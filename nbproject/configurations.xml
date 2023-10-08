@@ -1,0 +1,561 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configurationDescriptor version="65">
+  <logicalFolder name="root" displayName="root" projectFiles="true">
+    <logicalFolder name="HeaderFiles"
+                   displayName="Header Files"
+                   projectFiles="true">
+      <logicalFolder name="config" displayName="config" projectFiles="true">
+        <itemPath>config/hpl_adc_config.h</itemPath>
+        <itemPath>config/hpl_cmcc_config.h</itemPath>
+        <itemPath>config/hpl_dac_config.h</itemPath>
+        <itemPath>config/hpl_dmac_config.h</itemPath>
+        <itemPath>config/hpl_gclk_config.h</itemPath>
+        <itemPath>config/hpl_mclk_config.h</itemPath>
+        <itemPath>config/hpl_osc32kctrl_config.h</itemPath>
+        <itemPath>config/hpl_oscctrl_config.h</itemPath>
+        <itemPath>config/hpl_port_config.h</itemPath>
+        <itemPath>config/hpl_sercom_config.h</itemPath>
+        <itemPath>config/hpl_systick_config.h</itemPath>
+        <itemPath>config/hpl_tc_config.h</itemPath>
+        <itemPath>config/hpl_wdt_config.h</itemPath>
+        <itemPath>config/peripheral_clk_config.h</itemPath>
+        <itemPath>config/FreeRTOSConfig.h</itemPath>
+      </logicalFolder>
+      <logicalFolder name="examples" displayName="examples" projectFiles="true">
+        <itemPath>examples/driver_examples.h</itemPath>
+      </logicalFolder>
+      <logicalFolder name="hal" displayName="hal" projectFiles="true">
+        <logicalFolder name="include" displayName="include" projectFiles="true">
+          <itemPath>hal/include/hal_atomic.h</itemPath>
+          <itemPath>hal/include/hal_cache.h</itemPath>
+          <itemPath>hal/include/hal_crc_sync.h</itemPath>
+          <itemPath>hal/include/hal_dac_sync.h</itemPath>
+          <itemPath>hal/include/hal_delay.h</itemPath>
+          <itemPath>hal/include/hal_gpio.h</itemPath>
+          <itemPath>hal/include/hal_i2c_m_sync.h</itemPath>
+          <itemPath>hal/include/hal_init.h</itemPath>
+          <itemPath>hal/include/hal_io.h</itemPath>
+          <itemPath>hal/include/hal_sleep.h</itemPath>
+          <itemPath>hal/include/hal_spi_m_sync.h</itemPath>
+          <itemPath>hal/include/hal_wdt.h</itemPath>
+          <itemPath>hal/include/hpl_adc_dma.h</itemPath>
+          <itemPath>hal/include/hpl_cmcc.h</itemPath>
+          <itemPath>hal/include/hpl_core.h</itemPath>
+          <itemPath>hal/include/hpl_crc_sync.h</itemPath>
+          <itemPath>hal/include/hpl_delay.h</itemPath>
+          <itemPath>hal/include/hpl_dma.h</itemPath>
+          <itemPath>hal/include/hpl_gpio.h</itemPath>
+          <itemPath>hal/include/hpl_i2c_m_async.h</itemPath>
+          <itemPath>hal/include/hpl_i2c_m_sync.h</itemPath>
+          <itemPath>hal/include/hpl_i2c_s_async.h</itemPath>
+          <itemPath>hal/include/hpl_i2c_s_sync.h</itemPath>
+          <itemPath>hal/include/hpl_init.h</itemPath>
+          <itemPath>hal/include/hpl_irq.h</itemPath>
+          <itemPath>hal/include/hpl_pac.h</itemPath>
+          <itemPath>hal/include/hpl_ramecc.h</itemPath>
+          <itemPath>hal/include/hpl_sleep.h</itemPath>
+          <itemPath>hal/include/hpl_spi.h</itemPath>
+          <itemPath>hal/include/hpl_spi_async.h</itemPath>
+          <itemPath>hal/include/hpl_spi_dma.h</itemPath>
+          <itemPath>hal/include/hpl_spi_sync.h</itemPath>
+          <itemPath>hal/include/hpl_time_measure.h</itemPath>
+          <itemPath>hal/include/hpl_usart.h</itemPath>
+          <itemPath>hal/include/hpl_wdt.h</itemPath>
+          <itemPath>hal/include/hal_adc_sync.h</itemPath>
+          <itemPath>hal/include/hal_pwm.h</itemPath>
+          <itemPath>hal/include/hal_usart_sync.h</itemPath>
+          <itemPath>hal/include/hpl_adc_async.h</itemPath>
+          <itemPath>hal/include/hpl_adc_sync.h</itemPath>
+          <itemPath>hal/include/hpl_dac_async.h</itemPath>
+          <itemPath>hal/include/hpl_dac_sync.h</itemPath>
+          <itemPath>hal/include/hpl_missing_features.h</itemPath>
+          <itemPath>hal/include/hpl_pwm.h</itemPath>
+          <itemPath>hal/include/hpl_reset.h</itemPath>
+          <itemPath>hal/include/hpl_spi_m_async.h</itemPath>
+          <itemPath>hal/include/hpl_spi_m_dma.h</itemPath>
+          <itemPath>hal/include/hpl_spi_m_sync.h</itemPath>
+          <itemPath>hal/include/hpl_spi_s_async.h</itemPath>
+          <itemPath>hal/include/hpl_spi_s_sync.h</itemPath>
+          <itemPath>hal/include/hpl_timer.h</itemPath>
+          <itemPath>hal/include/hpl_usart_async.h</itemPath>
+          <itemPath>hal/include/hpl_usart_sync.h</itemPath>
+        </logicalFolder>
+        <logicalFolder name="utils" displayName="utils" projectFiles="true">
+          <logicalFolder name="include" displayName="include" projectFiles="true">
+            <itemPath>hal/utils/include/compiler.h</itemPath>
+            <itemPath>hal/utils/include/err_codes.h</itemPath>
+            <itemPath>hal/utils/include/events.h</itemPath>
+            <itemPath>hal/utils/include/utils.h</itemPath>
+            <itemPath>hal/utils/include/utils_assert.h</itemPath>
+            <itemPath>hal/utils/include/utils_event.h</itemPath>
+            <itemPath>hal/utils/include/utils_increment_macro.h</itemPath>
+            <itemPath>hal/utils/include/utils_list.h</itemPath>
+            <itemPath>hal/utils/include/utils_repeat_macro.h</itemPath>
+            <itemPath>hal/utils/include/parts.h</itemPath>
+          </logicalFolder>
+        </logicalFolder>
+      </logicalFolder>
+      <logicalFolder name="hpl" displayName="hpl" projectFiles="true">
+        <logicalFolder name="adc" displayName="adc" projectFiles="true">
+          <itemPath>hpl/adc/hpl_adc_base.h</itemPath>
+        </logicalFolder>
+        <logicalFolder name="core" displayName="core" projectFiles="true">
+          <itemPath>hpl/core/hpl_core_port.h</itemPath>
+        </logicalFolder>
+        <logicalFolder name="gclk" displayName="gclk" projectFiles="true">
+          <itemPath>hpl/gclk/hpl_gclk_base.h</itemPath>
+        </logicalFolder>
+        <logicalFolder name="pm" displayName="pm" projectFiles="true">
+          <itemPath>hpl/pm/hpl_pm_base.h</itemPath>
+        </logicalFolder>
+        <logicalFolder name="port" displayName="port" projectFiles="true">
+          <itemPath>hpl/port/hpl_gpio_base.h</itemPath>
+        </logicalFolder>
+        <logicalFolder name="tc" displayName="tc" projectFiles="true">
+          <itemPath>hpl/tc/hpl_tc_base.h</itemPath>
+        </logicalFolder>
+        <logicalFolder name="wdt" displayName="wdt" projectFiles="true">
+          <itemPath>hpl/wdt/hpl_wdt_base.h</itemPath>
+        </logicalFolder>
+      </logicalFolder>
+      <logicalFolder name="hri" displayName="hri" projectFiles="true">
+        <itemPath>hri/hri_ac_d51.h</itemPath>
+        <itemPath>hri/hri_adc_d51.h</itemPath>
+        <itemPath>hri/hri_aes_d51.h</itemPath>
+        <itemPath>hri/hri_ccl_d51.h</itemPath>
+        <itemPath>hri/hri_cmcc_d51.h</itemPath>
+        <itemPath>hri/hri_d51.h</itemPath>
+        <itemPath>hri/hri_dac_d51.h</itemPath>
+        <itemPath>hri/hri_dmac_d51.h</itemPath>
+        <itemPath>hri/hri_dsu_d51.h</itemPath>
+        <itemPath>hri/hri_eic_d51.h</itemPath>
+        <itemPath>hri/hri_evsys_d51.h</itemPath>
+        <itemPath>hri/hri_freqm_d51.h</itemPath>
+        <itemPath>hri/hri_gclk_d51.h</itemPath>
+        <itemPath>hri/hri_hmatrixb_d51.h</itemPath>
+        <itemPath>hri/hri_i2s_d51.h</itemPath>
+        <itemPath>hri/hri_icm_d51.h</itemPath>
+        <itemPath>hri/hri_mclk_d51.h</itemPath>
+        <itemPath>hri/hri_nvmctrl_d51.h</itemPath>
+        <itemPath>hri/hri_osc32kctrl_d51.h</itemPath>
+        <itemPath>hri/hri_oscctrl_d51.h</itemPath>
+        <itemPath>hri/hri_pac_d51.h</itemPath>
+        <itemPath>hri/hri_pcc_d51.h</itemPath>
+        <itemPath>hri/hri_pdec_d51.h</itemPath>
+        <itemPath>hri/hri_pm_d51.h</itemPath>
+        <itemPath>hri/hri_port_d51.h</itemPath>
+        <itemPath>hri/hri_qspi_d51.h</itemPath>
+        <itemPath>hri/hri_ramecc_d51.h</itemPath>
+        <itemPath>hri/hri_rstc_d51.h</itemPath>
+        <itemPath>hri/hri_rtc_d51.h</itemPath>
+        <itemPath>hri/hri_sdhc_d51.h</itemPath>
+        <itemPath>hri/hri_sercom_d51.h</itemPath>
+        <itemPath>hri/hri_supc_d51.h</itemPath>
+        <itemPath>hri/hri_tc_d51.h</itemPath>
+        <itemPath>hri/hri_tcc_d51.h</itemPath>
+        <itemPath>hri/hri_trng_d51.h</itemPath>
+        <itemPath>hri/hri_usb_d51.h</itemPath>
+        <itemPath>hri/hri_wdt_d51.h</itemPath>
+      </logicalFolder>
+      <logicalFolder name="thirdparty" displayName="thirdparty" projectFiles="true">
+        <logicalFolder name="RTOS" displayName="RTOS" projectFiles="true">
+          <logicalFolder name="freertos" displayName="freertos" projectFiles="true">
+            <logicalFolder name="FreeRTOSV10.0.0"
+                           displayName="FreeRTOSV10.0.0"
+                           projectFiles="true">
+              <logicalFolder name="Source" displayName="Source" projectFiles="true">
+                <logicalFolder name="include" displayName="include" projectFiles="true">
+                  <itemPath>thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/include/FreeRTOS.h</itemPath>
+                  <itemPath>thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/include/StackMacros.h</itemPath>
+                  <itemPath>thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/include/croutine.h</itemPath>
+                  <itemPath>thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/include/deprecated_definitions.h</itemPath>
+                  <itemPath>thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/include/event_groups.h</itemPath>
+                  <itemPath>thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/include/list.h</itemPath>
+                  <itemPath>thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/include/message_buffer.h</itemPath>
+                  <itemPath>thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/include/mpu_wrappers.h</itemPath>
+                  <itemPath>thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/include/portable.h</itemPath>
+                  <itemPath>thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/include/projdefs.h</itemPath>
+                  <itemPath>thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/include/queue.h</itemPath>
+                  <itemPath>thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/include/semphr.h</itemPath>
+                  <itemPath>thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/include/stack_macros.h</itemPath>
+                  <itemPath>thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/include/stream_buffer.h</itemPath>
+                  <itemPath>thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/include/task.h</itemPath>
+                  <itemPath>thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/include/timers.h</itemPath>
+                </logicalFolder>
+                <logicalFolder name="portable" displayName="portable" projectFiles="true">
+                  <logicalFolder name="GCC" displayName="GCC" projectFiles="true">
+                    <logicalFolder name="ARM_CM4F" displayName="ARM_CM4F" projectFiles="true">
+                      <itemPath>thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/portable/GCC/ARM_CM4F/portmacro.h</itemPath>
+                    </logicalFolder>
+                  </logicalFolder>
+                </logicalFolder>
+              </logicalFolder>
+              <itemPath>thirdparty/RTOS/freertos/FreeRTOSV10.0.0/rtos_port.h</itemPath>
+            </logicalFolder>
+          </logicalFolder>
+          <itemPath>thirdparty/RTOS/hal_rtos.h</itemPath>
+        </logicalFolder>
+      </logicalFolder>
+      <itemPath>driver_init.h</itemPath>
+      <itemPath>atmel_start_pins.h</itemPath>
+      <itemPath>rtos_start.h</itemPath>
+      <itemPath>atmel_start.h</itemPath>
+    </logicalFolder>
+    <logicalFolder name="LinkerScript"
+                   displayName="Linker Files"
+                   projectFiles="true">
+    </logicalFolder>
+    <logicalFolder name="SourceFiles"
+                   displayName="Source Files"
+                   projectFiles="true">
+      <logicalFolder name="examples" displayName="examples" projectFiles="true">
+        <itemPath>examples/driver_examples.c</itemPath>
+      </logicalFolder>
+      <logicalFolder name="hal" displayName="hal" projectFiles="true">
+        <logicalFolder name="src" displayName="src" projectFiles="true">
+          <itemPath>hal/src/hal_atomic.c</itemPath>
+          <itemPath>hal/src/hal_cache.c</itemPath>
+          <itemPath>hal/src/hal_crc_sync.c</itemPath>
+          <itemPath>hal/src/hal_dac_sync.c</itemPath>
+          <itemPath>hal/src/hal_delay.c</itemPath>
+          <itemPath>hal/src/hal_gpio.c</itemPath>
+          <itemPath>hal/src/hal_i2c_m_sync.c</itemPath>
+          <itemPath>hal/src/hal_init.c</itemPath>
+          <itemPath>hal/src/hal_io.c</itemPath>
+          <itemPath>hal/src/hal_sleep.c</itemPath>
+          <itemPath>hal/src/hal_wdt.c</itemPath>
+          <itemPath>hal/src/hal_adc_sync.c</itemPath>
+          <itemPath>hal/src/hal_pwm.c</itemPath>
+          <itemPath>hal/src/hal_spi_m_sync.c</itemPath>
+          <itemPath>hal/src/hal_usart_sync.c</itemPath>
+        </logicalFolder>
+        <logicalFolder name="utils" displayName="utils" projectFiles="true">
+          <logicalFolder name="src" displayName="src" projectFiles="true">
+            <itemPath>hal/utils/src/utils_assert.c</itemPath>
+            <itemPath>hal/utils/src/utils_event.c</itemPath>
+            <itemPath>hal/utils/src/utils_list.c</itemPath>
+            <itemPath>hal/utils/src/utils_syscalls.c</itemPath>
+          </logicalFolder>
+        </logicalFolder>
+      </logicalFolder>
+      <logicalFolder name="hpl" displayName="hpl" projectFiles="true">
+        <logicalFolder name="adc" displayName="adc" projectFiles="true">
+          <itemPath>hpl/adc/hpl_adc.c</itemPath>
+        </logicalFolder>
+        <logicalFolder name="cmcc" displayName="cmcc" projectFiles="true">
+          <itemPath>hpl/cmcc/hpl_cmcc.c</itemPath>
+        </logicalFolder>
+        <logicalFolder name="core" displayName="core" projectFiles="true">
+          <itemPath>hpl/core/hpl_core_m4.c</itemPath>
+          <itemPath>hpl/core/hpl_init.c</itemPath>
+        </logicalFolder>
+        <logicalFolder name="dac" displayName="dac" projectFiles="true">
+          <itemPath>hpl/dac/hpl_dac.c</itemPath>
+        </logicalFolder>
+        <logicalFolder name="dmac" displayName="dmac" projectFiles="true">
+          <itemPath>hpl/dmac/hpl_dmac.c</itemPath>
+        </logicalFolder>
+        <logicalFolder name="dsu" displayName="dsu" projectFiles="true">
+          <itemPath>hpl/dsu/hpl_dsu.c</itemPath>
+        </logicalFolder>
+        <logicalFolder name="gclk" displayName="gclk" projectFiles="true">
+          <itemPath>hpl/gclk/hpl_gclk.c</itemPath>
+        </logicalFolder>
+        <logicalFolder name="mclk" displayName="mclk" projectFiles="true">
+          <itemPath>hpl/mclk/hpl_mclk.c</itemPath>
+        </logicalFolder>
+        <logicalFolder name="osc32kctrl" displayName="osc32kctrl" projectFiles="true">
+          <itemPath>hpl/osc32kctrl/hpl_osc32kctrl.c</itemPath>
+        </logicalFolder>
+        <logicalFolder name="oscctrl" displayName="oscctrl" projectFiles="true">
+          <itemPath>hpl/oscctrl/hpl_oscctrl.c</itemPath>
+        </logicalFolder>
+        <logicalFolder name="pac" displayName="pac" projectFiles="true">
+          <itemPath>hpl/pac/hpl_pac.c</itemPath>
+        </logicalFolder>
+        <logicalFolder name="pm" displayName="pm" projectFiles="true">
+          <itemPath>hpl/pm/hpl_pm.c</itemPath>
+        </logicalFolder>
+        <logicalFolder name="ramecc" displayName="ramecc" projectFiles="true">
+          <itemPath>hpl/ramecc/hpl_ramecc.c</itemPath>
+        </logicalFolder>
+        <logicalFolder name="sercom" displayName="sercom" projectFiles="true">
+          <itemPath>hpl/sercom/hpl_sercom.c</itemPath>
+        </logicalFolder>
+        <logicalFolder name="systick" displayName="systick" projectFiles="true">
+          <itemPath>hpl/systick/hpl_systick.c</itemPath>
+        </logicalFolder>
+        <logicalFolder name="tc" displayName="tc" projectFiles="true">
+          <itemPath>hpl/tc/hpl_tc.c</itemPath>
+        </logicalFolder>
+        <logicalFolder name="wdt" displayName="wdt" projectFiles="true">
+          <itemPath>hpl/wdt/hpl_wdt.c</itemPath>
+        </logicalFolder>
+      </logicalFolder>
+      <logicalFolder name="samd51a" displayName="samd51a" projectFiles="true">
+        <logicalFolder name="gcc" displayName="gcc" projectFiles="true">
+          <logicalFolder name="gcc" displayName="gcc" projectFiles="true">
+            <itemPath>samd51a/gcc/gcc/startup_samd51.c</itemPath>
+          </logicalFolder>
+          <itemPath>samd51a/gcc/system_samd51.c</itemPath>
+        </logicalFolder>
+      </logicalFolder>
+      <logicalFolder name="thirdparty" displayName="thirdparty" projectFiles="true">
+        <logicalFolder name="RTOS" displayName="RTOS" projectFiles="true">
+          <logicalFolder name="freertos" displayName="freertos" projectFiles="true">
+            <logicalFolder name="FreeRTOSV10.0.0"
+                           displayName="FreeRTOSV10.0.0"
+                           projectFiles="true">
+              <logicalFolder name="Source" displayName="Source" projectFiles="true">
+                <logicalFolder name="portable" displayName="portable" projectFiles="true">
+                  <logicalFolder name="GCC" displayName="GCC" projectFiles="true">
+                    <logicalFolder name="ARM_CM4F" displayName="ARM_CM4F" projectFiles="true">
+                      <itemPath>thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/portable/GCC/ARM_CM4F/port.c</itemPath>
+                    </logicalFolder>
+                  </logicalFolder>
+                  <logicalFolder name="MemMang" displayName="MemMang" projectFiles="true">
+                    <itemPath>thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/portable/MemMang/heap_1.c</itemPath>
+                  </logicalFolder>
+                </logicalFolder>
+                <itemPath>thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/croutine.c</itemPath>
+                <itemPath>thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/event_groups.c</itemPath>
+                <itemPath>thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/list.c</itemPath>
+                <itemPath>thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/queue.c</itemPath>
+                <itemPath>thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/stream_buffer.c</itemPath>
+                <itemPath>thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/tasks.c</itemPath>
+                <itemPath>thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/timers.c</itemPath>
+              </logicalFolder>
+              <itemPath>thirdparty/RTOS/freertos/FreeRTOSV10.0.0/rtos_port.c</itemPath>
+            </logicalFolder>
+          </logicalFolder>
+        </logicalFolder>
+      </logicalFolder>
+      <itemPath>main.c</itemPath>
+      <itemPath>driver_init.c</itemPath>
+      <itemPath>rtos_start.c</itemPath>
+      <itemPath>atmel_start.c</itemPath>
+    </logicalFolder>
+    <logicalFolder name="ExternalFiles"
+                   displayName="Important Files"
+                   projectFiles="false">
+      <itemPath>Makefile</itemPath>
+    </logicalFolder>
+  </logicalFolder>
+  <projectmakefile>Makefile</projectmakefile>
+  <confs>
+    <conf name="Default" type="2">
+      <toolsSet>
+        <developmentServer>localhost</developmentServer>
+        <targetDevice>ATSAMD51P20A</targetDevice>
+        <targetHeader></targetHeader>
+        <targetPluginBoard></targetPluginBoard>
+        <platformTool>jlink</platformTool>
+        <languageToolchain>ARM</languageToolchain>
+        <languageToolchainVersion>12.3.1</languageToolchainVersion>
+        <platform>3</platform>
+      </toolsSet>
+      <packs>
+        <pack name="SAMD51_DFP" vendor="Microchip" version="3.7.237"/>
+        <pack name="CMSIS" vendor="ARM" version="5.8.0"/>
+      </packs>
+      <ScriptingSettings>
+      </ScriptingSettings>
+      <compileType>
+        <linkerTool>
+          <linkerLibItems>
+          </linkerLibItems>
+        </linkerTool>
+        <archiverTool>
+        </archiverTool>
+        <loading>
+          <useAlternateLoadableFile>false</useAlternateLoadableFile>
+          <parseOnProdLoad>false</parseOnProdLoad>
+          <alternateLoadableFile></alternateLoadableFile>
+        </loading>
+        <subordinates>
+        </subordinates>
+      </compileType>
+      <makeCustomizationType>
+        <makeCustomizationPreStepEnabled>false</makeCustomizationPreStepEnabled>
+        <makeUseCleanTarget>false</makeUseCleanTarget>
+        <makeCustomizationPreStep></makeCustomizationPreStep>
+        <makeCustomizationPostStepEnabled>false</makeCustomizationPostStepEnabled>
+        <makeCustomizationPostStep></makeCustomizationPostStep>
+        <makeCustomizationPutChecksumInUserID>false</makeCustomizationPutChecksumInUserID>
+        <makeCustomizationEnableLongLines>false</makeCustomizationEnableLongLines>
+        <makeCustomizationNormalizeHexFile>false</makeCustomizationNormalizeHexFile>
+      </makeCustomizationType>
+      <ARM-AR>
+        <property key="archiver-flags" value="-r"/>
+      </ARM-AR>
+      <ARM-AS>
+        <property key="announce-version" value="false"/>
+        <property key="include-paths" value=""/>
+        <property key="suppress-warnings" value="false"/>
+      </ARM-AS>
+      <ARM-AS-PRE>
+        <property key="announce-version" value="false"/>
+        <property key="include-paths" value=""/>
+        <property key="preprocessor-macros" value=""/>
+        <property key="preprocessor-macros-undefined" value=""/>
+        <property key="suppress-warnings" value="false"/>
+      </ARM-AS-PRE>
+      <ARM-CPP>
+        <property key="additional-warnings" value="true"/>
+        <property key="called-functions-located" value="true"/>
+        <property key="default-bitfield-type" value="false"/>
+        <property key="default-char-type" value="false"/>
+        <property key="disable-extra-code-exception" value="true"/>
+        <property key="disable-extra-code-generation" value="true"/>
+        <property key="extra-include-directories" value=""/>
+        <property key="extra-warnings" value="false"/>
+        <property key="fast-math" value="false"/>
+        <property key="garbage-collect-data" value="false"/>
+        <property key="garbage-collect-functions" value="true"/>
+        <property key="inhibit-all" value="false"/>
+        <property key="make-warnings-into-errors" value="false"/>
+        <property key="no-system-directories" value="false"/>
+        <property key="optimization-level" value="-Os"/>
+        <property key="position-independent" value="false"/>
+        <property key="preprocess-only" value="false"/>
+        <property key="preprocessor-macros" value=""/>
+        <property key="preprocessor-macros-undefined" value=""/>
+        <property key="strict-ansi" value="false"/>
+        <property key="strict-ansi-errors" value="false"/>
+        <property key="syntax-only" value="false"/>
+        <property key="undefined-identifier" value="false"/>
+        <property key="unsafe-math" value="false"/>
+        <property key="use-rodata" value="false"/>
+        <property key="verbose" value="false"/>
+      </ARM-CPP>
+      <ARM-GCC>
+        <property key="additional-warnings" value="true"/>
+        <property key="called-functions-located" value="true"/>
+        <property key="default-bitfield-type" value="false"/>
+        <property key="default-char-type" value="false"/>
+        <property key="extra-include-directories" value=""/>
+        <property key="extra-warnings" value="false"/>
+        <property key="fast-math" value="false"/>
+        <property key="garbage-collect-data" value="false"/>
+        <property key="garbage-collect-functions" value="true"/>
+        <property key="inhibit-all" value="false"/>
+        <property key="make-warnings-into-errors" value="false"/>
+        <property key="no-system-directories" value="false"/>
+        <property key="optimization-level" value="-Os"/>
+        <property key="position-independent" value="false"/>
+        <property key="preprocessor-macros" value=""/>
+        <property key="preprocessor-macros-undefined" value=""/>
+        <property key="strict-ansi" value="false"/>
+        <property key="strict-ansi-errors" value="false"/>
+        <property key="support-ansi" value="false"/>
+        <property key="syntax-only" value="false"/>
+        <property key="undefined-identifier" value="false"/>
+        <property key="unsafe-math" value="false"/>
+        <property key="verbose" value="false"/>
+      </ARM-GCC>
+      <ARM-Global>
+        <property key="bin" value="false"/>
+        <property key="common-include-directories"
+                  value=".\.;thirdparty/RTOS;hpl/port;hpl/pac;hpl/osc32kctrl;hpl/oscctrl;hpl/systick;hpl/cmcc;hal/utils/include;hal/include;thirdparty/RTOS/freertos/FreeRTOSV10.0.0;hpl/adc;thirdparty/RTOS/freertos/FreeRTOSV10.0.0/module_config;hpl/pm;hri;hpl/gclk;hpl/sercom;thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/portable/GCC/ARM_CM4F;hpl/mclk;hpl/core;hpl/ramecc;hpl/tc;hpl/dmac;hpl/wdt;examples;hpl/dac;hpl/dsu;thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/include;config"/>
+        <property key="eep" value="false"/>
+        <property key="hex" value="true"/>
+        <property key="lss" value="false"/>
+        <property key="omit-pack-options" value="true"/>
+        <property key="processor-mode" value="-mthumb"/>
+        <property key="srec" value="false"/>
+        <property key="user-pack-include" value="samd51a/include;CMSIS/Core/Include"/>
+        <appendMe value="-mfpu=fpv4-sp-d16 -mfloat-abi=hard"/>
+      </ARM-Global>
+      <ARM-LD>
+        <property key="additional-specs" value="--specs=nosys.specs"/>
+        <property key="exclude-standard-libraries" value="false"/>
+        <property key="extra-lib-directories" value="samd51a/gcc/gcc"/>
+        <property key="fast-math" value="false"/>
+        <property key="flash-segment" value=""/>
+        <property key="generate-map-file" value="true"/>
+        <property key="input-libraries" value=""/>
+        <property key="no-default-libs" value="false"/>
+        <property key="no-shared-libraries" value="false"/>
+        <property key="no-startup-files" value="false"/>
+        <property key="omit-symbol-information" value="false"/>
+        <property key="other-options" value=""/>
+        <property key="position-independent" value="false"/>
+        <property key="remove-unused-sections" value="true"/>
+        <property key="size-optimized-library" value="false"/>
+        <property key="sram-segment" value=""/>
+        <property key="unsafe-math" value="false"/>
+        <appendMe value="-T&quot;samd51a/gcc/gcc/samd51p20a_flash.ld&quot; "/>
+      </ARM-LD>
+      <Tool>
+        <property key="AutoSelectMemRanges" value="auto"/>
+        <property key="arm.use_vtor" value="false"/>
+        <property key="arm.vtor_adr" value="exception_table"/>
+        <property key="communication.adaptivespeed" value="false"/>
+        <property key="communication.autoselectspeed" value="true"/>
+        <property key="communication.interface" value="swd"/>
+        <property key="communication.speed" value="4"/>
+        <property key="debugoptions.debug-startup" value="Use system settings"/>
+        <property key="debugoptions.reset-behaviour" value="Use system settings"/>
+        <property key="event.recorder.enabled" value="false"/>
+        <property key="event.recorder.scvd.files" value=""/>
+        <property key="jlink.override" value=""/>
+        <property key="lastid" value=""/>
+        <property key="loader.board_file" value="${ProjectDir}/board.xboard"/>
+        <property key="memories.bootflash" value="true"/>
+        <property key="memories.configurationmemory" value="true"/>
+        <property key="memories.eeprom" value="true"/>
+        <property key="memories.id" value="true"/>
+        <property key="memories.instruction.ram" value="true"/>
+        <property key="memories.instruction.ram.ranges"
+                  value="${memories.instruction.ram.ranges.default}"/>
+        <property key="memories.programmemory" value="true"/>
+        <property key="memories.programmemory.ranges" value="0x0-0xfffff"/>
+        <property key="programoptions.eraseb4program" value="false"/>
+        <property key="programoptions.preservebootflash" value="false"/>
+        <property key="programoptions.preserveprogrammemory" value="false"/>
+        <property key="programoptions.preserveprogramrange.ranges" value="0x0-0xfffff"/>
+        <property key="programoptions.resetafterprogram" value="true"/>
+        <property key="script.has_reset" value="true"/>
+        <property key="script.log_level" value="1"/>
+        <property key="script.reset_delay" value="0"/>
+        <property key="script.show_output" value="false"/>
+        <property key="x.erase.clearprot" value="true"/>
+      </Tool>
+      <jlink>
+        <property key="AutoSelectMemRanges" value="auto"/>
+        <property key="arm.use_vtor" value="false"/>
+        <property key="arm.vtor_adr" value="exception_table"/>
+        <property key="communication.adaptivespeed" value="false"/>
+        <property key="communication.autoselectspeed" value="true"/>
+        <property key="communication.interface" value="swd"/>
+        <property key="communication.speed" value="4"/>
+        <property key="debugoptions.debug-startup" value="Use system settings"/>
+        <property key="debugoptions.reset-behaviour" value="Use system settings"/>
+        <property key="event.recorder.enabled" value="false"/>
+        <property key="event.recorder.scvd.files" value=""/>
+        <property key="jlink.override" value=""/>
+        <property key="lastid" value=""/>
+        <property key="loader.board_file" value="${ProjectDir}/board.xboard"/>
+        <property key="memories.bootflash" value="true"/>
+        <property key="memories.configurationmemory" value="true"/>
+        <property key="memories.eeprom" value="true"/>
+        <property key="memories.id" value="true"/>
+        <property key="memories.instruction.ram" value="true"/>
+        <property key="memories.instruction.ram.ranges"
+                  value="${memories.instruction.ram.ranges.default}"/>
+        <property key="memories.programmemory" value="true"/>
+        <property key="memories.programmemory.ranges" value="0x0-0xfffff"/>
+        <property key="programoptions.eraseb4program" value="false"/>
+        <property key="programoptions.preservebootflash" value="false"/>
+        <property key="programoptions.preserveprogrammemory" value="false"/>
+        <property key="programoptions.preserveprogramrange.ranges" value="0x0-0xfffff"/>
+        <property key="programoptions.resetafterprogram" value="true"/>
+        <property key="script.has_reset" value="true"/>
+        <property key="script.log_level" value="1"/>
+        <property key="script.reset_delay" value="0"/>
+        <property key="script.show_output" value="false"/>
+        <property key="x.erase.clearprot" value="true"/>
+      </jlink>
+    </conf>
+  </confs>
+</configurationDescriptor>
