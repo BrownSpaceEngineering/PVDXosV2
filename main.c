@@ -14,7 +14,7 @@ uint8_t arr[100];
 int main(void)
 {
     /* Initializes MCU, drivers and middleware */
-    //atmel_start_init();
+    atmel_start_init();
 
     // Initialize ADC
 

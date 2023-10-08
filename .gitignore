@@ -12,9 +12,10 @@
 *.cof
 
 # MPLAB X IDE specific
-nbproject/private/
-dist/
-build/
+.generated_files/*
+nbproject/private/*
+dist/*
+build/*
 
 # Debug files
 *.d
