@@ -3,7 +3,7 @@
     <type>com.microchip.mplab.nbide.embedded.makeproject</type>
     <configuration>
         <data xmlns="http://www.netbeans.org/ns/make-project/1">
-            <name>PVDXosThirdTry</name>
+            <name>PVDXos</name>
             <creation-uuid>555bb1bd-7c74-49bb-9593-82b3acb11729</creation-uuid>
             <make-project-type>0</make-project-type>
             <sourceEncoding>UTF-8</sourceEncoding>

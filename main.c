@@ -3,6 +3,8 @@
 #include <utils.h>
 #include <driver_init.h>
 
+
+
 uint8_t arr[100];
 /*
  * ADC_0
@@ -14,7 +16,11 @@ uint8_t arr[100];
 int main(void)
 {
     /* Initializes MCU, drivers and middleware */
-    atmel_start_init();
+    //atmel_start_init();
+    volatile unsigned int x = 0;
+    for(int i = 0; i < 1000; i++){
+        x++;
+    }
 
     // Initialize ADC
 

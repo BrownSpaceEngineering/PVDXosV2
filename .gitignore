@@ -14,6 +14,7 @@
 # MPLAB X IDE specific
 .generated_files/*
 nbproject/private/*
+nbproject/Makefile-genesis.properties
 dist/*
 build/*
 
