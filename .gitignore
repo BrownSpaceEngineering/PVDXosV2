@@ -1,2 +1,29 @@
-.generated_files
+# Object files
+*.o
+*.obj
 
+# Temporary files
+*.bak
+*.tmp
+
+# Compiled files
+*.hex
+*.elf
+*.cof
+
+# MPLAB X IDE specific
+nbproject/private/
+dist/
+build/
+
+# Debug files
+*.d
+*.map
+
+# Ignore cscope and ctags files
+cscope.*
+tags
+
+# Executables
+*.exe
+*.out
