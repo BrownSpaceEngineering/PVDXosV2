@@ -17,6 +17,8 @@ int main(void)
 {
     /* Initializes MCU, drivers and middleware */
     //atmel_start_init();
+    //Commented out because it fails rn
+    
     volatile unsigned int x = 0;
     for(int i = 0; i < 1000; i++){
         x++;
