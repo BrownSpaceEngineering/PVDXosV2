@@ -41,7 +41,7 @@
  * \brief ADC0's Clock frequency
  */
 #ifndef CONF_GCLK_ADC0_FREQUENCY
-#define CONF_GCLK_ADC0_FREQUENCY 1000000
+#define CONF_GCLK_ADC0_FREQUENCY 1500000
 #endif
 
 // <y> ADC Clock Source
@@ -81,7 +81,7 @@
  * \brief ADC1's Clock frequency
  */
 #ifndef CONF_GCLK_ADC1_FREQUENCY
-#define CONF_GCLK_ADC1_FREQUENCY 1000000
+#define CONF_GCLK_ADC1_FREQUENCY 1500000
 #endif
 
 // <y> DAC Clock Source
@@ -121,7 +121,7 @@
  * \brief DAC's Clock frequency
  */
 #ifndef CONF_GCLK_DAC_FREQUENCY
-#define CONF_GCLK_DAC_FREQUENCY 1000000
+#define CONF_GCLK_DAC_FREQUENCY 1500000
 #endif
 
 /**
@@ -129,7 +129,7 @@
  * \brief CPU's Clock frequency
  */
 #ifndef CONF_CPU_FREQUENCY
-#define CONF_CPU_FREQUENCY 1000000
+#define CONF_CPU_FREQUENCY 1500000
 #endif
 
 // <y> Core Clock Source
@@ -201,7 +201,7 @@
  * \brief SERCOM0's Core Clock frequency
  */
 #ifndef CONF_GCLK_SERCOM0_CORE_FREQUENCY
-#define CONF_GCLK_SERCOM0_CORE_FREQUENCY 1000000
+#define CONF_GCLK_SERCOM0_CORE_FREQUENCY 1500000
 #endif
 
 /**
@@ -281,7 +281,7 @@
  * \brief SERCOM1's Core Clock frequency
  */
 #ifndef CONF_GCLK_SERCOM1_CORE_FREQUENCY
-#define CONF_GCLK_SERCOM1_CORE_FREQUENCY 1000000
+#define CONF_GCLK_SERCOM1_CORE_FREQUENCY 1500000
 #endif
 
 /**
@@ -361,7 +361,7 @@
  * \brief SERCOM2's Core Clock frequency
  */
 #ifndef CONF_GCLK_SERCOM2_CORE_FREQUENCY
-#define CONF_GCLK_SERCOM2_CORE_FREQUENCY 1000000
+#define CONF_GCLK_SERCOM2_CORE_FREQUENCY 1500000
 #endif
 
 /**
@@ -409,7 +409,7 @@
  * \brief TC0's Clock frequency
  */
 #ifndef CONF_GCLK_TC0_FREQUENCY
-#define CONF_GCLK_TC0_FREQUENCY 1000000
+#define CONF_GCLK_TC0_FREQUENCY 1500000
 #endif
 
 // <<< end of configuration section >>>

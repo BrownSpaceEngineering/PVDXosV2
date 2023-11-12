@@ -3,14 +3,11 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/C:/Users/orenk/OneDrive/School/Brown/BSE/PVDXosV2/hal/src/hal_delay.c</file>
-            <file>file:/C:/Users/orenk/OneDrive/School/Brown/BSE/PVDXosV2/nbproject/Makefile-Default.mk</file>
-            <file>file:/C:/Users/orenk/OneDrive/School/Brown/BSE/PVDXosV2/nbproject/configurations.xml</file>
-            <file>file:/C:/Users/orenk/OneDrive/School/Brown/BSE/PVDXosV2/nbproject/Makefile-variables.mk</file>
+            <file>file:/C:/Users/orenk/OneDrive/School/Brown/BSE/PVDXosV2/hpl/systick/hpl_systick.c</file>
             <file>file:/C:/Users/orenk/OneDrive/School/Brown/BSE/PVDXosV2/main.c</file>
-            <file>file:/C:/Users/orenk/OneDrive/School/Brown/BSE/PVDXosV2/nbproject/Makefile-genesis.properties</file>
-            <file>file:/C:/Users/orenk/OneDrive/School/Brown/BSE/PVDXosV2/hal/src/hal_adc_sync.c</file>
-            <file>file:/C:/Users/orenk/OneDrive/School/Brown/BSE/PVDXosV2/.gitignore</file>
+            <file>file:/C:/Users/orenk/OneDrive/School/Brown/BSE/PVDXosV2/samd51a/include/instance/port.h</file>
+            <file>file:/C:/Users/orenk/OneDrive/School/Brown/BSE/PVDXosV2/samd51a/include/component/port.h</file>
+            <file>file:/C:/Users/orenk/OneDrive/School/Brown/BSE/PVDXosV2/rtos_start.c</file>
         </group>
     </open-files>
 </project-private>

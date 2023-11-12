@@ -5,6 +5,7 @@
 # Temporary files
 *.bak
 *.tmp
+make_strace_output.txt
 
 # Compiled files
 *.hex
@@ -21,6 +22,7 @@ build/*
 # Debug files
 *.d
 *.map
+/debug
 
 # Ignore cscope and ctags files
 cscope.*

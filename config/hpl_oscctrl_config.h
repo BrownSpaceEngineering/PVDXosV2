@@ -121,7 +121,7 @@
 // <i> Indicates whether configuration for XOSC1 is enabled or not
 // <id> enable_xosc1
 #ifndef CONF_XOSC1_CONFIG
-#define CONF_XOSC1_CONFIG 1
+#define CONF_XOSC1_CONFIG 0
 #endif
 
 // <o> Frequency <8000000-48000000>
@@ -136,7 +136,7 @@
 // <i> Indicates whether External Multipurpose Crystal Oscillator is enabled or not
 // <id> xosc1_arch_enable
 #ifndef CONF_XOSC1_ENABLE
-#define CONF_XOSC1_ENABLE 1
+#define CONF_XOSC1_ENABLE 0
 #endif
 
 // <o> Start-Up Time
@@ -234,7 +234,7 @@
 // <i> Indicates whether configuration for DFLL is enabled or not
 // <id> enable_dfll
 #ifndef CONF_DFLL_CONFIG
-#define CONF_DFLL_CONFIG 0
+#define CONF_DFLL_CONFIG 1
 #endif
 
 // <y> Reference Clock Source
@@ -253,7 +253,7 @@
 // <i> Select the clock source
 // <id> dfll_ref_clock
 #ifndef CONF_DFLL_GCLK
-#define CONF_DFLL_GCLK GCLK_PCHCTRL_GEN_GCLK3_Val
+#define CONF_DFLL_GCLK GCLK_PCHCTRL_GEN_GCLK1_Val
 #endif
 
 // <h> Digital Frequency Locked Loop Control
@@ -261,7 +261,7 @@
 // <i> Indicates whether DFLL is enabled or not
 // <id> dfll_arch_enable
 #ifndef CONF_DFLL_ENABLE
-#define CONF_DFLL_ENABLE 0
+#define CONF_DFLL_ENABLE 1
 #endif
 
 // <q> On Demand Control
@@ -404,7 +404,7 @@
 // <i> Select the clock source.
 // <id> fdpll0_ref_clock
 #ifndef CONF_FDPLL0_GCLK
-#define CONF_FDPLL0_GCLK GCLK_GENCTRL_SRC_XOSC32K
+#define CONF_FDPLL0_GCLK GCLK_PCHCTRL_GEN_GCLK10_Val
 #endif
 
 // <h> Digital Phase Locked Loop Control

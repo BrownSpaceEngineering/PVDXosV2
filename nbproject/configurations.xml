@@ -200,6 +200,8 @@
       <itemPath>atmel_start_pins.h</itemPath>
       <itemPath>rtos_start.h</itemPath>
       <itemPath>atmel_start.h</itemPath>
+      <itemPath>SEGGER_RTT.h</itemPath>
+      <itemPath>SEGGER_RTT_Conf.h</itemPath>
     </logicalFolder>
     <logicalFolder name="LinkerScript"
                    displayName="Linker Files"
@@ -334,6 +336,8 @@
       <itemPath>driver_init.c</itemPath>
       <itemPath>rtos_start.c</itemPath>
       <itemPath>atmel_start.c</itemPath>
+      <itemPath>SEGGER_RTT.c</itemPath>
+      <itemPath>SEGGER_RTT_printf.c</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"
@@ -341,6 +345,9 @@
       <itemPath>Makefile</itemPath>
     </logicalFolder>
   </logicalFolder>
+  <sourceRootList>
+    <Elem>.</Elem>
+  </sourceRootList>
   <projectmakefile>Makefile</projectmakefile>
   <confs>
     <conf name="Default" type="2">
@@ -355,8 +362,8 @@
         <platform>3</platform>
       </toolsSet>
       <packs>
-        <pack name="SAMD51_DFP" vendor="Microchip" version="3.7.237"/>
         <pack name="CMSIS" vendor="ARM" version="5.8.0"/>
+        <pack name="SAMD51_DFP" vendor="Microchip" version="3.7.237"/>
       </packs>
       <ScriptingSettings>
       </ScriptingSettings>

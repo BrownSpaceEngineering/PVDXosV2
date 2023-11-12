@@ -35,7 +35,6 @@
 #include <hpl_init.h>
 #include <hpl_oscctrl_config.h>
 #include <hpl_gclk_config.h>
-#include <stdint.h>
 
 /**
  * \brief Initialize clock sources
@@ -83,16 +82,8 @@ void _oscctrl_init_sources(void)
 
 #if CONF_XOSC1_CONFIG == 1
 #if CONF_XOSC1_ENABLE == 1
-    /*
-    uint32_t x = 0;
-	while (!hri_oscctrl_get_STATUS_XOSCRDY1_bit(hw)){
-        //Ready bit is somewhat fucky, so let's set a timeout typa thing
-        x++;
-        if (x > 0xF0000000){
-            break;
-        }
-    }
-    */
+	while (!hri_oscctrl_get_STATUS_XOSCRDY1_bit(hw))
+		;
 #endif
 #if CONF_XOSC1_ENALC == 1
 	hri_oscctrl_set_XOSCCTRL_ENALC_bit(hw, 1);

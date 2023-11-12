@@ -34,5 +34,5 @@ MP_CPPC_DIR="C:\Program Files (x86)\Arm GNU Toolchain arm-none-eabi\12.3 rel1\bi
 MP_AS_DIR="C:\Program Files (x86)\Arm GNU Toolchain arm-none-eabi\12.3 rel1\bin"
 MP_LD_DIR="C:\Program Files (x86)\Arm GNU Toolchain arm-none-eabi\12.3 rel1\bin"
 MP_AR_DIR="C:\Program Files (x86)\Arm GNU Toolchain arm-none-eabi\12.3 rel1\bin"
-DFP_DIR=C:/Program Files/Microchip/MPLABX/v6.15/packs/Microchip/SAMD51_DFP/3.7.237
 CMSIS_DIR=C:/Users/orenk/.mchp_packs/ARM/CMSIS/5.8.0
+DFP_DIR=C:/Program Files/Microchip/MPLABX/v6.15/packs/Microchip/SAMD51_DFP/3.7.237
