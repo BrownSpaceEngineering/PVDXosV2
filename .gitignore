@@ -1,0 +1,33 @@
+#IDE Junk
+.vscode
+
+# Object files
+*.o
+*.obj
+
+# Temporary files
+*.bak
+*.tmp
+
+# Compiled files
+*.hex
+*.elf
+*.cof
+
+# Debug files
+*.d
+*.map
+/debug
+
+# Ignore cscope and ctags files
+cscope.*
+tags
+
+# Executables
+*.exe
+*.out
+
+#ASF-Specific:
+*.atsln
+*.atzip
+
