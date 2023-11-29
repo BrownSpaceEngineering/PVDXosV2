@@ -4,6 +4,8 @@
 
 1. **Start the SEGGER GDB Server:**
    - run `JLinkGDBServer` from the SEGGER folder containing all the J-Link tools.
+   - Before clicking 'OK', make sure the target is set to `SAMD51P20A` nad the interface is set to `SWD`.
+   - 
    - Ensure the J-Link server is on port 2331 for GDB connections.
 
 2. **Build the Project:**
