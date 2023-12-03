@@ -70,13 +70,14 @@
    - Download & Install the .pkg from [here](https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads#:~:text=macOS%20(Apple%20silicon)%20hosted%20cross%20toolchains).
    - Make sure you're downloading for the right hardware.
 
-7. Add the Arm Developer Tools to your path by adding the following line to the bottom of the ~/.zshrc file, similar to step 1
+7. Add the Arm Developer Tools to your path by adding the following line to the bottom of the `~/.zshrc` (or `~/.bash_profile`) file, similar to step 1
    - Add:
         ```bash
         export PATH="/Applications/ArmGNUToolchain/<VersionNumber>/arm-none-eabi/bin/:$PATH"
         ```
    - IMPORTANT: Remember to replace `<VersionNumber>` with the version number of the toolchain you downloaded. It should be something like '13.2.Rel1'
 
+8. If you're on Mac, install GNU `sed` by running `brew install gnu-sed`
 
 ---
 

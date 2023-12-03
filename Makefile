@@ -46,6 +46,16 @@ SHELL := /bin/bash
 #This makefile is used to build the ASF files, and is provided by Atmel Start
 CHILD_MAKEFILE_PATH := ./ASF/gcc
 
+# Ensure that MK_DIR is set even when none of the checks are hit
+export MK_DIR := mkdir -p
+
+# Use gsed on macOS
+ifeq ($(shell uname), Darwin)
+	SED = gsed
+else
+	SED = sed
+endif
+
 # Compiler flags
 CFLAGS_POSITIVE := -Wall -Wextra -Werror -Wshadow
 CFLAGS_NEGATIVE += -Wno-unused-parameter #Because some ASF functions have unused parameters, supress this warning
@@ -53,7 +63,7 @@ CFLAGS := $(CFLAGS_POSITIVE) $(CFLAGS_NEGATIVE)
 
 
 ### All these variables are exported to the child makefile, and affect its behavior ###
-export SUB_DIRS := $(shell for dir in $(EXTRA_VPATH); do echo $$dir | sed 's|\.\./||g'; done)
+export SUB_DIRS := $(shell for dir in $(EXTRA_VPATH); do echo $$dir | $(SED) 's|\.\./||g'; done)
 
 export DIR_INCLUDES := $(CFLAGS) #Slightly hacky way to inject cflags into the child makefile
 DIR_INCLUDES += $(foreach dir,$(EXTRA_VPATH),-I"$(dir)" )
@@ -108,17 +118,17 @@ update_asf:
 	&& echo "(4.2) ASF Unzipped" \
 	&& cp -f ./ASF/atmel_start_config.atstart ./ \
 	&& echo "(5) ASF Config Lifted" \
-	&& sed -i 's/\$$(\@:%\.o=%\.d)/$$(patsubst ..\/%,%, \$$(\@:%\.o=%\.d))/g' ./ASF/gcc/Makefile \
+	&& $(SED) -i 's/\$$(\@:%\.o=%\.d)/$$(patsubst ..\/%,%, \$$(\@:%\.o=%\.d))/g' ./ASF/gcc/Makefile \
 	&& echo "(6.1) ASF Makefile: GCC dependency filepaths corrected" \
-	&& sed -i 's/\$$(\@:%\.o=%\.o)/$$(patsubst ..\/%,%, \$$(\@:%\.o=%\.o))/g' ./ASF/gcc/Makefile \
+	&& $(SED) -i 's/\$$(\@:%\.o=%\.o)/$$(patsubst ..\/%,%, \$$(\@:%\.o=%\.o))/g' ./ASF/gcc/Makefile \
 	&& echo "(6.2) ASF Makefile: GCC object filepaths corrected" \
-	&& sed -i 's/\$$@/\$$(strip \$$(patsubst ..\/%, %, $$@))/g' ./ASF/gcc/Makefile \
+	&& $(SED) -i 's/\$$@/\$$(strip \$$(patsubst ..\/%, %, $$@))/g' ./ASF/gcc/Makefile \
 	&& echo "(6.3) ASF Makefile: GCC output filepaths corrected" \
-	&& sed -i '/main/d' ./ASF/gcc/Makefile \
+	&& $(SED) -i '/main/d' ./ASF/gcc/Makefile \
 	&& echo "(6.4) ASF Makefile: References to ASF main.c removed" \
 	&& rm -f ./ASF/main.c \
 	&& echo "(7) ASF main.c Removed" \
-	&& sed -i 's/AtmelStart/PVDXos/g' ./ASF/gcc/Makefile \
+	&& $(SED) -i 's/AtmelStart/PVDXos/g' ./ASF/gcc/Makefile \
 	&& echo "(8) ASF Makefile: Project name updated to PVDXos" \
 	&& echo " --- Finished Integrating ASF --- "
 
