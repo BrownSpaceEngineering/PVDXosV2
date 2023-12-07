@@ -1,10 +1,4 @@
-#include <atmel_start.h>
-#include <driver_init.h>
-#include <hal_adc_sync.h>
-
-#include "SEGGER_RTT_printf.h"
-#include "rtos_start.h"
-#include "heartbeat_task.h"
+#include "globals.h"
 
 int main(void)
 {

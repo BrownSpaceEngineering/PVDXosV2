@@ -19,6 +19,7 @@ export OBJS := \
 ../src/tasks/heartbeat_main.o \
 ../src/misc/printf/SEGGER_RTT.o \
 ../src/misc/printf/SEGGER_RTT_printf.o \
+../src/sensor_drivers/rm3100.o \
 
 
 
@@ -29,6 +30,7 @@ export EXTRA_VPATH := \
 ../../src/tasks \
 ../../src/misc \
 ../../src/misc/printf \
+../../src/sensor_drivers \
 
 
 ###############################################################################
