@@ -101,6 +101,11 @@ endif
 # The worst part of this is step 6, making text modifications to the stock ASF Makefile
 # IF YOU MODIFY STEP 6, PLEASE MAKE SURE YOU KNOW WHAT YOU'RE DOING
 update_asf:
+	@if [ ! -f ASF.atzip ]; then \
+		echo "ASF.atzip not found in the current directory! (Make sure spelling and capitalization is exact)"; \
+		echo " --- Operation Aborted --- "; \
+		exit 1; \
+	fi;
 	@read -p "WARNING -- Are you sure you want to REPLACE the ASF with ASF.atzip? [Y/N] " confirm; \
 	if [ "$$confirm" != "y" ] && [ "$$confirm" != "Y" ]; then \
 		echo " --- Operation aborted --- "; \

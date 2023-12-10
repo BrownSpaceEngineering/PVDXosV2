@@ -30,4 +30,4 @@ tags
 #ASF-Specific:
 *.atsln
 *.atzip
-
+ASF/gcc/*
