@@ -2,7 +2,7 @@
 
 ## Building and Running:
 
-> Note: If you're using a factory-new devboard that you've just unboxed, please follow [these instructions](#setting-up-a-brand-new-m4-grand-central-devboard) first before continuing. If you've received a working devboard from another team member, you can continue.
+> **Note:** If you're using a factory-new devboard that you've just unboxed, please follow [these instructions](#setting-up-a-brand-new-metro-m4-grand-central-devboard) first before continuing. If you've received a working devboard from another team member, you can continue.
 
 1. **Start the SEGGER GDB Server:**
 
@@ -94,15 +94,15 @@ The Grand Central runs on an Atmel SAMD51P20A, which has a `BOOTPROT` fuse prote
 
 1. Install and open [Microchip Studio](https://www.microchip.com/en-us/tools-resources/develop/microchip-studio).
    > **Note:** Microchip Studio only supports Windows, so you might have to use a friend's computer for this, or in the worst case, install a Windows VM.
-2. Connect your M4 Grand Central _and_ J-Link to your computer via USB (and make sure they're connected to each other).
+2. Connect your M4 Grand Central and J-Link to your computer via USB (and make sure they're connected to each other).
 3. In Microchip Studio, go to `Tools > Device Programming`.
    - In the dialog that opens, select `Tool > J-Link`, `Device > ATSAMD51P20`, and `Interface > SWD`. Click `Apply`.
-   - Click `Read`. The empty fields for `Device Signature` and `Target Voltage` will populate.
-4. In the `Device Programming` window, select `Fuses`.
+   - Click `Read`. The empty fields for _'Device Signature'_ and _'Target Voltage'_ will populate.
+4. In the same 'Device Programming' window, select `Fuses`.
    - Change the value of `USER_WORD_0.NVMCTRL_BOOTPROT` to `0x0F` or `0 kbytes` (whichever shows up).
    - At the bottom of the window, click `Program` and then `Verify` to make sure the fuse has been set correctly.
 
-That should be it. The J-Link GDB Server should now work as expected after running `make connect`. Congrats on setting up your brand-new devboard!
+That should be it. The J-Link GDB Server should now work as expected. Congrats on setting up your brand-new devboard!
 
 ---
 
