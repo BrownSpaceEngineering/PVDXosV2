@@ -2,7 +2,7 @@
 ##################### ADDING SOMETHING?  READ THIS FIRST! #####################
 ###############################################################################
 ###
-###  When adding a new C file ot the source, you must do 2 things:
+###  When adding a new C file to the source, you must do 2 things:
 ###    - Add the file to the OBJS list below (with a .o extension)
 ###    - If it is in a new directory, Add the directory to the EXTRA_VPATH list below (with a .c extension)
 ###  Remember to add the trailing \ to the end of each line!
@@ -17,6 +17,7 @@
 export OBJS := \
 ../src/main.o \
 ../src/tasks/heartbeat_main.o \
+../src/tasks/watchdog_main.o \
 ../src/misc/printf/SEGGER_RTT.o \
 ../src/misc/printf/SEGGER_RTT_printf.o \
 

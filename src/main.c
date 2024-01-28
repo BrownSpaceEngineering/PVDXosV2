@@ -5,27 +5,34 @@
 #include "SEGGER_RTT_printf.h"
 #include "rtos_start.h"
 #include "heartbeat_task.h"
+#include "watchdog_task.h"
 
 int main(void)
 {
-            /* Initializes MCU, drivers and middleware */
-            atmel_start_init();
-            printf("ATMEL Initialization Complete!\n");
+    /* Initializes MCU, drivers and middleware */
+    atmel_start_init();
+    printf("ATMEL Initialization Complete!\n");
 
-            // Create Heartbeat Task
-            // xTaskCreate(main_func, "Task Name", Stack Size, Parameters, Priority, Task Handle);
-            BaseType_t heartbeatCreateStatus = xTaskCreate(heartbeat_main, "Heartbeat", 1000, NULL, 1, NULL);
-            if (heartbeatCreateStatus != pdPASS) {
-                printf("Heartbeat Task Creation Failed!\n");
-            } else {
-                printf("Heartbeat Task Created!\n");
-            }
+    // Initialize Watchdog
+    watchdog_init(WDT_CONFIG_PER_CYC16384, true);
 
-            // Start the scheduler
-            vTaskStartScheduler();
+    // Create Tasks
+    // xTaskCreate(main_func, "Task Name", Stack Size, Parameters, Priority, Task Handle);
 
-            printf("Work completed -- Looping forever\n");
-            while (1) {
-                
-            }
-        }
+    // Create Heartbeat Task
+    BaseType_t heartbeatCreateStatus = xTaskCreate(heartbeat_main, "Heartbeat", 1000, NULL, 1, NULL);
+    if (heartbeatCreateStatus != pdPASS) {
+        printf("Heartbeat Task Creation Failed!\n");
+    } else {
+        printf("Heartbeat Task Created!\n");
+    }
+
+    // Create Watchdog Task
+    BaseType_t watchdogCreateStatus = xTaskCreate(watchdog_main, "Watchdog", 1000, NULL, 1, NULL);
+
+    // Start the scheduler
+    vTaskStartScheduler();
+
+    printf("Work completed -- Looping forever\n");
+    while (true);
+}
