@@ -10,7 +10,7 @@
 
 void init_rm3100(void) {
     //Initialize the I2C Communications
-    i2c_m_sync_get_io_descriptor(&RM3100, &rm3100_io);
-    i2c_m_sync_enable(&RM3100);
-    i2c_m_sync_set_slaveaddr(&RM3100, 0x77, I2C_M_SEVEN);
+    i2c_m_sync_get_io_descriptor(&I2C_0, &rm3100_io);
+    i2c_m_sync_enable(&I2C_0);
+    i2c_m_sync_set_slaveaddr(&I2C_0, 0x77, I2C_M_SEVEN);
 }

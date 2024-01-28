@@ -13,7 +13,4 @@
 #include "misc/printf/SEGGER_RTT_printf.h"
 #include "tasks/heartbeat_task.h"
 
-//m_sync descriptors
-extern struct i2c_m_sync_desc RM3100;
-
 #endif
