@@ -16,8 +16,8 @@
 ### ALL C FILES SHOULD HAVE AN OBJECT FILE LISTED HERE ###
 export OBJS := \
 ../src/main.o \
-../src/tasks/heartbeat_main.o \
-../src/tasks/watchdog_main.o \
+../src/tasks/heartbeat/heartbeat_main.o \
+../src/tasks/watchdog/watchdog_main.o \
 ../src/misc/printf/SEGGER_RTT.o \
 ../src/misc/printf/SEGGER_RTT_printf.o \
 
@@ -28,6 +28,8 @@ export OBJS := \
 export EXTRA_VPATH := \
 ../../src \
 ../../src/tasks \
+../../src/tasks/heartbeat \
+../../src/tasks/watchdog \
 ../../src/misc \
 ../../src/misc/printf \
 
