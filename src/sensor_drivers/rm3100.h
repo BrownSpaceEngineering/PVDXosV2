@@ -38,4 +38,12 @@
 
 void init_rm3100(void);
 
+typedef struct {
+    long x;
+    long y;
+    long z;
+} RM3100_return_t;
+
+void changeCycleCount(uint16_t);
+
 #endif // rm3100_h_
