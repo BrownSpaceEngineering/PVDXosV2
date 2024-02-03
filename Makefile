@@ -18,6 +18,7 @@ export OBJS := \
 ../src/main.o \
 ../src/tasks/heartbeat/heartbeat_main.o \
 ../src/tasks/watchdog/watchdog_main.o \
+../src/tasks/watchdog/watchdog_helpers.o \
 ../src/misc/printf/SEGGER_RTT.o \
 ../src/misc/printf/SEGGER_RTT_printf.o \
 
