@@ -1,6 +1,6 @@
 #include "watchdog_task.h"
 
-void watchdog_main(void) {
+void watchdog_main(void *pvParameters) {
     // Iterate through the running times and check if any tasks have not checked in within the allowed time
     uint32_t current_time = xTaskGetTickCount();
 

@@ -1,8 +1,14 @@
-#pragma once
+#ifndef WATCHDOG_TASK_H
+
 #include "globals.h"
 #include "atmel_start.h"
 
 #define WATCHDOG_MS_DELAY 1000
+
+// If the difference between the current time and the time in the running_times array is greater than the allowed time,
+// then the task has not checked in and the watchdog should reset the system. Refer to "globals.h" to see the order in which
+// tasks are registered.
+static uint32_t allowed_times[NUM_TASKS] = {1000, 1000};
 
 static volatile Wdt *watchdog = WDT;
 static uint32_t running_times[NUM_TASKS];
@@ -20,3 +26,5 @@ void watchdog_kick(void);
 int watchdog_checkin(task_type_t task_index);
 int watchdog_register_task(task_type_t task_index);
 int watchdog_unregister_task(task_type_t task_index);
+
+#endif
