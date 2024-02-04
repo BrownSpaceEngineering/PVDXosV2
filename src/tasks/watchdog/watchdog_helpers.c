@@ -1,10 +1,5 @@
 #include "watchdog_task.h"
 
-// If the difference between the current time and the time in the running_times array is greater than the allowed time,
-// then the task has not checked in and the watchdog should reset the system. Refer to "globals.h" to see the order in which
-// tasks are registered.
-static uint32_t allowed_times[NUM_TASKS] = {1000, 1000};
-
 void watchdog_init(int watchdog_period, bool always_on) {
     // Initialize the running times
     for (int i = 0; i < NUM_TASKS; i++) {

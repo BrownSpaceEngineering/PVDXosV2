@@ -1,4 +1,5 @@
 #ifndef WATCHDOG_TASK_H
+#define WATCHDOG_TASK_H
 
 #include "globals.h"
 #include "atmel_start.h"
