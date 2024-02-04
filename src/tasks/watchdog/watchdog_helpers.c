@@ -44,7 +44,7 @@ void watchdog_init(int watchdog_period, bool always_on) {
     NVIC_SetVector(WDT_IRQn, (uint32_t)(&WDT_Handler)); // When the WDT_IRQn interrupt is triggered, call the WDT_Handler function
 }
 
-void WDT_Handler() {
+void WDT_Handler(void) {
     // Check if the early warning interrupt is triggered
     if (WDT->INTFLAG.bit.EW) {
         // Clear the early warning interrupt flag
@@ -54,7 +54,7 @@ void WDT_Handler() {
     }
 }
 
-void watchdog_early_warning_callback() {
+void watchdog_early_warning_callback(void) {
     // This function gets called when the watchdog is almost out of time
     // TODO Test if this works
     // This is also fine to leave blank
@@ -72,14 +72,14 @@ void watchdog_early_warning_callback() {
     vTaskDelay(pdMS_TO_TICKS(300));;
 }
 
-void watchdog_pet() {
+void watchdog_pet(void) {
     watchdog->CLEAR.reg = WDT_CLEAR_CLEAR_KEY;
 
     // Wait for synchronization
     while (watchdog->SYNCBUSY.bit.ENABLE);
 }
 
-void watchdog_kick() {
+void watchdog_kick(void) {
     watchdog->CLEAR.reg = 0x12; // set intentionally wrong clear key, so the watchdog will reset the system
     // this function should never return because the system should reset
 }

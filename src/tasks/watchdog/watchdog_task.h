@@ -12,9 +12,9 @@ static bool watchdog_enabled = false;
 // Initializes the memory for all the watchdog lists (i.e. for tasks to check in) and starts the watchdog timer
 void watchdog_init(int watchdog_period, bool always_on);
 void watchdog_main(void *pvParameters);
-void watchdog_early_warning_callback();
-void watchdog_pet();
-void watchdog_kick();
+void watchdog_early_warning_callback(void);
+void watchdog_pet(void);
+void watchdog_kick(void);
 
 // The following functions return 0 on success, -1 on failure
 int watchdog_checkin(task_type_t task_index);
