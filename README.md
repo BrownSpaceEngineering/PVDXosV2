@@ -40,8 +40,9 @@
 
    - `sudo apt install gcc-arm-none-eabi`
 
-4. Install GDB Multiarch:
+4. Install GDB Multiarch and other build tools:
    - `sudo apt install gdb-multiarch`
+   - `sudo apt install build-essential`
 
 ### Mac/Linux (Geared towards Mac)
 
