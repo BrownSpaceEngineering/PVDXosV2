@@ -19,6 +19,8 @@ export OBJS := \
 ../src/tasks/heartbeat_main.o \
 ../src/misc/printf/SEGGER_RTT.o \
 ../src/misc/printf/SEGGER_RTT_printf.o \
+../src/datastore/datastore.o \
+
 
 
 
@@ -29,6 +31,7 @@ export EXTRA_VPATH := \
 ../../src/tasks \
 ../../src/misc \
 ../../src/misc/printf \
+../../src/datastore \
 
 
 ###############################################################################
