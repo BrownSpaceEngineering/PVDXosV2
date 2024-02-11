@@ -3,8 +3,9 @@
 #include <hal_adc_sync.h>
 
 #include "SEGGER_RTT_printf.h"
-#include "rtos_start.h"
+#include "globals.h"
 #include "heartbeat_task.h"
+#include "rtos_start.h"
 
 int main(void)
 {
