@@ -57,29 +57,45 @@ else
 endif
 
 # Compiler flags
-CFLAGS_POSITIVE := -Wall -Wextra -Werror -Wshadow
-CFLAGS_NEGATIVE += -Wno-unused-parameter #Because some ASF functions have unused parameters, supress this warning
+CFLAGS_POSITIVE := -Wextra -Werror -Wshadow #-Wall is already included in the ASF makefile
+CFLAGS_NEGATIVE := -Wno-unused-parameter #Because some ASF functions have unused parameters, supress this warning
+CFLAGS_DEV := -DDEVBUILD
+CFLAGS_UNITTEST := -DUNITTEST
+CFLAGS_RELEASE := -DRELEASE
 CFLAGS := $(CFLAGS_POSITIVE) $(CFLAGS_NEGATIVE)
 
 
 ### All these variables are exported to the child makefile, and affect its behavior ###
 export SUB_DIRS := $(shell for dir in $(EXTRA_VPATH); do echo $$dir | $(SED) 's|\.\./||g'; done)
 
-export DIR_INCLUDES := $(CFLAGS) #Slightly hacky way to inject cflags into the child makefile
-DIR_INCLUDES += $(foreach dir,$(EXTRA_VPATH),-I"$(dir)" )
+export DIR_INCLUDES := $(foreach dir,$(EXTRA_VPATH),-I"$(dir)" )
 
 export OBJS_AS_ARGS := $(foreach obj,$(OBJS),$(patsubst ../%,%,$(obj)))
 
 export DEPS_AS_ARGS := $(patsubst %.o,%.d,$(OBJS_AS_ARGS))
 
-# Print out DIR_INCLUDES for debugging
-#$(info OBJS_AS_ARGS: $(OBJS_AS_ARGS))
+
+.PHONY: all dev release test clean connect update_asf
 
 # Default target
-all:
-	@$(MAKE) -C $(CHILD_MAKEFILE_PATH) \
+all: dev
+
+dev:
+	@$(MAKE) -C $(CHILD_MAKEFILE_PATH) CFLAGS=" $(CFLAGS_DEV) $(CFLAGS)" \
 	&& cp -f ./ASF/gcc/PVDXos.elf ./ \
 	&& echo " --- Finished Building PVDXos.elf --- "
+
+release: clean #Might as well clean before compiling the release build
+	@$(MAKE) -C $(CHILD_MAKEFILE_PATH) CFLAGS=" $(CFLAGS_RELEASE) $(CFLAGS)" \
+	&& cp -f ./ASF/gcc/PVDXos.elf ./ \
+	&& echo " --- Finished Building PVDXos.elf --- " \
+	&& echo " ---  THIS IS THE RELEASE BUILD!  --- "
+
+test: clean #Might as well clean before compiling the unit test build as well
+	@$(MAKE) -C $(CHILD_MAKEFILE_PATH) CFLAGS=" $(CFLAGS_UNITTEST) $(CFLAGS)" \
+	&& cp -f ./ASF/gcc/PVDXos.elf ./ \
+	&& echo " --- Finished Building PVDXos.elf --- " \
+	&& echo " --- THIS IS THE UNIT TEST BUILD! --- "
 
 # Clean target
 clean:
@@ -131,6 +147,8 @@ update_asf:
 	&& echo "(6.3) ASF Makefile: GCC output filepaths corrected" \
 	&& $(SED) -i '/main/d' ./ASF/gcc/Makefile \
 	&& echo "(6.4) ASF Makefile: References to ASF main.c removed" \
+	&& $(SED) -i 's/-DDEBUG/$$(CFLAGS)/g' ./ASF/gcc/Makefile \
+	&& echo "(6.5) ASF Makefile: CFLAGS hook injected" \
 	&& rm -f ./ASF/main.c \
 	&& echo "(7) ASF main.c Removed" \
 	&& $(SED) -i 's/AtmelStart/PVDXos/g' ./ASF/gcc/Makefile \
