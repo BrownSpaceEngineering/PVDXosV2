@@ -29,7 +29,7 @@ void heartbeat_main(void *pvParameters) {
         vTaskDelay(pdMS_TO_TICKS(300));
         #endif
 
-        //Testing heartbeat pattern (Blinking LEDs in an oscilating pattern [ON/OFF/ON] -> [OFF/ON/OFF])
+        //Testing heartbeat pattern (Blinking LEDs in an oscillating pattern [ON/OFF/ON] -> [OFF/ON/OFF])
         #if defined(UNITTEST)
         gpio_set_pin_level(LED_Orange1, false);
         gpio_set_pin_level(LED_Orange2, true);

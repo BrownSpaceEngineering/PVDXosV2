@@ -11,7 +11,7 @@
 Compilation guards to make sure that compilation is being done with the correct flags and correct compiler versions
 If you want to get rid of the red squiggly lines:
 - set C standard to GNU99 in the C/C++ extension settings
-- Add "-DDEVBUILD" to the InteliSense settings as a compiler argument
+- Add "-DDEVBUILD" to the IntelliSense settings as a compiler argument
 */
 
 //Check GNU 99 standard
@@ -25,13 +25,13 @@ If you want to get rid of the red squiggly lines:
 #endif
 //Check that at most one of {DEVBUILD, UNITTEST, RELEASE} is defined
 #if defined(DEVBUILD) && defined(UNITTEST)
-    #error "Multiple build type flags set! Must be one of: {DEVBUILD, UNITTEST, RELEASE}"
+    #error "Multiple build type flags set! (DEVBUILD && UNITTEST) Must be exactly one of: {DEVBUILD, UNITTEST, RELEASE}"
 #endif
 #if defined(DEVBUILD) && defined(RELEASE)
-    #error "Multiple build type flags set! Must be one of: {DEVBUILD, UNITTEST, RELEASE}"
+    #error "Multiple build type flags set! (DEVBUILD && RELEASE) Must be exactly one of: {DEVBUILD, UNITTEST, RELEASE}"
 #endif
 #if defined(UNITTEST) && defined(RELEASE)
-    #error "Multiple build type flags set! Must be one of: {DEVBUILD, UNITTEST, RELEASE}"
+    #error "Multiple build type flags set! (UNITTEST && RELEASE) Must be exactly one of: {DEVBUILD, UNITTEST, RELEASE}"
 #endif
 
 
