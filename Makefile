@@ -16,9 +16,11 @@
 ### ALL C FILES SHOULD HAVE AN OBJECT FILE LISTED HERE ###
 export OBJS := \
 ../src/main.o \
-../src/tasks/heartbeat_main.o \
+../src/tasks/heartbeat/heartbeat_main.o \
 ../src/misc/printf/SEGGER_RTT.o \
 ../src/misc/printf/SEGGER_RTT_printf.o \
+../src/misc/rtos_support/rtos_static_memory.o \
+../src/misc/rtos_support/rtos_stack_overflow.o \
 
 
 
@@ -29,6 +31,8 @@ export EXTRA_VPATH := \
 ../../src/tasks \
 ../../src/misc \
 ../../src/misc/printf \
+../../src/misc/rtos_support \
+../../src/tasks/heartbeat \
 
 
 ###############################################################################
@@ -153,6 +157,8 @@ update_asf:
 	&& echo "(7) ASF main.c Removed" \
 	&& $(SED) -i 's/AtmelStart/PVDXos/g' ./ASF/gcc/Makefile \
 	&& echo "(8) ASF Makefile: Project name updated to PVDXos" \
+	&& $(SED) -i 's|// <h> Basic|#define configSUPPORT_STATIC_ALLOCATION 1|' ./ASF/config/FreeRTOSConfig.h \
+	&& echo "(9) ASF FreeRTOSConfig.h: Static allocation enabled" \
 	&& echo " --- Finished Integrating ASF --- "
 
 
