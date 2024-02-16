@@ -1,6 +1,8 @@
 #ifndef GLOBALS_H_
 #define GLOBALS_H_
 
+#define TASK_STACK_OVERFLOW_PADDING 16 // Buffer for the stack size so that overflow doesn't corrupt any TCBs
+
 enum Status {
     SUCCESS = 0,
     ERROR_NO_DATA,

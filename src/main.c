@@ -1,6 +1,7 @@
 #include <atmel_start.h>
 #include <driver_init.h>
 #include <hal_adc_sync.h>
+#include <string.h>
 
 #include "SEGGER_RTT_printf.h"
 #include "globals.h"
@@ -44,7 +45,9 @@ int main(void)
             //Create the heartbeat task
             //The heartbeat task is a simple task that blinks the LEDs in a pattern to indicate that the system is running
             //xTaskCreateStatic(main_func, "TaskName", StackSize, pvParameters, Priority, StackBuffer, TaskTCB);
-            TaskHandle_t heartbeatTaskHandle = xTaskCreateStatic(heartbeat_main, "Heartbeat", HEARTBEAT_TASK_STACK_SIZE, NULL, 1, heartbeatTaskStack, &heartbeatTaskTCB);
+            TaskHandle_t heartbeatTaskHandle =
+                xTaskCreateStatic(heartbeat_main, "Heartbeat", HEARTBEAT_TASK_STACK_SIZE, NULL, 1,
+                                  heartbeatMem.heartbeatTaskStack, &heartbeatMem.heartbeatTaskTCB);
             if (heartbeatTaskHandle == NULL) {
                 printf("Heartbeat Task Creation Failed!\r\n");
             } else {

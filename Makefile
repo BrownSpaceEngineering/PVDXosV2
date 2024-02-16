@@ -158,7 +158,11 @@ update_asf:
 	&& $(SED) -i 's/AtmelStart/PVDXos/g' ./ASF/gcc/Makefile \
 	&& echo "(8) ASF Makefile: Project name updated to PVDXos" \
 	&& $(SED) -i 's|// <h> Basic|#define configSUPPORT_STATIC_ALLOCATION 1|' ./ASF/config/FreeRTOSConfig.h \
-	&& echo "(9) ASF FreeRTOSConfig.h: Static allocation enabled" \
+	&& echo "(9.1) ASF FreeRTOSConfig.h: Static allocation enabled" \
+	&& $(SED) -i 's|#define INCLUDE_uxTaskGetStackHighWaterMark 0|#define INCLUDE_uxTaskGetStackHighWaterMark 1|' ./ASF/config/FreeRTOSConfig.h \
+	&& echo "(9.2) ASF FreeRTOSConfig.h: Task stack high watermark function enabled" \
+	&& $(SED) -i 's|#define configCHECK_FOR_STACK_OVERFLOW 1|#define configCHECK_FOR_STACK_OVERFLOW 2|' ./ASF/config/FreeRTOSConfig.h \
+	&& echo "(9.3) ASF FreeRTOSConfig.h: Task stack overflow checking upgraded to type 2 (higher accuracy)" \
 	&& echo " --- Finished Integrating ASF --- "
 
 

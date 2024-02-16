@@ -1,13 +1,11 @@
 #include "heartbeat_task.h"
 #include "SEGGER_RTT_printf.h"
 
-StackType_t heartbeatTaskStack[HEARTBEAT_TASK_STACK_SIZE];
-StaticTask_t heartbeatTaskTCB;
+struct heartbeatTaskMemory heartbeatMem;
 
 void heartbeat_main(void *pvParameters) {
     printf("Heartbeat Task Started!\r\n");
     //NOTE: false is on for some reason on the orange LEDs
-
 
     //In release build, make sure orange LEDs are off
     #if defined(RELEASE)
