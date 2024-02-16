@@ -51,7 +51,7 @@ int main(void)
             if (heartbeatTaskHandle == NULL) {
                 printf("Heartbeat Task Creation Failed!\r\n");
             } else {
-                printf("Heartbeat Task Created! (Handle: %p)\r\n", heartbeatTaskHandle);
+                printf("Heartbeat Task Created!\r\n");
             }
             
             // Starts the scheduler: this function never returns, since control is transferred to the RTOS scheduler and tasks begin to run.
