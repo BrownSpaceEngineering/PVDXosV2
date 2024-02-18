@@ -28,4 +28,4 @@ int watchdog_checkin(task_type_t task_index);
 int watchdog_register_task(task_type_t task_index);
 int watchdog_unregister_task(task_type_t task_index);
 
-#endif
+#endif // WATCHDOG_TASK_H
