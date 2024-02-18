@@ -21,6 +21,7 @@ export OBJS := \
 ../src/misc/printf/SEGGER_RTT_printf.o \
 ../src/misc/rtos_support/rtos_static_memory.o \
 ../src/misc/rtos_support/rtos_stack_overflow.o \
+../test/test_tests.o \
 
 
 
@@ -33,6 +34,7 @@ export EXTRA_VPATH := \
 ../../src/misc/printf \
 ../../src/misc/rtos_support \
 ../../src/tasks/heartbeat \
+../../test/ \
 
 
 ###############################################################################
@@ -64,7 +66,7 @@ endif
 CFLAGS_POSITIVE := -Wextra -Werror -Wshadow #-Wall is already included in the ASF makefile
 CFLAGS_NEGATIVE := -Wno-unused-parameter #Because some ASF functions have unused parameters, supress this warning
 CFLAGS_DEV := -DDEVBUILD
-CFLAGS_UNITTEST := -DUNITTEST
+CFLAGS_UNITTEST := -DUNITTEST -DUNITY_EXCLUDE_STDINT_H -DUNITY_EXCLUDE_LIMITS_H -DUNITY_EXCLUDE_DOUBLE
 CFLAGS_RELEASE := -DRELEASE
 CFLAGS := $(CFLAGS_POSITIVE) $(CFLAGS_NEGATIVE)
 

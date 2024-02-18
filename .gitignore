@@ -1,5 +1,6 @@
 #IDE Junk
 .vscode
+*.json
 
 # Object files
 *.o
