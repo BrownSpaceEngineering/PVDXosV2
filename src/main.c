@@ -7,6 +7,7 @@
 #include "globals.h"
 #include "heartbeat_task.h"
 #include "rtos_start.h"
+#include "cosmicmonkey_task.h"
 
 /*
 Compilation guards to make sure that compilation is being done with the correct flags and correct compiler versions
@@ -53,7 +54,14 @@ int main(void)
             } else {
                 printf("Heartbeat Task Created!\r\n");
             }
-            
+
+            TaskHandle_t cosmicMonkeyTaskHandle =
+                xTaskCreateStatic(cosmicmonkey_main, "CosmicMonkey", COSMICMONKEY_TASK_STACK_SIZE, NULL, 1, cosmicmonkeyMem.cosmicmonkeyTaskStack, &cosmicmonkeyMem.cosmicmonkeyTaskTCB);
+            if (cosmicMonkeyTaskHandle == NULL) {
+                printf("Cosmic Monkey Task Creation Failed!\r\n");
+            } else {
+                printf("Cosmic Monkey Task Created!\r\n");
+            }
             // Starts the scheduler: this function never returns, since control is transferred to the RTOS scheduler and tasks begin to run.
             vTaskStartScheduler();
             printf("vTaskStartScheduler Returned: WE SHOULD NEVER GET HERE!\r\n");

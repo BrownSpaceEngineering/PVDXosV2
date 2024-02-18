@@ -21,6 +21,7 @@ export OBJS := \
 ../src/misc/printf/SEGGER_RTT_printf.o \
 ../src/misc/rtos_support/rtos_static_memory.o \
 ../src/misc/rtos_support/rtos_stack_overflow.o \
+../src/tasks/cosmic_monkey/cosmicmonkey_main.o \
 
 
 
@@ -33,6 +34,7 @@ export EXTRA_VPATH := \
 ../../src/misc/printf \
 ../../src/misc/rtos_support \
 ../../src/tasks/heartbeat \
+../../src/tasks/cosmic_monkey \
 
 
 ###############################################################################
