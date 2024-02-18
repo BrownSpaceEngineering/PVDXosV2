@@ -1,13 +1,18 @@
-#include <atmel_start.h>
-#include <driver_init.h>
-#include <hal_adc_sync.h>
-#include <string.h>
+// #include <atmel_start.h>
+// #include <driver_init.h>
+// #include <hal_adc_sync.h>
+// #include <string.h>
 
+// #include "SEGGER_RTT_printf.h"
+// #include "globals.h"
+// #include "heartbeat_task.h"
+// #include "rtos_start.h"
+
+#include "SEGGER_RTT.h"
+
+#ifdef UNITTEST
 #include "../test/test_tests.h"
-#include "SEGGER_RTT_printf.h"
-#include "globals.h"
-#include "heartbeat_task.h"
-#include "rtos_start.h"
+#endif
 
 /*
 Compilation guards to make sure that compilation is being done with the correct
@@ -58,7 +63,12 @@ int main(void) {
         printf("Heartbeat Task Created!\r\n");
     }
 
+    // unit testing block; put all unit testing functions here
+#ifdef UNITTEST
+
     run_core_tests();
+
+#endif
 
     // Starts the scheduler: this function never returns, since control is
     // transferred to the RTOS scheduler and tasks begin to run.
