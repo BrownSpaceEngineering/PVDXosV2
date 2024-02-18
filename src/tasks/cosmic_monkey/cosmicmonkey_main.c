@@ -1,6 +1,9 @@
 //#ifdef UNITTEST
+#include "cosmicmonkey_task.h"
 #include "atmel_start.h"
 #include "SEGGER_RTT_printf.h"
+
+struct cosmicmonkeyTaskMemory cosmicmonkeyMem;
 
 int FREQUENCY = 10;
 

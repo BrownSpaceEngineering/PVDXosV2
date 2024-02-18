@@ -1,3 +1,8 @@
+#include <atmel_start.h>
+#include <driver_init.h>
+#include "globals.h"
+#include "rtos_start.h"
+
 void perform_flip();
 void cosmicmonkey_main(void *pvParameters);
 #define COSMICMONKEY_TASK_STACK_SIZE 128
