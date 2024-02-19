@@ -20,9 +20,6 @@ void watchdog_init(uint8_t watchdog_period, bool always_on) {
         should_checkin[i] = false;
     }
 
-    // Make sure that critical tasks are always supposed to check in
-    should_checkin[WATCHDOG_TASK] = true;
-
     // Disable the watchdog before configuring
     watchdog_disable(watchdog_p);
 
