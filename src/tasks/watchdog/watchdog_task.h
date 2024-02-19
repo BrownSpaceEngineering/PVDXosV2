@@ -3,6 +3,7 @@
 
 #include "globals.h"
 #include "atmel_start.h"
+#include "SEGGER_RTT_printf.h"
 
 #define WATCHDOG_MS_DELAY 1000
 
@@ -11,13 +12,14 @@
 // tasks are registered.
 static uint32_t allowed_times[NUM_TASKS] = {1000, 1000};
 
-static volatile Wdt *watchdog = WDT;
+static volatile Wdt *watchdog_p = WDT;
+static struct wdt_descriptor *watchdog_descriptor_p = &WDT_0;
 static uint32_t running_times[NUM_TASKS];
 static bool should_checkin[NUM_TASKS];
 static bool watchdog_enabled = false;
 
 // Initializes the memory for all the watchdog lists (i.e. for tasks to check in) and starts the watchdog timer
-void watchdog_init(int watchdog_period, bool always_on);
+void watchdog_init(uint8_t watchdog_period, bool always_on);
 void watchdog_main(void *pvParameters);
 void watchdog_early_warning_callback(void);
 void watchdog_pet(void);
