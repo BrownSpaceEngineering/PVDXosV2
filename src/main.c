@@ -11,28 +11,27 @@ int main(void)
 {
     /* Initializes MCU, drivers and middleware */
     atmel_start_init();
-    printf("ATMEL Initialization Complete!\n");
+    printf("main: ATMEL initialization complete!\n");
 
     // Initialize watchdog
     watchdog_init(WDT_CONFIG_PER_CYC16384, true);
 
     // Create tasks
-    // xTaskCreateStatic(main_func, "Task Name", Stack Size, Parameters, Priority, Task Handle, Task Buffer, Task Control Block);
 
     // Create heartbeat task
     BaseType_t heartbeatCreateStatus = xTaskCreate(heartbeat_main, "Heartbeat", 1000, NULL, 1, NULL);
     if (heartbeatCreateStatus != pdPASS) {
-        printf("Heartbeat Task Creation Failed!\n");
+        printf("main: Heartbeat task creation failed!\n");
     } else {
-        printf("Heartbeat Task Created!\n");
+        printf("main: Heartbeat task created!\n");
     }
 
     // Create watchdog task
     BaseType_t watchdogCreateStatus = xTaskCreate(watchdog_main, "Watchdog", 1000, NULL, 1, NULL);
     if (watchdogCreateStatus != pdPASS) {
-        printf("Watchdog Task Creation Failed!\n");
+        printf("main: Watchdog task creation failed!\n");
     } else {
-        printf("Watchdog Task Created!\n");
+        printf("main: Watchdog task created!\n");
     }
 
     // Register tasks with the watchdog
@@ -42,6 +41,6 @@ int main(void)
     // Start the scheduler
     vTaskStartScheduler();
 
-    printf("Work completed -- Looping forever\n");
+    printf("main: Work completed -- looping forever\n");
     while (true);
 }

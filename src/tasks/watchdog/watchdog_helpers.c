@@ -2,8 +2,8 @@
 
 // If the difference between the current time and the time in the running_times array is greater than the allowed time,
 // then the task has not checked in and the watchdog should reset the system. Refer to "globals.h" to see the order in which
-// tasks are registered.
-uint32_t allowed_times[NUM_TASKS] = {1000, 1000};
+// tasks are registered. 
+uint32_t allowed_times[NUM_TASKS] = {1500, 1000}; // Units are in milliseconds
 
 volatile Wdt *const watchdog_p = WDT;
 uint32_t running_times[NUM_TASKS];
@@ -39,24 +39,24 @@ void watchdog_init(uint8_t watchdog_period, bool always_on) {
     NVIC_EnableIRQ(WDT_IRQn); // Enable the WDT_IRQn interrupt
     NVIC_SetVector(WDT_IRQn, (uint32_t)(&WDT_Handler)); // When the WDT_IRQn interrupt is triggered, call the WDT_Handler function
 
-    printf("Watchdog: Initialized\n");
+    printf("watchdog: Initialized\n");
 }
 
 void WDT_Handler(void) {
-    printf("Watchdog: WDT_Handler executed\n");
+    printf("watchdog: WDT_Handler executed\n");
 
     // Check if the early warning interrupt is triggered
     if (watchdog_get_early_warning_bit(watchdog_p)) {
-        printf("Watchdog: Early warning interrupt detected\n");
+        printf("watchdog: Early warning interrupt detected\n");
         watchdog_clear_early_warning_bit(watchdog_p); // Clear the early warning interrupt flag
         watchdog_early_warning_callback(); // Call the early warning callback function
     }
 }
 
 void watchdog_early_warning_callback(void) {
-    printf("Watchdog: Early warning callback executed\n");
+    printf("watchdog: Early warning callback executed\n");
     // This function gets called when the watchdog is almost out of time
-    // TODO Test if this works
+    // TODO: Test if this works
     // This is also fine to leave blank
     gpio_set_pin_level(LED_Orange1, false);
     vTaskDelay(pdMS_TO_TICKS(100));
@@ -73,12 +73,12 @@ void watchdog_early_warning_callback(void) {
 }
 
 void watchdog_pet(void) {
-    printf("Watchdog: Petted\n");
+    printf("watchdog: Petted\n");
     watchdog_feed(watchdog_p);
 }
 
 void watchdog_kick(void) {
-    printf("Watchdog: Kicked\n");
+    printf("watchdog: Kicked\n");
     watchdog_set_clear_register(watchdog_p, 0x12); // set intentionally wrong clear key, so the watchdog will reset the system
     // this function should never return because the system should reset
 }
@@ -96,7 +96,7 @@ int watchdog_checkin(task_type_t task_index) {
 
     // add the current time to the running times array
     running_times[task_index] = xTaskGetTickCount();
-    printf("Watchdog: Task %d checked in\n", task_index);
+    printf("watchdog: Task %d checked in\n", task_index);
     return 0;
 }
 
@@ -114,7 +114,7 @@ int watchdog_register_task(task_type_t task_index) {
     // initialize running times and require the task to check in
     running_times[task_index] = xTaskGetTickCount();
     should_checkin[task_index] = true;
-    printf("Watchdog: Task %d registered\n", task_index);
+    printf("watchdog: Task %d registered\n", task_index);
     return 0;
 }
 
@@ -131,6 +131,6 @@ int watchdog_unregister_task(task_type_t task_index) {
 
     running_times[task_index] = 0xDEADBEEF; // 0xDEADBEEF is a special value that indicates that the task is not running
     should_checkin[task_index] = false;
-    printf("Watchdog: Task %d unregistered\n", task_index);
+    printf("watchdog: Task %d unregistered\n", task_index);
     return 0;
 }

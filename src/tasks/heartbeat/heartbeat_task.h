@@ -3,8 +3,9 @@
 
 #include <atmel_start.h>
 #include <driver_init.h>
-
 #include "rtos_start.h"
+#include "globals.h"
+#include "watchdog_task.h"
 
 void heartbeat_main(void *pvParameters);
 
