@@ -7,7 +7,7 @@
 1. **Start the SEGGER GDB Server:**
 
    - run `JLinkGDBServer` from the SEGGER folder containing all the J-Link tools.
-   - Before clicking 'OK', make sure the target is set to `SAMD51P20A`, and the interface is set to `SWD`
+   - Before clicking 'OK', make sure the target is set to `ATSAMD51P20A`, and the interface is set to `SWD`
    - WINDOWS/WSL ONLY: The "Localhost Only" checkbox must be unchecked.
    - Ensure the J-Link server is on port 2331 for GDB connections.
 
