@@ -65,16 +65,19 @@ void watchdog_early_warning_callback(void) {
 }
 
 void watchdog_pet(void) {
+    printf("Petting the watchdog\n");
     wdt_feed(watchdog_descriptor_p);
 }
 
 void watchdog_kick(void) {
+    printf("Kicking the watchdog\n");
     hri_wdt_write_CLEAR_reg(watchdog_p, 0x12); // set intentionally wrong clear key, so the watchdog will reset the system
     // this function should never return because the system should reset
 }
 
-// If I am a battery task, I call this function: `watchdog_check_in(BATTERY_TASK)`
+// If I am a battery task, I call this function: `watchdog_checkin(BATTERY_TASK)`
 int watchdog_checkin(task_type_t task_index) {
+    // sanity checks
     if (task_index < 0 || task_index >= NUM_TASKS) {
         return -1;
     }
@@ -83,11 +86,13 @@ int watchdog_checkin(task_type_t task_index) {
         return -1;
     }
 
+    // add the current time to the running times array
     running_times[task_index] = xTaskGetTickCount();
     return 0;
 }
 
 int watchdog_register_task(task_type_t task_index) {
+    // sanity checks
     if (task_index < 0 || task_index >= NUM_TASKS) {
         return -1;
     }
@@ -97,6 +102,7 @@ int watchdog_register_task(task_type_t task_index) {
         watchdog_kick();
     }
 
+    // initialize running times and require the task to check in
     running_times[task_index] = xTaskGetTickCount();
     should_checkin[task_index] = true;
     return 0;
