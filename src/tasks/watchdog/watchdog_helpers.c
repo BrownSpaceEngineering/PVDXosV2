@@ -17,7 +17,7 @@ void watchdog_init(uint8_t watchdog_period, bool always_on) {
     wdt_disable(watchdog_descriptor_p);
 
     // Configure the watchdog
-    uint8_t watchdog_earlywarning_period = watchdog_period - 1; // Early warning will trigger halfway through the watchdog period
+    uint8_t watchdog_earlywarning_period = watchdog_period - 1; // Each increment of 1 doubles the period (see ASF/samd51a/include/component/wdt.h)
     hri_wdt_set_EWCTRL_EWOFFSET_bf(watchdog_p, watchdog_earlywarning_period); // Early warning will trigger halfway through the watchdog period
     hri_wdt_set_INTEN_EW_bit(watchdog_p); // Enable early warning interrupt
     hri_wdt_write_CONFIG_PER_bf(watchdog_p, watchdog_period); // Set the watchdog period
@@ -25,8 +25,9 @@ void watchdog_init(uint8_t watchdog_period, bool always_on) {
 
     // Enable the watchdog
     wdt_enable(watchdog_descriptor_p);
-
     watchdog_enabled = true;
+
+    // Configure the watchdog early warning interrupt
     NVIC_SetPriority(WDT_IRQn, 3); // Set the interrupt priority
     NVIC_EnableIRQ(WDT_IRQn); // Enable the WDT_IRQn interrupt
     NVIC_SetVector(WDT_IRQn, (uint32_t)(&WDT_Handler)); // When the WDT_IRQn interrupt is triggered, call the WDT_Handler function
