@@ -33,6 +33,7 @@ export EXTRA_VPATH := \
 ../../src/tasks/watchdog \
 ../../src/misc \
 ../../src/misc/printf \
+../../src/misc/hardware_watchdog_utils \
 
 
 ###############################################################################
