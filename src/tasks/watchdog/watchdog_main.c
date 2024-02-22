@@ -1,5 +1,7 @@
 #include "watchdog_task.h"
 
+struct watchdogTaskMemory watchdogMem;
+
 void watchdog_main(void *pvParameters) {
     printf("watchdog: Task started!\n");
 
