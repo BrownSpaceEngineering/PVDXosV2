@@ -1,5 +1,7 @@
 #ifdef UNITTEST
 
+#include "../src/misc/printf/SEGGER_RTT_printf.h"
+#include "unity.h"
 /* ==========================================
     Unity Project - A Test Framework for C
     Copyright (c) 2007-21 Mike Karlesky, Mark VanderVoord, Greg Williams
@@ -28,8 +30,6 @@
 #ifdef UNITY_INCLUDE_PRINT_FORMATTED
 #include <stdarg.h>
 #endif
-
-#include "SEGGER_RTT_printf.h"
 
 /* Unity Attempts to Auto-Detect Integer Types
  * Attempt 1: UINT_MAX, ULONG_MAX in <limits.h>, or default to 32 bits
@@ -549,7 +549,7 @@ struct UNITY_STORAGE_T {
 #endif
 };
 
-extern struct UNITY_STORAGE_T Unity;
+struct UNITY_STORAGE_T Unity;
 
 /*-------------------------------------------------------
  * Test Suite Management

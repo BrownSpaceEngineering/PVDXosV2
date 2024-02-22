@@ -66,7 +66,7 @@ endif
 CFLAGS_POSITIVE := -Wextra -Werror -Wshadow #-Wall is already included in the ASF makefile
 CFLAGS_NEGATIVE := -Wno-unused-parameter #Because some ASF functions have unused parameters, supress this warning
 CFLAGS_DEV := -DDEVBUILD
-CFLAGS_UNITTEST := -DUNITTEST -DUNITY_EXCLUDE_STDINT_H -DUNITY_EXCLUDE_LIMITS_H -DUNITY_EXCLUDE_DOUBLE
+CFLAGS_UNITTEST := -DUNITTEST -DUNITY_INCLUDE_CONFIG_H
 CFLAGS_RELEASE := -DRELEASE
 CFLAGS := $(CFLAGS_POSITIVE) $(CFLAGS_NEGATIVE)
 

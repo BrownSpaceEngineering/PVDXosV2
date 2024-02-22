@@ -1,5 +1,6 @@
 #ifdef UNITTEST
 
+#include "globals.h"
 /* =========================================================================
     Unity Project - A Test Framework for C
     Copyright (c) 2007-21 Mike Karlesky, Mark VanderVoord, Greg Williams
@@ -38,7 +39,8 @@ void UNITY_OUTPUT_CHAR(int);
         }                                                          \
     } while (0)
 
-struct UNITY_STORAGE_T Unity;
+// struct UNITY_STORAGE_T Unity;
+extern struct UNITY_STORAGE_T Unity;
 
 #ifdef UNITY_OUTPUT_COLOR
 const char UNITY_PROGMEM UnityStrOk[] = "\033[42mOK\033[0m";

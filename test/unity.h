@@ -1,5 +1,7 @@
 #ifdef UNITTEST
 
+#include "globals.h"
+
 /* ==========================================
     Unity Project - A Test Framework for C
     Copyright (c) 2007-21 Mike Karlesky, Mark VanderVoord, Greg Williams
@@ -21,6 +23,7 @@
 extern "C" {
 #endif
 
+// #include "unity.c"
 #include "unity_internals.h"
 
 /*-------------------------------------------------------

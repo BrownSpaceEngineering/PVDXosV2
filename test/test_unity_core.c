@@ -10,6 +10,8 @@
 #define TEST_INSTANCES
 #include "self_assessment_utils.h"
 
+extern struct UNITY_STORAGE_T Unity;
+
 static int SetToOneToFailInTearDown;
 static int SetToOneMeanWeAlreadyCheckedThisGuy;
 

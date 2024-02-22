@@ -108,7 +108,6 @@ char global_rtt_out_pbuffer[SEGGER_RTT_PRINTF_BUFFER_SIZE];
 
 SEGGER_RTT_PRINTF_DESC global_rtt_out = {
     global_rtt_out_pbuffer, SEGGER_RTT_PRINTF_BUFFER_SIZE, 0u, 0, 0};
-
 /*********************************************************************
  *
  *       _StoreChar
@@ -544,6 +543,17 @@ int SEGGER_RTT_printf(unsigned BufferIndex, const char *sFormat, ...) {
     va_start(ParamList, sFormat);
     r = SEGGER_RTT_vprintf(BufferIndex, sFormat, &ParamList);
     va_end(ParamList);
+    return r;
+}
+
+int printf(const char *sFormat, ...) {
+    int r;
+    va_list ParamList;
+
+    va_start(ParamList, sFormat);
+    r = SEGGER_RTT_printf(0, sFormat, &ParamList);
+    va_end(ParamList);
+
     return r;
 }
 /*************************** End of file ****************************/
