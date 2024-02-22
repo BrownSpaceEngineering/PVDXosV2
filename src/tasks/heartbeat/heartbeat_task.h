@@ -1,5 +1,5 @@
-#ifndef HEARTBEAT_TASK_H_
-#define HEARTBEAT_TASK_H_
+#ifndef HEARTBEAT_TASK_H
+#define HEARTBEAT_TASK_H
 
 #include <atmel_start.h>
 #include <driver_init.h>
@@ -22,4 +22,4 @@ extern struct heartbeatTaskMemory heartbeatMem;
 
 void heartbeat_main(void *pvParameters);
 
-#endif // HEARTBEAT_TASK_H_
+#endif // HEARTBEAT_TASK_H
