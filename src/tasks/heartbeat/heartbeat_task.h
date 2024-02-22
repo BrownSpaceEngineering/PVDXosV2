@@ -5,6 +5,7 @@
 #include <driver_init.h>
 #include "globals.h"
 #include "rtos_start.h"
+#include "watchdog_task.h"
 
 //Memory for the heartbeat task
 #define HEARTBEAT_TASK_STACK_SIZE 128 // Size of the stack in words (multiply by 4 to get bytes)
