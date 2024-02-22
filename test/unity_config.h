@@ -1,0 +1,10 @@
+#include "../src/misc/printf/SEGGER_RTT_printf.h"
+
+#define UNITY_EXCLUDE_STDINT_H
+#define UNITY_EXCLUDE_LIMITS_H
+#define UNITY_EXCLUDE_DOUBLE
+#define UNITY_EXCLUDE_SETJMP_H
+#define UNITY_EXCLUDE_MATH_H
+#define UNITY_EXCLUDE_STDDEF_H
+#define UNITY_EXCLUDE_PRINT_FORMATTED
+#define UNITY_OUTPUT_CHAR(a) (void)RTT_putchar(a)
