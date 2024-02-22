@@ -6,6 +6,7 @@
 #include "SEGGER_RTT_printf.h"
 #include "globals.h"
 #include "heartbeat_task.h"
+#include "watchdog_task.h"
 #include "rtos_start.h"
 
 /*

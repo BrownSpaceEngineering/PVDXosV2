@@ -5,8 +5,22 @@
 #include "atmel_start.h"
 #include "hardware_watchdog_utils.h"
 #include "SEGGER_RTT_printf.h"
+#include "rtos_start.h"
 
 #define WATCHDOG_MS_DELAY 1000
+
+// Memory for the watchdog task
+#define WATCHDOG_TASK_STACK_SIZE 128 // Size of the stack in words (multiply by 4 to get bytes)
+
+// Placed in a struct to ensure that the TCB is placed higher than the stack in memory
+// ^ This ensures that stack overflows do not corrupt the TCB (since the stack grows downwards)
+struct watchdogTaskMemory {
+    StackType_t OverflowBuffer[TASK_STACK_OVERFLOW_PADDING];
+    StackType_t watchdogTaskStack[WATCHDOG_TASK_STACK_SIZE];
+    StaticTask_t watchdogTaskTCB;
+};
+
+extern struct watchdogTaskMemory watchdogMem;
 
 // If the difference between the current time and the time in the running_times array is greater than the allowed time,
 // then the task has not checked in and the watchdog should reset the system. Refer to "globals.h" to see the order in which

@@ -7,7 +7,7 @@
 #include "rtos_start.h"
 
 //Memory for the heartbeat task
-#define HEARTBEAT_TASK_STACK_SIZE 128 //Size of the stack in words (multiply by 4 to get bytes)
+#define HEARTBEAT_TASK_STACK_SIZE 128 // Size of the stack in words (multiply by 4 to get bytes)
 
 //Placed in a struct to ensure that the TCB is placed higher than the stack in memory
 //^ This ensures that stack overflows do not corrupt the TCB (since the stack grows downwards)
