@@ -1,3 +1,6 @@
+#ifndef COSMICMONKEY_TASK_H_
+#define COSMICMONKEY_TASK_H_
+
 #include <atmel_start.h>
 #include <driver_init.h>
 #include "globals.h"
@@ -13,3 +16,11 @@ struct cosmicmonkeyTaskMemory {
     StaticTask_t cosmicmonkeyTaskTCB;
 };
 extern struct cosmicmonkeyTaskMemory cosmicmonkeyMem;
+
+struct cosmicmonkeyTaskArguments {
+    int frequency;
+};
+extern struct cosmicmonkeyTaskArguments cosmicmonkeyTaskArgs;
+
+
+#endif
