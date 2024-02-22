@@ -31,3 +31,6 @@ tags
 *.atsln
 *.atzip
 ASF/gcc/*
+
+#MacOS DS_Store
+**/.DS_Store
