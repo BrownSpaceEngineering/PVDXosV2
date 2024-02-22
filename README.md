@@ -17,10 +17,8 @@
 
 3. **Connect and Run:**
    - Use `make connect` to connect to the board and auto-flash/run the program.
-
-#### Compatability with Atmel Studio would be nice, but is not set up at the moment. (Any volunteers?)
-
----
+   - The code will automatically pause at the top of the 'main' function. Set any breakpoints you need, and then continue running the program with 'c'
+   - To see output from printf statements, connect to localhost:19021 using Telnet. (You can use PuTTY for this on Windows, or `nc localhost 19021` to listen with netcat on a Mac/Linux terminal)
 
 ## Toolchain Installation
 
@@ -41,8 +39,9 @@
 
    - `sudo apt install gcc-arm-none-eabi`
 
-4. Install GDB Multiarch:
+4. Install GDB Multiarch and other build tools:
    - `sudo apt install gdb-multiarch`
+   - `sudo apt install build-essential`
 
 ### Mac/Linux (Geared towards Mac)
 

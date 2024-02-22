@@ -1,46 +1,83 @@
 #include <atmel_start.h>
 #include <driver_init.h>
 #include <hal_adc_sync.h>
+#include <string.h>
 
 #include "SEGGER_RTT_printf.h"
-#include "rtos_start.h"
+#include "globals.h"
 #include "heartbeat_task.h"
-#include "watchdog_task.h"
+#include "rtos_start.h"
+
+/*
+Compilation guards to make sure that compilation is being done with the correct flags and correct compiler versions
+If you want to get rid of the red squiggly lines:
+- set C standard to GNU99 in the C/C++ extension settings
+- Add "-DDEVBUILD" to the IntelliSense settings as a compiler argument
+*/
+
+//Check GNU 99 standard
+#if __STDC_VERSION__ != 199901L
+    #error "This program needs to be compiled with the GNU99 Standard"
+#endif
+
+//Check that at least one of {DEVBUILD, UNITTEST, RELEASE} is defined
+#if !defined(DEVBUILD) && !defined(UNITTEST) && !defined(RELEASE)
+    #error "Build type flag not set! Must be one of: {DEVBUILD, UNITTEST, RELEASE}"
+#endif
+//Check that at most one of {DEVBUILD, UNITTEST, RELEASE} is defined
+#if defined(DEVBUILD) && defined(UNITTEST)
+    #error "Multiple build type flags set! (DEVBUILD && UNITTEST) Must be exactly one of: {DEVBUILD, UNITTEST, RELEASE}"
+#endif
+#if defined(DEVBUILD) && defined(RELEASE)
+    #error "Multiple build type flags set! (DEVBUILD && RELEASE) Must be exactly one of: {DEVBUILD, UNITTEST, RELEASE}"
+#endif
+#if defined(UNITTEST) && defined(RELEASE)
+    #error "Multiple build type flags set! (UNITTEST && RELEASE) Must be exactly one of: {DEVBUILD, UNITTEST, RELEASE}"
+#endif
+
 
 int main(void)
 {
-    /* Initializes MCU, drivers and middleware */
-    atmel_start_init();
-    printf("main: ATMEL initialization complete!\n");
+            /* Initializes MCU, drivers and middleware */
+            atmel_start_init();
+            printf("--- ATMEL Initialization Complete ---\r\n");
 
-    // Initialize watchdog
-    watchdog_init(WDT_CONFIG_PER_CYC16384, true);
+            // Initialize the watchdog as early as possible to ensure that the system is reset if the initialization hangs
+            watchdog_init(WDT_CONFIG_PER_CYC16384, true);
 
-    // Create tasks
+            //xTaskCreateStatic(main_func, "TaskName", StackSize, pvParameters, Priority, StackBuffer, TaskTCB);
 
-    // Create heartbeat task
-    BaseType_t heartbeatCreateStatus = xTaskCreate(heartbeat_main, "Heartbeat", 1000, NULL, 1, NULL);
-    if (heartbeatCreateStatus != pdPASS) {
-        printf("main: Heartbeat task creation failed!\n");
-    } else {
-        printf("main: Heartbeat task created!\n");
-    }
+            //Create the heartbeat task
+            //The heartbeat task is a simple task that blinks the LEDs in a pattern to indicate that the system is running
+            TaskHandle_t heartbeatTaskHandle = xTaskCreateStatic(
+                heartbeat_main, "Heartbeat", HEARTBEAT_TASK_STACK_SIZE, NULL, 1, heartbeatMem.heartbeatTaskStack, &heartbeatMem.heartbeatTaskTCB
+            );
 
-    // Create watchdog task
-    BaseType_t watchdogCreateStatus = xTaskCreate(watchdog_main, "Watchdog", 1000, NULL, 1, NULL);
-    if (watchdogCreateStatus != pdPASS) {
-        printf("main: Watchdog task creation failed!\n");
-    } else {
-        printf("main: Watchdog task created!\n");
-    }
+            if (heartbeatTaskHandle == NULL) {
+                printf("main: Heartbeat task creation failed!\n");
+            } else {
+                printf("main: Heartbeat task created!\n");
+            }
+            
+            // Create watchdog task
+            // The watchdog task is responsible for checking in with all the other tasks and resetting the system if a task has not checked in within the allowed time
+            TaskHandle_t watchdogTaskHandle = xTaskCreateStatic(
+                watchdog_main, "Watchdog", WATCHDOG_TASK_STACK_SIZE, NULL, 2, watchdogMem.watchdogTaskStack, &watchdogMem.watchdogTaskTCB
+            );
 
-    // Register tasks with the watchdog
-    watchdog_register_task(WATCHDOG_TASK);
-    watchdog_register_task(HEARTBEAT_TASK);
+            if (watchdogTaskHandle == NULL) {
+                printf("main: Watchdog task creation failed!\n");
+            } else {
+                printf("main: Watchdog task created!\n");
+            }
 
-    // Start the scheduler
-    vTaskStartScheduler();
+            // Register tasks with the watchdog
+            watchdog_register_task(WATCHDOG_TASK);
+            watchdog_register_task(HEARTBEAT_TASK);
 
-    printf("main: Work completed -- looping forever\n");
-    while (true);
-}
+            // Start the scheduler
+            vTaskStartScheduler();
+
+            printf("main: Work completed -- looping forever\n");
+            while (true);
+        }
