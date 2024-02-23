@@ -20,7 +20,6 @@ extern struct cosmicmonkeyTaskMemory cosmicmonkeyMem;
 struct cosmicmonkeyTaskArguments {
     int frequency;
 };
-extern struct cosmicmonkeyTaskArguments cosmicmonkeyTaskArgs;
 
 
 #endif
