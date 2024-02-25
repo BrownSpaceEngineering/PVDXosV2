@@ -1,7 +1,7 @@
 #include "logging.h"
-#include "SEGGER_RTT_printf.h"
 #include <stdlib.h>
 #include <stdarg.h>
+#include "SEGGER_RTT.h"
 void fatal(const char* string,...){
     va_list args;
     va_start(args, string);

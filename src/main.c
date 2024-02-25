@@ -4,7 +4,6 @@
 #include <string.h>
 
 #include "logging.h"
-#include "SEGGER_RTT_printf.h"
 #include "globals.h"
 #include "heartbeat_task.h"
 #include "rtos_start.h"
@@ -41,9 +40,7 @@ int main(void)
 {
             /* Initializes MCU, drivers and middleware */
             atmel_start_init();
-            printf("--- ATMEL Initialization Complete ---\r\n");
-            info("Info Test\n");
-
+            info("--- ATMEL Initialization Complete ---\r\n");
             //Create the heartbeat task
             //The heartbeat task is a simple task that blinks the LEDs in a pattern to indicate that the system is running
             //xTaskCreateStatic(main_func, "TaskName", StackSize, pvParameters, Priority, StackBuffer, TaskTCB);
@@ -51,14 +48,14 @@ int main(void)
                 xTaskCreateStatic(heartbeat_main, "Heartbeat", HEARTBEAT_TASK_STACK_SIZE, NULL, 1,
                                   heartbeatMem.heartbeatTaskStack, &heartbeatMem.heartbeatTaskTCB);
             if (heartbeatTaskHandle == NULL) {
-                printf("Heartbeat Task Creation Failed!\r\n");
+                warning("Heartbeat Task Creation Failed!\r\n");//could be fatal
             } else {
-                printf("Heartbeat Task Created!\r\n");
+                info("Heartbeat Task Created!\r\n");
             }
             
             // Starts the scheduler: this function never returns, since control is transferred to the RTOS scheduler and tasks begin to run.
             vTaskStartScheduler();
-            printf("vTaskStartScheduler Returned: WE SHOULD NEVER GET HERE!\r\n");
+            fatal("vTaskStartScheduler Returned: WE SHOULD NEVER GET HERE!\r\n");
             while (1) {
                 //Should never get here anyways
             }
