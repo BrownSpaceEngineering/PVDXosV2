@@ -7,7 +7,7 @@
 1. **Start the SEGGER GDB Server:**
 
    - run `JLinkGDBServer` from the SEGGER folder containing all the J-Link tools.
-   - Before clicking 'OK', make sure the target is set to `SAMD51P20A`, and the interface is set to `SWD`
+   - Before clicking 'OK', make sure the target is set to `ATSAMD51P20A`, and the interface is set to `SWD`
    - WINDOWS/WSL ONLY: The "Localhost Only" checkbox must be unchecked.
    - Ensure the J-Link server is on port 2331 for GDB connections.
 
@@ -18,8 +18,7 @@
 3. **Connect and Run:**
    - Use `make connect` to connect to the board and auto-flash/run the program.
    - The code will automatically pause at the top of the 'main' function. Set any breakpoints you need, and then continue running the program with 'c'
-   - To see output from printf statements, connect to localhost:19021 using Telnet. (You can use PuTTY for this on Windows, or the built-in terminal command `telnet` on Mac/Linux)
-
+   - To see output from printf statements, connect to localhost:19021 using Telnet. (You can use PuTTY for this on Windows, or `nc localhost 19021` to listen with netcat on a Mac/Linux terminal)
 
 ## Toolchain Installation
 
