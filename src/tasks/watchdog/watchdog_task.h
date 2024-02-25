@@ -27,7 +27,7 @@ extern struct watchdogTaskMemory watchdogMem;
 // tasks are registered.
 extern uint32_t allowed_times[NUM_TASKS];
 
-extern volatile Wdt *const watchdog_p;
+extern volatile Wdt *const p_watchdog;
 extern uint32_t running_times[NUM_TASKS];
 extern bool should_checkin[NUM_TASKS];
 extern bool watchdog_enabled;

@@ -5,7 +5,7 @@
 // tasks are registered. 
 uint32_t allowed_times[NUM_TASKS] = {1500, 1000}; // Units are in milliseconds
 
-volatile Wdt *const watchdog_p = WDT;
+volatile Wdt *const p_watchdog = WDT;
 uint32_t running_times[NUM_TASKS];
 bool should_checkin[NUM_TASKS];
 bool watchdog_enabled = false;
@@ -21,17 +21,17 @@ void watchdog_init(uint8_t watchdog_period, bool always_on) {
     }
 
     // Disable the watchdog before configuring
-    watchdog_disable(watchdog_p);
+    watchdog_disable(p_watchdog);
 
     // Configure the watchdog (casting to (Wdt *) bypasses volatile qualifier warning)
     uint8_t watchdog_earlywarning_period = watchdog_period - 1; // Each increment of 1 doubles the period (see ASF/samd51a/include/component/wdt.h)
-    watchdog_set_early_warning_offset(watchdog_p, watchdog_earlywarning_period); // Early warning will trigger halfway through the watchdog period
-    watchdog_enable_early_warning(watchdog_p); // Enable early warning interrupt
-    watchdog_set_period(watchdog_p, watchdog_period); // Set the watchdog period
-    watchdog_wait_for_register_sync(watchdog_p, WDT_SYNCBUSY_ENABLE | WDT_SYNCBUSY_WEN); // Wait for register synchronization
+    watchdog_set_early_warning_offset(p_watchdog, watchdog_earlywarning_period); // Early warning will trigger halfway through the watchdog period
+    watchdog_enable_early_warning(p_watchdog); // Enable early warning interrupt
+    watchdog_set_period(p_watchdog, watchdog_period); // Set the watchdog period
+    watchdog_wait_for_register_sync(p_watchdog, WDT_SYNCBUSY_ENABLE | WDT_SYNCBUSY_WEN); // Wait for register synchronization
 
     // Enable the watchdog
-    watchdog_enable(watchdog_p);
+    watchdog_enable(p_watchdog);
     watchdog_enabled = true;
 
     // Configure the watchdog early warning interrupt
@@ -46,9 +46,9 @@ void WDT_Handler(void) {
     printf("watchdog: WDT_Handler executed\n");
 
     // Check if the early warning interrupt is triggered
-    if (watchdog_get_early_warning_bit(watchdog_p)) {
+    if (watchdog_get_early_warning_bit(p_watchdog)) {
         printf("watchdog: Early warning interrupt detected\n");
-        watchdog_clear_early_warning_bit(watchdog_p); // Clear the early warning interrupt flag
+        watchdog_clear_early_warning_bit(p_watchdog); // Clear the early warning interrupt flag
         watchdog_early_warning_callback(); // Call the early warning callback function
     }
 }
@@ -74,12 +74,12 @@ void watchdog_early_warning_callback(void) {
 
 void watchdog_pet(void) {
     printf("watchdog: Petted\n");
-    watchdog_feed(watchdog_p);
+    watchdog_feed(p_watchdog);
 }
 
 void watchdog_kick(void) {
     printf("watchdog: Kicked\n");
-    watchdog_set_clear_register(watchdog_p, 0x12); // set intentionally wrong clear key, so the watchdog will reset the system
+    watchdog_set_clear_register(p_watchdog, 0x12); // set intentionally wrong clear key, so the watchdog will reset the system
     // this function should never return because the system should reset
 }
 
