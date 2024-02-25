@@ -17,9 +17,9 @@ void perform_flip() {
     if (8 <= bit_position) {
         printf("Unexpected value for bit position");
     }
-    uint8_t byte_flip_mask = 1 << bit_position;
+    uint8_t byte_flip_mask = 1 << bit_position; // Generates the a mask of the form 0 ... 010 ... 0
 
-    char* addr = (char*) p_memory_addr;
+    char* addr = (char*) p_memory_addr; // Gets pointer to the byte that will be modified
 
     *addr = *addr ^ byte_flip_mask; // Apply the byte_mask with an XOR to the selected byte
 }
@@ -35,7 +35,7 @@ void cosmicmonkey_main(void *pvParameters) {
     while (1)
     {
         perform_flip();
-        int time_task = (1000 / args.frequency);
+        int time_task = (1000 / args.frequency); // Generates the time delay in milliseconds based on the frequency
         vTaskDelay(pdMS_TO_TICKS(time_task));
     }
 }
