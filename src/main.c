@@ -62,7 +62,6 @@ int main(void)
             #if defined(DEVBUILD)
                 cm_args.frequency = 5;
             #endif
-            printf("Freq: %d \r\n", cm_args.frequency);
 
             TaskHandle_t cosmicMonkeyTaskHandle =
                 xTaskCreateStatic(cosmicmonkey_main, "CosmicMonkey", COSMICMONKEY_TASK_STACK_SIZE, (void *) &cm_args, 1,
