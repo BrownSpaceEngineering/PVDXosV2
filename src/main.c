@@ -39,46 +39,46 @@ If you want to get rid of the red squiggly lines:
 
 int main(void)
 {
-            /* Initializes MCU, drivers and middleware */
-            atmel_start_init();
-            printf("--- ATMEL Initialization Complete ---\r\n");
+    /* Initializes MCU, drivers and middleware */
+    atmel_start_init();
+    printf("--- ATMEL Initialization Complete ---\r\n");
 
-            // Initialize the watchdog as early as possible to ensure that the system is reset if the initialization hangs
-            watchdog_init(WDT_CONFIG_PER_CYC16384, true);
+    // Initialize the watchdog as early as possible to ensure that the system is reset if the initialization hangs
+    watchdog_init(WDT_CONFIG_PER_CYC16384, true);
 
-            //xTaskCreateStatic(main_func, "TaskName", StackSize, pvParameters, Priority, StackBuffer, TaskTCB);
+    //xTaskCreateStatic(main_func, "TaskName", StackSize, pvParameters, Priority, StackBuffer, TaskTCB);
 
-            //Create the heartbeat task
-            //The heartbeat task is a simple task that blinks the LEDs in a pattern to indicate that the system is running
-            TaskHandle_t heartbeatTaskHandle = xTaskCreateStatic(
-                heartbeat_main, "Heartbeat", HEARTBEAT_TASK_STACK_SIZE, NULL, 1, heartbeatMem.heartbeatTaskStack, &heartbeatMem.heartbeatTaskTCB
-            );
+    //Create the heartbeat task
+    //The heartbeat task is a simple task that blinks the LEDs in a pattern to indicate that the system is running
+    TaskHandle_t heartbeatTaskHandle = xTaskCreateStatic(
+        heartbeat_main, "Heartbeat", HEARTBEAT_TASK_STACK_SIZE, NULL, 1, heartbeatMem.heartbeatTaskStack, &heartbeatMem.heartbeatTaskTCB
+    );
 
-            if (heartbeatTaskHandle == NULL) {
-                printf("main: Heartbeat task creation failed!\n");
-            } else {
-                printf("main: Heartbeat task created!\n");
-            }
-            
-            // Create watchdog task
-            // The watchdog task is responsible for checking in with all the other tasks and resetting the system if a task has not checked in within the allowed time
-            TaskHandle_t watchdogTaskHandle = xTaskCreateStatic(
-                watchdog_main, "Watchdog", WATCHDOG_TASK_STACK_SIZE, NULL, 2, watchdogMem.watchdogTaskStack, &watchdogMem.watchdogTaskTCB
-            );
+    watchdog_register_task(HEARTBEAT_TASK); // Register the heartbeat task with the watchdog so that it can check in
 
-            if (watchdogTaskHandle == NULL) {
-                printf("main: Watchdog task creation failed!\n");
-            } else {
-                printf("main: Watchdog task created!\n");
-            }
+    if (heartbeatTaskHandle == NULL) {
+        printf("main: Heartbeat task creation failed!\n");
+    } else {
+        printf("main: Heartbeat task created!\n");
+    }
+    
+    // Create watchdog task
+    // The watchdog task is responsible for checking in with all the other tasks and resetting the system if a task has not checked in within the allowed time
+    TaskHandle_t watchdogTaskHandle = xTaskCreateStatic(
+        watchdog_main, "Watchdog", WATCHDOG_TASK_STACK_SIZE, NULL, 2, watchdogMem.watchdogTaskStack, &watchdogMem.watchdogTaskTCB
+    );
 
-            // Register tasks with the watchdog
-            watchdog_register_task(WATCHDOG_TASK);
-            watchdog_register_task(HEARTBEAT_TASK);
+    watchdog_register_task(WATCHDOG_TASK); // Register the watchdog task with itself so that it can check in
 
-            // Start the scheduler
-            vTaskStartScheduler();
+    if (watchdogTaskHandle == NULL) {
+        printf("main: Watchdog task creation failed!\n");
+    } else {
+        printf("main: Watchdog task created!\n");
+    }
+    
+    // Start the scheduler
+    vTaskStartScheduler();
 
-            printf("main: Work completed -- looping forever\n");
-            while (true);
-        }
+    printf("main: Work completed -- looping forever\n");
+    while (true);
+}
