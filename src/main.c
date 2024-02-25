@@ -36,6 +36,7 @@ If you want to get rid of the red squiggly lines:
     #error "Multiple build type flags set! (UNITTEST && RELEASE) Must be exactly one of: {DEVBUILD, UNITTEST, RELEASE}"
 #endif
 
+struct cosmicmonkeyTaskArguments cm_args = {0};
 
 int main(void)
 {
@@ -46,30 +47,32 @@ int main(void)
             //Create the heartbeat task
             //The heartbeat task is a simple task that blinks the LEDs in a pattern to indicate that the system is running
             //xTaskCreateStatic(main_func, "TaskName", StackSize, pvParameters, Priority, StackBuffer, TaskTCB);
-            /*TaskHandle_t heartbeatTaskHandle =
+            TaskHandle_t heartbeatTaskHandle =
                 xTaskCreateStatic(heartbeat_main, "Heartbeat", HEARTBEAT_TASK_STACK_SIZE, NULL, 1,
                                   heartbeatMem.heartbeatTaskStack, &heartbeatMem.heartbeatTaskTCB);
             if (heartbeatTaskHandle == NULL) {
                 printf("Heartbeat Task Creation Failed!\r\n");
             } else {
                 printf("Heartbeat Task Created!\r\n");
-            }*/
+            }
             #if defined(UNITTEST) || defined(DEVBUILD)
-            int frequency = 5;
             #if defined(UNITTEST)
-                frequency = 10;
+                cm_args.frequency = 10;
             #endif
-            
-            struct cosmicmonkeyTaskArguments cm_args = {frequency};
+            #if defined(DEVBUILD)
+                cm_args.frequency = 5;
+            #endif
+            printf("Freq: %d \r\n", cm_args.frequency);
 
             TaskHandle_t cosmicMonkeyTaskHandle =
-                xTaskCreateStatic(cosmicmonkey_main, "CosmicMonkey", COSMICMONKEY_TASK_STACK_SIZE, &cm_args, 1, cosmicmonkeyMem.cosmicmonkeyTaskStack, &cosmicmonkeyMem.cosmicmonkeyTaskTCB);
+                xTaskCreateStatic(cosmicmonkey_main, "CosmicMonkey", COSMICMONKEY_TASK_STACK_SIZE, (void *) &cm_args, 1,
+                                    cosmicmonkeyMem.cosmicmonkeyTaskStack, &cosmicmonkeyMem.cosmicmonkeyTaskTCB);
             if (cosmicMonkeyTaskHandle == NULL) {
                 printf("Cosmic Monkey Task Creation Failed!\r\n");
             } else {
                 printf("Cosmic Monkey Task Created!\r\n");
             }
-            #endif
+            #endif // Cosmic Monkey
             // Starts the scheduler: this function never returns, since control is transferred to the RTOS scheduler and tasks begin to run.
             vTaskStartScheduler();
             printf("vTaskStartScheduler Returned: WE SHOULD NEVER GET HERE!\r\n");
