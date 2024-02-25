@@ -3,6 +3,7 @@
 #include <hal_adc_sync.h>
 #include <string.h>
 
+#include "logging.h"
 #include "SEGGER_RTT_printf.h"
 #include "globals.h"
 #include "heartbeat_task.h"
@@ -41,6 +42,7 @@ int main(void)
             /* Initializes MCU, drivers and middleware */
             atmel_start_init();
             printf("--- ATMEL Initialization Complete ---\r\n");
+            info("Info Test\n");
 
             //Create the heartbeat task
             //The heartbeat task is a simple task that blinks the LEDs in a pattern to indicate that the system is running
