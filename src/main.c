@@ -54,8 +54,14 @@ int main(void)
             } else {
                 printf("Heartbeat Task Created!\r\n");
             }*/
-            #if defined(UNITTEST) || defined(DEVBUILD) 
-            struct cosmicmonkeyTaskArguments cm_args = {5};
+            #if defined(UNITTEST) || defined(DEVBUILD)
+            int frequency = 5;
+            #if defined(UNITTEST)
+                frequency = 10;
+            #endif
+            
+            struct cosmicmonkeyTaskArguments cm_args = {frequency};
+
             TaskHandle_t cosmicMonkeyTaskHandle =
                 xTaskCreateStatic(cosmicmonkey_main, "CosmicMonkey", COSMICMONKEY_TASK_STACK_SIZE, &cm_args, 1, cosmicmonkeyMem.cosmicmonkeyTaskStack, &cosmicmonkeyMem.cosmicmonkeyTaskTCB);
             if (cosmicMonkeyTaskHandle == NULL) {

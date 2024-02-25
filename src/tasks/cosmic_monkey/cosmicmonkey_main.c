@@ -4,8 +4,10 @@
 
 struct cosmicmonkeyTaskMemory cosmicmonkeyMem;
 
-static const int VALID_MEMORY_RANGE_START = 0x20000000
+static const int VALID_MEMORY_RANGE_START = 0x20000000;
 static const int VALID_MEMORY_RANGE_IN_BYTES = 18;
+static const int RAND_THREE_BIT_MASK = 0x1c0000;
+static const int EIGHTEEN_BIT_MASK = 0x3FFFF;
 
 void perform_flip()
 {
@@ -13,15 +15,15 @@ void perform_flip()
     /* Generate random number */
     uint32_t rand_int = rand_sync_read32(&RAND_0); // Mask the first 21 bits
     printf("Past the rand_int function, result: %u\r\n", rand_int);
-    uintptr_t memory_addr = VALID_MEMORY_RANGE_START + (rand_int & 0x3FFFF); //Isolate 18 bits of randomness to pick a random memory address
-    int bit_position = (rand_int & 0x1c0000) >> VALID_MEMORY_RANGE_IN_BYTES; //Pick the next 3 bits as the index
-    if (bit_position >= 8){
+    uintptr_t p_memory_addr = VALID_MEMORY_RANGE_START + (rand_int & EIGHTEEN_BIT_MASK); //Isolate 18 bits of randomness to pick a random memory address
+    int bit_position = (rand_int & RAND_THREE_BIT_MASK) >> VALID_MEMORY_RANGE_IN_BYTES; //Pick the next 3 bits as the index
+    if (8 <= bit_position){
         printf("Unexpected value for bit position");
     }
     uint8_t byte_flip_mask = 1 << bit_position;
 
     printf("Calculated bitmask: %d \r\n", byte_flip_mask);
-    char* addr = (char*) memory_addr;
+    char* addr = (char*) p_memory_addr;
     printf("%02X \r\n", *addr);
 
     *addr = *addr ^ byte_flip_mask; // Apply the byte_mask with an XOR to the selected byte
