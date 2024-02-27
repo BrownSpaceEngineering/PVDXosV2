@@ -2,8 +2,7 @@
 
 // If the difference between the current time and the time in the running_times array is greater than the allowed time,
 // then the task has not checked in and the watchdog should reset the system. Refer to "globals.h" to see the order in which
-// tasks are registered. 
-uint32_t allowed_times[NUM_TASKS] = {1500, 1000}; // Units are in milliseconds
+// tasks are registered.
 
 volatile Wdt *const p_watchdog = WDT;
 uint32_t running_times[NUM_TASKS];

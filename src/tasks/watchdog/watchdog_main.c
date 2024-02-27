@@ -2,6 +2,8 @@
 
 struct watchdogTaskMemory watchdogMem;
 
+uint32_t allowed_times[NUM_TASKS] = {WATCHDOG_TASK_ALLOWED_TIME, HEARTBEAT_TASK_ALLOWED_TIME}; // Units are in milliseconds
+
 void watchdog_main(void *pvParameters) {
     printf("watchdog: Task started!\n");
 
@@ -15,7 +17,9 @@ void watchdog_main(void *pvParameters) {
 
                 if (time_since_last_checkin > allowed_times[i]) {
                     // The task has not checked in within the allowed time, so we should reset the system
-                    printf("watchdog: Task %d has not checked in within the allowed time (time since last checkin: %d). Resetting system...\n", i, time_since_last_checkin);
+                    printf("watchdog: Task %d has not checked in within the allowed time! (time since last checkin: %d, allowed time: %d). "
+                           "Resetting system...\n",
+                           i, time_since_last_checkin, allowed_times[i]);
                     watchdog_kick();
                 }
             }
