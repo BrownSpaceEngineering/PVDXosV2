@@ -19,6 +19,7 @@
    - Use `make connect` to connect to the board and auto-flash/run the program.
    - The code will automatically pause at the top of the 'main' function. Set any breakpoints you need, and then continue running the program with 'c'
    - To see output from printf statements, connect to localhost:19021 using Telnet. (You can use PuTTY for this on Windows, or `nc localhost 19021` to listen with netcat on a Mac/Linux terminal)
+   - If using PuTTY, go to 'Terminal' and check the box for 'Implicit CR in every LF'
 
 ## Toolchain Installation
 
