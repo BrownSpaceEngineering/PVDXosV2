@@ -41,7 +41,7 @@ int main(void)
 {
     /* Initializes MCU, drivers and middleware */
     atmel_start_init();
-    printf("--- ATMEL Initialization Complete ---\r\n");
+    printf("--- ATMEL Initialization Complete ---\n");
 
     // Initialize the watchdog as early as possible to ensure that the system is reset if the initialization hangs
     watchdog_init(WDT_CONFIG_PER_CYC16384, true);
