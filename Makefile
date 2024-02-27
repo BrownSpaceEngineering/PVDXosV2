@@ -65,7 +65,9 @@ else
 endif
 
 # Compiler flags
-CFLAGS_POSITIVE := -Wextra -Werror -Wshadow #-Wall is already included in the ASF makefile
+CFLAGS_POSITIVE := -Wextra -Werror -Werror=maybe-uninitialized #-Wall is already included in the ASF makefile
+CFLAGS_POSITIVE += -Wshadow -Wnull-dereference -Wduplicated-cond -Wlogical-op -Werror=return-type -Wfloat-equal
+CFLAGS_POSITIVE += -Wdangling-else -Wtautological-compare
 CFLAGS_NEGATIVE := -Wno-unused-parameter #Because some ASF functions have unused parameters, supress this warning
 CFLAGS_DEV := -DDEVBUILD
 CFLAGS_UNITTEST := -DUNITTEST
