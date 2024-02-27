@@ -10,11 +10,11 @@ typedef enum {
     HEARTBEAT_TASK = 1,
 } task_type_t;
 
-enum Status {
+typedef enum {
     SUCCESS = 0,
     ERROR_NO_DATA,
     ERROR_NO_MEMORY,
     ERROR_UNRECOVERABLE, // If this is returned, the system should restart.
-};
+} status_t;
 
 #endif // GLOBALS_H
