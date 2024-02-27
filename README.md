@@ -42,6 +42,14 @@
 4. Install GDB Multiarch and other build tools:
    - `sudo apt install gdb-multiarch`
    - `sudo apt install build-essential`
+   - `sudo apt install clang-format`
+
+5. (Optional) Configure VSCode to use clang-format for formatting:
+
+   - Install the `clang-format` extension in VSCode.
+   - In VSCode properties, set the default formatter to `clang-format`.
+   - Enable 'format on save' in the settings.
+   - Set 'format on save mode' to 'modifications'.
 
 ### Mac/Linux (Geared towards Mac)
 
@@ -83,7 +91,16 @@
      ```
    - IMPORTANT: Remember to replace `<VersionNumber>` with the version number of the toolchain you downloaded. It should be something like '13.2.Rel1'
 
-8. If you're on Mac, install GNU `sed` by running `brew install gnu-sed`
+8. Install other build tools:
+   - `brew install gnu-sed` (if on mac)
+   - `brew install clang-format`
+
+9. (Optional) Configure VSCode to use clang-format for formatting:
+
+   - Install the `clang-format` extension in VSCode.
+   - In VSCode properties, set the default formatter to `clang-format`.
+   - Enable 'format on save' in the settings.
+   - Set 'format on save mode' to 'modifications'.
 
 ---
 
