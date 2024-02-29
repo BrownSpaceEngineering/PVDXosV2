@@ -2,7 +2,7 @@
 ##################### ADDING SOMETHING?  READ THIS FIRST! #####################
 ###############################################################################
 ###
-###  When adding a new C file ot the source, you must do 2 things:
+###  When adding a new C file to the source, you must do 2 things:
 ###    - Add the file to the OBJS list below (with a .o extension)
 ###    - If it is in a new directory, Add the directory to the EXTRA_VPATH list below (with a .c extension)
 ###  Remember to add the trailing \ to the end of each line!
@@ -17,6 +17,8 @@
 export OBJS := \
 ../src/main.o \
 ../src/tasks/heartbeat/heartbeat_main.o \
+../src/tasks/watchdog/watchdog_main.o \
+../src/tasks/watchdog/watchdog_helpers.o \
 ../src/misc/printf/SEGGER_RTT.o \
 ../src/misc/printf/SEGGER_RTT_printf.o \
 ../src/misc/rtos_support/rtos_static_memory.o \
@@ -30,10 +32,12 @@ export OBJS := \
 export EXTRA_VPATH := \
 ../../src \
 ../../src/tasks \
+../../src/tasks/heartbeat \
+../../src/tasks/watchdog \
 ../../src/misc \
 ../../src/misc/printf \
 ../../src/misc/rtos_support \
-../../src/tasks/heartbeat \
+../../src/misc/hardware_watchdog_utils \
 ../../src/tasks/cosmic_monkey \
 
 
@@ -63,7 +67,9 @@ else
 endif
 
 # Compiler flags
-CFLAGS_POSITIVE := -Wextra -Werror -Wshadow #-Wall is already included in the ASF makefile
+CFLAGS_POSITIVE := -Wextra -Werror -Werror=maybe-uninitialized #-Wall is already included in the ASF makefile
+CFLAGS_POSITIVE += -Wshadow -Wnull-dereference -Wduplicated-cond -Wlogical-op -Werror=return-type -Wfloat-equal
+CFLAGS_POSITIVE += -Wdangling-else -Wtautological-compare
 CFLAGS_NEGATIVE := -Wno-unused-parameter #Because some ASF functions have unused parameters, supress this warning
 CFLAGS_DEV := -DDEVBUILD
 CFLAGS_UNITTEST := -DUNITTEST

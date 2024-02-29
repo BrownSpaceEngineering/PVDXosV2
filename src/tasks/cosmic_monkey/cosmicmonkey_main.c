@@ -9,7 +9,7 @@ static const int VALID_MEMORY_RANGE_IN_BYTES = 18;
 static const int RAND_THREE_BIT_MASK = 0x1c0000;
 static const int EIGHTEEN_BIT_MASK = 0x3FFFF;
 
-static Status perform_flip() {
+status_t perform_flip() {
     /* Generate random number */
     uint32_t rand_int = rand_sync_read32(&RAND_0); // Mask the first 21 bits
     uintptr_t p_memory_addr = VALID_MEMORY_RANGE_START + (rand_int & EIGHTEEN_BIT_MASK); //Isolate 18 bits of randomness to pick a random memory address

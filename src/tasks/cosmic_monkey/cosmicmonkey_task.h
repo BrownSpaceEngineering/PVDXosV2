@@ -6,7 +6,7 @@
 #include "globals.h"
 #include "rtos_start.h"
 
-static Status perform_flip();
+status_t perform_flip();
 void cosmicmonkey_main(void *pvParameters);
 #define COSMICMONKEY_TASK_STACK_SIZE 128
 

@@ -4,7 +4,7 @@
 struct heartbeatTaskMemory heartbeatMem;
 
 void heartbeat_main(void *pvParameters) {
-    printf("Heartbeat Task Started!\r\n");
+    printf("heartbeat: Task started!\n");
     //NOTE: false is on for some reason on the orange LEDs
 
     //In release build, make sure orange LEDs are off
@@ -14,6 +14,10 @@ void heartbeat_main(void *pvParameters) {
     #endif
 
     while(1) {
+        // Print the current time
+        uint32_t current_time = xTaskGetTickCount();
+        printf("heartbeat: Current time is %d\n", current_time);
+
         //Devbuild heartbeat pattern (Smoothly turning on and off LEDs in a line)
         #if defined(DEVBUILD)
         gpio_set_pin_level(LED_Orange1, false);
@@ -49,5 +53,7 @@ void heartbeat_main(void *pvParameters) {
         gpio_set_pin_level(LED_Red, false);
         vTaskDelay(pdMS_TO_TICKS(500));
         #endif
+
+        watchdog_checkin(HEARTBEAT_TASK); // Check in with the watchdog
     }
 }

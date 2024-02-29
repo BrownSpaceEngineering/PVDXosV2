@@ -1,0 +1,46 @@
+Language: Cpp #C and C++ option
+BasedOnStyle: LLVM
+ColumnLimit: 140 #I don't particularly like column limits, but 140 is quite a lot so nothing longer than this
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+#Don't align assignments or declarations
+AlignConsecutiveAssignments: false
+AlignConsecutiveBitFields: false
+AlignConsecutiveDeclarations: false
+AlignConsecutiveMacros: false
+AlignEscapedNewlines: false
+AlignOperands: false
+#If stuff is too long, allow arguments to be on the next line
+AllowAllArgumentsOnNextLine: true
+AllowAllParametersOfDeclarationOnNextLine: true
+#Short blocks should only be on a single line if they're empty
+AllowShortBlocksOnASingleLine: Empty
+#Switch/Case statements, enums, and functions are better when explicit
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortEnumsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Empty #Allows for completely empty functions to be on one line
+#If statements should be verbose as well
+AllowShortIfStatementsOnASingleLine: false
+#Allows for short while loops to be on one line
+AllowShortLoopsOnASingleLine: true
+#Keep braces on the same line as their conditional (i.e. no newline for opening brackets)
+BreakBeforeBraces: Attach
+#For include statements, automatically sort them
+IncludeBlocks: Regroup
+#Case blocks should be indented
+IndentCaseBlocks: true
+IndentCaseLabels: true
+#Line endings should be LF (\n), not CRLF (\r\n)
+UseCRLF: false
+#Treat ifdef and similar preprocessor directives like control blocks and indent their contents
+IndentPPDirectives: BeforeHash
+#use int *p; instead of int* p;
+PointerAlignment: Right
+#Whitespace rules
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCaseColon: false
+SpaceBeforeParens: ControlStatements
+SpaceBeforeSquareBrackets: false
+SpaceInEmptyBlock: false
+SpacesBeforeTrailingComments: 1
