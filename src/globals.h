@@ -8,6 +8,7 @@ enum Status {
     ERROR_NO_DATA,
     ERROR_NO_MEMORY,
     ERROR_UNRECOVERABLE, // If this is returned, the system should restart.
+    ERROR_INTERNAL,
 };
 
 #endif // GLOBALS_H_

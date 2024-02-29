@@ -36,7 +36,7 @@ If you want to get rid of the red squiggly lines:
     #error "Multiple build type flags set! (UNITTEST && RELEASE) Must be exactly one of: {DEVBUILD, UNITTEST, RELEASE}"
 #endif
 
-struct cosmicmonkeyTaskArguments cm_args = {0};
+cosmicmonkeyTaskArguments_t cm_args = {0};
 
 int main(void)
 {

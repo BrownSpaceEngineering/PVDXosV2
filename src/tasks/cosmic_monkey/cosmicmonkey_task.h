@@ -6,7 +6,7 @@
 #include "globals.h"
 #include "rtos_start.h"
 
-void perform_flip();
+static Status perform_flip();
 void cosmicmonkey_main(void *pvParameters);
 #define COSMICMONKEY_TASK_STACK_SIZE 128
 
@@ -17,9 +17,9 @@ struct cosmicmonkeyTaskMemory {
 };
 extern struct cosmicmonkeyTaskMemory cosmicmonkeyMem;
 
-struct cosmicmonkeyTaskArguments {
+typedef struct cosmicmonkeyTaskArguments {
     int frequency;
-};
+} cosmicmonkeyTaskArguments_t;
 
 
 #endif
