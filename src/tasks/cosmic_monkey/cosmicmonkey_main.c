@@ -36,7 +36,9 @@ void cosmicmonkey_main(void *pvParameters) {
     printf("Cosmic monkey started with frequency: %d Hz\r\n", args.frequency);
     while (1)
     {
-        perform_flip();
+        if (perform_flip() != SUCCESS) {
+            printf("Internal error occured\n");
+        }
         int time_task = (1000 / args.frequency); // Generates the time delay in milliseconds based on the frequency
         vTaskDelay(pdMS_TO_TICKS(time_task));
     }
