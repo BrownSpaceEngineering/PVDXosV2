@@ -1,14 +1,8 @@
-#include <atmel_start.h>
-#include <driver_init.h>
-#include <hal_adc_sync.h>
-#include <string.h>
-
 #include "logging.h"
 #include "globals.h"
 #include "heartbeat_task.h"
 #include "rtos_start.h"
 #include "watchdog_task.h"
-
 #include <atmel_start.h>
 #include <driver_init.h>
 #include <hal_adc_sync.h>
