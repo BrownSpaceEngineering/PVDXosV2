@@ -8,6 +8,7 @@
 #include <driver_init.h>
 #include <hal_adc_sync.h>
 #include <string.h>
+#include "cosmicmonkey_task.h"
 
 /*
 Compilation guards to make sure that compilation is being done with the correct flags and correct compiler versions
@@ -36,6 +37,7 @@ If you want to get rid of the red squiggly lines:
     #error "Multiple build type flags set! (UNITTEST && RELEASE) Must be exactly one of: {DEVBUILD, UNITTEST, RELEASE}"
 #endif
 
+cosmicmonkeyTaskArguments_t cm_args = {0};
 int main(void) {
     /* Initializes MCU, drivers and middleware */
     atmel_start_init();
@@ -72,6 +74,24 @@ int main(void) {
     } else {
         printf("main: Watchdog task created!\n");
     }
+
+#if defined(UNITTEST) || defined(DEVBUILD)
+    #if defined(UNITTEST)
+    cm_args.frequency = 10;
+    #endif
+    #if defined(DEVBUILD)
+    cm_args.frequency = 5;
+    #endif
+
+    TaskHandle_t cosmicMonkeyTaskHandle =
+        xTaskCreateStatic(cosmicmonkey_main, "CosmicMonkey", COSMICMONKEY_TASK_STACK_SIZE, (void *)&cm_args, 1,
+                          cosmicmonkeyMem.cosmicmonkeyTaskStack, &cosmicmonkeyMem.cosmicmonkeyTaskTCB);
+    if (cosmicMonkeyTaskHandle == NULL) {
+        printf("Cosmic Monkey Task Creation Failed!\r\n");
+    } else {
+        printf("Cosmic Monkey Task Created!\r\n");
+    }
+#endif // Cosmic Monkey
 
     // Start the scheduler
     vTaskStartScheduler();
