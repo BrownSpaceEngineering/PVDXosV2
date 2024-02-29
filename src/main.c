@@ -1,9 +1,8 @@
-#include "SEGGER_RTT_printf.h"
+#include "logging.h"
 #include "globals.h"
 #include "heartbeat_task.h"
 #include "rtos_start.h"
 #include "watchdog_task.h"
-
 #include <atmel_start.h>
 #include <driver_init.h>
 #include <hal_adc_sync.h>
@@ -41,7 +40,7 @@ cosmicmonkeyTaskArguments_t cm_args = {0};
 int main(void) {
     /* Initializes MCU, drivers and middleware */
     atmel_start_init();
-    printf("--- ATMEL Initialization Complete ---\n");
+    info("--- ATMEL Initialization Complete ---\n");
 
     // Initialize the watchdog as early as possible to ensure that the system is reset if the initialization hangs
     watchdog_init(WDT_CONFIG_PER_CYC16384, true);
@@ -56,9 +55,9 @@ int main(void) {
     watchdog_register_task(HEARTBEAT_TASK); // Register the heartbeat task with the watchdog so that it can check in
 
     if (heartbeatTaskHandle == NULL) {
-        printf("main: Heartbeat task creation failed!\n");
+        fatal("main: Heartbeat task creation failed!\n");
     } else {
-        printf("main: Heartbeat task created!\n");
+        info("main: Heartbeat task created!\n");
     }
 
     // Create watchdog task
@@ -70,9 +69,9 @@ int main(void) {
     watchdog_register_task(WATCHDOG_TASK); // Register the watchdog task with itself so that it can check in
 
     if (watchdogTaskHandle == NULL) {
-        printf("main: Watchdog task creation failed!\n");
+        fatal("main: Watchdog task creation failed!\n");
     } else {
-        printf("main: Watchdog task created!\n");
+        info("main: Watchdog task created!\n");
     }
 
 #if defined(UNITTEST) || defined(DEVBUILD)
@@ -87,15 +86,15 @@ int main(void) {
         xTaskCreateStatic(cosmicmonkey_main, "CosmicMonkey", COSMICMONKEY_TASK_STACK_SIZE, (void *)&cm_args, 1,
                           cosmicmonkeyMem.cosmicmonkeyTaskStack, &cosmicmonkeyMem.cosmicmonkeyTaskTCB);
     if (cosmicMonkeyTaskHandle == NULL) {
-        printf("Cosmic Monkey Task Creation Failed!\r\n");
+        warning("Cosmic Monkey Task Creation Failed!\r\n");
     } else {
-        printf("Cosmic Monkey Task Created!\r\n");
+        info("Cosmic Monkey Task Created!\r\n");
     }
 #endif // Cosmic Monkey
 
     // Start the scheduler
     vTaskStartScheduler();
-    printf("vTaskStartScheduler Returned! -- Should never happen!\n");
+    fatal("vTaskStartScheduler Returned! -- Should never happen!\n");
     while (true) {
         // Loop forever, but we should never get here anyways
     }

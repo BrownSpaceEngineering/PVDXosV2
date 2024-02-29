@@ -4,7 +4,7 @@
 #include "globals.h"
 #include "atmel_start.h"
 #include "hardware_watchdog_utils.h"
-#include "SEGGER_RTT_printf.h"
+#include "logging.h"
 #include "rtos_start.h"
 
 #define WATCHDOG_MS_DELAY 1000 // Controls how often the Watchdog thread runs and verifies task checkins

@@ -1,10 +1,10 @@
 #include "heartbeat_task.h"
-#include "SEGGER_RTT_printf.h"
+#include "logging.h"
 
 struct heartbeatTaskMemory heartbeatMem;
 
 void heartbeat_main(void *pvParameters) {
-    printf("heartbeat: Task started!\n");
+    info("Heartbeat Task Started!\r\n");
     //NOTE: false is on for some reason on the orange LEDs
 
     //In release build, make sure orange LEDs are off
@@ -16,7 +16,7 @@ void heartbeat_main(void *pvParameters) {
     while(1) {
         // Print the current time
         uint32_t current_time = xTaskGetTickCount();
-        printf("heartbeat: Current time is %d\n", current_time);
+        debug("heartbeat: Current time is %d\n", current_time);
 
         //Devbuild heartbeat pattern (Smoothly turning on and off LEDs in a line)
         #if defined(DEVBUILD)
