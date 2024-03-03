@@ -9,4 +9,8 @@ void uhf_main(void *pvParameters) {
     spi_m_os_get_io_descriptor(&SPI_0, &io);
     /* Control the slave select(SS) pin */
     gpio_set_pin_level(UHF_CS, false);
+
+    while (1) {
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
 }
