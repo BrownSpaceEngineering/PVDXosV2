@@ -127,7 +127,7 @@ void I2C_0_init(void)
 void SPI_0_PORT_init(void)
 {
 
-	gpio_set_pin_level(PB26,
+	gpio_set_pin_level(PD08,
 	                   // <y> Initial level
 	                   // <id> pad_initial_level
 	                   // <false"> Low
@@ -135,11 +135,11 @@ void SPI_0_PORT_init(void)
 	                   false);
 
 	// Set pin direction to output
-	gpio_set_pin_direction(PB26, GPIO_DIRECTION_OUT);
+	gpio_set_pin_direction(PD08, GPIO_DIRECTION_OUT);
 
-	gpio_set_pin_function(PB26, PINMUX_PB26C_SERCOM2_PAD0);
+	gpio_set_pin_function(PD08, PINMUX_PD08C_SERCOM7_PAD0);
 
-	gpio_set_pin_level(PB27,
+	gpio_set_pin_level(PD09,
 	                   // <y> Initial level
 	                   // <id> pad_initial_level
 	                   // <false"> Low
@@ -147,14 +147,14 @@ void SPI_0_PORT_init(void)
 	                   false);
 
 	// Set pin direction to output
-	gpio_set_pin_direction(PB27, GPIO_DIRECTION_OUT);
+	gpio_set_pin_direction(PD09, GPIO_DIRECTION_OUT);
 
-	gpio_set_pin_function(PB27, PINMUX_PB27C_SERCOM2_PAD1);
+	gpio_set_pin_function(PD09, PINMUX_PD09C_SERCOM7_PAD1);
 
 	// Set pin direction to input
-	gpio_set_pin_direction(PB29, GPIO_DIRECTION_IN);
+	gpio_set_pin_direction(PD10, GPIO_DIRECTION_IN);
 
-	gpio_set_pin_pull_mode(PB29,
+	gpio_set_pin_pull_mode(PD10,
 	                       // <y> Pull configuration
 	                       // <id> pad_pull_config
 	                       // <GPIO_PULL_OFF"> Off
@@ -162,21 +162,21 @@ void SPI_0_PORT_init(void)
 	                       // <GPIO_PULL_DOWN"> Pull-down
 	                       GPIO_PULL_OFF);
 
-	gpio_set_pin_function(PB29, PINMUX_PB29C_SERCOM2_PAD3);
+	gpio_set_pin_function(PD10, PINMUX_PD10C_SERCOM7_PAD2);
 }
 
 void SPI_0_CLOCK_init(void)
 {
-	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM2_GCLK_ID_CORE, CONF_GCLK_SERCOM2_CORE_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
-	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM2_GCLK_ID_SLOW, CONF_GCLK_SERCOM2_SLOW_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM7_GCLK_ID_CORE, CONF_GCLK_SERCOM7_CORE_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM7_GCLK_ID_SLOW, CONF_GCLK_SERCOM7_SLOW_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
 
-	hri_mclk_set_APBBMASK_SERCOM2_bit(MCLK);
+	hri_mclk_set_APBDMASK_SERCOM7_bit(MCLK);
 }
 
 void SPI_0_init(void)
 {
 	SPI_0_CLOCK_init();
-	spi_m_sync_init(&SPI_0, SERCOM2);
+	spi_m_sync_init(&SPI_0, SERCOM7);
 	SPI_0_PORT_init();
 }
 

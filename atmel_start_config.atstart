@@ -1173,11 +1173,11 @@ drivers:
           slow_gclk_selection: Generic clock generator 3
   SPI_0:
     user_label: SPI_0
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::SERCOM2::driver_config_definition::SPI.Master::HAL:Driver:SPI.Master.Sync
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::SERCOM7::driver_config_definition::SPI.Master::HAL:Driver:SPI.Master.Sync
     functionality: SPI
     api: HAL:Driver:SPI_Master_Sync
     configuration:
-      spi_master_advanced: true
+      spi_master_advanced: false
       spi_master_arch_cpha: Sample input on leading edge
       spi_master_arch_cpol: SCK is low when idle
       spi_master_arch_dbgstop: Keep running
@@ -1190,22 +1190,22 @@ drivers:
       spi_master_rx_enable: true
     optional_signals: []
     variant:
-      specification: TXPO=0, RXPO=3
+      specification: TXPO=0, RXPO=2
       required_signals:
-      - name: SERCOM2/PAD/0
-        pad: PB26
+      - name: SERCOM7/PAD/0
+        pad: PD08
         label: MOSI
-      - name: SERCOM2/PAD/1
-        pad: PB27
+      - name: SERCOM7/PAD/1
+        pad: PD09
         label: SCK
-      - name: SERCOM2/PAD/3
-        pad: PB29
+      - name: SERCOM7/PAD/2
+        pad: PD10
         label: MISO
     clocks:
       domain_group:
         nodes:
         - name: Core
-          input: Generic clock generator 2
+          input: Generic clock generator 0
           external: false
           external_frequency: 0
         - name: Slow
@@ -1213,7 +1213,7 @@ drivers:
           external: false
           external_frequency: 0
         configuration:
-          core_gclk_selection: Generic clock generator 2
+          core_gclk_selection: Generic clock generator 0
           slow_gclk_selection: Generic clock generator 3
   DELAY_0:
     user_label: DELAY_0
@@ -1264,6 +1264,24 @@ pads:
     mode: Peripheral IO
     user_label: PA05
     configuration: null
+  PD08:
+    name: PD08
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PD08
+    mode: Digital output
+    user_label: PD08
+    configuration: null
+  PD09:
+    name: PD09
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PD09
+    mode: Digital output
+    user_label: PD09
+    configuration: null
+  PD10:
+    name: PD10
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PD10
+    mode: Digital input
+    user_label: PD10
+    configuration: null
   PA16:
     name: PA16
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA16
@@ -1275,24 +1293,6 @@ pads:
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA17
     mode: I2C
     user_label: PA17
-    configuration: null
-  PB26:
-    name: PB26
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB26
-    mode: Digital output
-    user_label: PB26
-    configuration: null
-  PB27:
-    name: PB27
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB27
-    mode: Digital output
-    user_label: PB27
-    configuration: null
-  PB29:
-    name: PB29
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB29
-    mode: Digital input
-    user_label: PB29
     configuration: null
   LED_Orange1:
     name: PC30
