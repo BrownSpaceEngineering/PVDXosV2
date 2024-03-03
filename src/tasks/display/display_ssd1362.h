@@ -1,5 +1,7 @@
 #ifndef DISPLAY_H
 #define DISPLAY_H
+// Includes
+#include <atmel_start.h>
 
 // Driver for the SSD1362 OLED controller within a Midas Displays MDOB256064D1Y-YS display
 
@@ -43,6 +45,11 @@
 #define SSD1362_CMD_HORIZSCROLL       0x96
 #define SSD1362_CMD_STOPSCROLL        0x9E
 #define SSD1362_CMD_STARTSCROLL       0x9F
+
+// Pin definitions
+#define OLED_RST_PIN 25
+#define OLED_DC_PIN 24
+#define OLED_CS_PIN 8
 
 // Color definitions
 #define BLACK    0x0000
