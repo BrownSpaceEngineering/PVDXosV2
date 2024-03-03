@@ -16,6 +16,7 @@ typedef enum {
     ERROR_NO_MEMORY,
     ERROR_UNRECOVERABLE, // If this is returned, the system should restart.
     ERROR_INTERNAL,
+    ERROR_IO
 } status_t;
 
 #endif // GLOBALS_H
