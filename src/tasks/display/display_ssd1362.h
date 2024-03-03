@@ -2,6 +2,7 @@
 #define DISPLAY_H
 // Includes
 #include <atmel_start.h>
+#include <globals.h>
 
 // Driver for the SSD1362 OLED controller within a Midas Displays MDOB256064D1Y-YS display
 
