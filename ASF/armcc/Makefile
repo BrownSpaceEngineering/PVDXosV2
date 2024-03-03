@@ -56,6 +56,7 @@ OBJS +=  \
 hal/src/hal_io.o \
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/list.o \
 hpl/systick/hpl_systick.o \
+hal/src/hal_spi_m_os.o \
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/event_groups.o \
 hpl/wdt/hpl_wdt.o \
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/croutine.o \
@@ -64,7 +65,6 @@ thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/stream_buffer.o \
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/portable/MemMang/heap_1.o \
 samd51a/armcc/Device/SAMD51/Source/ARM/startup_samd51.o \
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/queue.o \
-hal/src/hal_spi_m_sync.o \
 hal/src/hal_i2c_m_sync.o \
 samd51a/armcc/Device/SAMD51/Source/system_samd51.o \
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/timers.o \
@@ -106,6 +106,7 @@ OBJS_AS_ARGS +=  \
 "hal/src/hal_io.o" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/list.o" \
 "hpl/systick/hpl_systick.o" \
+"hal/src/hal_spi_m_os.o" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/event_groups.o" \
 "hpl/wdt/hpl_wdt.o" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/croutine.o" \
@@ -114,7 +115,6 @@ OBJS_AS_ARGS +=  \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/portable/MemMang/heap_1.o" \
 "samd51a/armcc/Device/SAMD51/Source/ARM/startup_samd51.o" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/queue.o" \
-"hal/src/hal_spi_m_sync.o" \
 "hal/src/hal_i2c_m_sync.o" \
 "samd51a/armcc/Device/SAMD51/Source/system_samd51.o" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/timers.o" \
@@ -170,7 +170,6 @@ DEPS_AS_ARGS +=  \
 "main.d" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/timers.d" \
 "samd51a/armcc/Device/SAMD51/Source/ARM/startup_samd51.d" \
-"hal/src/hal_spi_m_sync.d" \
 "hal/src/hal_wdt.d" \
 "hpl/cmcc/hpl_cmcc.d" \
 "hpl/dmac/hpl_dmac.d" \
@@ -179,6 +178,7 @@ DEPS_AS_ARGS +=  \
 "hal/src/hal_delay.d" \
 "hpl/core/hpl_init.d" \
 "hpl/pm/hpl_pm.d" \
+"hal/src/hal_spi_m_os.d" \
 "hpl/gclk/hpl_gclk.d" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/portable/RVDS/ARM_CM4F/port.d" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/rtos_port.d" \

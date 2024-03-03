@@ -1,13 +1,15 @@
-#include "logging.h"
+#include "cosmicmonkey_task.h"
 #include "globals.h"
 #include "heartbeat_task.h"
+#include "logging.h"
 #include "rtos_start.h"
+#include "uhf_task.h"
 #include "watchdog_task.h"
+
 #include <atmel_start.h>
 #include <driver_init.h>
 #include <hal_adc_sync.h>
 #include <string.h>
-#include "cosmicmonkey_task.h"
 
 /*
 Compilation guards to make sure that compilation is being done with the correct flags and correct compiler versions
@@ -81,7 +83,7 @@ int main(void) {
     #if defined(DEVBUILD)
     cm_args.frequency = 5;
     #endif
-
+    cm_args.frequency = 0;
     TaskHandle_t cosmicMonkeyTaskHandle =
         xTaskCreateStatic(cosmicmonkey_main, "CosmicMonkey", COSMICMONKEY_TASK_STACK_SIZE, (void *)&cm_args, 1,
                           cosmicmonkeyMem.cosmicmonkeyTaskStack, &cosmicmonkeyMem.cosmicmonkeyTaskTCB);
@@ -91,6 +93,15 @@ int main(void) {
         info("Cosmic Monkey Task Created!\r\n");
     }
 #endif // Cosmic Monkey
+
+    TaskHandle_t uhfTaskHandle =
+        xTaskCreateStatic(uhf_main, "uhf", WATCHDOG_TASK_STACK_SIZE, NULL, 2, uhfMem.uhfTaskStack, &uhfMem.uhfTaskTCB);
+
+    if (uhfTaskHandle == NULL) {
+        fatal("main: UHF task creation failed!\n");
+    } else {
+        info("main: UHF task created!\n");
+    }
 
     // Start the scheduler
     vTaskStartScheduler();

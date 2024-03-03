@@ -58,7 +58,7 @@ void assert_triggered(const char *file, uint32_t line);
 // <q> Enable counting semaphore
 // <id> freertos_use_counting_semaphores
 #ifndef configUSE_COUNTING_SEMAPHORES
-#define configUSE_COUNTING_SEMAPHORES 0
+#define configUSE_COUNTING_SEMAPHORES 1
 #endif
 
 // </h>

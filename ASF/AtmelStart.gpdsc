@@ -53,7 +53,7 @@
         <file category="doc" condition="ARMCC, GCC, IAR" name="hal/documentation/adc_sync.rst"/>
         <file category="doc" condition="ARMCC, GCC, IAR" name="hal/documentation/i2c_master_sync.rst"/>
         <file category="doc" condition="ARMCC, GCC, IAR" name="hal/documentation/rand_sync.rst"/>
-        <file category="doc" condition="ARMCC, GCC, IAR" name="hal/documentation/spi_master_sync.rst"/>
+        <file category="doc" condition="ARMCC, GCC, IAR" name="hal/documentation/spi_master_os.rst"/>
         <file category="doc" condition="ARMCC, GCC, IAR" name="hal/documentation/usart_sync.rst"/>
         <file category="doc" condition="ARMCC, GCC, IAR" name="hal/documentation/wdt.rst"/>
         <file category="header" condition="ARMCC, GCC, IAR" name="hal/include/hal_atomic.h"/>
@@ -65,7 +65,7 @@
         <file category="header" condition="ARMCC, GCC, IAR" name="hal/include/hal_io.h"/>
         <file category="header" condition="ARMCC, GCC, IAR" name="hal/include/hal_rand_sync.h"/>
         <file category="header" condition="ARMCC, GCC, IAR" name="hal/include/hal_sleep.h"/>
-        <file category="header" condition="ARMCC, GCC, IAR" name="hal/include/hal_spi_m_sync.h"/>
+        <file category="header" condition="ARMCC, GCC, IAR" name="hal/include/hal_spi_m_os.h"/>
         <file category="header" condition="ARMCC, GCC, IAR" name="hal/include/hal_wdt.h"/>
         <file category="header" condition="ARMCC, GCC, IAR" name="hal/include/hpl_adc_dma.h"/>
         <file category="header" condition="ARMCC, GCC, IAR" name="hal/include/hpl_cmcc.h"/>
@@ -209,7 +209,7 @@
         <file category="header" condition="ARMCC, GCC, IAR" name="hal/include/hpl_usart_async.h"/>
         <file category="header" condition="ARMCC, GCC, IAR" name="hal/include/hpl_usart_sync.h"/>
         <file category="source" condition="ARMCC, GCC, IAR" name="hal/src/hal_adc_sync.c"/>
-        <file category="source" condition="ARMCC, GCC, IAR" name="hal/src/hal_spi_m_sync.c"/>
+        <file category="source" condition="ARMCC, GCC, IAR" name="hal/src/hal_spi_m_os.c"/>
         <file category="source" condition="ARMCC, GCC, IAR" name="hal/src/hal_usart_sync.c"/>
         <file category="header" condition="ARMCC, GCC, IAR" name="hal/utils/include/parts.h"/>
         <file category="source" condition="ARMCC, GCC, IAR" name="hpl/adc/hpl_adc.c"/>

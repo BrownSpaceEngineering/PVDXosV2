@@ -1,5 +1,5 @@
-The SPI Master Synchronous Driver
-=================================
+The SPI Master RTOS Driver
+==========================
 
 The serial peripheral interface (SPI) is a synchronous serial communication
 interface.
@@ -8,6 +8,13 @@ SPI devices communicate in full duplex mode using a master-slave
 architecture with a single master. The master device originates the frame for
 reading and writing. Multiple slave devices are supported through selection
 with individual slave select (SS) lines.
+The transfer functions of SPI Master RTOS driver are optimized for RTOS support.
+When data transfer is in progress, the transfer functions use semaphore to block
+the current task or thread until transfer end. So the transfer functions do not
+work without RTOS, the transfer functions must be called in a RTOS task or thread.
+
+During data transfer, the SPI transfer process is not protected, so that a more
+flexible way can be chosen in application.
 
 Features
 --------
@@ -22,6 +29,7 @@ Features
   * Data order
 * Data transfer: transmission, reception and full-duplex
 
+
 Applications
 ------------
 
@@ -31,7 +39,8 @@ LCD controller, etc.
 Dependencies
 ------------
 
-SPI master capable hardware
+SPI master capable hardware, with interrupt on each character sent/received.
+RTOS
 
 Concurrency
 -----------
@@ -44,8 +53,10 @@ Limitations
 The slave select (SS) is not automatically inserted during read/write/transfer,
 user must use I/O to control the devices' SS.
 
+While read/write/transfer is in progress, the data buffer used must be kept
+unchanged.
+
 Known issues and workarounds
 ----------------------------
 
 N/A
-

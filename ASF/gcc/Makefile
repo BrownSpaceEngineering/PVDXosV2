@@ -59,7 +59,7 @@ OBJS +=  \
 hal/src/hal_io.o \
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/list.o \
 hpl/systick/hpl_systick.o \
-thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/portable/GCC/ARM_CM4F/port.o \
+hal/src/hal_spi_m_os.o \
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/event_groups.o \
 hpl/wdt/hpl_wdt.o \
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/croutine.o \
@@ -69,7 +69,7 @@ thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/stream_buffer.o \
 hal/utils/src/utils_syscalls.o \
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/portable/MemMang/heap_1.o \
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/queue.o \
-hal/src/hal_spi_m_sync.o \
+thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/portable/GCC/ARM_CM4F/port.o \
 hal/src/hal_i2c_m_sync.o \
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/timers.o \
 hal/src/hal_delay.o \
@@ -109,7 +109,7 @@ OBJS_AS_ARGS +=  \
 "hal/src/hal_io.o" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/list.o" \
 "hpl/systick/hpl_systick.o" \
-"thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/portable/GCC/ARM_CM4F/port.o" \
+"hal/src/hal_spi_m_os.o" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/event_groups.o" \
 "hpl/wdt/hpl_wdt.o" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/croutine.o" \
@@ -119,7 +119,7 @@ OBJS_AS_ARGS +=  \
 "hal/utils/src/utils_syscalls.o" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/portable/MemMang/heap_1.o" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/queue.o" \
-"hal/src/hal_spi_m_sync.o" \
+"thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/portable/GCC/ARM_CM4F/port.o" \
 "hal/src/hal_i2c_m_sync.o" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/timers.o" \
 "hal/src/hal_delay.o" \
@@ -206,7 +206,6 @@ DEPS_AS_ARGS +=  \
 "samd51a/gcc/system_samd51.d" \
 "hal/src/hal_i2c_m_sync.d" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/timers.d" \
-"hal/src/hal_spi_m_sync.d" \
 "hal/src/hal_wdt.d" \
 "hpl/cmcc/hpl_cmcc.d" \
 "hpl/dmac/hpl_dmac.d" \
@@ -215,6 +214,7 @@ DEPS_AS_ARGS +=  \
 "hal/src/hal_delay.d" \
 "hpl/core/hpl_init.d" \
 "hpl/pm/hpl_pm.d" \
+"hal/src/hal_spi_m_os.d" \
 "hpl/gclk/hpl_gclk.d" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/rtos_port.d" \
 "hal/src/hal_init.d" \

@@ -33,8 +33,6 @@ IndentCaseBlocks: true
 IndentCaseLabels: true
 #Line endings should be LF (\n), not CRLF (\r\n)
 UseCRLF: false
-#Treat ifdef and similar preprocessor directives like control blocks and indent their contents
-IndentPPDirectives: BeforeHash
 #use int *p; instead of int* p;
 PointerAlignment: Right
 #Whitespace rules

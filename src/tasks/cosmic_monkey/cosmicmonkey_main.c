@@ -29,7 +29,13 @@ status_t perform_flip() {
 void cosmicmonkey_main(void *pvParameters) {
     cosmicmonkeyTaskArguments_t args =
         *((cosmicmonkeyTaskArguments_t*) pvParameters);
-    
+
+    if (args.frequency <= 0) {
+        while (1) {
+            vTaskDelay(pdMS_TO_TICKS(1000000));
+        } // Sleep 1 million ms in a loop forever
+    }
+
     rand_sync_init(&RAND_0, TRNG); // Initialize random number generator
     rand_sync_enable(&RAND_0); // Enable the random number generator clock
 
