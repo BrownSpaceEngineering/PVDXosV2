@@ -1205,7 +1205,7 @@ drivers:
       domain_group:
         nodes:
         - name: Core
-          input: Generic clock generator 0
+          input: Generic clock generator 3
           external: false
           external_frequency: 0
         - name: Slow
@@ -1213,7 +1213,7 @@ drivers:
           external: false
           external_frequency: 0
         configuration:
-          core_gclk_selection: Generic clock generator 0
+          core_gclk_selection: Generic clock generator 3
           slow_gclk_selection: Generic clock generator 3
   DELAY_0:
     user_label: DELAY_0
@@ -1252,6 +1252,19 @@ drivers:
     clocks:
       domain_group: null
 pads:
+  UHF_RST:
+    name: PA02
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA02
+    mode: Digital output
+    user_label: UHF_RST
+    configuration:
+      pad_initial_level: High
+  UHF_IRQ:
+    name: PB05
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB05
+    mode: Digital input
+    user_label: UHF_IRQ
+    configuration: null
   PA04:
     name: PA04
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA04
@@ -1276,23 +1289,41 @@ pads:
     mode: I2C
     user_label: PA17
     configuration: null
-  PA18:
+  UHF_CIPO:
     name: PA18
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA18
     mode: Digital input
-    user_label: PA18
+    user_label: UHF_CIPO
     configuration: null
-  PC22:
+  UHF_SCK:
     name: PC22
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC22
     mode: Digital output
-    user_label: PC22
+    user_label: UHF_SCK
     configuration: null
-  PC23:
+  UHF_COPI:
     name: PC23
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC23
     mode: Digital output
-    user_label: PC23
+    user_label: UHF_COPI
+    configuration: null
+  BITBANG_COPI:
+    name: PA20
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA20
+    mode: Digital output
+    user_label: BITBANG_COPI
+    configuration: null
+  BITBANG_CIPO:
+    name: PA21
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA21
+    mode: Digital input
+    user_label: BITBANG_CIPO
+    configuration: null
+  BITBANG_SCK:
+    name: PA22
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA22
+    mode: Digital output
+    user_label: BITBANG_SCK
     configuration: null
   UHF_CS:
     name: PB25

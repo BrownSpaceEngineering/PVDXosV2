@@ -27,6 +27,7 @@ void info(char* string,...){
 }
 
 void debug(const char* string,...){
+    return;
     va_list args;
     va_start(args, string);
     unsigned int BufferIndex= 0;
