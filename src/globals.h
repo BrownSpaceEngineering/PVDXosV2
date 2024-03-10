@@ -12,11 +12,14 @@ typedef enum {
 
 typedef enum {
     SUCCESS = 0,
+    ERROR_INTERNAL, // Generic error for when something goes wrong
     ERROR_NO_DATA,
     ERROR_NO_MEMORY,
-    ERROR_INTERNAL,
     ERROR_WRITE_FAILED,
+    ERROR_NOT_YET_IMPLEMENTED,
+    ERROR_BUSY, // Similar to EAGAIN in Linux, if that comparison is helpful
 
+    // This one should be last in the list
     ERROR_UNRECOVERABLE, // If this is returned, the system should restart.
 } status_t;
 

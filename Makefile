@@ -25,6 +25,7 @@ export OBJS := \
 ../src/misc/rtos_support/rtos_stack_overflow.o \
 ../src/tasks/cosmic_monkey/cosmicmonkey_main.o \
 ../src/tasks/uhf/uhf_main.o \
+../src/tasks/uhf/uhf_hal.o \
 ../src/misc/logging/logging.o \
 
 
