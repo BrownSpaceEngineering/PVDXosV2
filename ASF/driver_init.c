@@ -11,16 +11,10 @@
 #include <utils.h>
 #include <hal_init.h>
 
-/* The priority of the peripheral should be between the low and high interrupt priority set by chosen RTOS,
- * Otherwise, some of the RTOS APIs may fail to work inside interrupts
- * In case of FreeRTOS,the Lowest Interrupt priority is set by configLIBRARY_LOWEST_INTERRUPT_PRIORITY and
- * Maximum interrupt priority by configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY, So Interrupt Priority of the peripheral
- * should be between configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY and configLIBRARY_LOWEST_INTERRUPT_PRIORITY
- */
-#define PERIPHERAL_INTERRUPT_PRIORITY (configLIBRARY_LOWEST_INTERRUPT_PRIORITY - 1)
+#include <hpl_adc_base.h>
+#include <hpl_adc_base.h>
 
-#include <hpl_adc_base.h>
-#include <hpl_adc_base.h>
+struct spi_m_sync_descriptor SPI_0;
 
 struct adc_sync_descriptor ADC_0;
 
@@ -29,8 +23,6 @@ struct adc_sync_descriptor ADC_1;
 struct usart_sync_descriptor USART_0;
 
 struct i2c_m_sync_desc I2C_0;
-
-struct spi_m_os_descriptor SPI_0;
 
 struct rand_sync_desc RAND_0;
 
@@ -184,13 +176,7 @@ void SPI_0_CLOCK_init(void)
 void SPI_0_init(void)
 {
 	SPI_0_CLOCK_init();
-	uint32_t irq = SERCOM3_0_IRQn;
-	for (uint32_t i = 0; i < 4; i++) {
-		NVIC_SetPriority((IRQn_Type)irq, PERIPHERAL_INTERRUPT_PRIORITY);
-		irq++;
-	}
-	spi_m_os_init(&SPI_0, SERCOM3);
-	spi_m_os_enable(&SPI_0);
+	spi_m_sync_init(&SPI_0, SERCOM3);
 	SPI_0_PORT_init();
 }
 

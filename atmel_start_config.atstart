@@ -156,11 +156,11 @@ drivers:
       domain_group:
         nodes:
         - name: ADC
-          input: Generic clock generator 0
+          input: Generic clock generator 1
           external: false
           external_frequency: 0
         configuration:
-          adc_gclk_selection: Generic clock generator 0
+          adc_gclk_selection: Generic clock generator 1
   CMCC:
     user_label: CMCC
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::CMCC::driver_config_definition::CMCC::HAL:HPL:CMCC
@@ -719,12 +719,12 @@ drivers:
     functionality: System
     api: HAL:HPL:GCLK
     configuration:
-      $input: 12000000
-      $input_id: External Crystal Oscillator 8-48MHz (XOSC1)
-      RESERVED_InputFreq: 12000000
-      RESERVED_InputFreq_id: External Crystal Oscillator 8-48MHz (XOSC1)
+      $input: 48000000
+      $input_id: Digital Frequency Locked Loop (DFLL48M)
+      RESERVED_InputFreq: 48000000
+      RESERVED_InputFreq_id: Digital Frequency Locked Loop (DFLL48M)
       _$freq_output_Generic clock generator 0: 1500000
-      _$freq_output_Generic clock generator 1: 6000000
+      _$freq_output_Generic clock generator 1: 500000
       _$freq_output_Generic clock generator 10: 12000000
       _$freq_output_Generic clock generator 11: 12000000
       _$freq_output_Generic clock generator 2: 12000000
@@ -743,11 +743,11 @@ drivers:
       enable_gclk_gen_11: false
       enable_gclk_gen_11__externalclock: 1000000
       enable_gclk_gen_1__externalclock: 1000000
-      enable_gclk_gen_2: true
+      enable_gclk_gen_2: false
       enable_gclk_gen_2__externalclock: 1000000
       enable_gclk_gen_3: true
       enable_gclk_gen_3__externalclock: 1000000
-      enable_gclk_gen_4: true
+      enable_gclk_gen_4: false
       enable_gclk_gen_4__externalclock: 1000000
       enable_gclk_gen_5: false
       enable_gclk_gen_5__externalclock: 1000000
@@ -779,7 +779,7 @@ drivers:
       gclk_arch_gen_1_oe: false
       gclk_arch_gen_1_oov: false
       gclk_arch_gen_1_runstdby: true
-      gclk_arch_gen_2_enable: true
+      gclk_arch_gen_2_enable: false
       gclk_arch_gen_2_idc: false
       gclk_arch_gen_2_oe: false
       gclk_arch_gen_2_oov: false
@@ -789,7 +789,7 @@ drivers:
       gclk_arch_gen_3_oe: false
       gclk_arch_gen_3_oov: false
       gclk_arch_gen_3_runstdby: false
-      gclk_arch_gen_4_enable: true
+      gclk_arch_gen_4_enable: false
       gclk_arch_gen_4_idc: false
       gclk_arch_gen_4_oe: false
       gclk_arch_gen_4_oov: false
@@ -828,7 +828,7 @@ drivers:
       gclk_gen_11_div: 1
       gclk_gen_11_div_sel: false
       gclk_gen_11_oscillator: External Crystal Oscillator 8-48MHz (XOSC1)
-      gclk_gen_1_div: 8
+      gclk_gen_1_div: 96
       gclk_gen_1_div_sel: false
       gclk_gen_1_oscillator: Digital Frequency Locked Loop (DFLL48M)
       gclk_gen_2_div: 1
@@ -1121,7 +1121,7 @@ drivers:
       domain_group:
         nodes:
         - name: Core
-          input: Generic clock generator 0
+          input: Generic clock generator 1
           external: false
           external_frequency: 0
         - name: Slow
@@ -1129,7 +1129,7 @@ drivers:
           external: false
           external_frequency: 0
         configuration:
-          core_gclk_selection: Generic clock generator 0
+          core_gclk_selection: Generic clock generator 1
           slow_gclk_selection: Generic clock generator 3
   I2C_0:
     user_label: I2C_0
@@ -1173,9 +1173,9 @@ drivers:
           slow_gclk_selection: Generic clock generator 3
   SPI_0:
     user_label: SPI_0
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::SERCOM3::driver_config_definition::SPI.Master::HAL:Driver:SPI.Master.RTOS
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::SERCOM3::driver_config_definition::SPI.Master::HAL:Driver:SPI.Master.Sync
     functionality: SPI
-    api: HAL:Driver:SPI_Master_RTOS
+    api: HAL:Driver:SPI_Master_Sync
     configuration:
       spi_master_advanced: false
       spi_master_arch_cpha: Sample input on leading edge
@@ -1205,7 +1205,7 @@ drivers:
       domain_group:
         nodes:
         - name: Core
-          input: Generic clock generator 3
+          input: Generic clock generator 1
           external: false
           external_frequency: 0
         - name: Slow
@@ -1213,7 +1213,7 @@ drivers:
           external: false
           external_frequency: 0
         configuration:
-          core_gclk_selection: Generic clock generator 3
+          core_gclk_selection: Generic clock generator 1
           slow_gclk_selection: Generic clock generator 3
   DELAY_0:
     user_label: DELAY_0

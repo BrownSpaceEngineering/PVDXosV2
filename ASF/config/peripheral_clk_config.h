@@ -41,7 +41,7 @@
  * \brief ADC0's Clock frequency
  */
 #ifndef CONF_GCLK_ADC0_FREQUENCY
-#define CONF_GCLK_ADC0_FREQUENCY 6000000
+#define CONF_GCLK_ADC0_FREQUENCY 500000
 #endif
 
 // <y> ADC Clock Source
@@ -73,7 +73,7 @@
 
 // <i> Select the clock source for ADC.
 #ifndef CONF_GCLK_ADC1_SRC
-#define CONF_GCLK_ADC1_SRC GCLK_PCHCTRL_GEN_GCLK0_Val
+#define CONF_GCLK_ADC1_SRC GCLK_PCHCTRL_GEN_GCLK1_Val
 #endif
 
 /**
@@ -81,7 +81,7 @@
  * \brief ADC1's Clock frequency
  */
 #ifndef CONF_GCLK_ADC1_FREQUENCY
-#define CONF_GCLK_ADC1_FREQUENCY 1500000
+#define CONF_GCLK_ADC1_FREQUENCY 500000
 #endif
 
 /**
@@ -121,7 +121,7 @@
 
 // <i> Select the clock source for CORE.
 #ifndef CONF_GCLK_SERCOM0_CORE_SRC
-#define CONF_GCLK_SERCOM0_CORE_SRC GCLK_PCHCTRL_GEN_GCLK0_Val
+#define CONF_GCLK_SERCOM0_CORE_SRC GCLK_PCHCTRL_GEN_GCLK1_Val
 #endif
 
 // <y> Slow Clock Source
@@ -161,7 +161,7 @@
  * \brief SERCOM0's Core Clock frequency
  */
 #ifndef CONF_GCLK_SERCOM0_CORE_FREQUENCY
-#define CONF_GCLK_SERCOM0_CORE_FREQUENCY 1500000
+#define CONF_GCLK_SERCOM0_CORE_FREQUENCY 500000
 #endif
 
 /**
@@ -281,7 +281,7 @@
 
 // <i> Select the clock source for CORE.
 #ifndef CONF_GCLK_SERCOM3_CORE_SRC
-#define CONF_GCLK_SERCOM3_CORE_SRC GCLK_PCHCTRL_GEN_GCLK3_Val
+#define CONF_GCLK_SERCOM3_CORE_SRC GCLK_PCHCTRL_GEN_GCLK1_Val
 #endif
 
 // <y> Slow Clock Source
@@ -321,7 +321,7 @@
  * \brief SERCOM3's Core Clock frequency
  */
 #ifndef CONF_GCLK_SERCOM3_CORE_FREQUENCY
-#define CONF_GCLK_SERCOM3_CORE_FREQUENCY 32768
+#define CONF_GCLK_SERCOM3_CORE_FREQUENCY 500000
 #endif
 
 /**

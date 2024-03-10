@@ -20,8 +20,6 @@ void USART_0_example(void);
 
 void I2C_0_example(void);
 
-void SPI_0_example_task(void *p);
-
 void delay_example(void);
 
 void RAND_0_example(void);

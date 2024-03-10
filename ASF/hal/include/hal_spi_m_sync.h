@@ -1,9 +1,9 @@
 /**
  * \file
  *
- * \brief SPI RTOS related functionality declaration.
+ * \brief SPI related functionality declaration.
  *
- * Copyright (c) 2016-2018 Microchip Technology Inc. and its subsidiaries.
+ * Copyright (c) 2014-2018 Microchip Technology Inc. and its subsidiaries.
  *
  * \asf_license_start
  *
@@ -31,36 +31,33 @@
  *
  */
 
-#ifndef _HAL_SPI_M_OS_H_INCLUDED
-#define _HAL_SPI_M_OS_H_INCLUDED
+#ifndef _HAL_SPI_M_SYNC_H_INCLUDED
+#define _HAL_SPI_M_SYNC_H_INCLUDED
 
 #include <hal_io.h>
-#include <hpl_spi_m_async.h>
-#include <hal_rtos.h>
+#include <hpl_spi_m_sync.h>
+
+/**
+ * \addtogroup doc_driver_hal_spi_master_sync
+ *
+ * @{
+ */
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/**
- * \addtogroup doc_driver_hal_spi_master_os
+/** \brief SPI HAL driver struct for polling mode
  *
- * @{
  */
-
-/* Forward declaration of spi_descriptor. */
-struct spi_m_os_descriptor;
-
-/** \brief SPI HAL driver struct for asynchronous access
- */
-struct spi_m_os_descriptor {
-	struct _spi_m_async_hpl_interface *func;
-	struct _spi_m_async_dev            dev;      /** Pointer to SPI device instance */
-	struct io_descriptor               io;       /** I/O read/write */
-	sem_t                              xfer_sem; /** SPI semphore */
-	struct spi_xfer                    xfer;     /** Transfer information copy, for R/W/Transfer */
-	uint32_t                           xfercnt;  /** Character count in current transfer */
-	uint32_t                           error;    /** SPI complete status, 0:no error*/
+struct spi_m_sync_descriptor {
+	struct _spi_m_sync_hpl_interface *func;
+	/** SPI device instance */
+	struct _spi_sync_dev dev;
+	/** I/O read/write */
+	struct io_descriptor io;
+	/** Flags for HAL driver */
+	uint16_t flags;
 };
 
 /** \brief Set the SPI HAL instance function pointer for HPL APIs.
@@ -71,11 +68,11 @@ struct spi_m_os_descriptor {
  *  \param[in] func Pointer to the HPL api structure.
  *
  */
-void spi_m_os_set_func_ptr(struct spi_m_os_descriptor *spi, void *const func);
+void spi_m_sync_set_func_ptr(struct spi_m_sync_descriptor *spi, void *const func);
 
-/** \brief Initialize the SPI HAL instance and hardware for RTOS mode
+/** \brief Initialize SPI HAL instance and hardware for polling mode
  *
- *  Initialize SPI HAL with interrupt mode (uses RTOS).
+ *  Initialize SPI HAL with polling mode.
  *
  *  \param[in] spi Pointer to the HAL SPI instance.
  *  \param[in] hw Pointer to the hardware base.
@@ -84,11 +81,11 @@ void spi_m_os_set_func_ptr(struct spi_m_os_descriptor *spi, void *const func);
  *  \retval ERR_NONE Success.
  *  \retval ERR_INVALID_DATA Error, initialized.
  */
-int32_t spi_m_os_init(struct spi_m_os_descriptor *const spi, void *const hw);
+int32_t spi_m_sync_init(struct spi_m_sync_descriptor *spi, void *const hw);
 
-/** \brief Deinitialize the SPI HAL instance
+/** \brief Deinitialize the SPI HAL instance and hardware
  *
- *  Abort transfer, disable and reset SPI, de-init software.
+ *  Abort transfer, disable and reset SPI, deinit software.
  *
  *  \param[in] spi Pointer to the HAL SPI instance.
  *
@@ -96,7 +93,7 @@ int32_t spi_m_os_init(struct spi_m_os_descriptor *const spi, void *const hw);
  *  \retval ERR_NONE Success.
  *  \retval <0 Error code.
  */
-int32_t spi_m_os_deinit(struct spi_m_os_descriptor *const spi);
+void spi_m_sync_deinit(struct spi_m_sync_descriptor *spi);
 
 /** \brief Enable SPI
  *
@@ -106,12 +103,9 @@ int32_t spi_m_os_deinit(struct spi_m_os_descriptor *const spi);
  *  \retval ERR_NONE Success.
  *  \retval <0 Error code.
  */
-int32_t spi_m_os_enable(struct spi_m_os_descriptor *const spi);
+void spi_m_sync_enable(struct spi_m_sync_descriptor *spi);
 
-/** \brief Disable the SPI and abort any pending transfer in progress
- *
- * If there is any pending transfer, the complete callback is invoked
- * with the \c ERR_ABORTED status.
+/** \brief Disable SPI
  *
  *  \param[in] spi Pointer to the HAL SPI instance.
  *
@@ -119,12 +113,11 @@ int32_t spi_m_os_enable(struct spi_m_os_descriptor *const spi);
  *  \retval ERR_NONE Success.
  *  \retval <0 Error code.
  */
-int32_t spi_m_os_disable(struct spi_m_os_descriptor *const spi);
+void spi_m_sync_disable(struct spi_m_sync_descriptor *spi);
 
 /** \brief Set SPI baudrate
  *
- *  Works if the SPI is initialized as master.
- *  In the function a sanity check is used to confirm it's called in the correct mode.
+ *  Works if SPI is initialized as master, it sets the baudrate.
  *
  *  \param[in] spi Pointer to the HAL SPI instance.
  *  \param[in] baud_val The target baudrate value
@@ -132,9 +125,10 @@ int32_t spi_m_os_disable(struct spi_m_os_descriptor *const spi);
  *
  *  \return Operation status.
  *  \retval ERR_NONE Success.
- *  \retval ERR_BUSY Busy.
+ *  \retval ERR_BUSY Busy
+ *  \retval ERR_INVALID_ARG The baudrate is not supported.
  */
-int32_t spi_m_os_set_baudrate(struct spi_m_os_descriptor *const spi, const uint32_t baud_val);
+int32_t spi_m_sync_set_baudrate(struct spi_m_sync_descriptor *spi, const uint32_t baud_val);
 
 /** \brief Set SPI mode
  *
@@ -146,13 +140,14 @@ int32_t spi_m_os_set_baudrate(struct spi_m_os_descriptor *const spi, const uint3
  *  - Mode 3: leading edge is falling edge, data sample on trailing edge.
  *
  *  \param[in] spi Pointer to the HAL SPI instance.
- *  \param[in] mode The mode (\ref spi_transfer_mode).
+ *  \param[in] mode The mode (0~3).
  *
  *  \return Operation status.
  *  \retval ERR_NONE Success.
- *  \retval ERR_BUSY Busy, CS activated.
+ *  \retval ERR_BUSY Busy
+ *  \retval ERR_INVALID_ARG The mode is not supported.
  */
-int32_t spi_m_os_set_mode(struct spi_m_os_descriptor *const spi, const enum spi_transfer_mode mode);
+int32_t spi_m_sync_set_mode(struct spi_m_sync_descriptor *spi, const enum spi_transfer_mode mode);
 
 /** \brief Set SPI transfer character size in number of bits
  *
@@ -164,43 +159,39 @@ int32_t spi_m_os_set_mode(struct spi_m_os_descriptor *const spi, const enum spi_
  *  supported by all system.
  *
  *  \param[in] spi Pointer to the HAL SPI instance.
- *  \param[in] char_size The char size (\ref spi_char_size).
+ *  \param[in] char_size The char size (~16, recommended 8).
  *
  *  \return Operation status.
  *  \retval ERR_NONE Success.
- *  \retval ERR_BUSY Busy, CS activated.
+ *  \retval ERR_BUSY Busy
  *  \retval ERR_INVALID_ARG The char size is not supported.
  */
-int32_t spi_m_os_set_char_size(struct spi_m_os_descriptor *const spi, const enum spi_char_size char_size);
+int32_t spi_m_sync_set_char_size(struct spi_m_sync_descriptor *spi, const enum spi_char_size char_size);
 
 /** \brief Set SPI transfer data order
  *
  *  \param[in] spi Pointer to the HAL SPI instance.
- *  \param[in] order The data order: send LSB/MSB first.
+ *  \param[in] dord The data order: send LSB/MSB first.
  *
  *  \return Operation status.
  *  \retval ERR_NONE Success.
- *  \retval ERR_BUSY Busy, CS activated.
- *  \retval ERR_INVALID The data order is not supported.
+ *  \retval ERR_BUSY Busy
+ *  \retval ERR_INVALID_ARG The data order is not supported.
  */
-int32_t spi_m_os_set_data_order(struct spi_m_os_descriptor *const spi, const enum spi_data_order order);
+int32_t spi_m_sync_set_data_order(struct spi_m_sync_descriptor *spi, const enum spi_data_order dord);
 
-/** \brief Perform the SPI data transfer (TX and RX) using RTOS
+/** \brief Perform the SPI data transfer (TX and RX) in polling way
  *
- *  Log the TX and RX buffers and transfer them in background. It blocks
- *  task/thread until the transfer done.
+ *  Activate CS, do TX and RX and deactivate CS. It blocks.
  *
- *  \param[in] spi Pointer to the HAL SPI instance.
- *  \param[in] txbuf Pointer to the transfer information (\ref spi_transfer).
- *  \param[out] rxbuf Pointer to the receiver information (\ref spi_receive).
- *  \param[in] length SPI transfer data length.
+ *  \param[in, out] spi Pointer to the HAL SPI instance.
+ *  \param[in] xfer Pointer to the transfer information (\ref spi_xfer).
  *
- *  \return Operation status.
- *  \retval ERR_NONE Success.
- *  \retval ERR_BUSY Busy.
+ *  \retval size Success.
+ *  \retval >=0 Timeout, with number of characters transferred.
+ *  \retval ERR_BUSY SPI is busy
  */
-int32_t spi_m_os_transfer(struct spi_m_os_descriptor *const spi, uint8_t const *txbuf, uint8_t *const rxbuf,
-                          const uint16_t length);
+int32_t spi_m_sync_transfer(struct spi_m_sync_descriptor *spi, const struct spi_xfer *xfer);
 
 /**
  * \brief Return the I/O descriptor for this SPI instance
@@ -213,22 +204,18 @@ int32_t spi_m_os_transfer(struct spi_m_os_descriptor *const spi, uint8_t const *
  *
  * \retval ERR_NONE
  */
-static inline int32_t spi_m_os_get_io_descriptor(struct spi_m_os_descriptor *const spi, struct io_descriptor **io)
-{
-	*io = &spi->io;
-	return ERR_NONE;
-}
+int32_t spi_m_sync_get_io_descriptor(struct spi_m_sync_descriptor *const spi, struct io_descriptor **io);
 
 /** \brief Retrieve the current driver version
  *
  *  \return Current driver version.
  */
-uint32_t spi_m_os_get_version(void);
+uint32_t spi_m_sync_get_version(void);
 
 /**@}*/
 
 #ifdef __cplusplus
 }
 #endif
-/**@}*/
-#endif /* ifndef _HAL_SPI_M_OS_H_INCLUDED */
+
+#endif /* ifndef _HAL_SPI_M_SYNC_H_INCLUDED */

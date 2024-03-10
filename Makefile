@@ -150,31 +150,35 @@ update_asf:
 	&& echo "(2) ASF Config Removed" \
 	&& mkdir -p ASF \
 	&& echo "(3) ASF Dir Re-Created" \
-	&& echo "(4.1) Unzipping ASF.atzip (this may take a sec...)" \
+	&& echo "(4) Unzipping ASF.atzip (may take a sec)" \
 	&& unzip -q ASF.atzip -d ASF \
-	&& echo "(4.2) ASF Unzipped" \
+	&& echo "(4.1) ASF Unzipped" \
+	&& find ./ASF/ -type f -newermt now -exec touch {} \;\
+	&& echo "(4.2) Set timestamps to current time" \
 	&& cp -f ./ASF/atmel_start_config.atstart ./ \
-	&& echo "(5) ASF Config Lifted" \
+	&& echo "(4.3) ASF Config Lifted" \
+	&& echo "(5) Making ASF Makefile Modifications..." \
 	&& $(SED) -i 's/\$$(\@:%\.o=%\.d)/$$(patsubst ..\/%,%, \$$(\@:%\.o=%\.d))/g' ./ASF/gcc/Makefile \
-	&& echo "(6.1) ASF Makefile: GCC dependency filepaths corrected" \
+	&& echo "(5.1) ASF Makefile: GCC dependency filepaths corrected" \
 	&& $(SED) -i 's/\$$(\@:%\.o=%\.o)/$$(patsubst ..\/%,%, \$$(\@:%\.o=%\.o))/g' ./ASF/gcc/Makefile \
-	&& echo "(6.2) ASF Makefile: GCC object filepaths corrected" \
+	&& echo "(5.2) ASF Makefile: GCC object filepaths corrected" \
 	&& $(SED) -i 's/\$$@/\$$(strip \$$(patsubst ..\/%, %, $$@))/g' ./ASF/gcc/Makefile \
-	&& echo "(6.3) ASF Makefile: GCC output filepaths corrected" \
+	&& echo "(5.3) ASF Makefile: GCC output filepaths corrected" \
 	&& $(SED) -i '/main/d' ./ASF/gcc/Makefile \
-	&& echo "(6.4) ASF Makefile: References to ASF main.c removed" \
+	&& echo "(5.4) ASF Makefile: References to ASF main.c removed" \
 	&& $(SED) -i 's/-DDEBUG/$$(CFLAGS)/g' ./ASF/gcc/Makefile \
-	&& echo "(6.5) ASF Makefile: CFLAGS hook injected" \
+	&& echo "(5.5) ASF Makefile: CFLAGS hook injected" \
 	&& rm -f ./ASF/main.c \
-	&& echo "(7) ASF main.c Removed" \
+	&& echo "(6) ASF main.c Removed" \
 	&& $(SED) -i 's/AtmelStart/PVDXos/g' ./ASF/gcc/Makefile \
-	&& echo "(8) ASF Makefile: Project name updated to PVDXos" \
+	&& echo "(7) ASF Makefile: Project name updated to PVDXos" \
+	&& echo "(8) Making FreeRTOSConfig Modifications..." \
 	&& $(SED) -i 's|// <h> Basic|#define configSUPPORT_STATIC_ALLOCATION 1|' ./ASF/config/FreeRTOSConfig.h \
-	&& echo "(9.1) ASF FreeRTOSConfig.h: Static allocation enabled" \
+	&& echo "(8.1) ASF FreeRTOSConfig.h: Static allocation enabled" \
 	&& $(SED) -i 's|#define INCLUDE_uxTaskGetStackHighWaterMark 0|#define INCLUDE_uxTaskGetStackHighWaterMark 1|' ./ASF/config/FreeRTOSConfig.h \
-	&& echo "(9.2) ASF FreeRTOSConfig.h: Task stack high watermark function enabled" \
+	&& echo "(8.2) ASF FreeRTOSConfig.h: Task stack high watermark function enabled" \
 	&& $(SED) -i 's|#define configCHECK_FOR_STACK_OVERFLOW 1|#define configCHECK_FOR_STACK_OVERFLOW 2|' ./ASF/config/FreeRTOSConfig.h \
-	&& echo "(9.3) ASF FreeRTOSConfig.h: Task stack overflow checking upgraded to type 2 (higher accuracy)" \
+	&& echo "(8.3) ASF FreeRTOSConfig.h: Task stack overflow checking upgraded to type 2 (higher accuracy)" \
 	&& echo " --- Finished Integrating ASF --- "
 
 
