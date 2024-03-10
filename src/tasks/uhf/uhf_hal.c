@@ -2,10 +2,10 @@
 
 #include "pincfg.h"
 
-#define UHF_BUFFER_CAPACITY 8
+#define UHF_SPI_BUFFER_CAPACITY 8
 
-uint8_t uhf_tx_buffer[UHF_BUFFER_CAPACITY] = {0};
-uint8_t uhf_rx_buffer[UHF_BUFFER_CAPACITY] = {0};
+uint8_t uhf_tx_buffer[UHF_SPI_BUFFER_CAPACITY] = {0};
+uint8_t uhf_rx_buffer[UHF_SPI_BUFFER_CAPACITY] = {0};
 struct spi_xfer uhf_transfer_struct = {
     .rxbuf = uhf_rx_buffer,
     .txbuf = uhf_tx_buffer,
@@ -23,7 +23,7 @@ status_t readRegister(uint8_t address, uint8_t *data) {
     uhf_rx_buffer[1] = 0x00; // The value from the register will be stored here after the sync_transfer
 
     uhf_transfer_struct.size = 2; // Capacity is larger than this, but we only want to transfer 2 bytes anyways
-    uint32_t bytes_transferred = spi_m_sync_transfer(&SPI_0, &uhf_transfer_struct);
+    uint32_t bytes_transferred = spi_m_sync_transfer(&UHF_SERCOM, &uhf_transfer_struct);
     gpio_set_pin_level(UHF_CS, true); // Set CS high
     if (bytes_transferred != 2) {
         warning("Failed to read from UHF module\n");
@@ -47,7 +47,7 @@ status_t writeRegister(uint8_t address, uint8_t value) {
     uhf_rx_buffer[1] = 0x00;
 
     uhf_transfer_struct.size = 2; // Capacity is larger than this, but we only want to transfer 2 bytes anyways
-    uint32_t bytes_transferred = spi_m_sync_transfer(&SPI_0, &uhf_transfer_struct);
+    uint32_t bytes_transferred = spi_m_sync_transfer(&UHF_SERCOM, &uhf_transfer_struct);
     gpio_set_pin_level(UHF_CS, true); // Set CS high
     if (bytes_transferred != 2) {
         warning("Failed to write to UHF module\n");
@@ -151,17 +151,79 @@ status_t uhf_init(uint32_t frequency) {
     return SUCCESS;
 }
 
-status_t uhf_send(uint8_t *data, uint8_t length) {
+status_t uhf_send(uint8_t *data, size_t length) {
     debug("Sending UHF packet of length %d\n", length);
-    status_t status = begin_packet();
+    if (length > MAX_PKT_LENGTH) {
+        return ERROR_MAX_SIZE_EXCEEDED;
+    }
+    status_t status = uhf_begin_packet();
     if (status != SUCCESS) {
         return status;
     }
+    status |= uhf_write(data, length);
 
-    return ERROR_NOT_YET_IMPLEMENTED;
+    status |= uhf_end_packet(); // also sends the message
+    return status;
 }
 
-status_t begin_packet() {
+status_t uhf_end_packet() {
+
+    // Original LoRa code included this check, but assuming we're not doing async mode, we can remove it.
+    /*
+    if ((async) && (_onTxDone)) { writeRegister(REG_DIO_MAPPING_1, 0x40); } // DIO0 => TXDONE
+    */
+
+    // put in TX mode
+    info("Beginning UHF transmission... (time: %d)\n", xTaskGetTickCount());
+    status_t reg_status = writeRegister_chk(REG_OP_MODE, MODE_LONG_RANGE_MODE | MODE_TX);
+
+    // if (!async) { Original LoRa code included this check, but assuming we're not doing async mode, we can remove it.
+    info("Waiting for UHF transmission to complete...\n");
+    // wait for TX done
+    uint8_t irq_flags = 0;
+    while (1) {
+        readRegister(REG_IRQ_FLAGS, &irq_flags);
+        if ((irq_flags & IRQ_TX_DONE_MASK) == 0) {
+            // TX not done yet, wait a bit
+            vTaskDelay(pdMS_TO_TICKS(UHF_TX_DONE_POLLING_RATE_MS));
+        } else {
+            // TX done!
+            break;
+        }
+    }
+    // clear IRQ's
+    reg_status |= writeRegister(REG_IRQ_FLAGS, IRQ_TX_DONE_MASK);
+
+    if (reg_status == SUCCESS) {
+        info("UHF transmission successful! (time: %d)\n", xTaskGetTickCount());
+    }
+    return reg_status;
+}
+
+status_t uhf_write(uint8_t *data, size_t size) {
+    uint8_t currentLength = 0;
+    status_t reg_status = readRegister(REG_PAYLOAD_LENGTH, &currentLength);
+
+    // check size
+    if ((currentLength + size) > MAX_PKT_LENGTH) {
+        return ERROR_MAX_SIZE_EXCEEDED;
+
+        // Original implementation truncates: \/
+        // size = MAX_PKT_LENGTH - currentLength;
+    }
+
+    // write data
+    for (size_t i = 0; i < size; i++) {
+        reg_status |= writeRegister(REG_FIFO, data[i]); // Not a persistent register, so we don't use the chk version
+    }
+
+    // update length
+    reg_status |= writeRegister_chk(REG_PAYLOAD_LENGTH, currentLength + size);
+
+    return reg_status;
+}
+
+status_t uhf_begin_packet() {
     if (is_transmitting()) {
         return ERROR_BUSY;
     }
@@ -169,22 +231,18 @@ status_t begin_packet() {
     // put in standby mode
     status_t reg_result = idle();
 
-    // set FIFO pointers
-    reg_result = writeRegister_chk(REG_FIFO_ADDR_PTR, 0);
-    if (reg_result != SUCCESS) {
-        return reg_result;
-    }
+    // Currently, supporting only explicit header mode (original code allows for implicit header mode config here)
+    /*if (implicitHeader) { implicitHeaderMode(); } else { explicitHeaderMode(); }*/
+    reg_result |= explicitHeaderMode();
 
-    // clear FIFO
-    reg_result = writeRegister_chk(REG_FIFO_TX_BASE_ADDR, 0);
-    if (reg_result != SUCCESS) {
-        return reg_result;
-    }
+    // reset FIFO address and paload length
+    reg_result |= writeRegister(REG_FIFO_ADDR_PTR, 0);
+    reg_result |= writeRegister(REG_PAYLOAD_LENGTH, 0);
 
     return SUCCESS;
 }
 
-bool isTransmitting() {
+bool is_transmitting() {
     uint8_t mode = 0;
     status_t reg_result = readRegister(REG_OP_MODE, &mode);
     if ((mode & MODE_TX) == MODE_TX) {
@@ -199,6 +257,13 @@ bool isTransmitting() {
     }
 
     return false;
+}
+
+status_t explicitHeaderMode() {
+    uint8_t reg_modem_config_1_val = 0;
+    status_t reg_result = readRegister(REG_MODEM_CONFIG_1, &reg_modem_config_1_val);
+    reg_result |= writeRegister_chk(REG_MODEM_CONFIG_1, reg_modem_config_1_val & 0xfe);
+    return reg_result;
 }
 
 status_t idle() {

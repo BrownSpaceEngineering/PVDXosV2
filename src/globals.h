@@ -12,15 +12,19 @@ typedef enum {
 
 typedef enum {
     SUCCESS = 0,
+
+    // Recoverable or low-significance errors are all less than 64
     ERROR_INTERNAL, // Generic error for when something goes wrong
     ERROR_NO_DATA,
     ERROR_NO_MEMORY,
     ERROR_WRITE_FAILED,
     ERROR_NOT_YET_IMPLEMENTED,
     ERROR_BUSY, // Similar to EAGAIN in Linux, if that comparison is helpful
+    ERROR_MAX_SIZE_EXCEEDED,
 
-    // This one should be last in the list
-    ERROR_UNRECOVERABLE, // If this is returned, the system should restart.
+    // High significance errors start at 128 (0x80) (in these cases, restart the system)
+    ERROR_UNRECOVERABLE = 0x80,
+    ERROR_BITFLIP, // Specifically if we detect a bitflip, so we can increment counters.
 } status_t;
 
 #endif // GLOBALS_H

@@ -3,6 +3,8 @@
 #include "uhf_task.h"
 
 struct uhfTaskMemory uhfMem = {0};
+unsigned char uhf_test_message[] = "Brown UHF Engineering!";
+size_t uhf_test_message_length = sizeof(uhf_test_message);
 
 void uhf_main(void *pvParameters) {
     info("UHF task started!\n");
@@ -15,8 +17,15 @@ void uhf_main(void *pvParameters) {
         warning("Failed to initialize UHF module! [Error: %d]\n", init_status);
     }
 
+    status_t send_status = uhf_send(uhf_test_message, uhf_test_message_length);
+    if (send_status == SUCCESS) {
+        info("UHF message sent succesfully\n");
+    } else {
+        warning("Failed to send UHF message! [Error: %d]\n", send_status);
+    }
+
     while (1) {
-        info("UHF task delaying forver\n");
+        info("UHF task done, delaying forver\n");
         vTaskDelay(pdMS_TO_TICKS(10000));
     }
 }

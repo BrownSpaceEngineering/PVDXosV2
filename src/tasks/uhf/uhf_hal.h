@@ -5,6 +5,8 @@
 #include <atmel_start.h>
 #include <driver_init.h>
 
+#define UHF_TX_DONE_POLLING_RATE_MS 10
+
 // registers
 #define REG_FIFO 0x00
 #define REG_OP_MODE 0x01
@@ -66,7 +68,7 @@
 
 /* Internal function prototypes */
 
-status_t uhf_send(uint8_t *data, uint8_t length);
+status_t uhf_send(uint8_t *data, size_t length);
 status_t uhf_init(uint32_t frequency);
 
 status_t readRegister(uint8_t address, uint8_t *data);
@@ -74,5 +76,8 @@ status_t writeRegister(uint8_t address, uint8_t value);
 status_t writeRegister_chk(uint8_t address, uint8_t value);
 
 status_t idle();
-status_t begin_packet();
+status_t uhf_begin_packet();
+status_t uhf_write(uint8_t *data, size_t size);
+status_t uhf_end_packet();
 bool is_transmitting();
+status_t explicitHeaderMode();

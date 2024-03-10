@@ -42,6 +42,7 @@ cosmicmonkeyTaskArguments_t cm_args = {0};
 int main(void) {
     /* Initializes MCU, drivers and middleware */
     atmel_start_init();
+    info("\n\n\n"); // Print a few newlines to make the log easier to read
     info("--- ATMEL Initialization Complete ---\n");
 
     // Initialize the watchdog as early as possible to ensure that the system is reset if the initialization hangs
