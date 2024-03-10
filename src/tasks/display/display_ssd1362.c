@@ -120,7 +120,7 @@ status_t init_display() {
 status_t write_command(uint8_t cmd) {
     CS_LOW();
     DC_LOW();
-    // Spi_write(cmd);
+    spi_write_byte(cmd);
     CS_HIGH();
 
     return SUCCESS;
@@ -129,7 +129,7 @@ status_t write_command(uint8_t cmd) {
 status_t write_data(uint8_t data) {
     CS_LOW();
     DC_HIGH();
-    // Spi_write(cmd);
+    spi_write_byte(data);
     CS_HIGH();
 
     return SUCCESS;
