@@ -9,22 +9,23 @@
 // CS functions
 #define CS_LOW() gpio_set_pin_level(OLED_CS_PIN, 0)
 #define CS_HIGH() gpio_set_pin_level(OLED_CS_PIN, 1)
-// Reset functions
-#define RST_LOW() gpio_set_pin_level(OLED_RST_PIN, 0)
-#define CS_HIGH() gpio_set_pin_level(OLED_RST_PIN, 1)
 
 #define INIT_WAIT_INTERVAL 300
 #define RESET_HIGH() gpio
 
-status_t spi_write_byte(uint8_t byte) {
-    unsigned char res;
-    struct spi_xfer xfer;
-    xfer.size = 1;
-    xfer.txbuf = &byte;
-    xfer.rxbuf = &res;
-    spi_m_sync_enable(&SPI_0);  // if you forget this line, this function returns -20
+#define DISPLAY_SPI_BUFFER_CAPACITY 3
+
+uint8_t spi_rx_buffer[DISPLAY_SPI_BUFFER_CAPACITY] = {0};
+uint8_t spi_tx_buffer[DISPLAY_SPI_BUFFER_CAPACITY] = {0};
+struct spi_xfer xfer = {
+    .rxbuf = spi_rx_buffer,
+    .txbuf = spi_tx_buffer,
+    .size = 0
+};
+
+status_t spi_write() {
     int32_t response = spi_m_sync_transfer(&SPI_0, &xfer);
-    if (response != 0) {
+    if (response != (int32_t)xfer.size) {
         return ERROR_IO;
     }
     return SUCCESS;
@@ -32,84 +33,140 @@ status_t spi_write_byte(uint8_t byte) {
 
 // TODO: Add error checking
 status_t init_display() {
+    spi_m_sync_enable(&SPI_0);  // if you forget this line, this function returns -20
+    
     // Reset the display
+    delay_ms(INIT_WAIT_INTERVAL);
     RST_LOW();
-    vTaskDelay(pdMS_TO_TICKS(INIT_WAIT_INTERVAL));
+    delay_ms(INIT_WAIT_INTERVAL);
     RST_HIGH();
-    vTaskDelay(pdMS_TO_TICKS(INIT_WAIT_INTERVAL));
-
+    delay_ms(INIT_WAIT_INTERVAL);
+    
     // Keep CS low for init
+    CS_HIGH();
+    delay_ms(INIT_WAIT_INTERVAL);
     CS_LOW();
+    delay_ms(INIT_WAIT_INTERVAL);
+
+    DC_LOW();
+    delay_ms(INIT_WAIT_INTERVAL);
+
     // Unlock command lock (just in case)
-    spi_write_byte(SSD1362_CMD_2B_COMMANDLOCK);
-    spi_write_byte(SSD_1362_ARG_COMMANDLOCK_UNLOCK);
+    xfer.size = 2;
+    spi_tx_buffer[0] = SSD1362_CMD_2B_COMMANDLOCK;
+    spi_tx_buffer[1] = SSD_1362_ARG_COMMANDLOCK_UNLOCK;
+    spi_write();
+
     // Put display to sleep
-    spi_write_byte(SSD1362_CMD_1B_DISPLAYOFF);
+    xfer.size = 1;
+    spi_tx_buffer[0] = SSD1362_CMD_1B_DISPLAYOFF;
+    spi_write();
 
     // Configure row and col addrs
-    spi_write_byte(SSD1362_CMD_3B_SETCOLUMN);
-    spi_write_byte(SSD_1362_COL_START);
-    spi_write_byte(SSD_1362_COL_END);
-    spi_write_byte(SSD1362_CMD_3B_SETROW);
-    spi_write_byte(SSD_1362_ROW_START);
-    spi_write_byte(SSD_1362_ROW_END);
+    xfer.size = 3;
+    spi_tx_buffer[0] = SSD1362_CMD_3B_SETCOLUMN;
+    spi_tx_buffer[1] = SSD_1362_COL_START;
+    spi_tx_buffer[2] = SSD_1362_COL_END;
+    spi_write();
+
+    xfer.size = 3;
+    spi_tx_buffer[0] = SSD1362_CMD_3B_SETROW;
+    spi_tx_buffer[1] = SSD_1362_ROW_START;
+    spi_tx_buffer[2] = SSD_1362_ROW_END;
+    spi_write();
 
     // Set contrast
-    spi_write_byte(SSD1362_CMD_2B_CONTRASTMASTER);
-    spi_write_byte(SSD1362_CONTRAST_STEP);
+    xfer.size = 2;
+    spi_tx_buffer[0] = SSD1362_CMD_2B_CONTRASTMASTER;
+    spi_tx_buffer[1] = SSD1362_CONTRAST_STEP;
+    spi_write();
 
     // Set remap
-    spi_write_byte(SSD1362_CMD_2B_SETREMAP);
-    spi_write_byte(SSD1362_REMAP_VALUE);
+    xfer.size = 2;
+    spi_tx_buffer[0] = SSD1362_CMD_2B_SETREMAP;
+    spi_tx_buffer[1] = SSD1362_REMAP_VALUE;
+    spi_write();
 
     // Set display start line
-    spi_write_byte(SSD1362_CMD_2B_STARTLINE);
-    spi_write_byte(0x00);
+    xfer.size = 2;
+    spi_tx_buffer[0] = SSD1362_CMD_2B_STARTLINE;
+    spi_tx_buffer[1] = 0x00;
+    spi_write();
+
+    // Set display offset
+    xfer.size = 2;
+    spi_tx_buffer[0] = SSD1362_CMD_DISPLAYOFFSET;
+    spi_tx_buffer[1] = 0x00;
+    spi_write();
 
     // Set normal display mode
-    spi_write_byte(SSD1362_CMD_1B_NORMALDISPLAY);
+    xfer.size = 1;
+    spi_tx_buffer[0] = SSD1362_CMD_ALLPIXELON; // was 0xA4 for normal display previously
+    spi_write();
 
     // Set multiplex ratio
-    spi_write_byte(SSD1362_CMD_2B_MULTIPLEX_RATIO);
-    spi_write_byte(SSD1362_MUX_RATIO);
+    xfer.size = 2;
+    spi_tx_buffer[0] = SSD1362_CMD_2B_MULTIPLEX_RATIO;
+    spi_tx_buffer[1] = SSD1362_MUX_RATIO;
+    spi_write();
 
     // Set VDD
-    spi_write_byte(SSD1362_CMD_2B_SET_VDD);
-    spi_write_byte(SSD_1362_ARG_VDD_ON);
+    xfer.size = 2;
+    spi_tx_buffer[0] = SSD1362_CMD_2B_SET_VDD;
+    spi_tx_buffer[1] = SSD_1362_ARG_VDD_ON;
+    spi_write();
 
     // Set IREF
-    spi_write_byte(SSD1362_CMD_2B_IREF_SELECTION);
-    spi_write_byte(SSD_1362_ARG_IREF_INTERNAL);
+    xfer.size = 2;
+    spi_tx_buffer[0] = SSD1362_CMD_2B_IREF_SELECTION;
+    spi_tx_buffer[1] = SSD_1362_ARG_IREF_EXTERNAL; // possibly should be 0x9E for internal
+    spi_write();
 
     // Set phase length
-    spi_write_byte(SSD1362_CMD_2B_PHASE_LENGTH);
-    spi_write_byte(SSD_1362_PHASE_1_2_LENGTHS);
+    xfer.size = 2;
+    spi_tx_buffer[0] = SSD1362_CMD_2B_PHASE_LENGTH;
+    spi_tx_buffer[1] = SSD_1362_PHASE_1_2_LENGTHS;
+    spi_write();
 
     // Set display clock divider
-    spi_write_byte(SSD1362_CMD_2B_CLOCKDIV);
-    spi_write_byte(SSD1362_CLOCK_DIVIDER_VALUE);
+    xfer.size = 2;
+    spi_tx_buffer[0] = SSD1362_CMD_2B_CLOCKDIV;
+    spi_tx_buffer[1] = SSD1362_CLOCK_DIVIDER_VALUE;
+    spi_write();
 
     // Set pre-charge 2 period
-    spi_write_byte(SSD1362_CMD_2B_PRECHARGE2);
-    spi_write_byte(SSD1362_PRECHARGE_2_TIME);
+    xfer.size = 2;
+    spi_tx_buffer[0] = SSD1362_CMD_2B_PRECHARGE2;
+    spi_tx_buffer[1] = SSD1362_PRECHARGE_2_TIME;
+    spi_write();
 
     // Set linear LUT
-    spi_write_byte(SSD1362_CMD_1B_USELINEARLUT);
+    xfer.size = 1;
+    spi_tx_buffer[0] = SSD1362_CMD_1B_USELINEARLUT;
+    spi_write();
 
     // Set pre-charge voltage level to 0.5 * Vcc
-    spi_write_byte(SSD1362_CMD_2B_PRECHARGELEVEL);
-    spi_write_byte(SSD1362_PRECHARGE_VOLTAGE_RATIO);
+    xfer.size = 2;
+    spi_tx_buffer[0] = SSD1362_CMD_2B_PRECHARGELEVEL;
+    spi_tx_buffer[1] = SSD1362_PRECHARGE_VOLTAGE_RATIO;
+    spi_write();
 
     // Set pre-charge capacitor
-    spi_write_byte(SSD1362_CMD_2B_PRECHARGE_CAPACITOR);
-    spi_write_byte(SSD1362_PRECHARGE_CAPACITOR);
+    xfer.size = 2;
+    spi_tx_buffer[0] = SSD1362_CMD_2B_PRECHARGE_CAPACITOR;
+    spi_tx_buffer[1] = SSD1362_PRECHARGE_CAPACITOR;
+    spi_write();
 
     // Set COM deselect voltage
-    spi_write_byte(SSD1362_CMD_2B_COM_DESELECT_VOLTAGE);
-    spi_write_byte(SSD1362_DESELECT_VOLTAGE_RATIO);
+    xfer.size = 2;
+    spi_tx_buffer[0] = SSD1362_CMD_2B_COM_DESELECT_VOLTAGE;
+    spi_tx_buffer[1] = SSD1362_DESELECT_VOLTAGE_RATIO;
+    spi_write();
 
     // Turn the display on!
-    spi_write_byte(SSD1362_CMD_1B_DISPLAYON);
+    xfer.size = 1;
+    spi_tx_buffer[0] = SSD1362_CMD_1B_DISPLAYON;
+    spi_write();
 
     // CS high when we finish our SPI operations
     CS_HIGH();
@@ -117,20 +174,34 @@ status_t init_display() {
     return SUCCESS;
 }
 
-status_t write_command(uint8_t cmd) {
-    CS_LOW();
-    DC_LOW();
-    spi_write_byte(cmd);
-    CS_HIGH();
+// status_t spi_write_byte(uint8_t byte) {
+//     unsigned char res;
+//     struct spi_xfer xfer;
+//     xfer.size = 1;
+//     xfer.txbuf = &byte;
+//     xfer.rxbuf = &res;
+//     //spi_m_sync_enable(&SPI_0);  // if you forget this line, this function returns -20
+//     int32_t response = spi_m_sync_transfer(&SPI_0, &xfer);
+//     if (response != 0) {
+//         return ERROR_IO;
+//     }
+//     return SUCCESS;
+// }
 
-    return SUCCESS;
-}
+// status_t write_command(uint8_t cmd) {
+//     CS_LOW();
+//     DC_LOW();
+//     spi_write_byte(cmd);
+//     CS_HIGH();
 
-status_t write_data(uint8_t data) {
-    CS_LOW();
-    DC_HIGH();
-    spi_write_byte(data);
-    CS_HIGH();
+//     return SUCCESS;
+// }
 
-    return SUCCESS;
-}
+// status_t write_data(uint8_t data) {
+//     CS_LOW();
+//     DC_HIGH();
+//     spi_write_byte(data);
+//     CS_HIGH();
+
+//     return SUCCESS;
+// }

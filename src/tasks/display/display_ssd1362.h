@@ -22,6 +22,7 @@
 #define SSD1362_CMD_DISPLAYALLOFF     0xA6
 #define SSD1362_CMD_DISPLAYALLON      0xA5
 #define SSD1362_CMD_1B_NORMALDISPLAY     0xA4
+#define SSD1362_CMD_ALLPIXELON        0xA5
 #define SSD1362_CMD_INVERTDISPLAY     0xA7
 #define SSD1362_CMD_2B_MULTIPLEX_RATIO   0xA8
 #define SSD1362_CMD_2B_SET_VDD    0xAB
@@ -37,7 +38,7 @@
 #define SSD1362_CMD_SETGRAY           0xB8
 #define SSD1362_CMD_1B_USELINEARLUT            0xB9
 #define SSD1362_CMD_2B_PRECHARGELEVEL    0xBC
-#define SSD1362_CMD_2B_PRECHARGE_CAPACITOR    0xBC
+#define SSD1362_CMD_2B_PRECHARGE_CAPACITOR    0xBD
 #define SSD1362_CMD_2B_COM_DESELECT_VOLTAGE             0xBE
 
 #define SSD1362_CMD_2B_CONTRASTMASTER    0x81
@@ -57,7 +58,7 @@
 #define SSD_1362_ROW_END    0x3F
 #define SSD_1362_COL_START  0x00
 #define SSD_1362_COL_END    0x7F
-#define SSD1362_CONTRAST_STEP  0x25  // TODO: what is this?
+#define SSD1362_CONTRAST_STEP  0x2F  // TODO: what is this? (used to be 0x25)
 #define SSD1362_REMAP_VALUE  0xC3  // TODO: what is this?
 #define SSD1362_MUX_RATIO  0x3F  // TODO: what is this?
 #define SSD_1362_PHASE_1_2_LENGTHS 0x22  // TODO: what is this?
@@ -72,14 +73,7 @@
 #define OLED_DC_PIN GPIO(GPIO_PORTC, 5)
 #define OLED_CS_PIN GPIO(GPIO_PORTD, 53)
 
-// Color definitions
-#define BLACK    0x0000
-#define BLUE     0x001F
-#define RED      0xF800
-#define GREEN    0x07E0
-#define CYAN     0x07FF
-#define MAGENTA  0xF81F
-#define YELLOW   0xFFE0
-#define WHITE    0xFFFF
+// Functions
+status_t init_display(void);
 
 #endif // DISPLAY_H

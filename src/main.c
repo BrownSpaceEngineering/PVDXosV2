@@ -8,6 +8,7 @@
 #include <hal_adc_sync.h>
 #include <string.h>
 #include "cosmicmonkey_task.h"
+#include "display_ssd1362.h"
 
 /*
 Compilation guards to make sure that compilation is being done with the correct flags and correct compiler versions
@@ -41,6 +42,9 @@ int main(void) {
     /* Initializes MCU, drivers and middleware */
     atmel_start_init();
     info("--- ATMEL Initialization Complete ---\n");
+
+    // Test Midas Display OLED init sequence
+    init_display();
 
     // Initialize the watchdog as early as possible to ensure that the system is reset if the initialization hangs
     watchdog_init(WDT_CONFIG_PER_CYC16384, true);
