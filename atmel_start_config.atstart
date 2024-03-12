@@ -1264,6 +1264,18 @@ pads:
     mode: Peripheral IO
     user_label: PA05
     configuration: null
+  Display_RST:
+    name: PB12
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB12
+    mode: Digital output
+    user_label: Display_RST
+    configuration: null
+  Display_DC:
+    name: PB13
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB13
+    mode: Digital output
+    user_label: Display_DC
+    configuration: null
   PA16:
     name: PA16
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA16
@@ -1293,6 +1305,12 @@ pads:
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC23
     mode: Digital output
     user_label: PC23
+    configuration: null
+  Display_CS:
+    name: PB20
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB20
+    mode: Digital output
+    user_label: Display_CS
     configuration: null
   LED_Orange1:
     name: PC30

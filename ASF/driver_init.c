@@ -225,6 +225,48 @@ void system_init(void)
 
 	gpio_set_pin_function(LED_Red, GPIO_PIN_FUNCTION_OFF);
 
+	// GPIO on PB12
+
+	gpio_set_pin_level(Display_RST,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   false);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(Display_RST, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(Display_RST, GPIO_PIN_FUNCTION_OFF);
+
+	// GPIO on PB13
+
+	gpio_set_pin_level(Display_DC,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   false);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(Display_DC, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(Display_DC, GPIO_PIN_FUNCTION_OFF);
+
+	// GPIO on PB20
+
+	gpio_set_pin_level(Display_CS,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   false);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(Display_CS, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(Display_CS, GPIO_PIN_FUNCTION_OFF);
+
 	// GPIO on PC30
 
 	gpio_set_pin_level(LED_Orange1,

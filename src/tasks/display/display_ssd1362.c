@@ -1,14 +1,14 @@
 #include "display_ssd1362.h"
 
 // RST functions
-#define RST_LOW() gpio_set_pin_level(OLED_RST_PIN, 0)
-#define RST_HIGH() gpio_set_pin_level(OLED_RST_PIN, 1)
+#define RST_LOW() gpio_set_pin_level(Display_RST, 0)
+#define RST_HIGH() gpio_set_pin_level(Display_RST, 1)
 // DC functions
-#define DC_LOW() gpio_set_pin_level(OLED_DC_PIN, 0)
-#define DC_HIGH() gpio_set_pin_level(OLED_DC_PIN, 1)
+#define DC_LOW() gpio_set_pin_level(Display_DC, 0)
+#define DC_HIGH() gpio_set_pin_level(Display_DC, 1)
 // CS functions
-#define CS_LOW() gpio_set_pin_level(OLED_CS_PIN, 0)
-#define CS_HIGH() gpio_set_pin_level(OLED_CS_PIN, 1)
+#define CS_LOW() gpio_set_pin_level(Display_CS, 0)
+#define CS_HIGH() gpio_set_pin_level(Display_CS, 1)
 
 #define INIT_WAIT_INTERVAL 300
 #define RESET_HIGH() gpio

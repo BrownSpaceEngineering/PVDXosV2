@@ -69,9 +69,9 @@
 #define SSD1362_DESELECT_VOLTAGE_RATIO 0x07 // TODO: what is this
 
 // Pin definitions
-#define OLED_RST_PIN GPIO(GPIO_PORTC, 4)
-#define OLED_DC_PIN GPIO(GPIO_PORTC, 5)
-#define OLED_CS_PIN GPIO(GPIO_PORTD, 53)
+// #define OLED_RST_PIN GPIO(GPIO_PORTC, 4)
+// #define OLED_DC_PIN GPIO(GPIO_PORTC, 5)
+// #define OLED_CS_PIN GPIO(GPIO_PORTD, 53)
 
 // Functions
 status_t init_display(void);
