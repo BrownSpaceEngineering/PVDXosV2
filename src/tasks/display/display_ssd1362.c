@@ -12,7 +12,7 @@
 #define RESET_WAIT_INTERVAL 100
 
 // maximum number of bytes that can be sent to the display in a single SPI transaction
-#define DISPLAY_SPI_BUFFER_CAPACITY 3
+#define DISPLAY_SPI_BUFFER_CAPACITY (SSD1362_WIDTH / 2) * SSD1362_HEIGHT
 
 // buffer for SPI transactions
 uint8_t spi_rx_buffer[DISPLAY_SPI_BUFFER_CAPACITY] = {0};
@@ -22,6 +22,9 @@ struct spi_xfer xfer = {
     .txbuf = spi_tx_buffer,
     .size = 0
 };
+
+// buffer for the display
+COLOR display_buffer[(SSD1362_WIDTH / 2) * SSD1362_HEIGHT] = {0};
 
 
 // write the contents of spi_tx_buffer to the display as a command
@@ -85,6 +88,43 @@ status_t display_set_window() {
 
 
 // TODO: Add error checking
+status_t display_set_color(POINT x, POINT y, COLOR color) {
+    // bounds checking
+    if (x >= SSD1362_WIDTH || y >= SSD1362_HEIGHT) {
+        return ERROR_INTERNAL;
+    }
+
+    // update the display buffer
+    uint16_t index = (y * (SSD1362_WIDTH / 2)) + (x / 2);
+
+    if (x % 2 == 0) {
+        display_buffer[index] |= (color << 4); // set the upper 4 bits of the byte
+    } else {
+        display_buffer[index] |= (color & 0x0F); // set the lower 4 bits of the byte
+    }
+
+    return SUCCESS;
+}
+
+
+// TODO: Add error checking
+status_t display_update() {
+    // set the display window to the entire display
+    display_set_window();
+
+    // write the display buffer to the display
+    xfer.size = (SSD1362_WIDTH / 2) * SSD1362_HEIGHT;
+
+    for (uint16_t i = 0; i < xfer.size; i++) {
+        spi_tx_buffer[i] = display_buffer[i];
+    }
+
+    spi_write_data();
+    return SUCCESS;
+}
+
+
+// TODO: Add error checking
 status_t display_init() {
     spi_m_sync_enable(&SPI_0); // if you forget this line, this function returns -20
 
@@ -130,8 +170,8 @@ status_t display_init() {
 
     // Set display mode
     xfer.size = 1;
-    // spi_tx_buffer[0] = SSD1362_CMD_1B_NORMALDISPLAY;
-    spi_tx_buffer[0] = SSD1362_CMD_ALLPIXELON; // sets all pixels to max brightness (use for debugging)
+    spi_tx_buffer[0] = SSD1362_CMD_1B_NORMALDISPLAY;
+    // spi_tx_buffer[0] = SSD1362_CMD_ALLPIXELON; // sets all pixels to max brightness (use for debugging)
     spi_write_command();
 
     // Set multiplex ratio
@@ -197,6 +237,19 @@ status_t display_init() {
     xfer.size = 1;
     spi_tx_buffer[0] = SSD1362_CMD_1B_DISPLAYON;
     spi_write_command();
+
+    // Display a checkerboard pattern
+    for (POINT y = 0; y < SSD1362_HEIGHT; y++) {
+        for (POINT x = 0; x < SSD1362_WIDTH; x++) {
+            if ((x + y) % 2 == 0) {
+                display_set_color(x, y, 0x0F);
+            } else {
+                display_set_color(x, y, 0x00);
+            }
+        }
+    }
+
+    display_update();
 
     return SUCCESS;
 }
