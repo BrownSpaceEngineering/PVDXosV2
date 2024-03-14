@@ -24,12 +24,32 @@ struct spi_xfer xfer = {
 };
 
 
-// write the contents of spi_tx_buffer to the display
-status_t spi_write() {
+// write the contents of spi_tx_buffer to the display as a command
+status_t spi_write_command() {
+    DC_LOW(); // set D/C# pin low to indicate that sent bytes are commands (not data)
+    CS_LOW(); // select the display for SPI communication
+
     int32_t response = spi_m_sync_transfer(&SPI_0, &xfer);
     if (response != (int32_t)xfer.size) {
         return ERROR_IO;
     }
+
+    CS_HIGH(); // deselect the display for SPI communication
+    return SUCCESS;
+}
+
+
+// write the contents of spi_tx_buffer to the display as data
+status_t spi_write_data() {
+    DC_HIGH(); // set D/C# pin high to indicate that sent bytes are data (not commands)
+    CS_LOW(); // select the display for SPI communication
+
+    int32_t response = spi_m_sync_transfer(&SPI_0, &xfer);
+    if (response != (int32_t)xfer.size) {
+        return ERROR_IO;
+    }
+
+    CS_HIGH(); // deselect the display for SPI communication
     return SUCCESS;
 }
 
@@ -45,134 +65,138 @@ void display_reset(void) {
 }
 
 
-// TODO: Add error checking and determine IREF
-status_t display_init() {
-    spi_m_sync_enable(&SPI_0); // if you forget this line, this function returns -20
-
-    display_reset(); // setting reset pin low triggers a reset of the display
-
-    CS_LOW(); // select the display for SPI communication
-    DC_LOW(); // set D/C# pin low to indicate that sent bytes are commands (not data)
-
-    // Unlock command lock (just in case)
-    xfer.size = 2;
-    spi_tx_buffer[0] = SSD1362_CMD_2B_COMMANDLOCK;
-    spi_tx_buffer[1] = SSD_1362_ARG_COMMANDLOCK_UNLOCK;
-    spi_write();
-
-    // Put display to sleep
-    xfer.size = 1;
-    spi_tx_buffer[0] = SSD1362_CMD_1B_DISPLAYOFF;
-    spi_write();
-
-    // Configure row and col addrs
+// TODO: Add error checking
+// Set the display window to the entire display
+status_t display_set_window() {
     xfer.size = 3;
     spi_tx_buffer[0] = SSD1362_CMD_3B_SETCOLUMN;
     spi_tx_buffer[1] = SSD_1362_COL_START;
     spi_tx_buffer[2] = SSD_1362_COL_END;
-    spi_write();
+    spi_write_command();
 
     xfer.size = 3;
     spi_tx_buffer[0] = SSD1362_CMD_3B_SETROW;
     spi_tx_buffer[1] = SSD_1362_ROW_START;
     spi_tx_buffer[2] = SSD_1362_ROW_END;
-    spi_write();
+    spi_write_command();
+
+    return SUCCESS;
+}
+
+
+// TODO: Add error checking
+status_t display_init() {
+    spi_m_sync_enable(&SPI_0); // if you forget this line, this function returns -20
+
+    display_reset(); // setting reset pin low triggers a reset of the display
+
+    // Unlock command lock (just in case)
+    xfer.size = 2;
+    spi_tx_buffer[0] = SSD1362_CMD_2B_COMMANDLOCK;
+    spi_tx_buffer[1] = SSD_1362_ARG_COMMANDLOCK_UNLOCK;
+    spi_write_command();
+
+    // Put display to sleep
+    xfer.size = 1;
+    spi_tx_buffer[0] = SSD1362_CMD_1B_DISPLAYOFF;
+    spi_write_command();
+
+    // Set active display window to the entire display
+    display_set_window();
 
     // Set contrast
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_CONTRASTMASTER;
     spi_tx_buffer[1] = SSD1362_CONTRAST_STEP;
-    spi_write();
+    spi_write_command();
 
     // Set remap
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_SETREMAP;
     spi_tx_buffer[1] = SSD1362_REMAP_VALUE;
-    spi_write();
+    spi_write_command();
 
     // Set display start line
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_STARTLINE;
     spi_tx_buffer[1] = 0x00;
-    spi_write();
+    spi_write_command();
 
     // Set display offset
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_DISPLAYOFFSET;
     spi_tx_buffer[1] = 0x00;
-    spi_write();
+    spi_write_command();
 
     // Set display mode
     xfer.size = 1;
-    spi_tx_buffer[0] = SSD1362_CMD_1B_NORMALDISPLAY;
-    // spi_tx_buffer[0] = SSD1362_CMD_ALLPIXELON; // sets all pixels to max brightness (use for debugging)
-    spi_write();
+    // spi_tx_buffer[0] = SSD1362_CMD_1B_NORMALDISPLAY;
+    spi_tx_buffer[0] = SSD1362_CMD_ALLPIXELON; // sets all pixels to max brightness (use for debugging)
+    spi_write_command();
 
     // Set multiplex ratio
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_MULTIPLEX_RATIO;
     spi_tx_buffer[1] = SSD1362_MUX_RATIO;
-    spi_write();
+    spi_write_command();
 
     // Set VDD
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_SET_VDD;
     spi_tx_buffer[1] = SSD_1362_ARG_VDD_ON;
-    spi_write();
+    spi_write_command();
 
     // Set IREF
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_IREF_SELECTION;
     spi_tx_buffer[1] = SSD_1362_ARG_IREF_INTERNAL;
-    spi_write();
+    spi_write_command();
 
     // Set phase length
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_PHASE_LENGTH;
     spi_tx_buffer[1] = SSD_1362_PHASE_1_2_LENGTHS;
-    spi_write();
+    spi_write_command();
 
     // Set display clock divider
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_CLOCKDIV;
     spi_tx_buffer[1] = SSD1362_CLOCK_DIVIDER_VALUE;
-    spi_write();
+    spi_write_command();
 
     // Set pre-charge 2 period
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_PRECHARGE2;
     spi_tx_buffer[1] = SSD1362_PRECHARGE_2_TIME;
-    spi_write();
+    spi_write_command();
 
     // Set linear LUT
     xfer.size = 1;
     spi_tx_buffer[0] = SSD1362_CMD_1B_USELINEARLUT;
-    spi_write();
+    spi_write_command();
 
     // Set pre-charge voltage level to 0.5 * Vcc
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_PRECHARGELEVEL;
     spi_tx_buffer[1] = SSD1362_PRECHARGE_VOLTAGE_RATIO;
-    spi_write();
+    spi_write_command();
 
     // Set pre-charge capacitor
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_PRECHARGE_CAPACITOR;
     spi_tx_buffer[1] = SSD1362_PRECHARGE_CAPACITOR;
-    spi_write();
+    spi_write_command();
 
     // Set COM deselect voltage
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_COM_DESELECT_VOLTAGE;
     spi_tx_buffer[1] = SSD1362_DESELECT_VOLTAGE_RATIO;
-    spi_write();
+    spi_write_command();
 
     // Turn the display on!
     xfer.size = 1;
     spi_tx_buffer[0] = SSD1362_CMD_1B_DISPLAYON;
-    spi_write();
-
-    CS_HIGH(); // deselect the display for SPI communication
+    spi_write_command();
 
     return SUCCESS;
 }
