@@ -44,7 +44,7 @@ int main(void) {
     info("--- ATMEL Initialization Complete ---\n");
 
     // Test Midas Display OLED init sequence
-    init_display();
+    display_init();
 
     // Initialize the watchdog as early as possible to ensure that the system is reset if the initialization hangs
     watchdog_init(WDT_CONFIG_PER_CYC16384, true);

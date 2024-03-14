@@ -1,20 +1,20 @@
 #include "display_ssd1362.h"
 
-// RST functions
+// functions for setting the reset, D/C#, and CS# pins on the display to high or low voltage
 #define RST_LOW() gpio_set_pin_level(Display_RST, 0)
 #define RST_HIGH() gpio_set_pin_level(Display_RST, 1)
-// DC functions
 #define DC_LOW() gpio_set_pin_level(Display_DC, 0)
 #define DC_HIGH() gpio_set_pin_level(Display_DC, 1)
-// CS functions
 #define CS_LOW() gpio_set_pin_level(Display_CS, 0)
 #define CS_HIGH() gpio_set_pin_level(Display_CS, 1)
 
-#define INIT_WAIT_INTERVAL 300
-#define RESET_HIGH() gpio
+// duration to wait between display initialization steps
+#define RESET_WAIT_INTERVAL 100
 
+// maximum number of bytes that can be sent to the display in a single SPI transaction
 #define DISPLAY_SPI_BUFFER_CAPACITY 3
 
+// buffer for SPI transactions
 uint8_t spi_rx_buffer[DISPLAY_SPI_BUFFER_CAPACITY] = {0};
 uint8_t spi_tx_buffer[DISPLAY_SPI_BUFFER_CAPACITY] = {0};
 struct spi_xfer xfer = {
@@ -23,6 +23,8 @@ struct spi_xfer xfer = {
     .size = 0
 };
 
+
+// write the contents of spi_tx_buffer to the display
 status_t spi_write() {
     int32_t response = spi_m_sync_transfer(&SPI_0, &xfer);
     if (response != (int32_t)xfer.size) {
@@ -31,25 +33,26 @@ status_t spi_write() {
     return SUCCESS;
 }
 
-// TODO: Add error checking
-status_t init_display() {
-    spi_m_sync_enable(&SPI_0);  // if you forget this line, this function returns -20
-    
-    // Reset the display
-    delay_ms(INIT_WAIT_INTERVAL);
-    RST_LOW();
-    delay_ms(INIT_WAIT_INTERVAL);
-    RST_HIGH();
-    delay_ms(INIT_WAIT_INTERVAL);
-    
-    // Keep CS low for init
-    CS_HIGH();
-    delay_ms(INIT_WAIT_INTERVAL);
-    CS_LOW();
-    delay_ms(INIT_WAIT_INTERVAL);
 
-    DC_LOW();
-    delay_ms(INIT_WAIT_INTERVAL);
+// TODO: change to vTaskDelay and add error checking
+void display_reset(void) {
+    RST_HIGH();
+    delay_ms(RESET_WAIT_INTERVAL);
+    RST_LOW();
+    delay_ms(RESET_WAIT_INTERVAL);
+    RST_HIGH();
+    delay_ms(RESET_WAIT_INTERVAL);
+}
+
+
+// TODO: Add error checking and determine IREF
+status_t display_init() {
+    spi_m_sync_enable(&SPI_0); // if you forget this line, this function returns -20
+
+    display_reset(); // setting reset pin low triggers a reset of the display
+
+    CS_LOW(); // select the display for SPI communication
+    DC_LOW(); // set D/C# pin low to indicate that sent bytes are commands (not data)
 
     // Unlock command lock (just in case)
     xfer.size = 2;
@@ -168,40 +171,7 @@ status_t init_display() {
     spi_tx_buffer[0] = SSD1362_CMD_1B_DISPLAYON;
     spi_write();
 
-    // CS high when we finish our SPI operations
-    CS_HIGH();
+    CS_HIGH(); // deselect the display for SPI communication
 
     return SUCCESS;
 }
-
-// status_t spi_write_byte(uint8_t byte) {
-//     unsigned char res;
-//     struct spi_xfer xfer;
-//     xfer.size = 1;
-//     xfer.txbuf = &byte;
-//     xfer.rxbuf = &res;
-//     //spi_m_sync_enable(&SPI_0);  // if you forget this line, this function returns -20
-//     int32_t response = spi_m_sync_transfer(&SPI_0, &xfer);
-//     if (response != 0) {
-//         return ERROR_IO;
-//     }
-//     return SUCCESS;
-// }
-
-// status_t write_command(uint8_t cmd) {
-//     CS_LOW();
-//     DC_LOW();
-//     spi_write_byte(cmd);
-//     CS_HIGH();
-
-//     return SUCCESS;
-// }
-
-// status_t write_data(uint8_t data) {
-//     CS_LOW();
-//     DC_HIGH();
-//     spi_write_byte(data);
-//     CS_HIGH();
-
-//     return SUCCESS;
-// }
