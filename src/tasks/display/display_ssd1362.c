@@ -102,9 +102,10 @@ status_t display_init() {
     spi_tx_buffer[1] = 0x00;
     spi_write();
 
-    // Set normal display mode
+    // Set display mode
     xfer.size = 1;
-    spi_tx_buffer[0] = SSD1362_CMD_ALLPIXELON; // was 0xA4 for normal display previously
+    spi_tx_buffer[0] = SSD1362_CMD_1B_NORMALDISPLAY;
+    // spi_tx_buffer[0] = SSD1362_CMD_ALLPIXELON; // sets all pixels to max brightness (use for debugging)
     spi_write();
 
     // Set multiplex ratio
@@ -122,7 +123,7 @@ status_t display_init() {
     // Set IREF
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_IREF_SELECTION;
-    spi_tx_buffer[1] = SSD_1362_ARG_IREF_EXTERNAL; // possibly should be 0x9E for internal
+    spi_tx_buffer[1] = SSD_1362_ARG_IREF_INTERNAL;
     spi_write();
 
     // Set phase length
