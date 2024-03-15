@@ -4,7 +4,7 @@
 
 #include <stdint.h>
 
-int main() {
+int bootloader() {
     // Increment the counter in backup RAM
     uint32_t *magic_number = (uint32_t *)MAGIC_NUMBER_ADDRESS;
     *magic_number = MAGIC_NUMBER;
@@ -23,6 +23,6 @@ int main() {
     // TODO: Maybe add some LED blinking pattern here or something idk
 
     // If we get here, something went wrong
-    *magic_number = 0xBADC0DE; // Write some failure message to the backup RAM
+    *magic_number = FAILURE_NUMBER; // Write some failure message to the backup RAM
     while (1) {}
 }
