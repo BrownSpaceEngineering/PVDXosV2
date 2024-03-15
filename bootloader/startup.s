@@ -11,28 +11,31 @@ _start:
 
     .section .text
 bootloader_rst:
-    /* Initialize data and bss sections */
-    ldr r0, =_sdata
-    ldr r1, =_edata
-    ldr r2, =.data
-    movs r3, #0
-copy_loop:
+    /* Initialize data section */
+    ldr r0, =_sdata /* points to RAM */
+    ldr r1, =_edata /* points to RAM */
+    ldr r2, =_sdata_flash /* points to FLASH */
+data_copy_loop:
     cmp r0, r1
     itt lo
     ldrlo r3, [r2], #4
     strlo r3, [r0], #4
-    blo copy_loop
+    blo data_copy_loop
 
-    ldr r0, =_sbss
-    ldr r1, =_ebss
+    /* Done copying the .data section, now zero the .bss section */
+
+    ldr r0, =_sbss /* points to RAM */
+    ldr r1, =_ebss /* points to RAM */
+    movs r3, #0
 zero_loop:
     cmp r0, r1
     it lo
     strlo r3, [r0], #4
     blo zero_loop
 
-    /* Call the main function (assuming you have one) */
-    bl main
+    /* Call the bootloader function */
+    bl bootloader
 
-    /* If main returns, loop forever */
-    b .
+    /* If the bootloader returns, loop forever (certified fucky-wucky situation) */
+deathloop:
+    b deathloop

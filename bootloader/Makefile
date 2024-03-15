@@ -1,30 +1,37 @@
+.PHONY: all clean
+
 # Compiler and flags
 CC = arm-none-eabi-gcc
-CFLAGS = -nostdlib -Wall -mcpu=cortex-m4 -mthumb -T linker.ld
+AS = arm-none-eabi-as
+LD = arm-none-eabi-ld
 
-# Source files
-SRC = bootloader.c
+CFLAGS = -nostartfiles -nostdlib -Wall -Wextra -Wpedantic -Werror -mcpu=cortex-m4 -mthumb -c
+ASFLAGS = -mcpu=cortex-m4 -mthumb -c
+LDFLAGS = -T linkerscript.ld
+
+TARGET = bootloader.elf
+
+C_SOURCES = bootloader.c
+ASM_SOURCES = startup.s
 
 # Object files
-OBJ = $(SRC:.c=.o)
+OBJECTS=$(C_SOURCES:.c=.o) $(ASM_SOURCES:.s=.o)
 
-# Output file
-OUT = out
+# Default rule
+all: $(TARGET)
 
-# Default target
-all: $(OUT)
+# Rule to link the final target
+$(TARGET): $(OBJECTS)
+	$(LD) $(LDFLAGS) $(OBJECTS) -o $@
 
-# Rule to create the output file
-$(OUT): $(OBJ)
-	$(CC) $(CFLAGS) $(OBJ) -o $@
-
-# Rule to compile source files
+# Rule to compile C source files
 %.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) $< -o $@
 
-# Clean target
+# Rule to compile assembly source files
+%.o: %.s
+	$(AS) $(ASFLAGS) $< -o $@
+
+# Clean rule
 clean:
-	rm -f $(OBJ) $(OUT)
-
-# Phony targets
-.PHONY: all clean
+	rm -f $(OBJECTS) $(TARGET)

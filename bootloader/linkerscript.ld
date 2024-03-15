@@ -13,8 +13,7 @@ SECTIONS
   /* Place the vector table at the start of FLASH */
   .isr_vector :
   {
-    . = 0x0
-    KEEP(*(.isr_vector)) /* KEEP() Ensures vector table is not optimized out */
+    KEEP(*(.isr_vector*))
     . = ALIGN(4);
   } > FLASH
 
@@ -29,9 +28,11 @@ SECTIONS
   /* Initialized data */
   .data : AT(ADDR(.text) + SIZEOF(.text))
   {
-    _sdata = .;         /* Create a symbol marking the start of the .data section */
-    *(.data*)           /* All initialized data */
-    _edata = .;         /* Define a symbol marking the end of the .data section */
+    _sdata_flash = LOADADDR(.data);                  /* Create a symbol marking the start of the .data section in FLASH */
+    _sdata = .;                                      /* Create a symbol marking the start of the .data section in RAM*/
+    *(.data*)                                        /* All initialized data */
+    _edata = .;                                      /* Create a symbol marking the end of the .data section in RAM*/
+    _edata_flash = LOADADDR(.data) + SIZEOF(.data); /* Create a symbol marking the end of the .data section in FLASH */
     . = ALIGN(4);
   } > RAM
 
