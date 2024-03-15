@@ -74,7 +74,7 @@
 
 // Functions
 status_t display_init(void);
-status_t display_set_color(POINT x, POINT y, COLOR color);
+status_t display_set_buffer(POINT x, POINT y, COLOR color);
 
 // Predefined images
 void display_checkerboard(void);

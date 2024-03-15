@@ -15,8 +15,8 @@
 #define DISPLAY_SPI_BUFFER_CAPACITY (SSD1362_WIDTH / 2) * SSD1362_HEIGHT
 
 // Buffer for SPI transactions
-uint8_t spi_rx_buffer[DISPLAY_SPI_BUFFER_CAPACITY] = {0};
-uint8_t spi_tx_buffer[DISPLAY_SPI_BUFFER_CAPACITY] = {0};
+uint8_t spi_rx_buffer[DISPLAY_SPI_BUFFER_CAPACITY] = {0x00};
+uint8_t spi_tx_buffer[DISPLAY_SPI_BUFFER_CAPACITY] = {0x00};
 struct spi_xfer xfer = {
     .rxbuf = spi_rx_buffer,
     .txbuf = spi_tx_buffer,
@@ -24,7 +24,7 @@ struct spi_xfer xfer = {
 };
 
 // Buffer for the display
-COLOR display_buffer[(SSD1362_WIDTH / 2) * SSD1362_HEIGHT] = {0};
+COLOR display_buffer[(SSD1362_WIDTH / 2) * SSD1362_HEIGHT] = {0x00};
 
 // Write the contents of spi_tx_buffer to the display as a command
 status_t spi_write_command() {
@@ -54,7 +54,7 @@ status_t spi_write_data() {
     return SUCCESS;
 }
 
-// TODO: change to vTaskDelay and add error checking
+// TODO: change to vTaskDelay
 // Trigger a complete reset of the display
 void display_reset(void) {
     RST_HIGH();
@@ -84,7 +84,7 @@ status_t display_set_window() {
 }
 
 // Set a specific pixel in the display buffer to a given color. To actually update the display, call display_update()
-status_t display_set_color(POINT x, POINT y, COLOR color) {
+status_t display_set_buffer(POINT x, POINT y, COLOR color) {
     // bounds checking
     if (x >= SSD1362_WIDTH || y >= SSD1362_HEIGHT) {
         return ERROR_INTERNAL;
@@ -102,7 +102,17 @@ status_t display_set_color(POINT x, POINT y, COLOR color) {
     return SUCCESS;
 }
 
+// Clear the display buffer. To actually update the display, call display_update()
+status_t display_clear_buffer() {
+    for (uint16_t i = 0; i < (SSD1362_WIDTH / 2) * SSD1362_HEIGHT; i++) {
+        display_buffer[i] = 0x00;
+    }
+
+    return SUCCESS;
+}
+
 // TODO: Add error checking
+// Update the display with the contents of the display buffer
 status_t display_update() {
     // set the display window to the entire display
     display_set_window();
@@ -119,6 +129,7 @@ status_t display_update() {
 }
 
 // TODO: Add error checking
+// Initialize the display
 status_t display_init() {
     spi_m_sync_enable(&SPI_0); // if you forget this line, this function returns -20
 
@@ -233,6 +244,8 @@ status_t display_init() {
     spi_write_command();
 
     // Display a test pattern
+    display_clear_buffer();
+    display_update();
     display_checkerboard();
     display_update();
 
