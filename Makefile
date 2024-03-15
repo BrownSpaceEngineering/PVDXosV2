@@ -26,6 +26,7 @@ export OBJS := \
 ../src/tasks/cosmic_monkey/cosmicmonkey_main.o \
 ../src/misc/logging/logging.o \
 ../src/tasks/display/display_ssd1362.o \
+../src/tasks/display/display_images.o \
 
 
 

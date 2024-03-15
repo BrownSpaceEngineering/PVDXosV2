@@ -4,7 +4,7 @@
 #include <atmel_start.h>
 #include <globals.h>
 
-// Driver for the SSD1362 OLED controller within a Midas Displays MDOB256064D1Y-YS display
+// Driver for the SSD1362 OLED controller within a Midas Displays MDOB256064D1Y-YS display.
 
 // SSD1362 commands
 #define SSD1362_WIDTH                       256
@@ -69,13 +69,17 @@
 #define SSD1362_DESELECT_VOLTAGE_RATIO      0x07 // TODO: what is this
 
 // Data types
-#define POINT uint16_t // 16 bits per point (for overflow checking)
+#define POINT uint16_t // 16 bits per coordinate (larger than 8-bit for overflow checking)
 #define COLOR uint8_t // 4 bits per pixel (16 greyscale levels)
 
 // Functions
 status_t display_init(void);
+status_t display_set_color(POINT x, POINT y, COLOR color);
+
+// Predefined images
+void display_checkerboard(void);
 
 // Variables
-extern COLOR display_buffer[(SSD1362_WIDTH / 2) * SSD1362_HEIGHT]; // pixels are 4 bits, so 2 pixels per byte
+extern COLOR display_buffer[(SSD1362_WIDTH / 2) * SSD1362_HEIGHT]; // pixels are 4 bits, so 2 consecutive pixels per byte
 
 #endif // DISPLAY_H

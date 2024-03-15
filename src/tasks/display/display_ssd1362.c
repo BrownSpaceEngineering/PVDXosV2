@@ -1,20 +1,20 @@
 #include "display_ssd1362.h"
 
-// functions for setting the reset, D/C#, and CS# pins on the display to high or low voltage
-#define RST_LOW() gpio_set_pin_level(Display_RST, 0)
-#define RST_HIGH() gpio_set_pin_level(Display_RST, 1)
-#define DC_LOW() gpio_set_pin_level(Display_DC, 0)
-#define DC_HIGH() gpio_set_pin_level(Display_DC, 1)
-#define CS_LOW() gpio_set_pin_level(Display_CS, 0)
-#define CS_HIGH() gpio_set_pin_level(Display_CS, 1)
+// Functions for setting the reset, data/command, and chip-select pins on the display to high or low voltage
+#define RST_LOW()                   gpio_set_pin_level(Display_RST, 0)
+#define RST_HIGH()                  gpio_set_pin_level(Display_RST, 1)
+#define DC_LOW()                    gpio_set_pin_level(Display_DC, 0)
+#define DC_HIGH()                   gpio_set_pin_level(Display_DC, 1)
+#define CS_LOW()                    gpio_set_pin_level(Display_CS, 0)
+#define CS_HIGH()                   gpio_set_pin_level(Display_CS, 1)
 
-// duration to wait between display initialization steps
-#define RESET_WAIT_INTERVAL 100
+// Duration to wait between display initialization steps
+#define RESET_WAIT_INTERVAL         100
 
-// maximum number of bytes that can be sent to the display in a single SPI transaction
+// Maximum number of bytes that can be sent to the display in a single SPI transaction
 #define DISPLAY_SPI_BUFFER_CAPACITY (SSD1362_WIDTH / 2) * SSD1362_HEIGHT
 
-// buffer for SPI transactions
+// Buffer for SPI transactions
 uint8_t spi_rx_buffer[DISPLAY_SPI_BUFFER_CAPACITY] = {0};
 uint8_t spi_tx_buffer[DISPLAY_SPI_BUFFER_CAPACITY] = {0};
 struct spi_xfer xfer = {
@@ -23,11 +23,10 @@ struct spi_xfer xfer = {
     .size = 0
 };
 
-// buffer for the display
+// Buffer for the display
 COLOR display_buffer[(SSD1362_WIDTH / 2) * SSD1362_HEIGHT] = {0};
 
-
-// write the contents of spi_tx_buffer to the display as a command
+// Write the contents of spi_tx_buffer to the display as a command
 status_t spi_write_command() {
     DC_LOW(); // set D/C# pin low to indicate that sent bytes are commands (not data)
     CS_LOW(); // select the display for SPI communication
@@ -41,11 +40,10 @@ status_t spi_write_command() {
     return SUCCESS;
 }
 
-
-// write the contents of spi_tx_buffer to the display as data
+// Write the contents of spi_tx_buffer to the display as data
 status_t spi_write_data() {
     DC_HIGH(); // set D/C# pin high to indicate that sent bytes are data (not commands)
-    CS_LOW(); // select the display for SPI communication
+    CS_LOW();  // select the display for SPI communication
 
     int32_t response = spi_m_sync_transfer(&SPI_0, &xfer);
     if (response != (int32_t)xfer.size) {
@@ -56,8 +54,8 @@ status_t spi_write_data() {
     return SUCCESS;
 }
 
-
 // TODO: change to vTaskDelay and add error checking
+// Trigger a complete reset of the display
 void display_reset(void) {
     RST_HIGH();
     delay_ms(RESET_WAIT_INTERVAL);
@@ -67,9 +65,8 @@ void display_reset(void) {
     delay_ms(RESET_WAIT_INTERVAL);
 }
 
-
 // TODO: Add error checking
-// Set the display window to the entire display
+// Set the display window to cover the entire screen
 status_t display_set_window() {
     xfer.size = 3;
     spi_tx_buffer[0] = SSD1362_CMD_3B_SETCOLUMN;
@@ -86,8 +83,7 @@ status_t display_set_window() {
     return SUCCESS;
 }
 
-
-// TODO: Add error checking
+// Set a specific pixel in the display buffer to a given color. To actually update the display, call display_update()
 status_t display_set_color(POINT x, POINT y, COLOR color) {
     // bounds checking
     if (x >= SSD1362_WIDTH || y >= SSD1362_HEIGHT) {
@@ -106,7 +102,6 @@ status_t display_set_color(POINT x, POINT y, COLOR color) {
     return SUCCESS;
 }
 
-
 // TODO: Add error checking
 status_t display_update() {
     // set the display window to the entire display
@@ -122,7 +117,6 @@ status_t display_update() {
     spi_write_data();
     return SUCCESS;
 }
-
 
 // TODO: Add error checking
 status_t display_init() {
@@ -238,17 +232,8 @@ status_t display_init() {
     spi_tx_buffer[0] = SSD1362_CMD_1B_DISPLAYON;
     spi_write_command();
 
-    // Display a checkerboard pattern
-    for (POINT y = 0; y < SSD1362_HEIGHT; y++) {
-        for (POINT x = 0; x < SSD1362_WIDTH; x++) {
-            if ((x + y) % 2 == 0) {
-                display_set_color(x, y, 0x0F);
-            } else {
-                display_set_color(x, y, 0x00);
-            }
-        }
-    }
-
+    // Display a test pattern
+    display_checkerboard();
     display_update();
 
     return SUCCESS;
