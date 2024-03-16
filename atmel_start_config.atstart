@@ -1205,7 +1205,7 @@ drivers:
       domain_group:
         nodes:
         - name: Core
-          input: Generic clock generator 3
+          input: Generic clock generator 2
           external: false
           external_frequency: 0
         - name: Slow
@@ -1213,7 +1213,7 @@ drivers:
           external: false
           external_frequency: 0
         configuration:
-          core_gclk_selection: Generic clock generator 3
+          core_gclk_selection: Generic clock generator 2
           slow_gclk_selection: Generic clock generator 3
   DELAY_0:
     user_label: DELAY_0

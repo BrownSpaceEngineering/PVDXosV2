@@ -38,6 +38,7 @@ If you want to get rid of the red squiggly lines:
 #endif
 
 cosmicmonkeyTaskArguments_t cm_args = {0};
+
 int main(void) {
     /* Initializes MCU, drivers and middleware */
     atmel_start_init();

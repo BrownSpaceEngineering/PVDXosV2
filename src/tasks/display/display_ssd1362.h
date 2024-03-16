@@ -72,12 +72,8 @@
 #define POINT uint16_t // 16 bits per coordinate (larger than 8-bit for overflow checking)
 #define COLOR uint8_t // 4 bits per pixel (16 greyscale levels)
 
-// Functions
+// Exposed Functions
 status_t display_init(void);
-status_t display_set_buffer(POINT x, POINT y, COLOR color);
-
-// Predefined images
-void display_checkerboard(void);
 
 // Variables
 extern COLOR display_buffer[(SSD1362_WIDTH / 2) * SSD1362_HEIGHT]; // pixels are 4 bits, so 2 consecutive pixels per byte

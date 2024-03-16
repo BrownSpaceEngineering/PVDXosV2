@@ -1,4 +1,6 @@
 #include "display_ssd1362.h"
+#include "image_buffer_PVDX.h"
+#include "logging.h"
 
 // Functions for setting the reset, data/command, and chip-select pins on the display to high or low voltage
 #define RST_LOW()                   gpio_set_pin_level(Display_RST, 0)
@@ -84,7 +86,7 @@ status_t display_set_window() {
 }
 
 // Set a specific pixel in the display buffer to a given color. To actually update the display, call display_update()
-status_t display_set_buffer(POINT x, POINT y, COLOR color) {
+status_t display_set_buffer_pixel(POINT x, POINT y, COLOR color) {
     // bounds checking
     if (x >= SSD1362_WIDTH || y >= SSD1362_HEIGHT) {
         return ERROR_INTERNAL;
@@ -97,6 +99,15 @@ status_t display_set_buffer(POINT x, POINT y, COLOR color) {
         display_buffer[index] |= (color << 4); // set the upper 4 bits of the byte
     } else {
         display_buffer[index] |= (color & 0x0F); // set the lower 4 bits of the byte
+    }
+
+    return SUCCESS;
+}
+
+// Set the entire display buffer to the contents of the input buffer. To actually update the display, call display_update()
+status_t display_set_buffer(const COLOR* buffer) {
+    for (uint16_t i = 0; i < (SSD1362_WIDTH / 2) * SSD1362_HEIGHT; i++) {
+        display_buffer[i] = buffer[i];
     }
 
     return SUCCESS;
@@ -243,10 +254,8 @@ status_t display_init() {
     spi_tx_buffer[0] = SSD1362_CMD_1B_DISPLAYON;
     spi_write_command();
 
-    // Display a test pattern
-    display_clear_buffer();
-    display_update();
-    display_checkerboard();
+    // Display an initial image
+    display_set_buffer(IMAGE_BUFFER_PVDX);
     display_update();
 
     return SUCCESS;
