@@ -140,6 +140,7 @@ status_t uhf_init(uint32_t frequency) {
     reg_result |= writeRegister_chk(REG_MODEM_CONFIG_3, 0x04);
 
     // set output power to 17 dBm
+    uhf_set_tx_boost_power();
     // setTxPower(17); //TODO this seems complex and I haven't implemented it yet
 
     // put in standby mode
@@ -164,6 +165,32 @@ status_t uhf_send(uint8_t *data, size_t length) {
 
     status |= uhf_end_packet(); // also sends the message
     return status;
+}
+
+void uhf_set_tx_boost_power() {
+    // Set to boost mode
+    int PA_Select = 1;         // Set boost enabled
+    int Max_Power = 0x4;       // IDK
+    int Output_Power = 0b1111; // Max output power = 17 (17 - (15 - Output_Power))
+    uint8_t PA_Config = 0;
+    PA_Config |= (PA_Select << 7);      // set PA_BOOST
+    PA_Config |= (Max_Power << 4);      // set Max_Power
+    PA_Config |= (Output_Power & 0x0F); // set Output_Power
+    writeRegister(REG_PA_CONFIG, PA_Config);
+    writeRegister(REG_PA_DAC, 0x87);
+    setOCP(140);
+}
+
+void setOCP(uint8_t mA) {
+    uint8_t ocpTrim = 27;
+
+    if (mA <= 120) {
+        ocpTrim = (mA - 45) / 5;
+    } else if (mA <= 240) {
+        ocpTrim = (mA + 30) / 10;
+    }
+
+    writeRegister(REG_OCP, 0x20 | (0x1F & ocpTrim));
 }
 
 status_t uhf_end_packet() {

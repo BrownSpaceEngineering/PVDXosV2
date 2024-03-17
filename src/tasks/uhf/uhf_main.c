@@ -3,7 +3,7 @@
 #include "uhf_task.h"
 
 struct uhfTaskMemory uhfMem = {0};
-unsigned char uhf_test_message[] = "Brown UHF Engineering!";
+unsigned char uhf_test_message[] = "Brown UHF Engineering! PVDX PVDX PVDX PVDX";
 size_t uhf_test_message_length = sizeof(uhf_test_message);
 
 void uhf_main(void *pvParameters) {
@@ -26,6 +26,7 @@ void uhf_main(void *pvParameters) {
 
     while (1) {
         info("UHF task done, delaying forver\n");
-        vTaskDelay(pdMS_TO_TICKS(10000));
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        uhf_send(uhf_test_message, uhf_test_message_length);
     }
 }

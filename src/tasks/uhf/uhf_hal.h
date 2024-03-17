@@ -79,5 +79,7 @@ status_t idle();
 status_t uhf_begin_packet();
 status_t uhf_write(uint8_t *data, size_t size);
 status_t uhf_end_packet();
+void uhf_set_tx_boost_power();
+void setOCP(uint8_t mA);
 bool is_transmitting();
 status_t explicitHeaderMode();
