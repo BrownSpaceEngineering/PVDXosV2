@@ -5,6 +5,7 @@
 /* ==========================================
     Unity Project - A Test Framework for C
     Copyright (c) 2007-21 Mike Karlesky, Mark VanderVoord, Greg Williams
+    Modified by Siddharta Laloux for use with SAMD51P20A/PVDXosV2
     [Released under MIT License. Please refer to license.txt for details]
 ========================================== */
 
@@ -319,9 +320,9 @@ typedef UNITY_DOUBLE_TYPE UNITY_DOUBLE;
  *-------------------------------------------------------*/
 #ifndef UNITY_OUTPUT_CHAR
 /* Default to using putchar, which is defined in stdio.h */
-#include <stdio.h>
-#define UNITY_OUTPUT_CHAR(a) (void)putchar(a)
-// #define UNITY_OUTPUT_CHAR(a) (void)RTT_putchar(a)
+// #include <stdio.h>
+// #define UNITY_OUTPUT_CHAR(a) (void)putchar(a)
+#define UNITY_OUTPUT_CHAR(a) (void)RTT_putchar(a)
 #else
 /* If defined as something else, make sure we declare it here so it's ready for
  * use */
@@ -333,7 +334,7 @@ extern void UNITY_OUTPUT_CHAR_HEADER_DECLARATION;
 #ifndef UNITY_OUTPUT_FLUSH
 #ifdef UNITY_USE_FLUSH_STDOUT
 /* We want to use the stdout flush utility */
-#include <stdio.h>
+// #include <stdio.h>
 #define UNITY_OUTPUT_FLUSH() (void)fflush(stdout)
 #else
 /* We've specified nothing, therefore flush should just be ignored */
@@ -549,7 +550,7 @@ struct UNITY_STORAGE_T {
 #endif
 };
 
-struct UNITY_STORAGE_T Unity;
+struct UNITY_STORAGE_T DoUnity;
 
 /*-------------------------------------------------------
  * Test Suite Management

@@ -1,6 +1,6 @@
 #include "../src/misc/printf/SEGGER_RTT_printf.h"
 
-#define UNITY_EXCLUDE_STDINT_H
+// #define UNITY_EXCLUDE_STDINT_H
 #define UNITY_EXCLUDE_LIMITS_H
 #define UNITY_EXCLUDE_DOUBLE
 #define UNITY_EXCLUDE_SETJMP_H

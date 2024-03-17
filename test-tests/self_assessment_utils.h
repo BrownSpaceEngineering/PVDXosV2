@@ -58,7 +58,7 @@ static const UNITY_DOUBLE d_zero = 0.0;
 #endif
 
 #ifdef USING_OUTPUT_SPY
-#include <stdio.h>
+// #include <stdio.h>
 #define SPY_BUFFER_MAX 40
 static char putcharSpyBuffer[SPY_BUFFER_MAX];
 #endif

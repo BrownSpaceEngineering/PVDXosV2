@@ -6,7 +6,9 @@
     [Released under MIT License. Please refer to license.txt for details]
 ========================================== */
 
+#include "unity.c"
 #include "unity.h"
+#include "unity_internals.h"
 #define TEST_INSTANCES
 #include "self_assessment_utils.h"
 
