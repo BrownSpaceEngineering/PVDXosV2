@@ -1131,46 +1131,6 @@ drivers:
         configuration:
           core_gclk_selection: Generic clock generator 0
           slow_gclk_selection: Generic clock generator 3
-  I2C_0:
-    user_label: I2C_0
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::SERCOM1::driver_config_definition::I2C.Master.Standard~2FFast-mode::HAL:Driver:I2C.Master.Sync
-    functionality: I2C
-    api: HAL:Driver:I2C_Master_Sync
-    configuration:
-      i2c_master_advanced: false
-      i2c_master_arch_dbgstop: Keep running
-      i2c_master_arch_inactout: Disabled
-      i2c_master_arch_lowtout: false
-      i2c_master_arch_mexttoen: false
-      i2c_master_arch_runstdby: false
-      i2c_master_arch_sdahold: 300-600ns hold time
-      i2c_master_arch_sexttoen: false
-      i2c_master_arch_trise: 215
-      i2c_master_baud_rate: 100000
-    optional_signals: []
-    variant:
-      specification: SDA=0, SCL=1
-      required_signals:
-      - name: SERCOM1/PAD/0
-        pad: PA16
-        label: SDA
-      - name: SERCOM1/PAD/1
-        pad: PA17
-        label: SCL
-    clocks:
-      domain_group:
-        nodes:
-        - name: Core
-          input: Generic clock generator 0
-          external: false
-          external_frequency: 0
-        - name: Slow
-          input: Generic clock generator 3
-          external: false
-          external_frequency: 0
-        configuration:
-          core_gclk_selection: Generic clock generator 0
-          slow_gclk_selection: Generic clock generator 3
   SPI_0:
     user_label: SPI_0
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::SERCOM2::driver_config_definition::SPI.Master::HAL:Driver:SPI.Master.Sync
@@ -1214,6 +1174,46 @@ drivers:
           external_frequency: 0
         configuration:
           core_gclk_selection: Generic clock generator 2
+          slow_gclk_selection: Generic clock generator 3
+  I2C_0:
+    user_label: I2C_0
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::SERCOM3::driver_config_definition::I2C.Master.Standard~2FFast-mode::HAL:Driver:I2C.Master.Sync
+    functionality: I2C
+    api: HAL:Driver:I2C_Master_Sync
+    configuration:
+      i2c_master_advanced: false
+      i2c_master_arch_dbgstop: Keep running
+      i2c_master_arch_inactout: Disabled
+      i2c_master_arch_lowtout: false
+      i2c_master_arch_mexttoen: false
+      i2c_master_arch_runstdby: false
+      i2c_master_arch_sdahold: 300-600ns hold time
+      i2c_master_arch_sexttoen: false
+      i2c_master_arch_trise: 215
+      i2c_master_baud_rate: 100000
+    optional_signals: []
+    variant:
+      specification: SDA=0, SCL=1
+      required_signals:
+      - name: SERCOM3/PAD/0
+        pad: PA17
+        label: SDA
+      - name: SERCOM3/PAD/1
+        pad: PA16
+        label: SCL
+    clocks:
+      domain_group:
+        nodes:
+        - name: Core
+          input: Generic clock generator 0
+          external: false
+          external_frequency: 0
+        - name: Slow
+          input: Generic clock generator 3
+          external: false
+          external_frequency: 0
+        configuration:
+          core_gclk_selection: Generic clock generator 0
           slow_gclk_selection: Generic clock generator 3
   DELAY_0:
     user_label: DELAY_0
@@ -1264,6 +1264,13 @@ pads:
     mode: I2C
     user_label: PA17
     configuration: null
+  DRDY_PIN:
+    name: PD20
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PD20
+    mode: Digital input
+    user_label: DRDY_PIN
+    configuration:
+      pad_pull_config: Pull-down
   PB26:
     name: PB26
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB26

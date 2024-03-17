@@ -83,45 +83,6 @@ void USART_0_init(void)
 	USART_0_PORT_init();
 }
 
-void I2C_0_PORT_init(void)
-{
-
-	gpio_set_pin_pull_mode(PA16,
-	                       // <y> Pull configuration
-	                       // <id> pad_pull_config
-	                       // <GPIO_PULL_OFF"> Off
-	                       // <GPIO_PULL_UP"> Pull-up
-	                       // <GPIO_PULL_DOWN"> Pull-down
-	                       GPIO_PULL_OFF);
-
-	gpio_set_pin_function(PA16, PINMUX_PA16C_SERCOM1_PAD0);
-
-	gpio_set_pin_pull_mode(PA17,
-	                       // <y> Pull configuration
-	                       // <id> pad_pull_config
-	                       // <GPIO_PULL_OFF"> Off
-	                       // <GPIO_PULL_UP"> Pull-up
-	                       // <GPIO_PULL_DOWN"> Pull-down
-	                       GPIO_PULL_OFF);
-
-	gpio_set_pin_function(PA17, PINMUX_PA17C_SERCOM1_PAD1);
-}
-
-void I2C_0_CLOCK_init(void)
-{
-	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM1_GCLK_ID_CORE, CONF_GCLK_SERCOM1_CORE_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
-	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM1_GCLK_ID_SLOW, CONF_GCLK_SERCOM1_SLOW_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
-
-	hri_mclk_set_APBAMASK_SERCOM1_bit(MCLK);
-}
-
-void I2C_0_init(void)
-{
-	I2C_0_CLOCK_init();
-	i2c_m_sync_init(&I2C_0, SERCOM1);
-	I2C_0_PORT_init();
-}
-
 void SPI_0_PORT_init(void)
 {
 
@@ -176,6 +137,45 @@ void SPI_0_init(void)
 	SPI_0_CLOCK_init();
 	spi_m_sync_init(&SPI_0, SERCOM2);
 	SPI_0_PORT_init();
+}
+
+void I2C_0_PORT_init(void)
+{
+
+	gpio_set_pin_pull_mode(PA17,
+	                       // <y> Pull configuration
+	                       // <id> pad_pull_config
+	                       // <GPIO_PULL_OFF"> Off
+	                       // <GPIO_PULL_UP"> Pull-up
+	                       // <GPIO_PULL_DOWN"> Pull-down
+	                       GPIO_PULL_OFF);
+
+	gpio_set_pin_function(PA17, PINMUX_PA17D_SERCOM3_PAD0);
+
+	gpio_set_pin_pull_mode(PA16,
+	                       // <y> Pull configuration
+	                       // <id> pad_pull_config
+	                       // <GPIO_PULL_OFF"> Off
+	                       // <GPIO_PULL_UP"> Pull-up
+	                       // <GPIO_PULL_DOWN"> Pull-down
+	                       GPIO_PULL_OFF);
+
+	gpio_set_pin_function(PA16, PINMUX_PA16D_SERCOM3_PAD1);
+}
+
+void I2C_0_CLOCK_init(void)
+{
+	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM3_GCLK_ID_CORE, CONF_GCLK_SERCOM3_CORE_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM3_GCLK_ID_SLOW, CONF_GCLK_SERCOM3_SLOW_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+
+	hri_mclk_set_APBBMASK_SERCOM3_bit(MCLK);
+}
+
+void I2C_0_init(void)
+{
+	I2C_0_CLOCK_init();
+	i2c_m_sync_init(&I2C_0, SERCOM3);
+	I2C_0_PORT_init();
 }
 
 void delay_driver_init(void)
@@ -240,15 +240,30 @@ void system_init(void)
 
 	gpio_set_pin_function(LED_Orange2, GPIO_PIN_FUNCTION_OFF);
 
+	// GPIO on PD20
+
+	// Set pin direction to input
+	gpio_set_pin_direction(DRDY_PIN, GPIO_DIRECTION_IN);
+
+	gpio_set_pin_pull_mode(DRDY_PIN,
+	                       // <y> Pull configuration
+	                       // <id> pad_pull_config
+	                       // <GPIO_PULL_OFF"> Off
+	                       // <GPIO_PULL_UP"> Pull-up
+	                       // <GPIO_PULL_DOWN"> Pull-down
+	                       GPIO_PULL_DOWN);
+
+	gpio_set_pin_function(DRDY_PIN, GPIO_PIN_FUNCTION_OFF);
+
 	ADC_0_init();
 
 	ADC_1_init();
 
 	USART_0_init();
 
-	I2C_0_init();
-
 	SPI_0_init();
+
+	I2C_0_init();
 
 	delay_driver_init();
 
