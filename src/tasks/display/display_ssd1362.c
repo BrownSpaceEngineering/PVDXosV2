@@ -1,4 +1,6 @@
 #include "display_ssd1362.h"
+
+#include "image_buffer_BrownLogo.h"
 #include "image_buffer_PVDX.h"
 #include "logging.h"
 
@@ -15,6 +17,9 @@
 
 // Maximum number of bytes that can be sent to the display in a single SPI transaction
 #define DISPLAY_SPI_BUFFER_CAPACITY (SSD1362_WIDTH / 2) * SSD1362_HEIGHT
+
+// Display Task memory structures
+struct displayMainTaskMemory displayMainMem;
 
 // Buffer for SPI transactions
 uint8_t spi_rx_buffer[DISPLAY_SPI_BUFFER_CAPACITY] = {0x00};
@@ -47,10 +52,15 @@ status_t spi_write_data() {
     DC_HIGH(); // set D/C# pin high to indicate that sent bytes are data (not commands)
     CS_LOW();  // select the display for SPI communication
 
+    TickType_t start = xTaskGetTickCount();
     int32_t response = spi_m_sync_transfer(&SPI_0, &xfer);
     if (response != (int32_t)xfer.size) {
         return ERROR_IO;
     }
+    TickType_t end = xTaskGetTickCount();
+    TickType_t duration = end - start;
+    int duration_ms = duration * portTICK_RATE_MS;
+    info("Duration to send: %d ms", duration_ms);
 
     CS_HIGH(); // deselect the display for SPI communication
     return SUCCESS;
@@ -60,11 +70,11 @@ status_t spi_write_data() {
 // Trigger a complete reset of the display
 void display_reset(void) {
     RST_HIGH();
-    delay_ms(RESET_WAIT_INTERVAL);
+    vTaskDelay(pdMS_TO_TICKS(RESET_WAIT_INTERVAL));
     RST_LOW();
-    delay_ms(RESET_WAIT_INTERVAL);
+    vTaskDelay(pdMS_TO_TICKS(RESET_WAIT_INTERVAL));
     RST_HIGH();
-    delay_ms(RESET_WAIT_INTERVAL);
+    vTaskDelay(pdMS_TO_TICKS(RESET_WAIT_INTERVAL));
 }
 
 // TODO: Add error checking
@@ -259,4 +269,21 @@ status_t display_init() {
     display_update();
 
     return SUCCESS;
+}
+
+void display_main(void *pvParameters) {
+    while (1) {
+        display_set_buffer(IMAGE_BUFFER_PVDX);
+        debug("First buffer set\n");
+        display_update();
+        debug("First image completed\n");
+        vTaskDelay(pdMS_TO_TICKS(500));
+
+        display_set_buffer(IMAGE_BUFFER_BROWNLOGO);
+        debug("Second image buffer set\n");
+        display_update();
+        debug("Second image completed\n");
+        vTaskDelay(pdMS_TO_TICKS(500));
+        watchdog_checkin(DISPLAY_TASK);
+    }
 }

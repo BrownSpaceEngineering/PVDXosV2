@@ -69,8 +69,8 @@ def visualize_buffer(buffer):
 
 
 # Example usage (a C header file will be created in the `./src/tasks/display/image_buffers/` directory)
-image_name = "PVDX"
-image_path = "/Users/tanishmakadia/Desktop/image_buffer_PVDX.png" # Absolute path to the image you want to convert
+image_name = "BrownLogo"
+image_path = "/Users/nachoblancasrodriguez/Documents/image_brown.png" # Absolute path to the image you want to convert
 buffer = image_to_buffer(image_path)
 export_buffer(buffer, image_name)
 visualize_buffer(buffer)

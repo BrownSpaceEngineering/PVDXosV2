@@ -1,6 +1,8 @@
 #ifndef DISPLAY_H
 #define DISPLAY_H
 // Includes
+#include "watchdog_task.h"
+
 #include <atmel_start.h>
 #include <globals.h>
 
@@ -72,8 +74,23 @@
 #define POINT uint16_t // 16 bits per coordinate (larger than 8-bit for overflow checking)
 #define COLOR uint8_t // 4 bits per pixel (16 greyscale levels)
 
+// FreeRTOS Task structs
+// Memory for the heartbeat task
+#define DISPLAYMAIN_TASK_STACK_SIZE         128 // Size of the stack in words (multiply by 4 to get bytes)
+
+// Placed in a struct to ensure that the TCB is placed higher than the stack in memory
+//^ This ensures that stack overflows do not corrupt the TCB (since the stack grows downwards)
+struct displayMainTaskMemory {
+    StackType_t OverflowBuffer[TASK_STACK_OVERFLOW_PADDING];
+    StackType_t displayMainTaskStack[DISPLAYMAIN_TASK_STACK_SIZE];
+    StaticTask_t displayMainTaskTCB;
+};
+
+extern struct displayMainTaskMemory displayMainMem;
+
 // Exposed Functions
 status_t display_init(void);
+void display_main(void *);
 
 // Variables
 extern COLOR display_buffer[(SSD1362_WIDTH / 2) * SSD1362_HEIGHT]; // pixels are 4 bits, so 2 consecutive pixels per byte

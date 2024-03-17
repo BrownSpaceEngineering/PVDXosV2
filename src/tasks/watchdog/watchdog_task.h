@@ -10,8 +10,10 @@
 #define WATCHDOG_MS_DELAY 1000 // Controls how often the Watchdog thread runs and verifies task checkins
 
 // In general, there's no issue with setting these times very high (i.e. 1 minute or longer) if needed
-#define HEARTBEAT_TASK_ALLOWED_TIME 2000 // 2 seconds the main loop is 1 second, so this is double the time
+#define HEARTBEAT_TASK_ALLOWED_TIME    10000 // 2 seconds the main loop is 1 second, so this is double the time
+#define TASK_MANAGER_TASK_ALLOWED_TIME 5000  // 5 seconds in order to prepare for other sensors
 #define WATCHDOG_TASK_ALLOWED_TIME 1500  // 1.5 Seconds, watchdog should be running often.
+#define DISPLAY_TASK_ALLOWED_TIME      10000 // In order two allow for the delay in between
 
 // Memory for the watchdog task
 #define WATCHDOG_TASK_STACK_SIZE 128 // Size of the stack in words (multiply by 4 to get bytes)

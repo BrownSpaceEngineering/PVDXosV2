@@ -26,6 +26,7 @@ export OBJS := \
 ../src/tasks/cosmic_monkey/cosmicmonkey_main.o \
 ../src/misc/logging/logging.o \
 ../src/tasks/display/display_ssd1362.o \
+../src/tasks/task_manager/task_manager.o \
 
 
 
@@ -43,6 +44,7 @@ export EXTRA_VPATH := \
 ../../src/tasks/cosmic_monkey \
 ../../src/misc/logging \
 ../../src/tasks/display \
+../../src/tasks/task_manager \
 ../../src/tasks/display/image_buffers \
 
 
