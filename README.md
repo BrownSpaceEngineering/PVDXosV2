@@ -7,7 +7,7 @@
 1. **Start the SEGGER GDB Server:**
 
    - run `JLinkGDBServer` from the SEGGER folder containing all the J-Link tools.
-   - Before clicking 'OK', make sure the target is set to `SAMD51P20A`, and the interface is set to `SWD`
+   - Before clicking 'OK', make sure the target is set to `ATSAMD51P20A`, and the interface is set to `SWD`
    - WINDOWS/WSL ONLY: The "Localhost Only" checkbox must be unchecked.
    - Ensure the J-Link server is on port 2331 for GDB connections.
 
@@ -18,8 +18,8 @@
 3. **Connect and Run:**
    - Use `make connect` to connect to the board and auto-flash/run the program.
    - The code will automatically pause at the top of the 'main' function. Set any breakpoints you need, and then continue running the program with 'c'
-   - To see output from printf statements, connect to localhost:19021 using Telnet. (You can use PuTTY for this on Windows, or the built-in terminal command `telnet` on Mac/Linux)
-
+   - To see output from printf statements, connect to localhost:19021 using Telnet. (You can use PuTTY for this on Windows, or `nc localhost 19021` to listen with netcat on a Mac/Linux terminal)
+   - If using PuTTY, go to 'Terminal' and check the box for 'Implicit CR in every LF'
 
 ## Toolchain Installation
 
@@ -43,6 +43,14 @@
 4. Install GDB Multiarch and other build tools:
    - `sudo apt install gdb-multiarch`
    - `sudo apt install build-essential`
+   - `sudo apt install clang-format`
+
+5. (Optional) Configure VSCode to use clang-format for formatting:
+
+   - Install the `clang-format` extension in VSCode.
+   - In VSCode properties, set the default formatter to `clang-format`.
+   - Enable 'format on save' in the settings.
+   - Set 'format on save mode' to 'modifications'.
 
 ### Mac/Linux (Geared towards Mac)
 
@@ -84,7 +92,16 @@
      ```
    - IMPORTANT: Remember to replace `<VersionNumber>` with the version number of the toolchain you downloaded. It should be something like '13.2.Rel1'
 
-8. If you're on Mac, install GNU `sed` by running `brew install gnu-sed`
+8. Install other build tools:
+   - `brew install gnu-sed` (if on mac)
+   - `brew install clang-format`
+
+9. (Optional) Configure VSCode to use clang-format for formatting:
+
+   - Install the `clang-format` extension in VSCode.
+   - In VSCode properties, set the default formatter to `clang-format`.
+   - Enable 'format on save' in the settings.
+   - Set 'format on save mode' to 'modifications'.
 
 ---
 

@@ -24,6 +24,8 @@ struct usart_sync_descriptor USART_0;
 
 struct i2c_m_sync_desc I2C_0;
 
+struct rand_sync_desc RAND_0;
+
 struct wdt_descriptor WDT_0;
 
 void ADC_0_PORT_init(void)
@@ -183,6 +185,17 @@ void delay_driver_init(void)
 	delay_init(SysTick);
 }
 
+void RAND_0_CLOCK_init(void)
+{
+	hri_mclk_set_APBCMASK_TRNG_bit(MCLK);
+}
+
+void RAND_0_init(void)
+{
+	RAND_0_CLOCK_init();
+	rand_sync_init(&RAND_0, TRNG);
+}
+
 void WDT_0_CLOCK_init(void)
 {
 	hri_mclk_set_APBAMASK_WDT_bit(MCLK);
@@ -251,6 +264,8 @@ void system_init(void)
 	SPI_0_init();
 
 	delay_driver_init();
+
+	RAND_0_init();
 
 	WDT_0_init();
 }

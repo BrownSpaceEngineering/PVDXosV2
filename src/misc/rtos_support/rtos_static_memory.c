@@ -10,7 +10,7 @@ void vApplicationGetIdleTaskMemory(StaticTask_t **ppxIdleTaskTCBBuffer, StackTyp
                                    configSTACK_DEPTH_TYPE *puxIdleTaskStackSize_StackDepthType) {
     // Must be static so it doesn't go out of scope when the function ends
     static StaticTask_t xIdleTaskTCB;
-    static StackType_t uxIdleTaskStack[configMINIMAL_STACK_SIZE * 20];
+    static StackType_t uxIdleTaskStack[configMINIMAL_STACK_SIZE];
 
     /* Pass out a pointer to the StaticTask_t structure in which the Idle task's
     state will be stored. */
@@ -23,7 +23,7 @@ void vApplicationGetIdleTaskMemory(StaticTask_t **ppxIdleTaskTCBBuffer, StackTyp
     Note that, as the array is necessarily of type StackType_t,
     configMINIMAL_STACK_SIZE is specified in words, not bytes. */
     StackType_t *puxIdleTaskStackSize = (StackType_t *)puxIdleTaskStackSize_StackDepthType;
-    *puxIdleTaskStackSize = configMINIMAL_STACK_SIZE * 20;
+    *puxIdleTaskStackSize = configMINIMAL_STACK_SIZE;
 }
 /*-----------------------------------------------------------*/
 
@@ -32,7 +32,7 @@ void vApplicationGetTimerTaskMemory(StaticTask_t **ppxTimerTaskTCBBuffer, StackT
                                     configSTACK_DEPTH_TYPE *puxTimerTaskStackSize_StackDepthType) {
     // Must be static so it doesn't go out of scope when the function ends
     static StaticTask_t xTimerTaskTCB;
-    static StackType_t uxTimerTaskStack[configTIMER_TASK_STACK_DEPTH * 20];
+    static StackType_t uxTimerTaskStack[configTIMER_TASK_STACK_DEPTH];
 
     /* Pass out a pointer to the StaticTask_t structure in which the Timer
     task's state will be stored. */
@@ -45,5 +45,5 @@ void vApplicationGetTimerTaskMemory(StaticTask_t **ppxTimerTaskTCBBuffer, StackT
     Note that, as the array is necessarily of type StackType_t,
     configTIMER_TASK_STACK_DEPTH is specified in words, not bytes. */
     StackType_t *puxTimerTaskStackSize = (StackType_t *)puxTimerTaskStackSize_StackDepthType;
-    *puxTimerTaskStackSize = configTIMER_TASK_STACK_DEPTH * 20;
+    *puxTimerTaskStackSize = configTIMER_TASK_STACK_DEPTH;
 }

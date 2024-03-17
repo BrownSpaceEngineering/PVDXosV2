@@ -1226,6 +1226,18 @@ drivers:
     variant: null
     clocks:
       domain_group: null
+  RAND_0:
+    user_label: RAND_0
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::TRNG::driver_config_definition::RAND::HAL:Driver:RAND.Sync
+    functionality: RAND
+    api: HAL:Driver:RAND_Sync
+    configuration:
+      trng_datardyeo: false
+      trng_runstdby: false
+    optional_signals: []
+    variant: null
+    clocks:
+      domain_group: null
   WDT_0:
     user_label: WDT_0
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::WDT::driver_config_definition::WDT::HAL:Driver:WDT

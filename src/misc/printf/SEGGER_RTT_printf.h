@@ -10,4 +10,4 @@
 int printf(const char *sFormat, ...);
 void RTT_putchar(char c);
 
-#endif  // SEGGER_RTT_PRINTF_H
+#endif // SEGGER_RTT_PRINTF_H
