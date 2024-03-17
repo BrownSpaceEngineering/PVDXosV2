@@ -3,7 +3,7 @@
 #include "uhf_task.h"
 
 struct uhfTaskMemory uhfMem = {0};
-unsigned char uhf_test_message[] = "Brown UHF Engineering! PVDX PVDX PVDX PVDX";
+unsigned char uhf_test_message[] = "Brown UHF Engineering! 🚀🚀🚀🚀🚀";
 size_t uhf_test_message_length = sizeof(uhf_test_message);
 
 void uhf_main(void *pvParameters) {
