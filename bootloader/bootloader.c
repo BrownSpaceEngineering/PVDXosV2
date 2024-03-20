@@ -3,7 +3,8 @@
 #include <stdint.h>
 
 __attribute__((noreturn)) void bootloader() {
-    // write magic number to backup RAM
+
+    // write magic number to backup RAM to indicate bootloader has ran successfully
     uint32_t *magic_number_addr = (uint32_t *)MAGIC_NUMBER_ADDRESS;
     *magic_number_addr = MAGIC_NUMBER;
 

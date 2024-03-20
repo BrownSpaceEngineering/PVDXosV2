@@ -15,10 +15,11 @@ int main(void) {
     // Bootloader sets a magic number in backup RAM to indicate that it has run successfully
     uint32_t *magic_number_addr = (uint32_t *)MAGIC_NUMBER_ADDRESS;
     uint32_t magic_number = *magic_number_addr;
+    *magic_number_addr = 0; // Clear the magic number so that this value doesn't linger
     if (magic_number == MAGIC_NUMBER) {
-        info("[+] Bootloader report: Success\n");
+        info("[+] Bootloader executed normally\n");
     } else {
-        warning("[-] Bootloader report: Failure\n");
+        warning("[!] Abnormal bootloader behavior (Magic Number: %x)\n", magic_number);
     }
 
     // Initialize the watchdog as early as possible to ensure that the system is reset if the initialization hangs
