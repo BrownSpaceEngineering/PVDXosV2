@@ -183,9 +183,8 @@ update_asf:
 	&& echo "(2) ASF config removed" \
 	&& mkdir -p ASF \
 	&& echo "(3) ASF dir re-Created" \
-	&& echo "(4.1) Unzipping ASF.atzip (this may take a sec...)" \
 	&& unzip -q ASF.atzip -d ASF \
-	&& echo "(4.2) ASF unzipped" \
+	&& echo "(4) ASF unzipped" \
 	&& cp -f ./ASF/atmel_start_config.atstart ./ \
 	&& echo "(5) ASF config lifted" \
 	&& $(SED) -i 's/\$$(\@:%\.o=%\.d)/$$(patsubst ..\/%,%, \$$(\@:%\.o=%\.d))/g' ./ASF/gcc/Makefile \
