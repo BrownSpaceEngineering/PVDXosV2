@@ -5,8 +5,8 @@
 __attribute__((noreturn)) void bootloader() {
 
     // write magic number to backup RAM to indicate bootloader has ran successfully
-    uint32_t *magic_number_addr = (uint32_t *)MAGIC_NUMBER_ADDRESS;
-    *magic_number_addr = MAGIC_NUMBER;
+    uint32_t *p_magic_number = (uint32_t *)MAGIC_NUMBER_ADDRESS;
+    *p_magic_number = MAGIC_NUMBER;
 
     // Done with bootloader: transfer control to PVDX application
     transfer_to_application();

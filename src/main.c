@@ -13,9 +13,9 @@ int main(void) {
     info("[+] Built from commit: %s\n", GIT_COMMIT_HASH);
 
     // Bootloader sets a magic number in backup RAM to indicate that it has run successfully
-    uint32_t *magic_number_addr = (uint32_t *)BOOTLOADER_MAGIC_NUMBER_ADDRESS;
-    uint32_t magic_number = *magic_number_addr;
-    *magic_number_addr = 0; // Clear the magic number so that this value doesn't linger
+    uint32_t *p_magic_number = (uint32_t *)BOOTLOADER_MAGIC_NUMBER_ADDRESS;
+    uint32_t magic_number = *p_magic_number;
+    *p_magic_number = 0; // Clear the magic number so that this value doesn't linger
     if (magic_number == BOOTLOADER_MAGIC_NUMBER_VALUE) {
         info("[+] Bootloader executed normally\n");
     } else {
