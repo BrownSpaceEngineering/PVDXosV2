@@ -3,7 +3,7 @@
 #define APPLICATION_START_ADDRESS (0x2000UL) // Start address of the application
 
 #define BACKUP_RAM (0x47000000UL)
-#define MAGIC_NUMBER_ADDRESS (BACKUP_RAM + 0x00)
+#define MAGIC_NUMBER_ADDRESS (BACKUP_RAM + 0x0)
 #define MAGIC_NUMBER (0x50564458UL)  // ASCII for 'PVDX'
 #define FAILURE_NUMBER (0xBADC0DEUL) // "Bad Code"
 

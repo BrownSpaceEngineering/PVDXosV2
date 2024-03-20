@@ -11,6 +11,13 @@
 #include <string.h>
 
 /*
+Standard definitions for main.c
+*/
+
+#define MAGIC_NUMBER_ADDRESS (BKUPRAM_ADDR + 0x0)
+#define MAGIC_NUMBER (0x50564458UL) // ASCII for 'PVDX'
+
+/*
 Compilation guards to make sure that compilation is being done with the correct flags and correct compiler versions
 If you want to get rid of the red squiggly lines:
 - set C standard to GNU99 in the C/C++ extension settings
@@ -61,3 +68,10 @@ If you want to get rid of the red squiggly lines:
 
 // Define build time
 #define BUILD_TIME __TIME__
+
+// Defines which should never actually execute, but are worth having for IDE reasons
+// (so that the IDE knows what flags to expect and doesn't throw a fit)
+#if !defined(DEVBUILD) && !defined(UNITTEST) && !defined(RELEASE) // No build flags set
+    #define BUILD_TYPE "Unspecified"
+    #define DEVBUILD
+#endif

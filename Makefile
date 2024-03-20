@@ -178,16 +178,16 @@ update_asf:
 	fi;
 	@echo "(0) Starting..." \
 	&& rm -rf ./ASF \
-	&& echo "(1) ASF Dir Removed" \
+	&& echo "(1) ASF dir removed" \
 	&& rm -f ./atmel_start_config.atstart \
-	&& echo "(2) ASF Config Removed" \
+	&& echo "(2) ASF config removed" \
 	&& mkdir -p ASF \
-	&& echo "(3) ASF Dir Re-Created" \
+	&& echo "(3) ASF dir re-Created" \
 	&& echo "(4.1) Unzipping ASF.atzip (this may take a sec...)" \
 	&& unzip -q ASF.atzip -d ASF \
-	&& echo "(4.2) ASF Unzipped" \
+	&& echo "(4.2) ASF unzipped" \
 	&& cp -f ./ASF/atmel_start_config.atstart ./ \
-	&& echo "(5) ASF Config Lifted" \
+	&& echo "(5) ASF config lifted" \
 	&& $(SED) -i 's/\$$(\@:%\.o=%\.d)/$$(patsubst ..\/%,%, \$$(\@:%\.o=%\.d))/g' ./ASF/gcc/Makefile \
 	&& echo "(6.1) ASF Makefile: GCC dependency filepaths corrected" \
 	&& $(SED) -i 's/\$$(\@:%\.o=%\.o)/$$(patsubst ..\/%,%, \$$(\@:%\.o=%\.o))/g' ./ASF/gcc/Makefile \
@@ -198,16 +198,20 @@ update_asf:
 	&& echo "(6.4) ASF Makefile: References to ASF main.c removed" \
 	&& $(SED) -i 's/-DDEBUG/$$(CFLAGS)/g' ./ASF/gcc/Makefile \
 	&& echo "(6.5) ASF Makefile: CFLAGS hook injected" \
-	&& rm -f ./ASF/main.c \
-	&& echo "(7) ASF main.c Removed" \
 	&& $(SED) -i 's/AtmelStart/PVDXos/g' ./ASF/gcc/Makefile \
-	&& echo "(8) ASF Makefile: Project name updated to PVDXos" \
+	&& echo "(6.6) ASF Makefile: Project name updated to PVDXos" \
+	&& rm -f ./ASF/main.c \
+	&& echo "(7) ASF main.c removed" \
 	&& $(SED) -i 's|// <h> Basic|#define configSUPPORT_STATIC_ALLOCATION 1|' ./ASF/config/FreeRTOSConfig.h \
-	&& echo "(9.1) ASF FreeRTOSConfig.h: Static allocation enabled" \
+	&& echo "(8.1) ASF FreeRTOSConfig.h: Static allocation enabled" \
 	&& $(SED) -i 's|#define INCLUDE_uxTaskGetStackHighWaterMark 0|#define INCLUDE_uxTaskGetStackHighWaterMark 1|' ./ASF/config/FreeRTOSConfig.h \
-	&& echo "(9.2) ASF FreeRTOSConfig.h: Task stack high watermark function enabled" \
+	&& echo "(8.2) ASF FreeRTOSConfig.h: Task stack high watermark function enabled" \
 	&& $(SED) -i 's|#define configCHECK_FOR_STACK_OVERFLOW 1|#define configCHECK_FOR_STACK_OVERFLOW 2|' ./ASF/config/FreeRTOSConfig.h \
-	&& echo "(9.3) ASF FreeRTOSConfig.h: Task stack overflow checking upgraded to type 2 (higher accuracy)" \
+	&& echo "(8.3) ASF FreeRTOSConfig.h: Task stack overflow checking upgraded to type 2 (higher accuracy)" \
+	&& $(SED) -i 's|ORIGIN = 0x00000000, LENGTH = 0x00100000|ORIGIN = 0x00002000, LENGTH = 0x000FE000|' ./ASF/samd51a/gcc/gcc/samd51p20a_flash.ld \
+	&& echo "(9) ASF Linker Script: Flash memory region updated to exclude bootloader" \
+	&& find ./ASF -type f -newermt now -exec touch {} + \
+	&& echo "(10) Timestamps in future updated to present" \
 	&& echo " --- Finished Integrating ASF --- "
 
 

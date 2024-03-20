@@ -12,6 +12,15 @@ int main(void) {
     info("[+] Built from branch: %s\n", GIT_BRANCH_NAME);
     info("[+] Built from commit: %s\n", GIT_COMMIT_HASH);
 
+    // Bootloader sets a magic number in backup RAM to indicate that it has run successfully
+    uint32_t *magic_number_addr = (uint32_t *)MAGIC_NUMBER_ADDRESS;
+    uint32_t magic_number = *magic_number_addr;
+    if (magic_number == MAGIC_NUMBER) {
+        info("[+] Bootloader report: Success\n");
+    } else {
+        warning("[-] Bootloader report: Failure\n");
+    }
+
     // Initialize the watchdog as early as possible to ensure that the system is reset if the initialization hangs
     watchdog_init(WDT_CONFIG_PER_CYC16384, true);
 
