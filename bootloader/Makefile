@@ -5,7 +5,7 @@ CC = arm-none-eabi-gcc
 AS = arm-none-eabi-as
 LD = arm-none-eabi-ld
 
-CFLAGS = -nostartfiles -nostdlib -Wall -Wextra -Wpedantic -Werror -mcpu=cortex-m4 -mthumb -c
+CFLAGS = -nostartfiles -nostdlib -g -Wall -Wextra -Wpedantic -Werror -mcpu=cortex-m4 -mthumb -c
 ASFLAGS = -mcpu=cortex-m4 -mthumb -c
 LDFLAGS = -T linkerscript.ld
 

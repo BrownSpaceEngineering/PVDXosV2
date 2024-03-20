@@ -1,7 +1,7 @@
 /* Define memory regions */
 MEMORY
 {
-  FLASH (rx) : ORIGIN = 0x00000000, LENGTH = 1M    /* 1MB Flash */
+  FLASH (rx) : ORIGIN = 0x00000000, LENGTH = 0x2000    /* 0x2000 (8KiB) of flash reserved for bootloader */
   RAM (rwx) : ORIGIN = 0x20000000, LENGTH = 256K   /* 256KB RAM */
 }
 
@@ -50,7 +50,7 @@ SECTIONS
   .stack (NOLOAD) :
   {
     . = ALIGN(8);
-    . = . + 0x400;      /* Adjust stack size as needed */
+    . = . + 0x1000;      /* Adjust stack size as needed */
     _estack = .;        /* Define stack top symbol */
   } > RAM
 }
