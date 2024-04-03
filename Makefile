@@ -71,16 +71,37 @@ else
 	SED = sed
 endif
 
+# Get git branch name and commit hash
+GIT_AVAILABLE := $(shell git rev-parse > /dev/null 2>&1; echo $$?)
+# ^ This is set to the return code of 'git rev-parse' (0 if successful, 1 if not)
+
+ifeq ($(GIT_AVAILABLE),0) # Zero case means we *are* in a git repo
+    GIT_BRANCH_NAME := \"$(shell git rev-parse --abbrev-ref HEAD)\"
+    GIT_COMMIT_HASH := \"$(shell git rev-parse HEAD | tail -c 8)\"
+else
+    $(warning Not in a Git repository, proceeding without Git information)
+    GIT_BRANCH_NAME := \"NONE\"
+    GIT_COMMIT_HASH := \"NONE\"
+endif
+
+
 # Compiler flags
-CFLAGS_POSITIVE := -Wextra -Werror -Werror=maybe-uninitialized # -Wall is already included in the ASF makefile
-CFLAGS_POSITIVE += -Wshadow -Wnull-dereference -Wduplicated-cond -Wlogical-op -Werror=return-type #Verbose warnings
-CFLAGS_POSITIVE += -Wfloat-equal -Wdangling-else -Wtautological-compare #more verbose warnings
-CFLAGS_POSITIVE += -fwrapv #Enable signed integer overflow so that weird optimizations are not applied.
-CFLAGS_NEGATIVE := -Wno-unused-parameter #Because some ASF functions have unused parameters, supress this warning
+# Include git branch and commit hash in the build
+CFLAGS += -D'GIT_BRANCH_NAME="$(GIT_BRANCH_NAME)"' -D'GIT_COMMIT_HASH="$(GIT_COMMIT_HASH)"'
+
+# Robust error checking
+CFLAGS += -Wextra -Werror -Werror=maybe-uninitialized
+CFLAGS += -Wshadow -Wnull-dereference -Wduplicated-cond -Wlogical-op -Werror=return-type -Wfloat-equal
+CFLAGS += -Wdangling-else -Wtautological-compare
+CFLAGS += -fwrapv # Enable fwrapv (wrap on overflow of signed integers) just to be safe
+
+# Disable warnings for unused parameters due to ASF functions having unused parameters
+CFLAGS += -Wno-unused-parameter #Because some ASF functions have unused parameters, supress this warning
+
+# Build-specific flags
 CFLAGS_DEV := -DDEVBUILD
 CFLAGS_UNITTEST := -DUNITTEST
 CFLAGS_RELEASE := -DRELEASE
-CFLAGS := $(CFLAGS_POSITIVE) $(CFLAGS_NEGATIVE)
 
 
 ### All these variables are exported to the child makefile, and affect its behavior ###
@@ -93,7 +114,7 @@ export OBJS_AS_ARGS := $(foreach obj,$(OBJS),$(patsubst ../%,%,$(obj)))
 export DEPS_AS_ARGS := $(patsubst %.o,%.d,$(OBJS_AS_ARGS))
 
 
-.PHONY: all dev release test clean connect update_asf
+.PHONY: all dev release test clean connect update_asf flash_bootloader
 
 # Default target
 all: dev
@@ -101,7 +122,8 @@ all: dev
 dev:
 	@$(MAKE) -C $(CHILD_MAKEFILE_PATH) CFLAGS=" $(CFLAGS_DEV) $(CFLAGS)" \
 	&& cp -f ./ASF/gcc/PVDXos.elf ./ \
-	&& echo " --- Finished Building PVDXos.elf --- "
+	&& echo " --- Finished Building PVDXos.elf --- " \
+	&& echo " ---    THIS IS THE DEV BUILD!    --- "
 
 release: clean #Might as well clean before compiling the release build
 	@$(MAKE) -C $(CHILD_MAKEFILE_PATH) CFLAGS=" $(CFLAGS_RELEASE) $(CFLAGS)" \
@@ -109,7 +131,7 @@ release: clean #Might as well clean before compiling the release build
 	&& echo " --- Finished Building PVDXos.elf --- " \
 	&& echo " ---  THIS IS THE RELEASE BUILD!  --- "
 
-test: clean #Might as well clean before compiling the unit test build as well
+test:
 	@$(MAKE) -C $(CHILD_MAKEFILE_PATH) CFLAGS=" $(CFLAGS_UNITTEST) $(CFLAGS)" \
 	&& cp -f ./ASF/gcc/PVDXos.elf ./ \
 	&& echo " --- Finished Building PVDXos.elf --- " \
@@ -130,6 +152,18 @@ else #Run the windows-specific command
 	gdb-multiarch -ex "target remote $$hostname.local:2331" -ex "load" -ex "monitor halt" -ex "monitor reset" -ex "b main" -ex "continue" ./PVDXos.elf
 endif
 
+#Builds the bootloader, then flashes it to the board. Make connect needs to be run after this.
+flash_bootloader:
+	$(MAKE) -C ./bootloader clean
+	$(MAKE) -C ./bootloader # Builds the bootloader
+ifeq (,$(findstring microsoft,$(shell uname -r))) #Detects a WSL kernel name, and runs a WSL-specific command for connecting to the GDB server
+	@gdb -ex "target remote localhost:2331" -ex "load" -ex "monitor halt" -ex "monitor reset" ./bootloader/bootloader.elf
+else #Run the windows-specific command
+	@hostname=$(shell hostname) && \
+	gdb-multiarch -ex "target remote $$hostname.local:2331" -ex "load" -ex "monitor halt" -ex "monitor reset" ./bootloader/bootloader.elf
+endif
+
+
 # When updating the ASF configuration, this must be run once in order to automatically integrate the new ASF config
 # Hopefully nobody ever needs to touch this, but you can add to it if you want to automatically trigger an action when the ASF is updated
 # The worst part of this is step 6, making text modifications to the stock ASF Makefile
@@ -147,19 +181,15 @@ update_asf:
 	fi;
 	@echo "(0) Starting..." \
 	&& rm -rf ./ASF \
-	&& echo "(1) ASF Dir Removed" \
+	&& echo "(1) ASF dir removed" \
 	&& rm -f ./atmel_start_config.atstart \
-	&& echo "(2) ASF Config Removed" \
+	&& echo "(2) ASF config removed" \
 	&& mkdir -p ASF \
-	&& echo "(3) ASF Dir Re-Created" \
-	&& echo "(4) Unzipping ASF.atzip (may take a sec)" \
+	&& echo "(3) ASF dir re-Created" \
 	&& unzip -q ASF.atzip -d ASF \
-	&& echo "(4.1) ASF Unzipped" \
-	&& find ./ASF/ -type f -newermt now -exec touch {} \;\
-	&& echo "(4.2) Set timestamps to current time" \
+	&& echo "(4) ASF unzipped" \
 	&& cp -f ./ASF/atmel_start_config.atstart ./ \
-	&& echo "(4.3) ASF Config Lifted" \
-	&& echo "(5) Making ASF Makefile Modifications..." \
+	&& echo "(5) ASF config lifted" \
 	&& $(SED) -i 's/\$$(\@:%\.o=%\.d)/$$(patsubst ..\/%,%, \$$(\@:%\.o=%\.d))/g' ./ASF/gcc/Makefile \
 	&& echo "(5.1) ASF Makefile: GCC dependency filepaths corrected" \
 	&& $(SED) -i 's/\$$(\@:%\.o=%\.o)/$$(patsubst ..\/%,%, \$$(\@:%\.o=%\.o))/g' ./ASF/gcc/Makefile \
@@ -169,18 +199,21 @@ update_asf:
 	&& $(SED) -i '/main/d' ./ASF/gcc/Makefile \
 	&& echo "(5.4) ASF Makefile: References to ASF main.c removed" \
 	&& $(SED) -i 's/-DDEBUG/$$(CFLAGS)/g' ./ASF/gcc/Makefile \
-	&& echo "(5.5) ASF Makefile: CFLAGS hook injected" \
-	&& rm -f ./ASF/main.c \
-	&& echo "(6) ASF main.c Removed" \
+	&& echo "(6.5) ASF Makefile: CFLAGS hook injected" \
 	&& $(SED) -i 's/AtmelStart/PVDXos/g' ./ASF/gcc/Makefile \
-	&& echo "(7) ASF Makefile: Project name updated to PVDXos" \
-	&& echo "(8) Making FreeRTOSConfig Modifications..." \
+	&& echo "(6.6) ASF Makefile: Project name updated to PVDXos" \
+	&& rm -f ./ASF/main.c \
+	&& echo "(7) ASF main.c removed" \
 	&& $(SED) -i 's|// <h> Basic|#define configSUPPORT_STATIC_ALLOCATION 1|' ./ASF/config/FreeRTOSConfig.h \
 	&& echo "(8.1) ASF FreeRTOSConfig.h: Static allocation enabled" \
 	&& $(SED) -i 's|#define INCLUDE_uxTaskGetStackHighWaterMark 0|#define INCLUDE_uxTaskGetStackHighWaterMark 1|' ./ASF/config/FreeRTOSConfig.h \
 	&& echo "(8.2) ASF FreeRTOSConfig.h: Task stack high watermark function enabled" \
 	&& $(SED) -i 's|#define configCHECK_FOR_STACK_OVERFLOW 1|#define configCHECK_FOR_STACK_OVERFLOW 2|' ./ASF/config/FreeRTOSConfig.h \
 	&& echo "(8.3) ASF FreeRTOSConfig.h: Task stack overflow checking upgraded to type 2 (higher accuracy)" \
+	&& $(SED) -i 's|ORIGIN = 0x00000000, LENGTH = 0x00100000|ORIGIN = 0x00002000, LENGTH = 0x000FE000|' ./ASF/samd51a/gcc/gcc/samd51p20a_flash.ld \
+	&& echo "(9) ASF Linker Script: Flash memory region updated to exclude bootloader" \
+	&& find ./ASF -type f -newermt now -exec touch {} + \
+	&& echo "(10) Timestamps in future updated to present" \
 	&& echo " --- Finished Integrating ASF --- "
 
 

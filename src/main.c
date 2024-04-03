@@ -1,49 +1,27 @@
-#include "cosmicmonkey_task.h"
-#include "globals.h"
-#include "heartbeat_task.h"
-#include "logging.h"
-#include "rtos_start.h"
-#include "uhf_task.h"
-#include "watchdog_task.h"
-
-#include <atmel_start.h>
-#include <driver_init.h>
-#include <hal_adc_sync.h>
-#include <string.h>
-
-/*
-Compilation guards to make sure that compilation is being done with the correct flags and correct compiler versions
-If you want to get rid of the red squiggly lines:
-- set C standard to GNU99 in the C/C++ extension settings
-- Add "-DDEVBUILD" to the IntelliSense settings as a compiler argument
-*/
-
-// Check GNU 99 standard
-#if __STDC_VERSION__ != 199901L
-    #error "This program needs to be compiled with the GNU99 Standard"
-#endif
-
-// Check that at least one of {DEVBUILD, UNITTEST, RELEASE} is defined
-#if !defined(DEVBUILD) && !defined(UNITTEST) && !defined(RELEASE)
-    #error "Build type flag not set! Must be one of: {DEVBUILD, UNITTEST, RELEASE}"
-#endif
-// Check that at most one of {DEVBUILD, UNITTEST, RELEASE} is defined
-#if defined(DEVBUILD) && defined(UNITTEST)
-    #error "Multiple build type flags set! (DEVBUILD && UNITTEST) Must be exactly one of: {DEVBUILD, UNITTEST, RELEASE}"
-#endif
-#if defined(DEVBUILD) && defined(RELEASE)
-    #error "Multiple build type flags set! (DEVBUILD && RELEASE) Must be exactly one of: {DEVBUILD, UNITTEST, RELEASE}"
-#endif
-#if defined(UNITTEST) && defined(RELEASE)
-    #error "Multiple build type flags set! (UNITTEST && RELEASE) Must be exactly one of: {DEVBUILD, UNITTEST, RELEASE}"
-#endif
+#include "main.h"
 
 cosmicmonkeyTaskArguments_t cm_args = {0};
+
 int main(void) {
     /* Initializes MCU, drivers and middleware */
     atmel_start_init();
     info("\n\n\n"); // Print a few newlines to make the log easier to read
     info("--- ATMEL Initialization Complete ---\n");
+    info("[+] Build Type: %s\n", BUILD_TYPE);
+    info("[+] Build Date: %s\n", BUILD_DATE);
+    info("[+] Build Time: %s\n", BUILD_TIME);
+    info("[+] Built from branch: %s\n", GIT_BRANCH_NAME);
+    info("[+] Built from commit: %s\n", GIT_COMMIT_HASH);
+
+    // Bootloader sets a magic number in backup RAM to indicate that it has run successfully
+    uint32_t *p_magic_number = (uint32_t *)BOOTLOADER_MAGIC_NUMBER_ADDRESS;
+    uint32_t magic_number = *p_magic_number;
+    *p_magic_number = 0; // Clear the magic number so that this value doesn't linger
+    if (magic_number == BOOTLOADER_MAGIC_NUMBER_VALUE) {
+        info("[+] Bootloader executed normally\n");
+    } else {
+        warning("[!] Abnormal bootloader behavior (Magic Number: %x)\n", magic_number);
+    }
 
     // Initialize the watchdog as early as possible to ensure that the system is reset if the initialization hangs
     watchdog_init(WDT_CONFIG_PER_CYC16384, true);
