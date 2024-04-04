@@ -4,6 +4,18 @@
 
 __attribute__((noreturn)) void bootloader() {
 
+    // Check the reset cause
+    uint8_t *p_rcause = (uint8_t *)RSTC_RCAUSE;
+    uint8_t rcause = *p_rcause;
+
+    if (rcause == 0x20) {
+        // Watchdog reset happened, maybe worth doing something about later?
+        // Wipe all memory (VERY RISKY THIS TOTALLY IS UB)
+        for (register int *p = (int *)0x20000000; p < (int *)0x20040000; p++) {
+            *p = 0;
+        }
+    }
+
     // write magic number to backup RAM to indicate bootloader has ran successfully
     uint32_t *p_magic_number = (uint32_t *)MAGIC_NUMBER_ADDRESS;
     *p_magic_number = MAGIC_NUMBER;
@@ -31,8 +43,8 @@ __attribute__((noreturn)) void transfer_to_application() {
     *p_scb_vtor = (APPLICATION_START_ADDRESS & SCB_VTOR_TBLOFF_Msk);
 
     // set SP to desired_sp and then jump to PC using assembly
-    __asm__ volatile("mov sp, %0\n\t" // Move the value in desired_sp into SP
-                     "bx %1"          // Branch to the address contained in desired_pc
+    __asm__ volatile("mov sp, %0\n" // Move the value in desired_sp into SP
+                     "bx %1"        // Branch to the address contained in desired_pc
                      :
                      : "r"(desired_sp), "r"(desired_pc) // Arguments to the assembly (accessed as %0 and %1 in the assembly code)
                      :);

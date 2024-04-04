@@ -9,8 +9,15 @@
 #define SCS_BASE (0xE000E000UL)
 #define SCB_BASE (SCS_BASE + 0x0D00UL)
 #define SCB_VTOR (SCB_BASE + 0x08) // VTOR: Vector Table Offset Register (where the processor will reset from)
+#define SCB_AIRCR (SCB_BASE + 0x0C) // AIRCR Contains SYSRESETREQ bit to request a system reset
 
 #define SCB_VTOR_TBLOFF_Msk (0xFFFFFF80UL) // Mask off the last 7 bits (128 bytes alignment)
+
+#define SCB_AIRCR_VECTKEY_Pos 16U
+#define SCB_AIRCR_SYSRESETREQ_Pos 2U
+#define SCB_AIRCR_SYSRESETREQ_Msk (1UL << SCB_AIRCR_SYSRESETREQ_Pos)
+
+#define RSTC_RCAUSE (0x40000C00UL + 0x00UL) // Reset Cause Register
 
 #define FLASH_START (0UL)
 #define FLASH_SIZE (0x100000UL) // 1MB
