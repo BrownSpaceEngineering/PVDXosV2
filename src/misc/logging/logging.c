@@ -63,7 +63,6 @@ void debug_impl(const char *string, ...) {
     if (DEBUG < LOG_LEVEL) {
         return;
     }
-    return;
     va_list args;
     va_start(args, string);
     unsigned int BufferIndex= 0;

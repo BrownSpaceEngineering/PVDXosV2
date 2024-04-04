@@ -94,6 +94,7 @@ CFLAGS += -Wextra -Werror -Werror=maybe-uninitialized
 CFLAGS += -Wshadow -Wnull-dereference -Wduplicated-cond -Wlogical-op -Werror=return-type -Wfloat-equal
 CFLAGS += -Wdangling-else -Wtautological-compare
 CFLAGS += -fwrapv # Enable fwrapv (wrap on overflow of signed integers) just to be safe
+CFLAGS += -fsigned-char # Define char (with no sign qualifiers) as a signed char type
 
 # Disable warnings for unused parameters due to ASF functions having unused parameters
 CFLAGS += -Wno-unused-parameter #Because some ASF functions have unused parameters, supress this warning
@@ -165,9 +166,9 @@ endif
 
 
 # When updating the ASF configuration, this must be run once in order to automatically integrate the new ASF config
-# Hopefully nobody ever needs to touch this, but you can add to it if you want to automatically trigger an action when the ASF is updated
-# The worst part of this is step 6, making text modifications to the stock ASF Makefile
-# IF YOU MODIFY STEP 6, PLEASE MAKE SURE YOU KNOW WHAT YOU'RE DOING
+# Add to this section if you want to automatically trigger an action when the ASF is updated
+# The worst part of this is $SED substitutions, making text modifications to the stock ASF Makefile and FreeRTOSConfig.h
+# IF YOU MODIFY THESE STEPS, PLEASE MAKE SURE YOU KNOW WHAT YOU'RE DOING -- ChatGPT is good at making these SED commands
 update_asf:
 	@if [ ! -f ASF.atzip ]; then \
 		echo "ASF.atzip not found in the current directory! (Make sure spelling and capitalization is exact)"; \
@@ -204,8 +205,8 @@ update_asf:
 	&& echo "(6.6) ASF Makefile: Project name updated to PVDXos" \
 	&& rm -f ./ASF/main.c \
 	&& echo "(7) ASF main.c removed" \
-	&& $(SED) -i 's|// <h> Basic|#define configSUPPORT_STATIC_ALLOCATION 1|' ./ASF/config/FreeRTOSConfig.h \
-	&& echo "(8.1) ASF FreeRTOSConfig.h: Static allocation enabled" \
+	&& $(SED) -i 's|// <h> Basic|#define configSUPPORT_STATIC_ALLOCATION 1\n#define INCLUDE_xQueueGetMutexHolder 1|' ./ASF/config/FreeRTOSConfig.h \
+	&& echo "(8.1) ASF FreeRTOSConfig.h: Static allocation & QueueGetMutexHolder enabled" \
 	&& $(SED) -i 's|#define INCLUDE_uxTaskGetStackHighWaterMark 0|#define INCLUDE_uxTaskGetStackHighWaterMark 1|' ./ASF/config/FreeRTOSConfig.h \
 	&& echo "(8.2) ASF FreeRTOSConfig.h: Task stack high watermark function enabled" \
 	&& $(SED) -i 's|#define configCHECK_FOR_STACK_OVERFLOW 1|#define configCHECK_FOR_STACK_OVERFLOW 2|' ./ASF/config/FreeRTOSConfig.h \

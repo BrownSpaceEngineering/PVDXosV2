@@ -4,9 +4,9 @@
 /* --------- HIGH-LEVEL CONFIG VARIABLES AND DEFINES --------- */
 
 #if defined(RELEASE)
-#define DEFAULT_LOG_LEVEL EVENT // The default log level for the system
+    #define DEFAULT_LOG_LEVEL EVENT // The default log level for the system
 #else
-#define DEFAULT_LOG_LEVEL INFO // The default log level for the system
+    #define DEFAULT_LOG_LEVEL DEBUG // The default log level for the system
 #endif
 
 /* ----------------------------------------------------------- */

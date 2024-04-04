@@ -20,7 +20,7 @@ StaticSemaphore_t uhfOutgoingMessagesMutexStruct = {0};
 // Memory to store data after it's removed from the stream
 uint8_t uhf_next_packet[MAX_PKT_LENGTH] = {0};
 
-unsigned char uhf_test_message[] = "Brown UHF Engineering! 🚀🚀🚀🚀🚀";
+char uhf_test_message[] = "Brown UHF Engineering! 🚀🚀🚀🚀🚀";
 size_t uhf_test_message_length = sizeof(uhf_test_message);
 
 // Definitions for static functions in this file
@@ -39,31 +39,37 @@ void uhf_main(void *pvParameters) {
         info("UHF module initialized succesfully\n");
     } else {
         warning("Failed to initialize UHF module! [Error: %d]\n", init_status);
+        // TODO: Decide what exactly to do here (UHF is a pretty critical component!)
     }
 
     // Constantly poll the UHF module for new messages
     // Constantly check the stream to see if anything needs to be sent
     while (1) {
-        // Check for incoming messages by reading from the incoming stream into the next packet buffer
-        size_t bytes_read = xStreamBufferReceive(uhfIncomingMessages, uhf_next_packet, MAX_PKT_LENGTH, 0);
+        // Check for any outgoing messages we need to send
+        size_t bytes_read = xStreamBufferReceive(uhfOutgoingMessages, uhf_next_packet, MAX_PKT_LENGTH, 0);
         if (bytes_read > 0) {
-            debug("Received UHF message of length %d\n", bytes_read);
+            debug("Supposed to send a message of length: %d\n", bytes_read);
+            if (init_status != SUCCESS) {
+                debug("UHF module not initialized, cannot send message\n");
+                continue;
+            }
+            status_t send_status = uhf_send(uhf_next_packet, bytes_read);
+            if (send_status == SUCCESS) {
+                debug("UHF message sent successfully\n");
+            } else {
+                warning("Failed to send UHF message! [Error: %d]\n", send_status);
+            }
+        }
+
+        // TODO: Poll the IRQ pin and check for any messages we have received (then place received messages into the incoming stream)
+
+        // TEMPORARY: For now, just send a UHF test message every loop by enqueueing it into the outgoing stream
+        status_t enqueue_result = uhf_send_message_nonblocking(uhf_test_message, uhf_test_message_length);
+        if (enqueue_result != SUCCESS) {
+            warning("Failed to enqueue test message into UHF outgoing stream! [Error: %d]\n", enqueue_result);
         }
 
         vTaskDelay(pdMS_TO_TICKS(UHF_POLLING_DELAY_MS));
-    }
-
-    status_t send_status = uhf_send(uhf_test_message, uhf_test_message_length);
-    if (send_status == SUCCESS) {
-        info("UHF message sent succesfully\n");
-    } else {
-        warning("Failed to send UHF message! [Error: %d]\n", send_status);
-    }
-
-    while (1) {
-        info("UHF task done, delaying forver\n");
-        vTaskDelay(pdMS_TO_TICKS(1000));
-        uhf_send(uhf_test_message, uhf_test_message_length);
     }
 }
 

@@ -12,6 +12,8 @@ struct spi_xfer uhf_transfer_struct = {
     .size = 0,
 };
 
+bool uhf_initialized = false;
+
 status_t readRegister(uint8_t address, uint8_t *data) {
     gpio_set_pin_level(UHF_CS, false);      // Set CS low
     uint8_t register_addr = address & 0x7F; // All bits except the first one
@@ -94,10 +96,10 @@ status_t uhf_init(uint32_t frequency) {
     uint8_t version = 0;
     status_t reg_result = readRegister(REG_VERSION, &version);
     if (version != 0x12) {
-        warning("UHF module not found\n");
+        debug("UHF module not found (returned version code: %d)\n", version);
         return ERROR_INTERNAL;
     } else {
-        info("UHF module found!\n");
+        debug("UHF module found!\n");
     }
 
     // Put UHF radio in sleep mode
@@ -106,7 +108,8 @@ status_t uhf_init(uint32_t frequency) {
     if (reg_result == SUCCESS) {
         debug("UHF module put to sleep\n");
     } else {
-        warning("Failed to put UHF module to sleep! [Error: %d]\n", reg_result);
+        debug("Failed to put UHF module to sleep! [Error: %d]\n", reg_result);
+        return ERROR_INTERNAL;
     }
 
     // set frequency to the frequency argument
@@ -118,7 +121,8 @@ status_t uhf_init(uint32_t frequency) {
     if (reg_result == SUCCESS) {
         debug("Frequency written succesfully\n");
     } else {
-        warning("Failed to write frequency! [Error: %d]\n", reg_result);
+        debug("Failed to write frequency! [Error: %d]\n", reg_result);
+        return ERROR_INTERNAL;
     }
 
     // set base addresses
@@ -149,10 +153,14 @@ status_t uhf_init(uint32_t frequency) {
     if (reg_result != SUCCESS) {
         return ERROR_INTERNAL;
     }
+    uhf_initialized = true;
     return SUCCESS;
 }
 
 status_t uhf_send(uint8_t *data, size_t length) {
+    if (uhf_initialized == false) {
+        return ERROR_UNINITIALIZED;
+    }
     debug("Sending UHF packet of length %d\n", length);
     if (length > MAX_PKT_LENGTH) {
         return ERROR_MAX_SIZE_EXCEEDED;
@@ -161,9 +169,12 @@ status_t uhf_send(uint8_t *data, size_t length) {
     if (status != SUCCESS) {
         return status;
     }
-    status |= uhf_write(data, length);
+    status = uhf_write(data, length);
+    if (status != SUCCESS) {
+        return status;
+    }
 
-    status |= uhf_end_packet(); // also sends the message
+    status = uhf_end_packet(); // also sends the message
     return status;
 }
 
