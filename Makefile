@@ -91,6 +91,7 @@ CFLAGS += -Wextra -Werror -Werror=maybe-uninitialized
 CFLAGS += -Wshadow -Wnull-dereference -Wduplicated-cond -Wlogical-op -Werror=return-type -Wfloat-equal
 CFLAGS += -Wdangling-else -Wtautological-compare
 CFLAGS += -fwrapv # Enable fwrapv (wrap on overflow of signed integers) just to be safe
+CFLAGS += -fsigned-char # Ensure that char is signed as your average c programmer might expect -- it's actually default unsigned on arm!
 
 # Disable warnings for unused parameters due to ASF functions having unused parameters
 CFLAGS += -Wno-unused-parameter #Because some ASF functions have unused parameters, supress this warning
@@ -195,14 +196,14 @@ update_asf:
 	&& echo "(6.3) ASF Makefile: GCC output filepaths corrected" \
 	&& $(SED) -i '/main/d' ./ASF/gcc/Makefile \
 	&& echo "(6.4) ASF Makefile: References to ASF main.c removed" \
-	&& $(SED) -i 's/-DDEBUG/$$(CFLAGS)/g' ./ASF/gcc/Makefile \
-	&& echo "(6.5) ASF Makefile: CFLAGS hook injected" \
+	&& $(SED) -i 's/-DDEBUG/$$(CFLAGS) -D__FILENAME__=\\"$$\(notdir $$<)\\"/g' ./ASF/gcc/Makefile \
+	&& echo "(6.5) ASF Makefile: CFLAGS and __FILENAME__ hook injected" \
 	&& $(SED) -i 's/AtmelStart/PVDXos/g' ./ASF/gcc/Makefile \
 	&& echo "(6.6) ASF Makefile: Project name updated to PVDXos" \
 	&& rm -f ./ASF/main.c \
 	&& echo "(7) ASF main.c removed" \
-	&& $(SED) -i 's|// <h> Basic|#define configSUPPORT_STATIC_ALLOCATION 1|' ./ASF/config/FreeRTOSConfig.h \
-	&& echo "(8.1) ASF FreeRTOSConfig.h: Static allocation enabled" \
+	&& $(SED) -i 's|// <h> Basic|#define configSUPPORT_STATIC_ALLOCATION 1\n#define INCLUDE_xQueueGetMutexHolder 1|' ./ASF/config/FreeRTOSConfig.h \
+	&& echo "(8.1) ASF FreeRTOSConfig.h: Static allocation & QueueGetMutexHolder enabled" \
 	&& $(SED) -i 's|#define INCLUDE_uxTaskGetStackHighWaterMark 0|#define INCLUDE_uxTaskGetStackHighWaterMark 1|' ./ASF/config/FreeRTOSConfig.h \
 	&& echo "(8.2) ASF FreeRTOSConfig.h: Task stack high watermark function enabled" \
 	&& $(SED) -i 's|#define configCHECK_FOR_STACK_OVERFLOW 1|#define configCHECK_FOR_STACK_OVERFLOW 2|' ./ASF/config/FreeRTOSConfig.h \
@@ -212,6 +213,3 @@ update_asf:
 	&& find ./ASF -type f -newermt now -exec touch {} + \
 	&& echo "(10) Timestamps in future updated to present" \
 	&& echo " --- Finished Integrating ASF --- "
-
-
-
