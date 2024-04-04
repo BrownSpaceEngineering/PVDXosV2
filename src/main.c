@@ -41,7 +41,7 @@ int main(void) {
         info("main: Heartbeat task created!\n");
     }
 
-    // Create watchdog task
+    // ----- WATCHDOG -----
     // The watchdog task is responsible for checking in with all the other tasks and resetting the system if a task has
     // not checked in within the allowed time
     TaskHandle_t watchdogTaskHandle = xTaskCreateStatic(watchdog_main, "Watchdog", WATCHDOG_TASK_STACK_SIZE, NULL, 2,
@@ -55,6 +55,8 @@ int main(void) {
         info("main: Watchdog task created!\n");
     }
 
+    // ----- COSMIC MONKEY -----
+
 #if defined(UNITTEST) || defined(DEVBUILD)
     #if defined(UNITTEST)
     cm_args.frequency = 10;
@@ -62,7 +64,7 @@ int main(void) {
     #if defined(DEVBUILD)
     cm_args.frequency = 5;
     #endif
-    cm_args.frequency = 0;
+
     TaskHandle_t cosmicMonkeyTaskHandle =
         xTaskCreateStatic(cosmicmonkey_main, "CosmicMonkey", COSMICMONKEY_TASK_STACK_SIZE, (void *)&cm_args, 1,
                           cosmicmonkeyMem.cosmicmonkeyTaskStack, &cosmicmonkeyMem.cosmicmonkeyTaskTCB);
@@ -73,6 +75,7 @@ int main(void) {
     }
 #endif // Cosmic Monkey
 
+    // ----- UHF -----
     TaskHandle_t uhfTaskHandle =
         xTaskCreateStatic(uhf_main, "uhf", WATCHDOG_TASK_STACK_SIZE, NULL, 2, uhfMem.uhfTaskStack, &uhfMem.uhfTaskTCB);
 

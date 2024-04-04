@@ -31,6 +31,8 @@ IncludeBlocks: Regroup
 #Case blocks should be indented
 IndentCaseBlocks: true
 IndentCaseLabels: true
+#Indent Preprocessor definitions if they're nested
+IndentPPDirectives: BeforeHash
 #Line endings should be LF (\n), not CRLF (\r\n)
 UseCRLF: false
 #use int *p; instead of int* p;

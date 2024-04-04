@@ -127,7 +127,7 @@ void I2C_0_init(void)
 void SPI_0_PORT_init(void)
 {
 
-	gpio_set_pin_level(UHF_COPI,
+	gpio_set_pin_level(UHF_MOSI,
 	                   // <y> Initial level
 	                   // <id> pad_initial_level
 	                   // <false"> Low
@@ -135,9 +135,9 @@ void SPI_0_PORT_init(void)
 	                   false);
 
 	// Set pin direction to output
-	gpio_set_pin_direction(UHF_COPI, GPIO_DIRECTION_OUT);
+	gpio_set_pin_direction(UHF_MOSI, GPIO_DIRECTION_OUT);
 
-	gpio_set_pin_function(UHF_COPI, PINMUX_PC23D_SERCOM3_PAD0);
+	gpio_set_pin_function(UHF_MOSI, PINMUX_PC23D_SERCOM3_PAD0);
 
 	gpio_set_pin_level(UHF_SCK,
 	                   // <y> Initial level
@@ -152,9 +152,9 @@ void SPI_0_PORT_init(void)
 	gpio_set_pin_function(UHF_SCK, PINMUX_PC22D_SERCOM3_PAD1);
 
 	// Set pin direction to input
-	gpio_set_pin_direction(UHF_CIPO, GPIO_DIRECTION_IN);
+	gpio_set_pin_direction(UHF_MISO, GPIO_DIRECTION_IN);
 
-	gpio_set_pin_pull_mode(UHF_CIPO,
+	gpio_set_pin_pull_mode(UHF_MISO,
 	                       // <y> Pull configuration
 	                       // <id> pad_pull_config
 	                       // <GPIO_PULL_OFF"> Off
@@ -162,7 +162,7 @@ void SPI_0_PORT_init(void)
 	                       // <GPIO_PULL_DOWN"> Pull-down
 	                       GPIO_PULL_OFF);
 
-	gpio_set_pin_function(UHF_CIPO, PINMUX_PA18D_SERCOM3_PAD2);
+	gpio_set_pin_function(UHF_MISO, PINMUX_PA18D_SERCOM3_PAD2);
 }
 
 void SPI_0_CLOCK_init(void)
@@ -224,49 +224,6 @@ void system_init(void)
 	gpio_set_pin_direction(UHF_RST, GPIO_DIRECTION_OUT);
 
 	gpio_set_pin_function(UHF_RST, GPIO_PIN_FUNCTION_OFF);
-
-	// GPIO on PA20
-
-	gpio_set_pin_level(BITBANG_COPI,
-	                   // <y> Initial level
-	                   // <id> pad_initial_level
-	                   // <false"> Low
-	                   // <true"> High
-	                   false);
-
-	// Set pin direction to output
-	gpio_set_pin_direction(BITBANG_COPI, GPIO_DIRECTION_OUT);
-
-	gpio_set_pin_function(BITBANG_COPI, GPIO_PIN_FUNCTION_OFF);
-
-	// GPIO on PA21
-
-	// Set pin direction to input
-	gpio_set_pin_direction(BITBANG_CIPO, GPIO_DIRECTION_IN);
-
-	gpio_set_pin_pull_mode(BITBANG_CIPO,
-	                       // <y> Pull configuration
-	                       // <id> pad_pull_config
-	                       // <GPIO_PULL_OFF"> Off
-	                       // <GPIO_PULL_UP"> Pull-up
-	                       // <GPIO_PULL_DOWN"> Pull-down
-	                       GPIO_PULL_OFF);
-
-	gpio_set_pin_function(BITBANG_CIPO, GPIO_PIN_FUNCTION_OFF);
-
-	// GPIO on PA22
-
-	gpio_set_pin_level(BITBANG_SCK,
-	                   // <y> Initial level
-	                   // <id> pad_initial_level
-	                   // <false"> Low
-	                   // <true"> High
-	                   false);
-
-	// Set pin direction to output
-	gpio_set_pin_direction(BITBANG_SCK, GPIO_DIRECTION_OUT);
-
-	gpio_set_pin_function(BITBANG_SCK, GPIO_PIN_FUNCTION_OFF);
 
 	// GPIO on PB01
 

@@ -191,15 +191,15 @@ update_asf:
 	&& cp -f ./ASF/atmel_start_config.atstart ./ \
 	&& echo "(5) ASF config lifted" \
 	&& $(SED) -i 's/\$$(\@:%\.o=%\.d)/$$(patsubst ..\/%,%, \$$(\@:%\.o=%\.d))/g' ./ASF/gcc/Makefile \
-	&& echo "(5.1) ASF Makefile: GCC dependency filepaths corrected" \
+	&& echo "(6.1) ASF Makefile: GCC dependency filepaths corrected" \
 	&& $(SED) -i 's/\$$(\@:%\.o=%\.o)/$$(patsubst ..\/%,%, \$$(\@:%\.o=%\.o))/g' ./ASF/gcc/Makefile \
-	&& echo "(5.2) ASF Makefile: GCC object filepaths corrected" \
+	&& echo "(6.2) ASF Makefile: GCC object filepaths corrected" \
 	&& $(SED) -i 's/\$$@/\$$(strip \$$(patsubst ..\/%, %, $$@))/g' ./ASF/gcc/Makefile \
-	&& echo "(5.3) ASF Makefile: GCC output filepaths corrected" \
+	&& echo "(6.3) ASF Makefile: GCC output filepaths corrected" \
 	&& $(SED) -i '/main/d' ./ASF/gcc/Makefile \
-	&& echo "(5.4) ASF Makefile: References to ASF main.c removed" \
-	&& $(SED) -i 's/-DDEBUG/$$(CFLAGS)/g' ./ASF/gcc/Makefile \
-	&& echo "(6.5) ASF Makefile: CFLAGS hook injected" \
+	&& echo "(6.4) ASF Makefile: References to ASF main.c removed" \
+	&& $(SED) -i 's/-DDEBUG/$$(CFLAGS) -D__FILENAME__=\\"$$\(notdir $$<)\\"/g' ./ASF/gcc/Makefile \
+	&& echo "(6.5) ASF Makefile: CFLAGS and __FILENAME__ hook injected" \
 	&& $(SED) -i 's/AtmelStart/PVDXos/g' ./ASF/gcc/Makefile \
 	&& echo "(6.6) ASF Makefile: Project name updated to PVDXos" \
 	&& rm -f ./ASF/main.c \

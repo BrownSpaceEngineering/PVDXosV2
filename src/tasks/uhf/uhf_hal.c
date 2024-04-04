@@ -252,7 +252,7 @@ status_t uhf_write(uint8_t *data, size_t size) {
 
 status_t uhf_begin_packet() {
     if (is_transmitting()) {
-        return ERROR_BUSY;
+        return ERROR_RESOURCE_IN_USE;
     }
 
     // put in standby mode

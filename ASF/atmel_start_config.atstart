@@ -719,10 +719,10 @@ drivers:
     functionality: System
     api: HAL:HPL:GCLK
     configuration:
-      $input: 48000000
-      $input_id: Digital Frequency Locked Loop (DFLL48M)
-      RESERVED_InputFreq: 48000000
-      RESERVED_InputFreq_id: Digital Frequency Locked Loop (DFLL48M)
+      $input: 12000000
+      $input_id: External Crystal Oscillator 8-48MHz (XOSC1)
+      RESERVED_InputFreq: 12000000
+      RESERVED_InputFreq_id: External Crystal Oscillator 8-48MHz (XOSC1)
       _$freq_output_Generic clock generator 0: 1500000
       _$freq_output_Generic clock generator 1: 500000
       _$freq_output_Generic clock generator 10: 12000000
@@ -1289,11 +1289,11 @@ pads:
     mode: I2C
     user_label: PA17
     configuration: null
-  UHF_CIPO:
+  UHF_MISO:
     name: PA18
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA18
     mode: Digital input
-    user_label: UHF_CIPO
+    user_label: UHF_MISO
     configuration: null
   UHF_SCK:
     name: PC22
@@ -1301,29 +1301,11 @@ pads:
     mode: Digital output
     user_label: UHF_SCK
     configuration: null
-  UHF_COPI:
+  UHF_MOSI:
     name: PC23
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC23
     mode: Digital output
-    user_label: UHF_COPI
-    configuration: null
-  BITBANG_COPI:
-    name: PA20
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA20
-    mode: Digital output
-    user_label: BITBANG_COPI
-    configuration: null
-  BITBANG_CIPO:
-    name: PA21
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA21
-    mode: Digital input
-    user_label: BITBANG_CIPO
-    configuration: null
-  BITBANG_SCK:
-    name: PA22
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA22
-    mode: Digital output
-    user_label: BITBANG_SCK
+    user_label: UHF_MOSI
     configuration: null
   UHF_CS:
     name: PB25

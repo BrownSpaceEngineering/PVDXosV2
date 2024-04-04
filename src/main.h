@@ -3,6 +3,7 @@
 #include "heartbeat_task.h"
 #include "logging.h"
 #include "rtos_start.h"
+#include "uhf_task.h"
 #include "watchdog_task.h"
 
 #include <atmel_start.h>
@@ -68,10 +69,3 @@ If you want to get rid of the red squiggly lines:
 
 // Define build time
 #define BUILD_TIME __TIME__
-
-// Defines which should never actually execute, but are worth having for IDE reasons
-// (so that the IDE knows what flags to expect and doesn't throw a fit)
-#if !defined(DEVBUILD) && !defined(UNITTEST) && !defined(RELEASE) // No build flags set
-    #define BUILD_TYPE "Unspecified"
-    #define DEVBUILD
-#endif
