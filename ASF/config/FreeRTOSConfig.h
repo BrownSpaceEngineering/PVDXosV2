@@ -18,6 +18,7 @@ void assert_triggered(const char *file, uint32_t line);
 #include <peripheral_clk_config.h>
 
 #define configSUPPORT_STATIC_ALLOCATION 1
+#define INCLUDE_xQueueGetMutexHolder 1
 
 #ifndef configCPU_CLOCK_HZ
 #define configCPU_CLOCK_HZ (CONF_CPU_FREQUENCY)
