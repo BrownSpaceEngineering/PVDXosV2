@@ -19,7 +19,9 @@ int main(void) {
     *p_magic_number = 0; // Clear the magic number so that this value doesn't linger
     if (magic_number == BOOTLOADER_MAGIC_NUMBER_VALUE) {
         info_impl("[+] Bootloader executed normally\n");
+        info_impl("[+] Bootloader executed normally\n");
     } else {
+        warning_impl("[!] Abnormal bootloader behavior (Magic Number: %x)\n", magic_number);
         warning_impl("[!] Abnormal bootloader behavior (Magic Number: %x)\n", magic_number);
     }
 

@@ -29,7 +29,7 @@ DEBUG: Detailed information about the system for debugging (e.g. length of array
     #define info(msg, ...) info_impl("[INFO|%s:%d]: " msg, __FILENAME__, __LINE__, ##__VA_ARGS__)
     #define debug(msg, ...) debug_impl("[DEBUG|%s:%d]: " msg, __FILENAME__, __LINE__, ##__VA_ARGS__)
 #else
-    /* Other build types (such as release or unittest) don't need line numbers */
+    /* Other build types (such as release or unittest) don't need filenames or line numbers */
     #define fatal(msg, ...) fatal_impl("[FATAL]: " msg, ##__VA_ARGS__)
     #define warning(msg, ...) warning_impl("[WARNING]: " msg, ##__VA_ARGS__)
     #define event(msg, ...) event_impl("[EVENT]: " msg, ##__VA_ARGS__)

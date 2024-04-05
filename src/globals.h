@@ -4,21 +4,14 @@
 /* --------- HIGH-LEVEL CONFIG VARIABLES AND DEFINES --------- */
 
 #if defined(RELEASE)
-    #define DEFAULT_LOG_LEVEL EVENT // The default log level for the system
+    #define DEFAULT_LOG_LEVEL INFO // The default log level for the system on release builds
 #else
-    #define DEFAULT_LOG_LEVEL DEBUG // The default log level for the system
+    #define DEFAULT_LOG_LEVEL DEBUG // The default log level for the system for debug and unit test builds
 #endif
 
 /* ----------------------------------------------------------- */
 
-/*
- * Nothing here yet, but stuff that goes here would be things like how long to wait until antenna deploy, flags for turning on/off certain
- * features, etc.
- * */
-
-// ### IN-DEPTH CONFIG VARIABLES AND DEFINITIONS ###
-
-#define TASK_STACK_OVERFLOW_PADDING 8 // Buffer for the stack size so that overflow doesn't corrupt any TCBs
+#define TASK_STACK_OVERFLOW_PADDING 16 // Buffer for the stack size so that overflow doesn't corrupt any TCBs
 
 #define NUM_TASKS 2 // The number of tasks that the watchdog will check in with
 

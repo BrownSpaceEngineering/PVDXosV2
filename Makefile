@@ -94,7 +94,7 @@ CFLAGS += -Wextra -Werror -Werror=maybe-uninitialized
 CFLAGS += -Wshadow -Wnull-dereference -Wduplicated-cond -Wlogical-op -Werror=return-type -Wfloat-equal
 CFLAGS += -Wdangling-else -Wtautological-compare
 CFLAGS += -fwrapv # Enable fwrapv (wrap on overflow of signed integers) just to be safe
-CFLAGS += -fsigned-char # Define char (with no sign qualifiers) as a signed char type
+CFLAGS += -fsigned-char # Ensure that char is signed as your average c programmer might expect -- it's actually default unsigned on arm!
 
 # Disable warnings for unused parameters due to ASF functions having unused parameters
 CFLAGS += -Wno-unused-parameter #Because some ASF functions have unused parameters, supress this warning
@@ -216,6 +216,3 @@ update_asf:
 	&& find ./ASF -type f -newermt now -exec touch {} + \
 	&& echo "(10) Timestamps in future updated to present" \
 	&& echo " --- Finished Integrating ASF --- "
-
-
-

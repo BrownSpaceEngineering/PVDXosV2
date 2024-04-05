@@ -13,7 +13,7 @@ void fatal_impl(const char *string, ...) {
     // No log level checking here, since fatal should always be printed
     va_list args;
     va_start(args, string);
-    unsigned int BufferIndex= 0;
+    unsigned int BufferIndex = 0;
     SEGGER_RTT_vprintf(BufferIndex, string, &args); // Use vprintf to print with variable arguments
     // TODO: Gracefully shut down the system and then kick the watchdog.
     while (1) {} // Temporary infinite loop to halt the system (watchdog will eventually kick)
@@ -28,9 +28,9 @@ void warning_impl(const char *string, ...) {
     }
     va_list args;
     va_start(args, string);
-    unsigned int BufferIndex= 0;
-    SEGGER_RTT_vprintf(BufferIndex,string, &args); // Use vprintf to print with variable arguments
-    
+    unsigned int BufferIndex = 0;
+    SEGGER_RTT_vprintf(BufferIndex, string, &args); // Use vprintf to print with variable arguments
+
     va_end(args);
 }
 
@@ -53,8 +53,8 @@ void info_impl(char *string, ...) {
     }
     va_list args;
     va_start(args, string);
-    unsigned int BufferIndex= 0;
-    SEGGER_RTT_vprintf(BufferIndex,string, &args); // Use vprintf to print with variable arguments
+    unsigned int BufferIndex = 0;
+    SEGGER_RTT_vprintf(BufferIndex, string, &args); // Use vprintf to print with variable arguments
     va_end(args);
 }
 
@@ -65,7 +65,7 @@ void debug_impl(const char *string, ...) {
     }
     va_list args;
     va_start(args, string);
-    unsigned int BufferIndex= 0;
-    SEGGER_RTT_vprintf(BufferIndex,string, &args); // Use vprintf to print with variable arguments
+    unsigned int BufferIndex = 0;
+    SEGGER_RTT_vprintf(BufferIndex, string, &args); // Use vprintf to print with variable arguments
     va_end(args);
 }
