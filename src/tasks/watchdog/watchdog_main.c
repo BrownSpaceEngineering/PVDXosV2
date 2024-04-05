@@ -28,7 +28,7 @@ void watchdog_main(void *pvParameters) {
         watchdog_checkin(WATCHDOG_TASK); // Watchdog checks in with itself
 
         // if we get here, then all tasks have checked in within the allowed time
-        // watchdog_pet();
+        watchdog_pet();
         vTaskDelay(pdMS_TO_TICKS(WATCHDOG_MS_DELAY));
     }
 }
