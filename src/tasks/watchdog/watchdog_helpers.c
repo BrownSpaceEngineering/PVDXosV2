@@ -41,6 +41,7 @@ void watchdog_init(uint8_t watchdog_period, bool always_on) {
     info("watchdog: Initialized\n");
 }
 
+/* Temporarily commented out (so that specific_handlers.c works)
 void WDT_Handler(void) {
     debug("watchdog: WDT_Handler executed\n");
 
@@ -51,6 +52,7 @@ void WDT_Handler(void) {
         watchdog_early_warning_callback(); // Call the early warning callback function
     }
 }
+*/
 
 void watchdog_early_warning_callback(void) {
     warning("watchdog: Early warning callback executed\n");
