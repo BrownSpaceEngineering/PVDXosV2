@@ -60,7 +60,7 @@ status_t spi_write_data() {
     TickType_t end = xTaskGetTickCount();
     TickType_t duration = end - start;
     int duration_ms = duration * portTICK_RATE_MS;
-    info("Duration to send: %d ms", duration_ms);
+    info("Duration to send: %d ms\n", duration_ms);
 
     CS_HIGH(); // deselect the display for SPI communication
     return SUCCESS;
