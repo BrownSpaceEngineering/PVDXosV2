@@ -57,9 +57,12 @@ void PVDX_default_handler() {
 
     // ### Memory Manage Fault Status Register (MMSR)
     bool mmar_valid = (mem_manage_fault_sr & SCB_CFSR_MMARVALID_Msk) >> SCB_CFSR_MMARVALID_Pos;
+    /*
+    // --- Valid fields, but we don't need them for now ---
     bool memmang_fault_floatlazy_state_preservation = (mem_manage_fault_sr & SCB_CFSR_MLSPERR_Msk) >> SCB_CFSR_MLSPERR_Pos;
     bool memmang_fault_stacking_error = (mem_manage_fault_sr & SCB_CFSR_MSTKERR_Msk) >> SCB_CFSR_MSTKERR_Pos;
     bool memmang_fault_unstacking_error = (mem_manage_fault_sr & SCB_CFSR_MUNSTKERR_Msk) >> SCB_CFSR_MUNSTKERR_Pos;
+    */
     bool memmang_fault_data_violation = (mem_manage_fault_sr & SCB_CFSR_DACCVIOL_Msk) >> SCB_CFSR_DACCVIOL_Pos;
     bool memmang_fault_instruction_violation = (mem_manage_fault_sr & SCB_CFSR_IACCVIOL_Msk) >> SCB_CFSR_IACCVIOL_Pos;
 
@@ -71,17 +74,9 @@ void PVDX_default_handler() {
     warning("Fault Type: %s\n", FAULT_NAMES[vectactive]);
     warning_impl("Detailed Fault Information:\n");
 
-    if (bfsr_valid) {
-        warning_impl("\t- Bus Fault Address: 0x%08X\n", bus_faulty_address);
-    } else {
-        warning_impl("\t- Bus Fault Address: N/A\n");
-    }
-
-    if (mmar_valid) {
-        warning_impl("\t- Memory Manage Fault Address: 0x%08X\n", mem_manage_faulty_address);
-    } else {
-        warning_impl("\t- Memory Manage Fault Address: N/A\n");
-    }
+    warning_impl("\t- Bus Fault Address: 0x%08X [Valid: %s]\n", bus_faulty_address, bfsr_valid ? "Yes" : "No");
+    warning_impl("\t- Memory Manage Fault Address: 0x%08X [Valid: %s]\n", mem_manage_faulty_address, mmar_valid ? "Yes" : "No");
+    warning_impl("\t ^^^ Do not pay attention to these values if they are not valid\n");
 
     warning_impl("\t- Usage Fault from Division by Zero: %s\n", div_by_zero_fault ? "Yes" : "No");
     warning_impl("\t- Usage Fault from Unaligned Access: %s\n", unaligned_access_fault ? "Yes" : "No");
