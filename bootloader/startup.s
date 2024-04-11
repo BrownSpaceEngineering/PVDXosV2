@@ -5,8 +5,9 @@
     .globl _start
     .section .isr_vector, "a", %progbits
 _start:
-    .word _estack            /* Top of stack -- Defined in the linker file*/
-    .word bootloader_rst     /* Reset Handler -- First code that runs */
+    .word _estack                /* Top of stack -- Defined in the linker file*/
+    .word bootloader_rst + 1     /* Reset Handler -- First code that runs */
+    /* We use bootloader_rst + 1 because the LSB of the address is used to determine the instruction set, and it needs to be 1 for ARM Thumb-2 instructions */
     /* Other handlers can be added to the vector table if needed, but probably not needed */
 
     .section .text

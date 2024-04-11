@@ -30,6 +30,15 @@ void PVDX_default_handler() {
     uintptr_t mem_manage_faulty_address = scb->MMFAR;
     uint32_t hard_fault_sr = scb->HFSR;
     uint32_t configurable_fault_sr = scb->CFSR;
+
+    // Print raw values of these registers: (TODO: Delete this eventually)
+    warning_impl("Raw values of registers:\n");
+    warning_impl("\t- Bus Fault Address: 0x%08X\n", bus_faulty_address);
+    warning_impl("\t- Memory Manage Fault Address: 0x%08X\n", mem_manage_faulty_address);
+    warning_impl("\t- Hard Fault Status Register: 0x%08X\n", hard_fault_sr);
+    warning_impl("\t- Configurable Fault Status Register: 0x%08X\n", configurable_fault_sr);
+
+    // Break down CFSR into its subregisters
     uint16_t usage_fault_sr = (configurable_fault_sr & SCB_CFSR_USGFAULTSR_Msk) >> SCB_CFSR_USGFAULTSR_Pos;
     uint8_t bus_fault_sr = (configurable_fault_sr & SCB_CFSR_BUSFAULTSR_Msk) >> SCB_CFSR_BUSFAULTSR_Pos;
     uint8_t mem_manage_fault_sr = (configurable_fault_sr & SCB_CFSR_MEMFAULTSR_Msk) >> SCB_CFSR_MEMFAULTSR_Pos;

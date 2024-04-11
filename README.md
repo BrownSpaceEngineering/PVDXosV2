@@ -15,7 +15,13 @@
 
    - Execute `make` to build the project.
 
-3. **Connect and Run:**
+3. **Flash the Bootloader:**
+
+   - If you're using a brand-new devboard, you *must* flash the bootloader. This is done by running `make flash_bootloader`. Once GDB starts up successfully, you can exit gdb.
+   - If you're using a devboard that has already been set up, you can usually skip this step, but it never hurts!
+   - If/When the bootloader gets an update, you can update it by running `make flash_bootloader` again.
+
+4. **Connect and Run:**
    - Use `make connect` to connect to the board and auto-flash/run the program.
    - The code will automatically pause at the top of the 'main' function. Set any breakpoints you need, and then continue running the program with 'c'
    - To see output from printf statements, connect to localhost:19021 using Telnet. (You can use PuTTY for this on Windows, or `nc localhost 19021` to listen with netcat on a Mac/Linux terminal)
