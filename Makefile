@@ -29,7 +29,7 @@ export OBJS := \
 ../src/misc/exception_handlers/specific_handlers.o \
 ../src/tasks/display/display_ssd1362.o \
 ../src/tasks/task_manager/task_manager.o \
-
+../src/tasks/command_executor/command_executor.o \
 
 
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###
@@ -49,6 +49,7 @@ export EXTRA_VPATH := \
 ../../src/tasks/display \
 ../../src/tasks/task_manager \
 ../../src/tasks/display/image_buffers \
+../../src/tasks/command_executor \
 
 
 ###############################################################################
