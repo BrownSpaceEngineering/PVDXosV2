@@ -82,23 +82,23 @@ int main(void) {
         info("main: Watchdog task created!\n");
     }
 
-    // #if defined(UNITTEST) || defined(DEVBUILD)
-    //     #if defined(UNITTEST)
-    //     cm_args.frequency = 10;
-    //     #endif
-    //     #if defined(DEVBUILD)
-    //     cm_args.frequency = 5;
-    //     #endif
+    #if defined(UNITTEST) || defined(DEVBUILD)
+        #if defined(UNITTEST)
+        cm_args.frequency = 10;
+        #endif
+        #if defined(DEVBUILD)
+        cm_args.frequency = 5;
+        #endif
 
-    //     TaskHandle_t cosmicMonkeyTaskHandle =
-    //         xTaskCreateStatic(cosmicmonkey_main, "CosmicMonkey", COSMICMONKEY_TASK_STACK_SIZE, (void *)&cm_args, 1,
-    //                           cosmicmonkeyMem.cosmicmonkeyTaskStack, &cosmicmonkeyMem.cosmicmonkeyTaskTCB);
-    //     if (cosmicMonkeyTaskHandle == NULL) {
-    //         warning("Cosmic Monkey Task Creation Failed!\r\n");
-    //     } else {
-    //         info("Cosmic Monkey Task Created!\r\n");
-    //     }
-    // #endif // Cosmic Monkey
+        TaskHandle_t cosmicMonkeyTaskHandle =
+            xTaskCreateStatic(cosmicmonkey_main, "CosmicMonkey", COSMICMONKEY_TASK_STACK_SIZE, (void *)&cm_args, 1,
+                              cosmicmonkeyMem.cosmicmonkeyTaskStack, &cosmicmonkeyMem.cosmicmonkeyTaskTCB);
+        if (cosmicMonkeyTaskHandle == NULL) {
+            warning("Cosmic Monkey Task Creation Failed!\r\n");
+        } else {
+            info("Cosmic Monkey Task Created!\r\n");
+        }
+    #endif // Cosmic Monkey
 
     // Start the scheduler
     vTaskStartScheduler();
