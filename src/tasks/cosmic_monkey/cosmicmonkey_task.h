@@ -1,5 +1,5 @@
-#ifndef COSMICMONKEY_TASK_H_
-#define COSMICMONKEY_TASK_H_
+#ifndef COSMICMONKEY_TASK_H
+#define COSMICMONKEY_TASK_H
 
 #include <atmel_start.h>
 #include <driver_init.h>
@@ -22,4 +22,4 @@ typedef struct cosmicmonkeyTaskArguments {
 } cosmicmonkeyTaskArguments_t;
 
 
-#endif
+#endif // COSMICMONKEY_TASK_H
