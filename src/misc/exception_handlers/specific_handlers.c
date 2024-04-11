@@ -1,19 +1,25 @@
 #include "default_handler.h"
+#include "logging.h"
 
 // Implementation of Cortex-M4 core handlers
 void NonMaskableInt_Handler(void) {
+    //warning("NMI Handler Entered\n");
     PVDX_default_handler();
 }
 void HardFault_Handler(void) {
+    //warning("HardFault Handler Entered\n");
     PVDX_default_handler();
 }
 void MemManagement_Handler(void) {
+    //warning("MemManagement Handler Entered\n");
     PVDX_default_handler();
 }
 void BusFault_Handler(void) {
+    //warning("BusFault Handler Entered\n");
     PVDX_default_handler();
 }
 void UsageFault_Handler(void) {
+    //warning("UsageFault Handler Entered\n");
     PVDX_default_handler();
 }
 
