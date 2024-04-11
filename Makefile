@@ -27,6 +27,10 @@ export OBJS := \
 ../src/tasks/uhf/uhf_main.o \
 ../src/tasks/uhf/uhf_hal.o \
 ../src/misc/logging/logging.o \
+../src/misc/exception_handlers/default_handler.o \
+../src/misc/exception_handlers/specific_handlers.o \
+../src/tasks/display/display_ssd1362.o \
+../src/tasks/task_manager/task_manager.o \
 
 
 
@@ -44,6 +48,10 @@ export EXTRA_VPATH := \
 ../../src/tasks/cosmic_monkey \
 ../../src/tasks/uhf \
 ../../src/misc/logging \
+../../src/misc/exception_handlers \
+../../src/tasks/display \
+../../src/tasks/task_manager \
+../../src/tasks/display/image_buffers \
 
 
 ###############################################################################
@@ -158,10 +166,10 @@ flash_bootloader:
 	$(MAKE) -C ./bootloader clean
 	$(MAKE) -C ./bootloader # Builds the bootloader
 ifeq (,$(findstring microsoft,$(shell uname -r))) #Detects a WSL kernel name, and runs a WSL-specific command for connecting to the GDB server
-	@gdb -ex "target remote localhost:2331" -ex "load" -ex "monitor halt" -ex "monitor reset" ./bootloader/bootloader.elf
+	@gdb -ex "target remote localhost:2331" -ex "load" -ex "monitor halt" -ex "monitor reset" -ex "set confirm off" -ex "add-symbol-file PVDXos.elf" -ex "set confirm on" ./bootloader/bootloader.elf
 else #Run the windows-specific command
 	@hostname=$(shell hostname) && \
-	gdb-multiarch -ex "target remote $$hostname.local:2331" -ex "load" -ex "monitor halt" -ex "monitor reset" ./bootloader/bootloader.elf
+	gdb-multiarch -ex "target remote $$hostname.local:2331" -ex "load" -ex "monitor halt" -ex "monitor reset" -ex "set confirm off" -ex "add-symbol-file PVDXos.elf" -ex "set confirm on" ./bootloader/bootloader.elf
 endif
 
 

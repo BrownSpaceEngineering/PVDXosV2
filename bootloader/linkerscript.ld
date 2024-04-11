@@ -50,7 +50,7 @@ SECTIONS
   .stack (NOLOAD) :
   {
     . = ALIGN(8);
-    . = . + 0x1000;      /* Adjust stack size as needed */
+    . = . + 0x10000;      /* No memory issues here, just define a big 10KiB stack */
     _estack = .;        /* Define stack top symbol */
   } > RAM
 }
