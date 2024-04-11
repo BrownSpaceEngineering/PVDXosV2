@@ -24,4 +24,4 @@ extern struct taskManagerTaskMemory taskManagerMem;
 
 void task_manager_init(void *pvParameters);
 
-#endif // HEARTBEAT_TASK_H
+#endif // TASK_MANAGER_TASK_H
