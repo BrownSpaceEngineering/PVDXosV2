@@ -115,9 +115,9 @@ status_t display_set_buffer_pixel(POINT x, POINT y, COLOR color) {
 }
 
 // Set the entire display buffer to the contents of the input buffer. To actually update the display, call display_update()
-status_t display_set_buffer(const COLOR* buffer) {
+status_t display_set_buffer(const COLOR* p_buffer) {
     for (uint16_t i = 0; i < (SSD1362_WIDTH / 2) * SSD1362_HEIGHT; i++) {
-        display_buffer[i] = buffer[i];
+        display_buffer[i] = p_buffer[i];
     }
 
     return SUCCESS;
