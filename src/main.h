@@ -3,6 +3,7 @@
 #include "heartbeat_task.h"
 #include "logging.h"
 #include "rtos_start.h"
+#include "shell_task.h"
 #include "watchdog_task.h"
 
 #include <atmel_start.h>
@@ -75,3 +76,6 @@ If you want to get rid of the red squiggly lines:
     #define BUILD_TYPE "Unspecified"
     #define DEVBUILD
 #endif
+
+int main(void);
+void hardware_init(void);

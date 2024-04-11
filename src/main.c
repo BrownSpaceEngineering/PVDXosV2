@@ -5,8 +5,9 @@ cosmicmonkeyTaskArguments_t cm_args = {0};
 int main(void) {
     /* Initializes MCU, drivers and middleware */
     atmel_start_init();
-    // Using the impl version of these functions to avoid cluttering up w/ file and line numbers
     info_impl("--- ATMEL Initialization Complete ---\n");
+    hardware_init();
+    info_impl("--- Hardware Initialization Complete ---\n");
     info_impl("[+] Build Type: %s\n", BUILD_TYPE);
     info_impl("[+] Build Date: %s\n", BUILD_DATE);
     info_impl("[+] Build Time: %s\n", BUILD_TIME);
@@ -55,6 +56,21 @@ int main(void) {
         info("main: Watchdog task created!\n");
     }
 
+    // ------- SHELL TASK -------
+
+    TaskHandle_t shellTaskHandle =
+        xTaskCreateStatic(shell_main, "Shell", SHELL_TASK_STACK_SIZE, NULL, 2, shellMem.shellTaskStack, &shellMem.shellTaskTCB);
+
+    watchdog_register_task(SHELL_TASK); // Register the shell task with the watchdog so that it can check in
+
+    if (shellTaskHandle == NULL) {
+        fatal("main: Shell task creation failed!\n");
+    } else {
+        info("main: Shell task created!\n");
+    }
+
+    // ------- COSMIC MONKEY TASK -------
+
 #if defined(UNITTEST) || defined(DEVBUILD)
     #if defined(UNITTEST)
     cm_args.frequency = 10;
@@ -79,4 +95,8 @@ int main(void) {
     while (true) {
         // Loop forever, but we should never get here anyways
     }
+}
+
+void hardware_init() {
+    return;
 }

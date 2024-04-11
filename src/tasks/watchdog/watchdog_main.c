@@ -2,7 +2,8 @@
 
 struct watchdogTaskMemory watchdogMem;
 
-uint32_t allowed_times[NUM_TASKS] = {WATCHDOG_TASK_ALLOWED_TIME, HEARTBEAT_TASK_ALLOWED_TIME}; // Units are in milliseconds
+uint32_t allowed_times[NUM_TASKS] = {WATCHDOG_TASK_ALLOWED_TIME, HEARTBEAT_TASK_ALLOWED_TIME,
+                                     SHELL_TASK_ALLOWED_TIME}; // Units are in milliseconds
 
 void watchdog_main(void *pvParameters) {
     info("watchdog: Task started!\n");

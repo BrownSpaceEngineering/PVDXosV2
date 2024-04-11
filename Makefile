@@ -25,6 +25,7 @@ export OBJS := \
 ../src/misc/rtos_support/rtos_stack_overflow.o \
 ../src/tasks/cosmic_monkey/cosmicmonkey_main.o \
 ../src/misc/logging/logging.o \
+../src/tasks/shell/shell_main.o \
 
 
 
@@ -41,6 +42,7 @@ export EXTRA_VPATH := \
 ../../src/misc/hardware_watchdog_utils \
 ../../src/tasks/cosmic_monkey \
 ../../src/misc/logging \
+../../src/tasks/shell \
 
 
 ###############################################################################
