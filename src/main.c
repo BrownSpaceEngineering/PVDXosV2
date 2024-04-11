@@ -8,9 +8,8 @@ cosmicmonkeyTaskArguments_t cm_args = {0};
 int main(void) {
     /* Initializes MCU, drivers and middleware */
     atmel_start_init();
-    info_impl("--- ATMEL Initialization Complete ---\n");
     hardware_init();
-    info_impl("--- Hardware Initialization Complete ---\n");
+    info_impl("--- Atmel & Hardware Initialization Complete ---\n");
     info_impl("[+] Build Type: %s\n", BUILD_TYPE);
     info_impl("[+] Build Date: %s\n", BUILD_DATE);
     info_impl("[+] Build Time: %s\n", BUILD_TIME);

@@ -122,7 +122,7 @@ export OBJS_AS_ARGS := $(foreach obj,$(OBJS),$(patsubst ../%,%,$(obj)))
 export DEPS_AS_ARGS := $(patsubst %.o,%.d,$(OBJS_AS_ARGS))
 
 
-.PHONY: all dev release test clean connect update_asf flash_bootloader
+.PHONY: all dev release test clean connect update_asf log flash_bootloader
 
 # Default target
 all: dev
@@ -170,6 +170,10 @@ else #Run the windows-specific command
 	@hostname=$(shell hostname) && \
 	gdb-multiarch -ex "target remote $$hostname.local:2331" -ex "load" -ex "monitor halt" -ex "monitor reset" -ex "set confirm off" -ex "add-symbol-file PVDXos.elf" -ex "set confirm on" ./bootloader/bootloader.elf
 endif
+
+log:
+	@echo "Setting up TELNET connection to switch RTT channel..."
+	@echo "$$$$SEGGER_TELNET_ConfigStr=RTTCh;1$$$$" | nc localhost 19021
 
 
 # When updating the ASF configuration, this must be run once in order to automatically integrate the new ASF config
