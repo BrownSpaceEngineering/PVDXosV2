@@ -12,8 +12,9 @@
 /* ----------------------------------------------------------- */
 
 #define TASK_STACK_OVERFLOW_PADDING 16 // Buffer for the stack size so that overflow doesn't corrupt any TCBs
-
 #define NUM_TASKS                   4 // The number of tasks that the watchdog will check in with
+#define size_t uint32_t;
+
 
 typedef enum {
     WATCHDOG_TASK = 0,
@@ -28,7 +29,7 @@ typedef enum {
     ERROR_NO_MEMORY,
     ERROR_UNRECOVERABLE, // If this is returned, the system should restart.
     ERROR_INTERNAL,
-    ERROR_IO
+    ERROR_IO,
 } status_t;
 
 typedef enum {
