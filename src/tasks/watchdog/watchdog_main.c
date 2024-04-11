@@ -18,9 +18,9 @@ void watchdog_main(void *pvParameters) {
 
                 if (time_since_last_checkin > allowed_times[i]) {
                     // The task has not checked in within the allowed time, so we should reset the system
-                    warning("watchdog: Task %d has not checked in within the allowed time! (time since last checkin: %d, allowed time: %d). "
-                           "Resetting system...\n",
-                           i, time_since_last_checkin, allowed_times[i]);
+                    fatal("watchdog: Task %d has not checked in within the allowed time! (time since last checkin: %d, allowed time: %d). "
+                          "Resetting system...\n",
+                          i, time_since_last_checkin, allowed_times[i]);
                     watchdog_kick();
                 }
             }

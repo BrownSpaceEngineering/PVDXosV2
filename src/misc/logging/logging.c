@@ -1,6 +1,7 @@
 #include "logging.h"
 
 #include "SEGGER_RTT.h"
+#include "watchdog_task.h"
 
 #include <stdarg.h>
 #include <stdlib.h>
@@ -14,8 +15,14 @@ void fatal_impl(const char *string, ...) {
     va_list args;
     va_start(args, string);
     SEGGER_RTT_vprintf(LOGGING_RTT_OUTPUT_CHANNEL, string, &args); // Use vprintf to print with variable arguments
+
+    // To make sure that the message is printed before the watchdog resets the system, print a few more.
+    warning_impl("FATAL ERROR OCCURRED! RESTARTING SYSTEM...\n");
+    warning_impl("FATAL ERROR OCCURRED! RESTARTING SYSTEM...\n");
+    warning_impl("FATAL ERROR OCCURRED! RESTARTING SYSTEM...\n");
+
     // TODO: Gracefully shut down the system and then kick the watchdog.
-    while (1) {} // Temporary infinite loop to halt the system (watchdog will eventually kick)
+    watchdog_kick();
 
     va_end(args);
 }
