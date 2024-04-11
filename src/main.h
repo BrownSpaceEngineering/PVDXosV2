@@ -69,7 +69,7 @@ If you want to get rid of the red squiggly lines:
 // Define build date
 #define BUILD_DATE __DATE__
 
-// Define build time
+// Define build timame
 #define BUILD_TIME __TIME__
 
 // Defines which should never actually execute, but are worth having for IDE reasons

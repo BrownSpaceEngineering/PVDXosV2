@@ -30,6 +30,7 @@ export OBJS := \
 ../src/tasks/display/display_ssd1362.o \
 ../src/tasks/task_manager/task_manager.o \
 ../src/tasks/shell/shell_main.o \
+../src/tasks/shell/shell_helpers.o \
 
 
 

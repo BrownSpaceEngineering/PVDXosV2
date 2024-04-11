@@ -8,13 +8,13 @@ set ip "localhost"
 set port "19021"
 
 # Spawn telnet session
-spawn telnet $ip $port
+spawn nc $ip $port
 
 # Wait for any output to ensure the connection is ready, then send the config string
 expect {
     timeout { send_user "Connection timed out\n"; exit }
     eof { send_user "Connection failed\n"; exit }
-    -re . { send "$$SEGGER_TELNET_ConfigStr=RTTCh;1$$\r" }
+    -re . { send "\$\$SEGGER_TELNET_ConfigStr=RTTCh;1\$\$\r" }
 }
 
 # Interact with the session after sending the command
