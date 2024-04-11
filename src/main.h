@@ -6,6 +6,7 @@
 #include "rtos_start.h"
 #include "shell_task.h"
 #include "watchdog_task.h"
+#include "task_manager.h"
 
 #include <atmel_start.h>
 #include <driver_init.h>

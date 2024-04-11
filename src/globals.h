@@ -15,12 +15,14 @@
 
 #define TASK_STACK_OVERFLOW_PADDING 16 // Buffer for the stack size so that overflow doesn't corrupt any TCBs
 
-#define NUM_TASKS 3 // The number of tasks that the watchdog will check in with
+#define NUM_TASKS                   5 // The number of tasks that the watchdog will check in with
 
 typedef enum {
     WATCHDOG_TASK = 0,
-    HEARTBEAT_TASK = 1,
-    SHELL_TASK = 2,
+    TASK_MANAGER_TASK = 1,
+    HEARTBEAT_TASK = 2,
+    DISPLAY_TASK = 3,
+    SHELL_TASK = 4,
 } task_type_t;
 
 typedef enum {
@@ -35,6 +37,7 @@ typedef enum {
     ERROR_RESOURCE_IN_USE, // Similar to EAGAIN in Linux (Basically, this WOULD work but busy rn, try again later)
     ERROR_MAX_SIZE_EXCEEDED,
     ERROR_UNINITIALIZED,
+    ERROR_IO,
 
     // High significance errors start at 128 (0x80) (in these cases, restart the system)
     ERROR_UNRECOVERABLE = 0x80,
