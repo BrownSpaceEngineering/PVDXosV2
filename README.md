@@ -15,11 +15,11 @@
 
    - Execute `make` to build the project.
 
-3. **[Only Needed Once] Flash the Bootloader:**
+3. **Flash the Bootloader:**
 
-   - If you're using a brand-new devboard, you'll need to flash the bootloader once. This is done by running `make flash_bootloader`.
-   - If you're using a devboard that has already been set up, you can skip this step.
-   - If/When the bootloader gets an update, you can update it by 
+   - If you're using a brand-new devboard, you *must* flash the bootloader. This is done by running `make flash_bootloader`. Once GDB starts up successfully, you can exit gdb.
+   - If you're using a devboard that has already been set up, you can usually skip this step, but it never hurts!
+   - If/When the bootloader gets an update, you can update it by running `make flash_bootloader` again.
 
 4. **Connect and Run:**
    - Use `make connect` to connect to the board and auto-flash/run the program.
