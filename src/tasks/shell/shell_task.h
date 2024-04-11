@@ -23,4 +23,4 @@ extern struct shellTaskMemory shellMem;
 
 void shell_main(void *pvParameters);
 
-#endif // SHELLT_TASK_H
+#endif // SHELL_TASK_H

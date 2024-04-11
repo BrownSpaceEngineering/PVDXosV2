@@ -1,5 +1,8 @@
 #include "main.h"
 
+// Buffer for Segger Logging Channel
+uint8_t SEGGER_RTT_LOG_BUFFER[SEGGER_RTT_LOG_BUFFER_SIZE];
+
 cosmicmonkeyTaskArguments_t cm_args = {0};
 
 int main(void) {
@@ -98,5 +101,9 @@ int main(void) {
 }
 
 void hardware_init() {
+    // Segger Buffer 0 is pre-configured at compile time according to segger documentation
+    // Config the logging output channel (assuming it's not zero)
+    SEGGER_RTT_ConfigUpBuffer(LOGGING_RTT_OUTPUT_CHANNEL, "Log Output", SEGGER_RTT_LOG_BUFFER, SEGGER_RTT_LOG_BUFFER_SIZE,
+                              SEGGER_RTT_MODE_NO_BLOCK_SKIP);
     return;
 }

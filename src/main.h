@@ -1,3 +1,4 @@
+#include "SEGGER_RTT.h"
 #include "cosmicmonkey_task.h"
 #include "globals.h"
 #include "heartbeat_task.h"

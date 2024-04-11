@@ -1,7 +1,15 @@
 #ifndef LOGIN_H
 #define LOGIN_H
 
+#include "SEGGER_RTT.h"
 #include "globals.h"
+
+#define LOGGING_RTT_OUTPUT_CHANNEL 1
+
+#if LOGGING_RTT_OUTPUT_CHANNEL == 0
+    #error                                                                                                                                 \
+        "Setting the Logging Channel to 0 should be done with care! You may be wasting memory with SEGGER_RTT_LOG_BUFFER (Channel 0 has pre-allocated buffers)"
+#endif
 
 /*
 FATAL: Worst class of errors that will cause a system restart (e.g. memory corruption, stack overflow, critical function fails)
@@ -23,8 +31,9 @@ DEBUG: Detailed information about the system for debugging (e.g. length of array
 
 #if defined(DEVBUILD)
     /* Devbuild should include filenames and line numbers */
-    #define fatal(msg, ...) fatal_impl("[FATAL|%s:%d]: " msg, __FILENAME__, __LINE__, ##__VA_ARGS__)
-    #define warning(msg, ...) warning_impl("[WARNING|%s:%d]: " msg, __FILENAME__, __LINE__, ##__VA_ARGS__)
+    #define fatal(msg, ...) fatal_impl(RTT_CTRL_TEXT_BRIGHT_RED "[FATAL|%s:%d]: " msg RTT_CTRL_RESET, __FILENAME__, __LINE__, ##__VA_ARGS__)
+    #define warning(msg, ...)                                                                                                              \
+        warning_impl(RTT_CTRL_TEXT_BRIGHT_RED "[WARNING|%s:%d]: " msg RTT_CTRL_RESET, __FILENAME__, __LINE__, ##__VA_ARGS__)
     #define event(msg, ...) event_impl("[EVENT|%s:%d]: " msg, __FILENAME__, __LINE__, ##__VA_ARGS__)
     #define info(msg, ...) info_impl("[INFO|%s:%d]: " msg, __FILENAME__, __LINE__, ##__VA_ARGS__)
     #define debug(msg, ...) debug_impl("[DEBUG|%s:%d]: " msg, __FILENAME__, __LINE__, ##__VA_ARGS__)

@@ -5,8 +5,6 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
-#define RTT_OUTPUT_CHANNEL 1
-
 // Macros for debugging functions so that file and line number info can be included
 
 log_level_t LOG_LEVEL = DEFAULT_LOG_LEVEL;
@@ -15,7 +13,7 @@ void fatal_impl(const char *string, ...) {
     // No log level checking here, since fatal should always be printed
     va_list args;
     va_start(args, string);
-    SEGGER_RTT_vprintf(RTT_OUTPUT_CHANNEL, string, &args); // Use vprintf to print with variable arguments
+    SEGGER_RTT_vprintf(LOGGING_RTT_OUTPUT_CHANNEL, string, &args); // Use vprintf to print with variable arguments
     // TODO: Gracefully shut down the system and then kick the watchdog.
     while (1) {} // Temporary infinite loop to halt the system (watchdog will eventually kick)
 
@@ -29,7 +27,7 @@ void warning_impl(const char *string, ...) {
     }
     va_list args;
     va_start(args, string);
-    SEGGER_RTT_vprintf(RTT_OUTPUT_CHANNEL, string, &args); // Use vprintf to print with variable arguments
+    SEGGER_RTT_vprintf(LOGGING_RTT_OUTPUT_CHANNEL, string, &args); // Use vprintf to print with variable arguments
 
     va_end(args);
 }
@@ -41,7 +39,7 @@ void event_impl(const char *string, ...) {
     }
     va_list args;
     va_start(args, string);
-    SEGGER_RTT_vprintf(RTT_OUTPUT_CHANNEL, string, &args); // Use vprintf to print with variable arguments
+    SEGGER_RTT_vprintf(LOGGING_RTT_OUTPUT_CHANNEL, string, &args); // Use vprintf to print with variable arguments
     va_end(args);
 }
 
@@ -52,7 +50,7 @@ void info_impl(char *string, ...) {
     }
     va_list args;
     va_start(args, string);
-    SEGGER_RTT_vprintf(RTT_OUTPUT_CHANNEL, string, &args); // Use vprintf to print with variable arguments
+    SEGGER_RTT_vprintf(LOGGING_RTT_OUTPUT_CHANNEL, string, &args); // Use vprintf to print with variable arguments
     va_end(args);
 }
 
@@ -63,6 +61,6 @@ void debug_impl(const char *string, ...) {
     }
     va_list args;
     va_start(args, string);
-    SEGGER_RTT_vprintf(RTT_OUTPUT_CHANNEL, string, &args); // Use vprintf to print with variable arguments
+    SEGGER_RTT_vprintf(LOGGING_RTT_OUTPUT_CHANNEL, string, &args); // Use vprintf to print with variable arguments
     va_end(args);
 }
