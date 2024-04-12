@@ -28,10 +28,7 @@ void fatal_impl(const char *string, ...) {
 }
 
 void warning_impl(const char *string, ...) {
-    // Check if the log level is high enough to print this message
-    if (WARNING < LOG_LEVEL) {
-        return;
-    }
+    // No log level checking here, since warning should always be printed
     va_list args;
     va_start(args, string);
     SEGGER_RTT_vprintf(LOGGING_RTT_OUTPUT_CHANNEL, string, &args); // Use vprintf to print with variable arguments
@@ -70,4 +67,12 @@ void debug_impl(const char *string, ...) {
     va_start(args, string);
     SEGGER_RTT_vprintf(LOGGING_RTT_OUTPUT_CHANNEL, string, &args); // Use vprintf to print with variable arguments
     va_end(args);
+}
+
+void set_log_level(log_level_t level) {
+    LOG_LEVEL = level;
+}
+
+log_level_t get_log_level() {
+    return LOG_LEVEL;
 }

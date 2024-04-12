@@ -47,7 +47,7 @@ void clear_RTT_input_buffer() {
     }
 }
 
-void terminal_vprintf(const char *string, ...) {
+void terminal_printf(const char *string, ...) {
     va_list args;
     va_start(args, string);
     SEGGER_RTT_vprintf(SHELL_RTT_CHANNEL, string, &args); // Use vprintf to print with variable arguments

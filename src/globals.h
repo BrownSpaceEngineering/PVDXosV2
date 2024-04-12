@@ -49,7 +49,32 @@ typedef enum {
     INFO,
     EVENT,
     WARNING,
-    FATAL,
 } log_level_t;
+
+// Defines for printing out the build version
+#if defined(DEVBUILD)
+    #define BUILD_TYPE "Development Build"
+#endif
+#if defined(UNITTEST)
+    #define BUILD_TYPE "Unit Test Build"
+#endif
+#if defined(RELEASE)
+    #define BUILD_TYPE "Release Build"
+#endif
+
+// Define build date
+#define BUILD_DATE __DATE__
+
+// Define build timame
+#define BUILD_TIME __TIME__
+
+// IDE-only defines so that the IDE doesn't throw a billion errors for unavailable defines
+#if !defined(DEVBUILD) && !defined(UNITTEST) && !defined(RELEASE) // No build flags set so it must be IDE
+    #define BUILD_TYPE "<Resolved During Compilation>"
+    #define GIT_BRANCH_NAME "<Resolved During Compilation>"
+    #define GIT_COMMIT_HASH "<Resolved During Compilation>"
+    #define DEVBUILD
+    #error "IDE-only defines ran during a build! This should never happen!"
+#endif
 
 #endif // GLOBALS_H

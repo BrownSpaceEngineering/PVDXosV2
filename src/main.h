@@ -47,37 +47,5 @@ If you want to get rid of the red squiggly lines:
     #error "Multiple build type flags set! (UNITTEST && RELEASE) Must be exactly one of: {DEVBUILD, UNITTEST, RELEASE}"
 #endif
 
-#ifndef GIT_BRANCH_NAME
-    #define GIT_BRANCH_NAME "Unspecified"
-#endif
-
-#ifndef GIT_COMMIT_HASH
-    #define GIT_COMMIT_HASH "Unspecified"
-#endif
-
-// Defines for printing out the build version
-#if defined(DEVBUILD)
-    #define BUILD_TYPE "Development Build"
-#endif
-#if defined(UNITTEST)
-    #define BUILD_TYPE "Unit Test Build"
-#endif
-#if defined(RELEASE)
-    #define BUILD_TYPE "Release Build"
-#endif
-
-// Define build date
-#define BUILD_DATE __DATE__
-
-// Define build timame
-#define BUILD_TIME __TIME__
-
-// Defines which should never actually execute, but are worth having for IDE reasons
-// (so that the IDE knows what flags to expect and doesn't throw a fit)
-#if !defined(DEVBUILD) && !defined(UNITTEST) && !defined(RELEASE) // No build flags set
-    #define BUILD_TYPE "Unspecified"
-    #define DEVBUILD
-#endif
-
 int main(void);
 void hardware_init(void);

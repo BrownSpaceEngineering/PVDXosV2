@@ -1,3 +1,4 @@
+#include "shell_commands.h"
 #include "shell_helpers.h"
 #include "shell_task.h"
 
@@ -5,14 +6,15 @@ struct shellTaskMemory shellMem = {0};
 
 uint8_t SHELL_INPUT_BUFFER[SHELL_INPUT_BUFFER_SIZE] = {0}; //This is a layer ontop of the RTT internal buffer, which is of length 16 (BUFFER_SIZE_DOWN)
 
-// Returns the number of characters read
-
 void shell_main(void *pvParameters) {
     info("Shell task started\n");
+    clear_RTT_input_buffer();
+    terminal_printf(RTT_CTRL_TEXT_YELLOW "\nPVDX Shell Initialized! [%s (%s:%s), Built %s]\n" RTT_CTRL_RESET, BUILD_TYPE, GIT_BRANCH_NAME,
+                    GIT_COMMIT_HASH, BUILD_DATE " at " BUILD_TIME);
 
-    while(1) {
+    while (1) {
         // Print the shell prompt
-        terminal_vprintf(SHELL_PROMPT);
+        terminal_printf(SHELL_PROMPT);
 
         //Wait for a command
         size_t cmd_len = get_line_from_terminal(SHELL_INPUT_BUFFER);
@@ -27,7 +29,7 @@ void shell_main(void *pvParameters) {
             warning("Command length limit reached! (Max: %d)\n", SHELL_INPUT_BUFFER_SIZE);
             warning("Ignoring command and clearing input buffer\n");
             clear_RTT_input_buffer();
-            terminal_vprintf("Command length limit reached! (Max: %d)\n", SHELL_INPUT_BUFFER_SIZE);
+            terminal_printf("Command length limit reached! (Max: %d)\n", SHELL_INPUT_BUFFER_SIZE);
             continue;
         }
 
@@ -35,11 +37,11 @@ void shell_main(void *pvParameters) {
         int arg_count = 0;
 
         // Extract the first word of the command
-        char *cmd = strtok((char *)SHELL_INPUT_BUFFER, " ");
-        args[arg_count++] = cmd;
+        char *user_command = strtok((char *)SHELL_INPUT_BUFFER, " ");
+        args[arg_count++] = user_command;
 
         // Continue extracting the rest of the arguments
-        while (cmd != NULL && arg_count < MAX_ARGS) {
+        while (user_command != NULL && arg_count < MAX_ARGS) {
             args[arg_count] = strtok(NULL, " ");
             if (args[arg_count] == NULL) {
                 // Reached the end of the arguments
@@ -48,21 +50,21 @@ void shell_main(void *pvParameters) {
             arg_count++;
         }
 
-        if (strcmp(cmd, "help") == 0) {
-            terminal_vprintf("Available commands:\n");
-            terminal_vprintf("help - Display this help message\n");
-            terminal_vprintf("echo <message> - Echo the message back to the terminal\n");
-            terminal_vprintf("clear - Clear the terminal\n");
-        } else if (strcmp(cmd, "echo") == 0) {
-            if (arg_count != 2) {
-                terminal_vprintf("Usage: echo <message>\n");
-            } else {
-                terminal_vprintf("Echo: '%s'\n", args[1]);
+        // Find the associated command function
+        void (*command_func)(char **args, int arg_count) = NULL;
+        for (shell_command_t *shell_command = shell_commands; shell_command->command_name != NULL; shell_command++) {
+            if (strcmp(user_command, shell_command->command_name) == 0) {
+                // It's the right shell command, call the command function
+                command_func = shell_command->command_function;
+                break;
             }
-        } else if (strcmp(cmd, "clear") == 0) {
-            terminal_vprintf(RTT_CTRL_CLEAR);
+        }
+        if (command_func == NULL) {
+            terminal_printf("Command not found: %s\n", user_command);
         } else {
-            terminal_vprintf("Unknown command: '%s'\n", cmd);
+            debug("Running command func for %s\n", user_command);
+            command_func(args, arg_count);
+            debug("Command func for %s finished\n", user_command);
         }
     }
 }

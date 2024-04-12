@@ -4,11 +4,7 @@
 #include "SEGGER_RTT.h"
 #include "globals.h"
 
-#define LOGGING_RTT_OUTPUT_CHANNEL 0
-
-#if LOGGING_RTT_OUTPUT_CHANNEL == 0
-
-#endif
+#define LOGGING_RTT_OUTPUT_CHANNEL 1
 
 /*
 FATAL: Worst class of errors that will cause a system restart (e.g. memory corruption, stack overflow, critical function fails)
@@ -51,5 +47,8 @@ void warning_impl(const char *string, ...);
 void event_impl(const char *string, ...);
 void info_impl(char *string, ...);
 void debug_impl(const char *string, ...);
+
+void set_log_level(log_level_t level);
+log_level_t get_log_level();
 
 #endif

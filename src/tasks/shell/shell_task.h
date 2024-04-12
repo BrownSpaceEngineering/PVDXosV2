@@ -29,5 +29,6 @@ extern struct shellTaskMemory shellMem;
 
 void shell_main(void *pvParameters);
 
+// Defines that will never run in practice, but are useful for the IDE not throwing a billion errors:
 
 #endif // SHELL_TASK_H

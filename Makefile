@@ -31,6 +31,7 @@ export OBJS := \
 ../src/tasks/task_manager/task_manager.o \
 ../src/tasks/shell/shell_main.o \
 ../src/tasks/shell/shell_helpers.o \
+../src/tasks/shell/shell_commands.o \
 
 
 
