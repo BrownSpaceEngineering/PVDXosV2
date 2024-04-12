@@ -5,6 +5,7 @@ cosmicmonkeyTaskArguments_t cm_args = {0};
 int main(void) {
     /* Initializes MCU, drivers and middleware */
     atmel_start_init();
+    info_impl(RTT_CTRL_RESET RTT_CTRL_CLEAR); //Reset the terminal
     info_impl("--- ATMEL Initialization Complete ---\n");
     info_impl("[+] Build Type: %s\n", BUILD_TYPE);
     info_impl("[+] Build Date: %s\n", BUILD_DATE);
