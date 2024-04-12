@@ -31,20 +31,19 @@ DEBUG: Detailed information about the system for debugging (e.g. length of array
 #if defined(DEVBUILD)
     /* Devbuild should include filenames and line numbers */
     #define fatal(msg, ...)                                                                                                                \
-        fatal_impl(RTT_CTRL_TEXT_BRIGHT_RED "[FATAL|%s:%d]: " msg RTT_CTRL_TEXT_BRIGHT_WHITE, __FILENAME__, __LINE__, ##__VA_ARGS__)
+        fatal_impl(RTT_CTRL_TEXT_BRIGHT_RED "[FATAL|%s:%d]: " msg RTT_CTRL_RESET, __FILENAME__, __LINE__, ##__VA_ARGS__)
     #define warning(msg, ...)                                                                                                              \
-        warning_impl(RTT_CTRL_TEXT_BRIGHT_RED "[WARNING|%s:%d]: " msg RTT_CTRL_TEXT_BRIGHT_WHITE, __FILENAME__, __LINE__, ##__VA_ARGS__)
-    #define event(msg, ...) event_impl("[EVENT|%s:%d]: " msg, __FILENAME__, __LINE__, ##__VA_ARGS__)
-    #define info(msg, ...)  info_impl("[INFO|%s:%d]: " msg, __FILENAME__, __LINE__, ##__VA_ARGS__)
-    #define debug(msg, ...)                                                                                                                \
-        debug_impl(RTT_CTRL_TEXT_WHITE "[DEBUG|%s:%d]: " msg RTT_CTRL_TEXT_BRIGHT_WHITE, __FILENAME__, __LINE__, ##__VA_ARGS__)
+        warning_impl(RTT_CTRL_TEXT_BRIGHT_RED "[WARNING|%s:%d]: " msg RTT_CTRL_RESET, __FILENAME__, __LINE__, ##__VA_ARGS__)
+    #define event(msg, ...) event_impl(RTT_CTRL_TEXT_BRIGHT_WHITE "[EVENT|%s:%d]: " msg, __FILENAME__, __LINE__, ##__VA_ARGS__)
+    #define info(msg, ...)  info_impl(RTT_CTRL_TEXT_BRIGHT_WHITE "[INFO|%s:%d]: " msg, __FILENAME__, __LINE__, ##__VA_ARGS__)
+    #define debug(msg, ...) debug_impl(RTT_CTRL_TEXT_WHITE "[DEBUG|%s:%d]: " msg RTT_CTRL_RESET, __FILENAME__, __LINE__, ##__VA_ARGS__)
 #else
     /* Other build types (such as release or unittest) don't need filenames or line numbers */
-    #define fatal(msg, ...)   fatal_impl(RTT_CTRL_TEXT_BRIGHT_RED "[FATAL]: " msg RTT_CTRL_TEXT_BRIGHT_WHITE, ##__VA_ARGS__)
-    #define warning(msg, ...) warning_impl(RTT_CTRL_TEXT_BRIGHT_RED "[WARNING]: " msg RTT_CTRL_TEXT_BRIGHT_WHITE, ##__VA_ARGS__)
-    #define event(msg, ...)   event_impl("[EVENT]: " msg, ##__VA_ARGS__)
-    #define info(msg, ...)    info_impl("[INFO]: " msg, ##__VA_ARGS__)
-    #define debug(msg, ...)   debug_impl(RTT_CTRL_TEXT_WHITE "[DEBUG]: " msg RTT_CTRL_TEXT_BRIGHT_WHITE, ##__VA_ARGS__)
+    #define fatal(msg, ...)   fatal_impl(RTT_CTRL_TEXT_BRIGHT_RED "[FATAL]: " msg RTT_CTRL_RESET, ##__VA_ARGS__)
+    #define warning(msg, ...) warning_impl(RTT_CTRL_TEXT_BRIGHT_RED "[WARNING]: " msg RTT_CTRL_RESET, ##__VA_ARGS__)
+    #define event(msg, ...)   event_impl(RTT_CTRL_TEXT_BRIGHT_WHITE "[EVENT]: " msg, ##__VA_ARGS__)
+    #define info(msg, ...)    info_impl(RTT_CTRL_TEXT_BRIGHT_WHITE "[INFO]: " msg, ##__VA_ARGS__)
+    #define debug(msg, ...)   debug_impl(RTT_CTRL_TEXT_WHITE "[DEBUG]: " msg RTT_CTRL_RESET, ##__VA_ARGS__)
 #endif
 
 void fatal_impl(const char *string, ...);
