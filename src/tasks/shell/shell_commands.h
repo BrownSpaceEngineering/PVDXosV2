@@ -22,4 +22,7 @@ void help_clear();
 void shell_loglevel(char **args, int arg_count);
 void help_loglevel();
 
+void shell_reboot(char **args, int arg_count);
+void help_reboot();
+
 #endif // SHELL_COMMANDS_H

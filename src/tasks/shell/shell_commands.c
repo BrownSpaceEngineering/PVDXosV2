@@ -2,15 +2,14 @@
 
 #include "logging.h"
 #include "shell_helpers.h"
+#include "watchdog_task.h"
 
 #include <atmel_start.h>
 
 shell_command_t shell_commands[] = {
-    {"help", shell_help, help_help},
-    {"echo", shell_echo, help_echo},
-    {"clear", shell_clear, help_clear},
-    {"loglevel", shell_loglevel, help_loglevel},
-    {NULL, NULL, NULL} // Null-terminated array
+    {"help", shell_help, help_help},       {"echo", shell_echo, help_echo},
+    {"clear", shell_clear, help_clear},    {"loglevel", shell_loglevel, help_loglevel},
+    {"reboot", shell_reboot, help_reboot}, {NULL, NULL, NULL} // Null-terminated array
 };
 
 // ----- HELP COMMAND -----
@@ -22,6 +21,7 @@ void shell_help(char **args, int arg_count) {
         terminal_printf("echo <message> - Echo the message back to the terminal\n");
         terminal_printf("clear - Clear the terminal screen\n");
         terminal_printf("loglevel <level 0-3> - Set the log level for PVDX terminal output\n");
+        terminal_printf("reboot - Reboot the satellite\n");
     } else if (arg_count == 2) {
         for (shell_command_t *shell_command = shell_commands; shell_command->command_name != NULL; shell_command++) {
             if (strcmp(args[1], shell_command->command_name) == 0) {
@@ -110,4 +110,16 @@ void help_loglevel() {
     terminal_printf("\t[1] (info level)  ==> Every meaningful interaction with the satellite is displayed [DEFAULT]\n");
     terminal_printf("\t[2] (event level) ==> Significant events and interactions displayed\n");
     terminal_printf("\t[3] (warning level) ==> Only errors and critical events are displayed\n");
+}
+
+// ----- REBOOT COMMAND -----
+void shell_reboot(char **args, int arg_count) {
+    if (arg_count != 1) {
+        terminal_printf("Invalid usage. Try 'help reboot'\n");
+        return;
+    }
+    terminal_printf("Rebooting the satellite...\n");
+    delay_ms(1000); // Give the message time to print
+    warning("Reboot command executed by user\n");
+    watchdog_kick(); // Kick the watchdog to trigger a reboot
 }
