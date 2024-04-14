@@ -1,7 +1,6 @@
 #include "main.h"
 
 // Buffer for Segger Logging Channel
-uint8_t SEGGER_RTT_LOG_BUFFER[SEGGER_RTT_LOG_BUFFER_SIZE];
 
 cosmicmonkeyTaskArguments_t cm_args = {0};
 

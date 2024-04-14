@@ -9,6 +9,7 @@
 // Macros for debugging functions so that file and line number info can be included
 
 log_level_t LOG_LEVEL = DEFAULT_LOG_LEVEL;
+uint8_t SEGGER_RTT_LOG_BUFFER[SEGGER_RTT_LOG_BUFFER_SIZE];
 
 void fatal_impl(const char *string, ...) {
     // No log level checking here, since fatal should always be printed

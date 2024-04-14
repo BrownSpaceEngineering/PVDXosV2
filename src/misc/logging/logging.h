@@ -1,10 +1,12 @@
-#ifndef LOGIN_H
-#define LOGIN_H
+#ifndef LOGGING_H
+#define LOGGING_H
 
 #include "SEGGER_RTT.h"
 #include "globals.h"
 
 #define LOGGING_RTT_OUTPUT_CHANNEL 1
+
+extern uint8_t SEGGER_RTT_LOG_BUFFER[SEGGER_RTT_LOG_BUFFER_SIZE];
 
 /*
 FATAL: Worst class of errors that will cause a system restart (e.g. memory corruption, stack overflow, critical function fails)
@@ -52,4 +54,4 @@ void debug_impl(const char *string, ...);
 void set_log_level(log_level_t level);
 log_level_t get_log_level();
 
-#endif
+#endif /* LOGGING_H */
