@@ -22,6 +22,8 @@ void I2C_0_example(void);
 
 void delay_example(void);
 
+void RAND_0_example(void);
+
 void WDT_0_example(void);
 
 #ifdef __cplusplus

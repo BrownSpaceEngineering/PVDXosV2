@@ -46,7 +46,7 @@ void assert_triggered(const char *file, uint32_t line);
 // <i> Default: 2400
 // <id> freertos_total_heap_size
 #ifndef configTOTAL_HEAP_SIZE
-#define configTOTAL_HEAP_SIZE ((size_t)(131072))
+#define configTOTAL_HEAP_SIZE ((size_t)(2400))
 #endif
 
 // <q> Enable mutex
@@ -66,7 +66,7 @@ void assert_triggered(const char *file, uint32_t line);
 // <e> Advanced
 // <id> freertos_advanced
 #ifndef FREERTOS_ADVANCED_CONFIG
-#define FREERTOS_ADVANCED_CONFIG 0
+#define FREERTOS_ADVANCED_CONFIG 1
 #endif
 
 // <q> Enable preemption
@@ -78,7 +78,7 @@ void assert_triggered(const char *file, uint32_t line);
 // <q> Use recursive mutex
 // <id> freertos_use_recursive_mutexes
 #ifndef configUSE_RECURSIVE_MUTEXES
-#define configUSE_RECURSIVE_MUTEXES 1
+#define configUSE_RECURSIVE_MUTEXES 0
 #endif
 
 // <q> Generate runtime stats
@@ -96,7 +96,7 @@ void assert_triggered(const char *file, uint32_t line);
 // <q> Check stack overflow
 // <id> freertos_check_for_stack_overflow
 #ifndef configCHECK_FOR_STACK_OVERFLOW
-#define configCHECK_FOR_STACK_OVERFLOW 0
+#define configCHECK_FOR_STACK_OVERFLOW 1
 #endif
 
 // <q> Use maclloc failed hook
@@ -219,7 +219,7 @@ to exclude the API function. */
 // <q> Include function to delete task
 // <id> freertos_vtaskdelete
 #ifndef INCLUDE_vTaskDelete
-#define INCLUDE_vTaskDelete 0
+#define INCLUDE_vTaskDelete 1
 #endif
 
 // <q> Include function to suspend task
@@ -267,7 +267,7 @@ to exclude the API function. */
 // <q> Include the function to get task name
 // <id> freertos_pctaskgettaskname
 #ifndef INCLUDE_pcTaskGetTaskName
-#define INCLUDE_pcTaskGetTaskName 0
+#define INCLUDE_pcTaskGetTaskName 1
 #endif
 
 // <q> Include the function to get task state

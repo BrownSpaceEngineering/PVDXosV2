@@ -22,18 +22,18 @@ middlewares:
   FREERTOS_V1000_0:
     user_label: FREERTOS_V1000_0
     configuration:
-      freertos_advanced: false
-      freertos_check_for_stack_overflow: false
+      freertos_advanced: true
+      freertos_check_for_stack_overflow: true
       freertos_etaskgetstate: false
       freertos_generate_run_time_stats: false
       freertos_max_co_routine_priorities: 2
       freertos_max_priorities: 5
       freertos_minimal_stack_size: 64
-      freertos_pctaskgettaskname: false
+      freertos_pctaskgettaskname: true
       freertos_tick_rate_hz: 1000
       freertos_timer_task_priority: 2
       freertos_timer_task_stack_depth: 64
-      freertos_total_heap_size: 131072
+      freertos_total_heap_size: 2400
       freertos_use_16_bit_ticks: false
       freertos_use_application_task_tag_functions: false
       freertos_use_co_routines: false
@@ -43,7 +43,7 @@ middlewares:
       freertos_use_mutexes: true
       freertos_use_port_optimised_functions: false
       freertos_use_preemption: true
-      freertos_use_recursive_mutexes: true
+      freertos_use_recursive_mutexes: false
       freertos_use_stats_formatting_functions: true
       freertos_use_tick_hook: false
       freertos_use_tickless_idle: false
@@ -53,7 +53,7 @@ middlewares:
       freertos_vtaskcleanupresources: false
       freertos_vtaskdelay: true
       freertos_vtaskdelayuntil: false
-      freertos_vtaskdelete: false
+      freertos_vtaskdelete: true
       freertos_vtaskpriorityset: false
       freertos_vtasksuspend: true
       freertos_xresumefromisr: false
@@ -723,7 +723,7 @@ drivers:
       $input_id: External Crystal Oscillator 8-48MHz (XOSC1)
       RESERVED_InputFreq: 12000000
       RESERVED_InputFreq_id: External Crystal Oscillator 8-48MHz (XOSC1)
-      _$freq_output_Generic clock generator 0: 1500000
+      _$freq_output_Generic clock generator 0: 12000000
       _$freq_output_Generic clock generator 1: 6000000
       _$freq_output_Generic clock generator 10: 12000000
       _$freq_output_Generic clock generator 11: 12000000
@@ -731,7 +731,7 @@ drivers:
       _$freq_output_Generic clock generator 3: 32768
       _$freq_output_Generic clock generator 4: 32768
       _$freq_output_Generic clock generator 5: 48000000
-      _$freq_output_Generic clock generator 6: 937504
+      _$freq_output_Generic clock generator 6: 120000512
       _$freq_output_Generic clock generator 7: 12000000
       _$freq_output_Generic clock generator 8: 12000000
       _$freq_output_Generic clock generator 9: 12000000
@@ -819,7 +819,7 @@ drivers:
       gclk_arch_gen_9_oe: false
       gclk_arch_gen_9_oov: false
       gclk_arch_gen_9_runstdby: false
-      gclk_gen_0_div: 32
+      gclk_gen_0_div: 4
       gclk_gen_0_div_sel: false
       gclk_gen_0_oscillator: Digital Frequency Locked Loop (DFLL48M)
       gclk_gen_10_div: 1
@@ -843,7 +843,7 @@ drivers:
       gclk_gen_5_div: 1
       gclk_gen_5_div_sel: false
       gclk_gen_5_oscillator: Digital Frequency Locked Loop (DFLL48M)
-      gclk_gen_6_div: 128
+      gclk_gen_6_div: 1
       gclk_gen_6_div_sel: false
       gclk_gen_6_oscillator: Digital Phase Locked Loop (DPLL1)
       gclk_gen_7_div: 1
@@ -865,11 +865,11 @@ drivers:
     functionality: System
     api: HAL:HPL:MCLK
     configuration:
-      $input: 1500000
+      $input: 12000000
       $input_id: Generic clock generator 0
-      RESERVED_InputFreq: 1500000
+      RESERVED_InputFreq: 12000000
       RESERVED_InputFreq_id: Generic clock generator 0
-      _$freq_output_CPU: 1500000
+      _$freq_output_CPU: 12000000
       cpu_clock_source: Generic clock generator 0
       cpu_div: '1'
       enable_cpu_clock: true
@@ -1133,39 +1133,39 @@ drivers:
           slow_gclk_selection: Generic clock generator 3
   SPI_0:
     user_label: SPI_0
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::SERCOM2::driver_config_definition::SPI.Master::HAL:Driver:SPI.Master.Sync
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::SERCOM1::driver_config_definition::SPI.Master::HAL:Driver:SPI.Master.Sync
     functionality: SPI
     api: HAL:Driver:SPI_Master_Sync
     configuration:
-      spi_master_advanced: true
+      spi_master_advanced: false
       spi_master_arch_cpha: Sample input on leading edge
       spi_master_arch_cpol: SCK is low when idle
       spi_master_arch_dbgstop: Keep running
       spi_master_arch_dord: MSB first
       spi_master_arch_ibon: In data stream
       spi_master_arch_runstdby: false
-      spi_master_baud_rate: 5000000
+      spi_master_baud_rate: 6000000
       spi_master_character_size: 8 bits
       spi_master_dummybyte: 511
       spi_master_rx_enable: true
     optional_signals: []
     variant:
-      specification: TXPO=0, RXPO=3
+      specification: TXPO=0, RXPO=2
       required_signals:
-      - name: SERCOM2/PAD/0
-        pad: PB26
+      - name: SERCOM1/PAD/0
+        pad: PA00
         label: MOSI
-      - name: SERCOM2/PAD/1
-        pad: PB27
+      - name: SERCOM1/PAD/1
+        pad: PA01
         label: SCK
-      - name: SERCOM2/PAD/3
-        pad: PB29
+      - name: SERCOM1/PAD/2
+        pad: PA18
         label: MISO
     clocks:
       domain_group:
         nodes:
         - name: Core
-          input: Generic clock generator 2
+          input: Generic clock generator 0
           external: false
           external_frequency: 0
         - name: Slow
@@ -1173,11 +1173,11 @@ drivers:
           external: false
           external_frequency: 0
         configuration:
-          core_gclk_selection: Generic clock generator 2
+          core_gclk_selection: Generic clock generator 0
           slow_gclk_selection: Generic clock generator 3
   I2C_0:
     user_label: I2C_0
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::SERCOM3::driver_config_definition::I2C.Master.Standard~2FFast-mode::HAL:Driver:I2C.Master.Sync
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::SERCOM5::driver_config_definition::I2C.Master.Standard~2FFast-mode::HAL:Driver:I2C.Master.Sync
     functionality: I2C
     api: HAL:Driver:I2C_Master_Sync
     configuration:
@@ -1195,11 +1195,11 @@ drivers:
     variant:
       specification: SDA=0, SCL=1
       required_signals:
-      - name: SERCOM3/PAD/0
-        pad: PA17
+      - name: SERCOM5/PAD/0
+        pad: PA23
         label: SDA
-      - name: SERCOM3/PAD/1
-        pad: PA16
+      - name: SERCOM5/PAD/1
+        pad: PA22
         label: SCL
     clocks:
       domain_group:
@@ -1226,6 +1226,18 @@ drivers:
     variant: null
     clocks:
       domain_group: null
+  RAND_0:
+    user_label: RAND_0
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::TRNG::driver_config_definition::RAND::HAL:Driver:RAND.Sync
+    functionality: RAND
+    api: HAL:Driver:RAND_Sync
+    configuration:
+      trng_datardyeo: false
+      trng_runstdby: false
+    optional_signals: []
+    variant: null
+    clocks:
+      domain_group: null
   WDT_0:
     user_label: WDT_0
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::WDT::driver_config_definition::WDT::HAL:Driver:WDT
@@ -1240,6 +1252,18 @@ drivers:
     clocks:
       domain_group: null
 pads:
+  PA00:
+    name: PA00
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA00
+    mode: Digital output
+    user_label: PA00
+    configuration: null
+  PA01:
+    name: PA01
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA01
+    mode: Digital output
+    user_label: PA01
+    configuration: null
   PA04:
     name: PA04
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA04
@@ -1252,42 +1276,47 @@ pads:
     mode: Peripheral IO
     user_label: PA05
     configuration: null
-  PA16:
-    name: PA16
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA16
-    mode: I2C
-    user_label: PA16
+  Display_RST:
+    name: PB12
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB12
+    mode: Digital output
+    user_label: Display_RST
     configuration: null
-  PA17:
-    name: PA17
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA17
-    mode: I2C
-    user_label: PA17
+  Display_DC:
+    name: PB13
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB13
+    mode: Digital output
+    user_label: Display_DC
+    configuration: null
+  PA18:
+    name: PA18
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA18
+    mode: Digital input
+    user_label: PA18
     configuration: null
   DRDY_PIN:
-    name: PD20
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PD20
+    name: PD21
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PD21
     mode: Digital input
     user_label: DRDY_PIN
-    configuration:
-      pad_pull_config: Pull-down
-  PB26:
-    name: PB26
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB26
-    mode: Digital output
-    user_label: PB26
     configuration: null
-  PB27:
-    name: PB27
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB27
+  Display_CS:
+    name: PB20
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB20
     mode: Digital output
-    user_label: PB27
+    user_label: Display_CS
     configuration: null
-  PB29:
-    name: PB29
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB29
-    mode: Digital input
-    user_label: PB29
+  PA22:
+    name: PA22
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA22
+    mode: I2C
+    user_label: PA22
+    configuration: null
+  PA23:
+    name: PA23
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA23
+    mode: I2C
+    user_label: PA23
     configuration: null
   LED_Orange1:
     name: PC30

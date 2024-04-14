@@ -44,6 +44,7 @@ hal/src \
 samd51a/gcc \
 hal/utils/src \
 hpl/wdt \
+hpl/trng \
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/portable/GCC/ARM_CM4F \
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/portable/MemMang \
 hpl/mclk \
@@ -79,6 +80,8 @@ hal/src/hal_wdt.o \
 hal/utils/src/utils_assert.o \
 hpl/dmac/hpl_dmac.o \
 hpl/oscctrl/hpl_oscctrl.o \
+hal/src/hal_rand_sync.o \
+hpl/trng/hpl_trng.o \
 hal/src/hal_usart_sync.o \
 hpl/mclk/hpl_mclk.o \
 hpl/ramecc/hpl_ramecc.o \
@@ -91,14 +94,14 @@ examples/driver_examples.o \
 driver_init.o \
 hal/src/hal_adc_sync.o \
 hpl/sercom/hpl_sercom.o \
+hal/src/hal_atomic.o \
 hal/src/hal_gpio.o \
 hal/utils/src/utils_event.o \
 hal/src/hal_sleep.o \
 hal/src/hal_cache.o \
-hpl/cmcc/hpl_cmcc.o \
 samd51a/gcc/gcc/startup_samd51.o \
 atmel_start.o \
-hal/src/hal_atomic.o \
+hpl/cmcc/hpl_cmcc.o \
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/tasks.o \
 hpl/adc/hpl_adc.o
 
@@ -127,6 +130,8 @@ OBJS_AS_ARGS +=  \
 "hal/utils/src/utils_assert.o" \
 "hpl/dmac/hpl_dmac.o" \
 "hpl/oscctrl/hpl_oscctrl.o" \
+"hal/src/hal_rand_sync.o" \
+"hpl/trng/hpl_trng.o" \
 "hal/src/hal_usart_sync.o" \
 "hpl/mclk/hpl_mclk.o" \
 "hpl/ramecc/hpl_ramecc.o" \
@@ -139,14 +144,14 @@ OBJS_AS_ARGS +=  \
 "driver_init.o" \
 "hal/src/hal_adc_sync.o" \
 "hpl/sercom/hpl_sercom.o" \
+"hal/src/hal_atomic.o" \
 "hal/src/hal_gpio.o" \
 "hal/utils/src/utils_event.o" \
 "hal/src/hal_sleep.o" \
 "hal/src/hal_cache.o" \
-"hpl/cmcc/hpl_cmcc.o" \
 "samd51a/gcc/gcc/startup_samd51.o" \
 "atmel_start.o" \
-"hal/src/hal_atomic.o" \
+"hpl/cmcc/hpl_cmcc.o" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/tasks.o" \
 "hpl/adc/hpl_adc.o"
 
@@ -170,6 +175,7 @@ DIR_INCLUDES +=  \
 -I"../hpl/ramecc" \
 -I"../hpl/sercom" \
 -I"../hpl/systick" \
+-I"../hpl/trng" \
 -I"../hpl/wdt" \
 -I"../hri" \
 -I"../" \
@@ -213,6 +219,8 @@ DEPS_AS_ARGS +=  \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/rtos_port.d" \
 "hal/src/hal_init.d" \
 "hal/src/hal_usart_sync.d" \
+"hpl/trng/hpl_trng.d" \
+"hal/src/hal_rand_sync.d" \
 "hpl/mclk/hpl_mclk.d" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/portable/GCC/ARM_CM4F/port.d" \
 "driver_init.d" \
@@ -277,7 +285,7 @@ $(OUTPUT_FILE_PATH): $(OBJS)
 %.o: %.c
 	@echo Building file: $<
 	@echo ARM/GNU C Compiler
-	$(QUOTE)arm-none-eabi-gcc$(QUOTE) -x c -mthumb -DDEBUG -O0 -ffunction-sections -mlong-calls -g3 -Wall -c -std=gnu99 \
+	$(QUOTE)arm-none-eabi-gcc$(QUOTE) -x c -mthumb -DDEBUG -Os -ffunction-sections -mlong-calls -g3 -Wall -c -std=gnu99 \
 -D__SAMD51P20A__ -mcpu=cortex-m4 -mfloat-abi=softfp -mfpu=fpv4-sp-d16 \
 $(DIR_INCLUDES) \
 -MD -MP -MF "$(patsubst ../%,%, $(@:%.o=%.d))" -MT"$(patsubst ../%,%, $(@:%.o=%.d))" -MT"$(patsubst ../%,%, $(@:%.o=%.o))"  -o "$(strip $(patsubst ../%, %, $@))" "$<"
@@ -286,7 +294,7 @@ $(DIR_INCLUDES) \
 %.o: %.s
 	@echo Building file: $<
 	@echo ARM/GNU Assembler
-	$(QUOTE)arm-none-eabi-as$(QUOTE) -x c -mthumb -DDEBUG -O0 -ffunction-sections -mlong-calls -g3 -Wall -c -std=gnu99 \
+	$(QUOTE)arm-none-eabi-as$(QUOTE) -x c -mthumb -DDEBUG -Os -ffunction-sections -mlong-calls -g3 -Wall -c -std=gnu99 \
 -D__SAMD51P20A__ -mcpu=cortex-m4 -mfloat-abi=softfp -mfpu=fpv4-sp-d16 \
 $(DIR_INCLUDES) \
 -MD -MP -MF "$(patsubst ../%,%, $(@:%.o=%.d))" -MT"$(patsubst ../%,%, $(@:%.o=%.d))" -MT"$(patsubst ../%,%, $(@:%.o=%.o))"  -o "$(strip $(patsubst ../%, %, $@))" "$<"
@@ -295,7 +303,7 @@ $(DIR_INCLUDES) \
 %.o: %.S
 	@echo Building file: $<
 	@echo ARM/GNU Preprocessing Assembler
-	$(QUOTE)arm-none-eabi-gcc$(QUOTE) -x c -mthumb -DDEBUG -O0 -ffunction-sections -mlong-calls -g3 -Wall -c -std=gnu99 \
+	$(QUOTE)arm-none-eabi-gcc$(QUOTE) -x c -mthumb -DDEBUG -Os -ffunction-sections -mlong-calls -g3 -Wall -c -std=gnu99 \
 -D__SAMD51P20A__ -mcpu=cortex-m4 -mfloat-abi=softfp -mfpu=fpv4-sp-d16 \
 $(DIR_INCLUDES) \
 -MD -MP -MF "$(patsubst ../%,%, $(@:%.o=%.d))" -MT"$(patsubst ../%,%, $(@:%.o=%.d))" -MT"$(patsubst ../%,%, $(@:%.o=%.o))"  -o "$(strip $(patsubst ../%, %, $@))" "$<"
