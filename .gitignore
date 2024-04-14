@@ -30,4 +30,13 @@ tags
 #ASF-Specific:
 *.atsln
 *.atzip
+ASF/gcc/*
 
+#MacOS DS_Store
+**/.DS_Store
+
+#Windows WSL Identifiers
+*.Identifier
+
+#Logs folder
+logs/*

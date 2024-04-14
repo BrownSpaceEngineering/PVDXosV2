@@ -88,7 +88,7 @@ void USART_0_init(void)
 void SPI_0_PORT_init(void)
 {
 
-	gpio_set_pin_level(PA00,
+	gpio_set_pin_level(PC23,
 	                   // <y> Initial level
 	                   // <id> pad_initial_level
 	                   // <false"> Low
@@ -96,11 +96,11 @@ void SPI_0_PORT_init(void)
 	                   false);
 
 	// Set pin direction to output
-	gpio_set_pin_direction(PA00, GPIO_DIRECTION_OUT);
+	gpio_set_pin_direction(PC23, GPIO_DIRECTION_OUT);
 
-	gpio_set_pin_function(PA00, PINMUX_PA00D_SERCOM1_PAD0);
+	gpio_set_pin_function(PC23, PINMUX_PC23D_SERCOM3_PAD0);
 
-	gpio_set_pin_level(PA01,
+	gpio_set_pin_level(PC22,
 	                   // <y> Initial level
 	                   // <id> pad_initial_level
 	                   // <false"> Low
@@ -108,9 +108,9 @@ void SPI_0_PORT_init(void)
 	                   false);
 
 	// Set pin direction to output
-	gpio_set_pin_direction(PA01, GPIO_DIRECTION_OUT);
+	gpio_set_pin_direction(PC22, GPIO_DIRECTION_OUT);
 
-	gpio_set_pin_function(PA01, PINMUX_PA01D_SERCOM1_PAD1);
+	gpio_set_pin_function(PC22, PINMUX_PC22D_SERCOM3_PAD1);
 
 	// Set pin direction to input
 	gpio_set_pin_direction(PA18, GPIO_DIRECTION_IN);
@@ -123,21 +123,21 @@ void SPI_0_PORT_init(void)
 	                       // <GPIO_PULL_DOWN"> Pull-down
 	                       GPIO_PULL_OFF);
 
-	gpio_set_pin_function(PA18, PINMUX_PA18C_SERCOM1_PAD2);
+	gpio_set_pin_function(PA18, PINMUX_PA18D_SERCOM3_PAD2);
 }
 
 void SPI_0_CLOCK_init(void)
 {
-	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM1_GCLK_ID_CORE, CONF_GCLK_SERCOM1_CORE_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
-	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM1_GCLK_ID_SLOW, CONF_GCLK_SERCOM1_SLOW_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM3_GCLK_ID_CORE, CONF_GCLK_SERCOM3_CORE_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM3_GCLK_ID_SLOW, CONF_GCLK_SERCOM3_SLOW_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
 
-	hri_mclk_set_APBAMASK_SERCOM1_bit(MCLK);
+	hri_mclk_set_APBBMASK_SERCOM3_bit(MCLK);
 }
 
 void SPI_0_init(void)
 {
 	SPI_0_CLOCK_init();
-	spi_m_sync_init(&SPI_0, SERCOM1);
+	spi_m_sync_init(&SPI_0, SERCOM3);
 	SPI_0_PORT_init();
 }
 

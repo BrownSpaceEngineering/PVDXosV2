@@ -17,7 +17,8 @@ void assert_triggered(const char *file, uint32_t line);
 
 #include <peripheral_clk_config.h>
 
-// <h> Basic
+#define configSUPPORT_STATIC_ALLOCATION 1
+#define INCLUDE_xQueueGetMutexHolder 1
 
 #ifndef configCPU_CLOCK_HZ
 #define configCPU_CLOCK_HZ (CONF_CPU_FREQUENCY)
@@ -96,7 +97,7 @@ void assert_triggered(const char *file, uint32_t line);
 // <q> Check stack overflow
 // <id> freertos_check_for_stack_overflow
 #ifndef configCHECK_FOR_STACK_OVERFLOW
-#define configCHECK_FOR_STACK_OVERFLOW 1
+#define configCHECK_FOR_STACK_OVERFLOW 2
 #endif
 
 // <q> Use maclloc failed hook
@@ -254,7 +255,7 @@ to exclude the API function. */
 #define INCLUDE_xTaskGetCurrentTaskHandle 0
 #endif
 
-#define INCLUDE_uxTaskGetStackHighWaterMark 0
+#define INCLUDE_uxTaskGetStackHighWaterMark 1
 
 // <q> Include the function to get idle task handler
 // <id> freertos_xtaskgetidletaskhandle
