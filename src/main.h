@@ -1,8 +1,10 @@
+#include "SEGGER_RTT.h"
 #include "cosmicmonkey_task.h"
 #include "globals.h"
 #include "heartbeat_task.h"
 #include "logging.h"
 #include "rtos_start.h"
+#include "shell_task.h"
 #include "uhf_task.h"
 #include "watchdog_task.h"
 #include "task_manager.h"
@@ -46,27 +48,5 @@ If you want to get rid of the red squiggly lines:
     #error "Multiple build type flags set! (UNITTEST && RELEASE) Must be exactly one of: {DEVBUILD, UNITTEST, RELEASE}"
 #endif
 
-#ifndef GIT_BRANCH_NAME
-    #define GIT_BRANCH_NAME "Unspecified"
-#endif
-
-#ifndef GIT_COMMIT_HASH
-    #define GIT_COMMIT_HASH "Unspecified"
-#endif
-
-// Defines for printing out the build version
-#if defined(DEVBUILD)
-    #define BUILD_TYPE "Development Build"
-#endif
-#if defined(UNITTEST)
-    #define BUILD_TYPE "Unit Test Build"
-#endif
-#if defined(RELEASE)
-    #define BUILD_TYPE "Release Build"
-#endif
-
-// Define build date
-#define BUILD_DATE __DATE__
-
-// Define build time
-#define BUILD_TIME __TIME__
+int main(void);
+void hardware_init(void);

@@ -1,7 +1,12 @@
-#ifndef LOGIN_H
-#define LOGIN_H
+#ifndef LOGGING_H
+#define LOGGING_H
 
+#include "SEGGER_RTT.h"
 #include "globals.h"
+
+#define LOGGING_RTT_OUTPUT_CHANNEL 1
+
+extern uint8_t SEGGER_RTT_LOG_BUFFER[SEGGER_RTT_LOG_BUFFER_SIZE];
 
 /*
 FATAL: Worst class of errors that will cause a system restart (e.g. memory corruption, stack overflow, critical function fails)
@@ -23,18 +28,21 @@ DEBUG: Detailed information about the system for debugging (e.g. length of array
 
 #if defined(DEVBUILD)
     /* Devbuild should include filenames and line numbers */
-    #define fatal(msg, ...) fatal_impl("[FATAL|%s:%d]: " msg, __FILENAME__, __LINE__, ##__VA_ARGS__)
-    #define warning(msg, ...) warning_impl("[WARNING|%s:%d]: " msg, __FILENAME__, __LINE__, ##__VA_ARGS__)
-    #define event(msg, ...) event_impl("[EVENT|%s:%d]: " msg, __FILENAME__, __LINE__, ##__VA_ARGS__)
-    #define info(msg, ...) info_impl("[INFO|%s:%d]: " msg, __FILENAME__, __LINE__, ##__VA_ARGS__)
-    #define debug(msg, ...) debug_impl("[DEBUG|%s:%d]: " msg, __FILENAME__, __LINE__, ##__VA_ARGS__)
+    #define fatal(msg, ...)                                                                                                                \
+        fatal_impl(RTT_CTRL_TEXT_BRIGHT_RED "[FATAL|%s:%d]: " msg RTT_CTRL_RESET, __FILENAME__, __LINE__, ##__VA_ARGS__)
+    #define warning(msg, ...)                                                                                                              \
+        warning_impl(RTT_CTRL_TEXT_BRIGHT_RED "[WARNING|%s:%d]: " msg RTT_CTRL_RESET, __FILENAME__, __LINE__, ##__VA_ARGS__)
+    #define event(msg, ...)                                                                                                                \
+        event_impl(RTT_CTRL_TEXT_BRIGHT_WHITE "[EVENT|%s:%d]: " msg RTT_CTRL_RESET, __FILENAME__, __LINE__, ##__VA_ARGS__)
+    #define info(msg, ...) info_impl(RTT_CTRL_TEXT_BRIGHT_WHITE "[INFO|%s:%d]: " msg RTT_CTRL_RESET, __FILENAME__, __LINE__, ##__VA_ARGS__)
+    #define debug(msg, ...) debug_impl(RTT_CTRL_TEXT_WHITE "[DEBUG|%s:%d]: " msg RTT_CTRL_RESET, __FILENAME__, __LINE__, ##__VA_ARGS__)
 #else
     /* Other build types (such as release or unittest) don't need filenames or line numbers */
-    #define fatal(msg, ...) fatal_impl("[FATAL]: " msg, ##__VA_ARGS__)
-    #define warning(msg, ...) warning_impl("[WARNING]: " msg, ##__VA_ARGS__)
-    #define event(msg, ...) event_impl("[EVENT]: " msg, ##__VA_ARGS__)
-    #define info(msg, ...) info_impl("[INFO]: " msg, ##__VA_ARGS__)
-    #define debug(msg, ...) debug_impl("[DEBUG]: " msg, ##__VA_ARGS__)
+    #define fatal(msg, ...)   fatal_impl(RTT_CTRL_TEXT_BRIGHT_RED "[FATAL]: " msg RTT_CTRL_RESET, ##__VA_ARGS__)
+    #define warning(msg, ...) warning_impl(RTT_CTRL_TEXT_BRIGHT_RED "[WARNING]: " msg RTT_CTRL_RESET, ##__VA_ARGS__)
+    #define event(msg, ...)   event_impl(RTT_CTRL_TEXT_BRIGHT_WHITE "[EVENT]: " msg, ##__VA_ARGS__)
+    #define info(msg, ...)    info_impl(RTT_CTRL_TEXT_BRIGHT_WHITE "[INFO]: " msg, ##__VA_ARGS__)
+    #define debug(msg, ...)   debug_impl(RTT_CTRL_TEXT_WHITE "[DEBUG]: " msg RTT_CTRL_RESET, ##__VA_ARGS__)
 #endif
 
 void fatal_impl(const char *string, ...);
@@ -43,4 +51,7 @@ void event_impl(const char *string, ...);
 void info_impl(char *string, ...);
 void debug_impl(const char *string, ...);
 
-#endif
+void set_log_level(log_level_t level);
+log_level_t get_log_level();
+
+#endif /* LOGGING_H */

@@ -31,6 +31,9 @@ export OBJS := \
 ../src/misc/exception_handlers/specific_handlers.o \
 ../src/tasks/display/display_ssd1362.o \
 ../src/tasks/task_manager/task_manager.o \
+../src/tasks/shell/shell_main.o \
+../src/tasks/shell/shell_helpers.o \
+../src/tasks/shell/shell_commands.o \
 
 
 
@@ -52,6 +55,7 @@ export EXTRA_VPATH := \
 ../../src/tasks/display \
 ../../src/tasks/task_manager \
 ../../src/tasks/display/image_buffers \
+../../src/tasks/shell \
 
 
 ###############################################################################
@@ -171,7 +175,6 @@ else #Run the windows-specific command
 	@hostname=$(shell hostname) && \
 	gdb-multiarch -ex "target remote $$hostname.local:2331" -ex "load" -ex "monitor halt" -ex "monitor reset" -ex "set confirm off" -ex "add-symbol-file PVDXos.elf" -ex "set confirm on" ./bootloader/bootloader.elf
 endif
-
 
 # When updating the ASF configuration, this must be run once in order to automatically integrate the new ASF config
 # Add to this section if you want to automatically trigger an action when the ASF is updated

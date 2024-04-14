@@ -39,7 +39,12 @@ void cosmicmonkey_main(void *pvParameters) {
     rand_sync_init(&RAND_0, TRNG); // Initialize random number generator
     rand_sync_enable(&RAND_0); // Enable the random number generator clock
 
-    info("Cosmic monkey started with frequency: %d Hz\r\n", args.frequency);
+    if (args.frequency == 0) {
+        warning("Cosmic Monkey task started, but frequency is 0Hz! Suspending task forever...\n");
+        vTaskSuspend(NULL);
+    }
+
+    info("Cosmic monkey started with frequency: %d Hz\n", args.frequency);
     while (1)
     {
         if (perform_flip() != SUCCESS) {

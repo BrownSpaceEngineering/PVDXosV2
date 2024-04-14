@@ -8,10 +8,6 @@ UseTab: Never
 AlignConsecutiveAssignments: false
 AlignConsecutiveBitFields: false
 AlignConsecutiveDeclarations: false
-AlignConsecutiveMacros:
-  Enabled: true
-  AcrossEmptyLines: true
-  AcrossComments: true
 AlignEscapedNewlines: false
 AlignOperands: false
 #If stuff is too long, allow arguments to be on the next line

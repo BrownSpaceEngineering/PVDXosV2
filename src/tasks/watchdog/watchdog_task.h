@@ -13,6 +13,9 @@
 #define TASK_MANAGER_TASK_ALLOWED_TIME 5000  // 5 seconds in order to prepare for other sensors
 #define WATCHDOG_TASK_ALLOWED_TIME 1500
 #define DISPLAY_TASK_ALLOWED_TIME      10000 // In order two allow for the delay in between
+#define SHELL_TASK_ALLOWED_TIME 5000     // 5 seconds, since the shell task is not critical
+
+/* REMEMBER TO ALSO ADD YOUR TIME TO THE ALLOWED_TIMES LIST IN WATCHDOG_MAIN.C */
 
 // Memory for the watchdog task
 #define WATCHDOG_TASK_STACK_SIZE 128 // Size of the stack in words (multiply by 4 to get bytes)

@@ -1,0 +1,2 @@
+# Scripts
+The scripts folder is comprised of a collection of scripts that are used to automate various tasks or interact with PVDXos in some way. They are *never* linked together with the main application (i.e. are not included in PVDXos itself).
