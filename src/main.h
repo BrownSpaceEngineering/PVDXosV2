@@ -7,7 +7,7 @@
 #include "logging.h"
 #include "rtos_start.h"
 #include "watchdog_task.h"
-#include "task_manager.h"
+#include "task_manager_task.h"
 
 #include <atmel_start.h>
 #include <driver_init.h>

@@ -90,7 +90,7 @@ extern struct displayTaskMemory displayMem;
 
 // Exposed Functions
 status_t display_init(void);
-void display_main(void *);
+void display_main(void *pvParameters);
 
 // Variables
 extern COLOR display_buffer[(SSD1362_WIDTH / 2) * SSD1362_HEIGHT]; // pixels are 4 bits, so 2 consecutive pixels per byte

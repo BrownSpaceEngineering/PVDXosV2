@@ -1,4 +1,4 @@
-#include "display_ssd1362.h"
+#include "display_task.h"
 
 #include "image_buffer_BrownLogo.h"
 #include "image_buffer_PVDX.h"
@@ -269,26 +269,4 @@ status_t display_init() {
     display_update();
 
     return SUCCESS;
-}
-
-void display_main(void *pvParameters) {
-    // Initialize the display
-    display_init();
-    info("Display initialized\n")
-
-    // TODO: Receive commands from the command executor task to update the display
-    while (1) {
-        display_set_buffer(IMAGE_BUFFER_PVDX);
-        debug("First buffer set\n");
-        display_update();
-        debug("First image completed\n");
-        vTaskDelay(pdMS_TO_TICKS(500));
-
-        display_set_buffer(IMAGE_BUFFER_BROWNLOGO);
-        debug("Second image buffer set\n");
-        display_update();
-        debug("Second image completed\n");
-        vTaskDelay(pdMS_TO_TICKS(500));
-        watchdog_checkin(DISPLAY_TASK);
-    }
 }

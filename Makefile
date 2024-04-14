@@ -16,20 +16,24 @@
 ### ALL C FILES SHOULD HAVE AN OBJECT FILE LISTED HERE ###
 export OBJS := \
 ../src/main.o \
-../src/tasks/heartbeat/heartbeat_main.o \
-../src/tasks/watchdog/watchdog_main.o \
-../src/tasks/watchdog/watchdog_helpers.o \
 ../src/misc/printf/SEGGER_RTT.o \
 ../src/misc/printf/SEGGER_RTT_printf.o \
 ../src/misc/rtos_support/rtos_static_memory.o \
 ../src/misc/rtos_support/rtos_stack_overflow.o \
-../src/tasks/cosmic_monkey/cosmicmonkey_main.o \
 ../src/misc/logging/logging.o \
 ../src/misc/exception_handlers/default_handler.o \
 ../src/misc/exception_handlers/specific_handlers.o \
-../src/tasks/display/display_ssd1362.o \
-../src/tasks/task_manager/task_manager.o \
-../src/tasks/command_executor/command_executor.o \
+../src/tasks/heartbeat/heartbeat_main.o \
+../src/tasks/watchdog/watchdog_main.o \
+../src/tasks/watchdog/watchdog_helpers.o \
+../src/tasks/cosmic_monkey/cosmicmonkey_main.o \
+../src/tasks/cosmic_monkey/cosmicmonkey_helpers.o \
+../src/tasks/display/display_main.o \
+../src/tasks/display/display_helpers.o \
+../src/tasks/task_manager/task_manager_main.o \
+../src/tasks/task_manager/task_manager_helpers.o \
+../src/tasks/command_executor/command_executor_main.o \
+../src/tasks/command_executor/command_executor_helpers.o \
 
 
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###
