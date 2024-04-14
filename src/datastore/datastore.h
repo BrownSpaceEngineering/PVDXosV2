@@ -1,13 +1,13 @@
-#ifndef DATASTORE_H_
-#define DATASTORE_H_
+#ifndef DATASTORE_H
+#define DATASTORE_H
 
 #define MAX_STORAGE_SIZE 100
 #define NUM_SENSORS 2
 
-enum DataSource {
+typedef enum {
     MAGNETOMETER = 0,
     PLACEHOLDER = 1,
-}
+} datasource_t;
 
 /* API for Data Store goes here */
 
