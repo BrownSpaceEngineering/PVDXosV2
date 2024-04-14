@@ -45,6 +45,7 @@ void rm3100_main(void *pvParameters) {
     init_rm3100();
     while(1) {
         values_loop();
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
 }
 
@@ -53,7 +54,7 @@ RM3100_return_t values_loop() {
 
     if (useDRDYPin) {
         while(gpio_get_pin_level(DRDY_PIN) == 0) {
-            delay_ms(100);
+            vTaskDelay(pdMS_TO_TICKS(100));
         }
     }
 
@@ -113,6 +114,7 @@ int32_t RM3100ReadReg(uint8_t addr, uint8_t *val) {
     if ((rv = io_write(rm3100_io, writeBuf, 1)) != 0){
         warning("Error in RM3100 Write");
     } else {
+        vTaskDelay(pdMS_TO_TICKS(500));
         if ((rv = io_read(rm3100_io, val, 1)) != 0) {
             warning("Error in RM3100 Write");
         }
@@ -124,6 +126,7 @@ int32_t RM3100WriteReg(uint8_t addr, uint8_t data) {
     uint8_t writeBuf1[2] = {addr, data};
 
     io_write(rm3100_io, writeBuf1, 1);
+    vTaskDelay(pdMS_TO_TICKS(500));
     return io_write(rm3100_io, writeBuf1 + 1, 1);
 }
 
