@@ -1,6 +1,9 @@
 import pylink
 import curses
 import re
+import platform
+import os
+import datetime
 
 """
 ABOUT THIS FILE:
@@ -77,7 +80,7 @@ def parse_and_print(window, text):
             window.addstr(part, current_pair)
     window.refresh()
 
-def open_rtt_channels(stdscr):
+def open_rtt_channels(stdscr, logfile = None):
     setup_color_pairs()
     stdscr.clear()
     win0 = curses.newwin(curses.LINES // 2, curses.COLS, 0, 0)
@@ -131,6 +134,32 @@ def open_rtt_channels(stdscr):
         if buf1:
             text1 = bytes(buf1).decode('ascii', errors='replace')
             parse_and_print(win1, text1)
+            # Write to a log file if specified
+            if logfile is not None:
+                logfile.write(text1)
+
+def main():
+    # Sanity check to make sure this is not in WSL
+    if "microsoft" in platform.uname().release:
+        print("This code cannot be executed in a WSL environment. Run natively on Windows instead!")
+        exit(1)
+
+    #Check if the ./logs directory exists
+    current_script_dir = os.path.dirname(__file__)
+    logs_path = os.path.join(current_script_dir, '..', 'logs')
+    logs_path = os.path.normpath(logs_path)
+
+    #If the logs directory does not exist, create it
+    if not os.path.exists(logs_path):
+        os.makedirs(logs_path)
+
+    # Create a log file in the logs directory with the current date and time
+    current_time = datetime.datetime.now()
+    log_filename = current_time.strftime("%Y-%m-%d_%H-%M-%S.log")
+    log_file_path = os.path.join(logs_path, log_filename)
+    
+    with open (log_file_path, "w") as file:
+        curses.wrapper(lambda stdscr: open_rtt_channels(stdscr, file))
 
 if __name__ == "__main__":
-    curses.wrapper(open_rtt_channels)
+    
