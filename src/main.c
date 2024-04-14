@@ -1,12 +1,15 @@
 #include "main.h"
 
+// Buffer for Segger Logging Channel
+
 cosmicmonkeyTaskArguments_t cm_args = {0};
 
 int main(void) {
     /* Initializes MCU, drivers and middleware */
     atmel_start_init();
+    hardware_init();
     info_impl(RTT_CTRL_RESET RTT_CTRL_CLEAR); //Reset the terminal
-    info_impl("--- ATMEL Initialization Complete ---\n");
+    info_impl("--- Atmel & Hardware Initialization Complete ---\n");
     info_impl("[+] Build Type: %s\n", BUILD_TYPE);
     info_impl("[+] Build Date: %s\n", BUILD_DATE);
     info_impl("[+] Build Time: %s\n", BUILD_TIME);
@@ -83,13 +86,28 @@ int main(void) {
         info("main: Watchdog task created!\n");
     }
 
+    // ------- SHELL TASK -------
+
+    TaskHandle_t shellTaskHandle =
+        xTaskCreateStatic(shell_main, "Shell", SHELL_TASK_STACK_SIZE, NULL, 2, shellMem.shellTaskStack, &shellMem.shellTaskTCB);
+
+    watchdog_register_task(SHELL_TASK); // Register the shell task with the watchdog so that it can check in
+
+    if (shellTaskHandle == NULL) {
+        fatal("main: Shell task creation failed!\n");
+    } else {
+        info("main: Shell task created!\n");
+    }
+
+    // ------- COSMIC MONKEY TASK -------
+
     #if defined(UNITTEST) || defined(DEVBUILD)
         #if defined(UNITTEST)
         cm_args.frequency = 10;
         #endif
         #if defined(DEVBUILD)
-        cm_args.frequency = 5;
-        #endif
+        cm_args.frequency = 1;
+    #endif
 
         TaskHandle_t cosmicMonkeyTaskHandle =
             xTaskCreateStatic(cosmicmonkey_main, "CosmicMonkey", COSMICMONKEY_TASK_STACK_SIZE, (void *)&cm_args, 1,
@@ -107,4 +125,14 @@ int main(void) {
     while (true) {
         // Loop forever, but we should never get here anyways
     }
+}
+
+void hardware_init() {
+    // Segger Buffer 0 is pre-configured at compile time according to segger documentation
+    // Config the logging output channel (assuming it's not zero)
+    if (LOGGING_RTT_OUTPUT_CHANNEL != 0) {
+        SEGGER_RTT_ConfigUpBuffer(LOGGING_RTT_OUTPUT_CHANNEL, "Log Output", SEGGER_RTT_LOG_BUFFER, SEGGER_RTT_LOG_BUFFER_SIZE,
+                                  SEGGER_RTT_MODE_NO_BLOCK_SKIP);
+    }
+    return;
 }
