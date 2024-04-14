@@ -50,6 +50,7 @@ void shell_echo(char **args, int arg_count) {
     } else {
         terminal_printf("Echo: '");
         for (int i = 1; i < arg_count; i++) {
+            info("Echoing message to terminal: %s\n", args[i]);
             terminal_printf("%s", args[i]);
             if (i < arg_count - 1) {
                 terminal_printf(" ");
@@ -94,6 +95,7 @@ void shell_loglevel(char **args, int arg_count) {
         } else {
             log_level_t log_level = (log_level_t)level;
             set_log_level(log_level);
+            info("Log level set to %s(%d)\n", log_level_string_mappings[log_level], log_level);
             terminal_printf("Log level set to %s(%d)\n", log_level_string_mappings[log_level], log_level);
         }
     } else {
@@ -106,20 +108,26 @@ void help_loglevel() {
     terminal_printf("\tDisplays the current log level\n");
     terminal_printf("Usage: loglevel <level>\n");
     terminal_printf("\tSets the log level for PVDX terminal output\n");
-    terminal_printf("\t[0] (debug level) ==> Very detailed info about the internals of every process\n");
-    terminal_printf("\t[1] (info level)  ==> Every meaningful interaction with the satellite is displayed [DEFAULT]\n");
-    terminal_printf("\t[2] (event level) ==> Significant events and interactions displayed\n");
+    terminal_printf("\t[0] (debug level) ====> Very detailed info about the internals of every process\n");
+    terminal_printf("\t[1] (info level)  ====> Every meaningful interaction with the satellite is displayed [DEFAULT]\n");
+    terminal_printf("\t[2] (event level) ====> Significant events and interactions displayed\n");
     terminal_printf("\t[3] (warning level) ==> Only errors and critical events are displayed\n");
 }
 
 // ----- REBOOT COMMAND -----
+
 void shell_reboot(char **args, int arg_count) {
     if (arg_count != 1) {
         terminal_printf("Invalid usage. Try 'help reboot'\n");
         return;
     }
-    terminal_printf("Rebooting the satellite...\n");
-    delay_ms(1000); // Give the message time to print
     warning("Reboot command executed by user\n");
+    terminal_printf("Rebooting the satellite...\n");
+    delay_ms(1000);  // Give the message time to print
     watchdog_kick(); // Kick the watchdog to trigger a reboot
+}
+
+void help_reboot() {
+    terminal_printf("Usage: reboot\n");
+    terminal_printf("\tReboots the satellite\n");
 }

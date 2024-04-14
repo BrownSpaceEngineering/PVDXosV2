@@ -37,3 +37,6 @@ ASF/gcc/*
 
 #Windows WSL Identifiers
 *.Identifier
+
+#Logs folder
+logs/*

@@ -9,8 +9,10 @@ uint8_t SHELL_INPUT_BUFFER[SHELL_INPUT_BUFFER_SIZE] = {0}; //This is a layer ont
 void shell_main(void *pvParameters) {
     info("Shell task started\n");
     clear_RTT_input_buffer();
-    terminal_printf(RTT_CTRL_TEXT_BRIGHT_YELLOW "\nPVDX Shell Initialized! [%s (%s:%s), Built %s]\n" RTT_CTRL_RESET, BUILD_TYPE,
-                    GIT_BRANCH_NAME, GIT_COMMIT_HASH, BUILD_DATE " at " BUILD_TIME);
+    terminal_printf(RTT_CTRL_TEXT_BRIGHT_YELLOW "\n\n\n\n\n\n\n\nPVDX Shell Initialized! [%s (%s:%s), Built %s]\n" RTT_CTRL_RESET,
+                    BUILD_TYPE, GIT_BRANCH_NAME, GIT_COMMIT_HASH, BUILD_DATE " at " BUILD_TIME);
+
+    terminal_printf("%s", SHELL_ASCII_ART);
 
     while (1) {
         // Print the shell prompt
