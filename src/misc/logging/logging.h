@@ -30,8 +30,9 @@ DEBUG: Detailed information about the system for debugging (e.g. length of array
         fatal_impl(RTT_CTRL_TEXT_BRIGHT_RED "[FATAL|%s:%d]: " msg RTT_CTRL_RESET, __FILENAME__, __LINE__, ##__VA_ARGS__)
     #define warning(msg, ...)                                                                                                              \
         warning_impl(RTT_CTRL_TEXT_BRIGHT_RED "[WARNING|%s:%d]: " msg RTT_CTRL_RESET, __FILENAME__, __LINE__, ##__VA_ARGS__)
-    #define event(msg, ...) event_impl(RTT_CTRL_TEXT_BRIGHT_WHITE "[EVENT|%s:%d]: " msg, __FILENAME__, __LINE__, ##__VA_ARGS__)
-    #define info(msg, ...)  info_impl(RTT_CTRL_TEXT_BRIGHT_WHITE "[INFO|%s:%d]: " msg, __FILENAME__, __LINE__, ##__VA_ARGS__)
+    #define event(msg, ...)                                                                                                                \
+        event_impl(RTT_CTRL_TEXT_BRIGHT_WHITE "[EVENT|%s:%d]: " msg RTT_CTRL_RESET, __FILENAME__, __LINE__, ##__VA_ARGS__)
+    #define info(msg, ...) info_impl(RTT_CTRL_TEXT_BRIGHT_WHITE "[INFO|%s:%d]: " msg RTT_CTRL_RESET, __FILENAME__, __LINE__, ##__VA_ARGS__)
     #define debug(msg, ...) debug_impl(RTT_CTRL_TEXT_WHITE "[DEBUG|%s:%d]: " msg RTT_CTRL_RESET, __FILENAME__, __LINE__, ##__VA_ARGS__)
 #else
     /* Other build types (such as release or unittest) don't need filenames or line numbers */
