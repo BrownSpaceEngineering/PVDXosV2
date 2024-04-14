@@ -1,3 +1,6 @@
+#ifndef MAIN_H
+#define MAIN_H
+
 #include "cosmicmonkey_task.h"
 #include "globals.h"
 #include "heartbeat_task.h"
@@ -9,7 +12,6 @@
 #include <atmel_start.h>
 #include <driver_init.h>
 #include <hal_adc_sync.h>
-#include <string.h>
 
 /*
 Standard definitions for main.c
@@ -76,3 +78,5 @@ If you want to get rid of the red squiggly lines:
     #define BUILD_TYPE "Unspecified"
     #define DEVBUILD
 #endif
+
+#endif // MAIN_H

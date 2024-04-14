@@ -4,8 +4,29 @@
 
 struct taskManagerTaskMemory taskManagerMem;
 
+/* {TaskHandle (NULL at initialization), main_func, "name", stack_size, argument, priority, stackbuffer, tcb}*/
+
+PVDXTask_t taskList[] = {
+    {NULL, watchdog_main, "Watchdog", WATCHDOG_TASK_STACK_SIZE, NULL, 2, watchdogMem.watchdogTaskStack, &watchdogMem.watchdogTaskTCB},
+    {NULL, display_main, "DisplayMain", DISPLAY_TASK_STACK_SIZE, NULL, 1, displayMem.displayTaskStack, &displayMem.displayTaskTCB},
+    {NULL, heartbeat_main, "Heartbeat", HEARTBEAT_TASK_STACK_SIZE, NULL, 1, heartbeatMem.heartbeatTaskStack, &heartbeatMem.heartbeatTaskTCB}
+    {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL} // Null terminator for the array (since size is unspecified)
+};
+
 // Initializes all other tasks running on the system
 void task_manager_init(void *pvParameters) {
+
+
+    for(int i = 0; taskList[i].name != NULL; i++) {
+        taskList[i].handle = xTaskCreateStatic(taskList[i].function, taskList[i].name, taskList[i].stackSize, taskList[i].pvParameters, taskList[i].priority, taskList[i].stackBuffer, taskList[i].taskTCB);
+        if (taskList[i].handle == NULL) {
+            fatal("task_manager_init: %s task creation failed!\n", taskList[i].name);
+        } else {
+            info("task_manager_init: %s task created!\n", taskList[i].name);
+        }
+        watchdog_register_task(taskList[i].handle);
+    }
+
     // Create watchdog task
     // The watchdog task is responsible for checking in with all the other tasks and resetting the system if a task has
     // not checked in within the allowed time
@@ -50,4 +71,8 @@ void task_manager_init(void *pvParameters) {
     // watchdog_unregister_task(TASK_MANAGER_TASK);
 
     // vTaskSuspend(NULL);
+}
+
+TaskHandle_t start_task() {
+
 }

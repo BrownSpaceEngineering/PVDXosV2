@@ -24,10 +24,18 @@ struct taskManagerTaskMemory {
 
 extern struct taskManagerTaskMemory taskManagerMem;
 
-// task handles used to communicate with each task
-extern TaskHandle_t watchdogTaskHandle;
-extern TaskHandle_t displayTaskHandle;
-extern TaskHandle_t heartbeatTaskHandle;
+typedef struct  {
+    TaskHandle_t handle;
+    TaskFunction_t function;
+    char *name;
+    uint32_t stackSize;
+    void *pvParameters;
+    UBaseType_t priority;
+    StackType_t *stackBuffer;
+    StaticTask_t *taskTCB;
+} PVDXTask_t;
+
+extern PVDXTask_t taskList[];
 
 void task_manager_init(void *pvParameters);
 
