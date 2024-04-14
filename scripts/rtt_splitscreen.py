@@ -5,6 +5,10 @@ import re
 def setup_color_pairs():
     curses.start_color()
     curses.use_default_colors()
+    # Explicitly initializing color content might help
+    curses.init_color(curses.COLOR_RED, 1000, 0, 0)
+    curses.init_color(curses.COLOR_GREEN, 0, 1000, 0)
+    curses.init_color(curses.COLOR_BLUE, 0, 0, 1000)
     color_map = {
         30: curses.COLOR_BLACK,   # Black
         31: curses.COLOR_RED,     # Red
@@ -28,7 +32,7 @@ def setup_color_pairs():
         for bg in range(40, 48):
             fg_curses = color_map[fg]
             bg_curses = color_map[bg]
-            curses.init_pair(i, fg_curses, bg_curses)
+            curses.init_pair(i, fg_curses, -1)
             i += 1
     curses.init_pair(65, -1, -1)  # Default colors
 
@@ -46,9 +50,17 @@ def parse_and_print(window, text):
             else:
                 codes = part[2:-1].split(';')
                 if len(codes) == 2:
-                    fg, bg = map(int, codes)
-                    fg_index = fg - 30 if fg < 40 else 0
-                    bg_index = bg - 40 if bg >= 40 else 0
+                    fg_index = -1
+                    bg_index = -1
+                    identifier, colorcode = map(int, codes)
+                    if identifier == 1 or identifier == 2:
+                        # Text modifier (foreground)
+                        if 30 <= colorcode <= 37:
+                            fg_index = colorcode - 30
+                    if identifier == 4 or identifier == 24:
+                        # Background modifier
+                        if 40 <= colorcode <= 47:
+                            bg_index = colorcode - 40
                     current_pair = curses.color_pair(fg_index * 8 + bg_index + 1)
         else:
             # Make sure to handle the case where part might still contain null characters
@@ -61,7 +73,10 @@ def open_rtt_channels(stdscr):
     stdscr.clear()
     win0 = curses.newwin(curses.LINES // 2, curses.COLS, 0, 0)
     win0.scrollok(True)
-    win1 = curses.newwin(curses.LINES // 2, curses.COLS, curses.LINES // 2, 0)
+    y = curses.LINES // 2  # Draw horizontal line to separate windows
+    for x in range(curses.COLS):  # Draw across the entire width of the screen
+        stdscr.addch(y, x, curses.ACS_HLINE)  # Using horizontal line character
+    win1 = curses.newwin(curses.LINES // 2 - 1, curses.COLS, curses.LINES // 2 + 1, 0)
     win1.scrollok(True)
     jlink = pylink.JLink()
     jlink.open()
@@ -69,6 +84,8 @@ def open_rtt_channels(stdscr):
     jlink.rtt_start()
 
     win0.nodelay(True)
+
+    stdscr.refresh()
 
     user_input = ""
 
