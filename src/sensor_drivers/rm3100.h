@@ -36,7 +36,7 @@
 #define singleMode 0 //0 = use continuous measurement mode; 1 = use single measurement mode
 #define useDRDYPin 1 //0 = not using DRDYPin ; 1 = using DRDYPin to wait for data
 
-void init_rm3100(void);
+int init_rm3100(void);
 
 typedef struct {
     long x;
