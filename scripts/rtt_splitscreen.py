@@ -2,6 +2,15 @@ import pylink
 import curses
 import re
 
+"""
+ABOUT THIS FILE:
+This is supposed to use the curses module to create a split screen terminal interface with both the PVDX Shell and the log output in the same screen
+It's a very fragile script, has only been tested on windows, and much of it is AI-generated
+Therefore, if anything needs to be changed it's probably best to start from scratch
+
+BUGS: In Windows, the colors are completely wrong lol
+"""
+
 def setup_color_pairs():
     curses.start_color()
     curses.use_default_colors()
