@@ -6,6 +6,8 @@
 #include "globals.h"
 #include "rtos_start.h"
 
+#define RM3100_TASK_STACK_SIZE 128
+
 //Need to put the holy grail of values here
 #define RM3100Address 0x20 // Hexadecimal slave address for RM3100 with Pin 2 and Pin 4 set to LOW
 
@@ -38,6 +40,8 @@
 #define initialCC 200 // Set the cycle count
 #define singleMode 0 //0 = use continuous measurement mode; 1 = use single measurement mode
 #define useDRDYPin 1 //0 = not using DRDYPin ; 1 = using DRDYPin to wait for data
+
+void rm3100_main(void *pvParameters);
 
 int init_rm3100(void);
 

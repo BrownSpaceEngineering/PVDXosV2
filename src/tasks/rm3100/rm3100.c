@@ -39,15 +39,22 @@ int init_rm3100(void) {
     return 0;
 }
 
-RM3100_return_t values_loop(void) {
+void rm3100_main(void *pvParameters) {
+    info("RM3100 Task Started!\r\n");
+
+    init_rm3100();
+    while(1) {
+        values_loop();
+    }
+}
+
+RM3100_return_t values_loop() {
     RM3100_return_t returnVals;
 
     if (useDRDYPin) {
         while(gpio_get_pin_level(DRDY_PIN) == 0) {
             delay_ms(100);
         }
-    } else {
-        //TO DO: WE HAVE NO IDEA HOW PINS WORK (STILL)
     }
 
     uint8_t x2,x1,x0,y2,y1,y0,z2,z1,z0;

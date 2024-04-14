@@ -61,7 +61,7 @@ int main(void) {
 
     // Create the heartbeat task
     // The heartbeat task is a simple task that blinks the LEDs in a pattern to indicate that the system is running
-    TaskHandle_t heartbeatTaskHandle = xTaskCreateStatic(heartbeat_main, "Heartbeat", HEARTBEAT_TASK_STACK_SIZE, NULL, 1,
+    TaskHandle_t heartbeatTaskHandle = xTaskCreateStatic(heartbeat_main, "Heartbeat", RM3100_TASK_STACK_SIZE, NULL, 1,
                                                          heartbeatMem.heartbeatTaskStack, &heartbeatMem.heartbeatTaskTCB);
 
     watchdog_register_task(HEARTBEAT_TASK); // Register the heartbeat task with the watchdog so that it can check in
@@ -99,6 +99,18 @@ int main(void) {
         info("main: Shell task created!\n");
     }
 
+    // ------- RM3100 TASK -------
+    TaskHandle_t rm3100TaskHandle =
+        xTaskCreateStatic(rm3100_main, "RM3100", SHELL_TASK_STACK_SIZE, NULL, 2, shellMem.shellTaskStack, &shellMem.shellTaskTCB);
+    
+    watchdog_register_task(RM3100_TASK);
+
+    if (rm3100TaskHandle == NULL) {
+        fatal("main: Shell task creation failed!\n");
+    } else {
+        info("main: Shell task created!\n");
+    }
+
     // ------- COSMIC MONKEY TASK -------
 
     #if defined(UNITTEST) || defined(DEVBUILD)
@@ -106,7 +118,7 @@ int main(void) {
         cm_args.frequency = 10;
         #endif
         #if defined(DEVBUILD)
-        cm_args.frequency = 1;
+        cm_args.frequency = 0;
     #endif
 
         TaskHandle_t cosmicMonkeyTaskHandle =

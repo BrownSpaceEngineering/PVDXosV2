@@ -15,7 +15,7 @@
 
 #define TASK_STACK_OVERFLOW_PADDING 16 // Buffer for the stack size so that overflow doesn't corrupt any TCBs
 
-#define NUM_TASKS                   5 // The number of tasks that the watchdog will check in with
+#define NUM_TASKS                   6 // The number of tasks that the watchdog will check in with
 
 typedef enum {
     WATCHDOG_TASK = 0,
@@ -23,6 +23,7 @@ typedef enum {
     HEARTBEAT_TASK = 2,
     DISPLAY_TASK = 3,
     SHELL_TASK = 4,
+    RM3100_TASK = 5,
 } task_type_t;
 
 typedef enum {
