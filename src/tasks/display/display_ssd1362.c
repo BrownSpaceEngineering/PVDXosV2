@@ -19,7 +19,7 @@
 #define DISPLAY_SPI_BUFFER_CAPACITY (SSD1362_WIDTH / 2) * SSD1362_HEIGHT
 
 // Display Task memory structures
-struct displayMainTaskMemory displayMainMem;
+struct displayTaskMemory displayMem;
 
 // Buffer for SPI transactions
 uint8_t spi_rx_buffer[DISPLAY_SPI_BUFFER_CAPACITY] = {0x00};
@@ -272,6 +272,11 @@ status_t display_init() {
 }
 
 void display_main(void *pvParameters) {
+    // Initialize the display
+    display_init();
+    info("Display initialized\n")
+
+    // TODO: Receive commands from the command executor task to update the display
     while (1) {
         display_set_buffer(IMAGE_BUFFER_PVDX);
         debug("First buffer set\n");

@@ -5,6 +5,8 @@
 #include "globals.h"
 #include "rtos_start.h"
 #include "watchdog_task.h"
+#include "heartbeat_task.h"
+#include "logging.h"
 
 #include <atmel_start.h>
 #include <driver_init.h>
@@ -21,6 +23,11 @@ struct taskManagerTaskMemory {
 };
 
 extern struct taskManagerTaskMemory taskManagerMem;
+
+// task handles used to communicate with each task
+extern TaskHandle_t watchdogTaskHandle;
+extern TaskHandle_t displayTaskHandle;
+extern TaskHandle_t heartbeatTaskHandle;
 
 void task_manager_init(void *pvParameters);
 

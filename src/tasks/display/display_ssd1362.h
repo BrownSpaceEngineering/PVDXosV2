@@ -76,17 +76,17 @@
 
 // FreeRTOS Task structs
 // Memory for the heartbeat task
-#define DISPLAYMAIN_TASK_STACK_SIZE         128 // Size of the stack in words (multiply by 4 to get bytes)
+#define DISPLAY_TASK_STACK_SIZE         128 // Size of the stack in words (multiply by 4 to get bytes)
 
 // Placed in a struct to ensure that the TCB is placed higher than the stack in memory
 //^ This ensures that stack overflows do not corrupt the TCB (since the stack grows downwards)
-struct displayMainTaskMemory {
+struct displayTaskMemory {
     StackType_t OverflowBuffer[TASK_STACK_OVERFLOW_PADDING];
-    StackType_t displayMainTaskStack[DISPLAYMAIN_TASK_STACK_SIZE];
-    StaticTask_t displayMainTaskTCB;
+    StackType_t displayTaskStack[DISPLAY_TASK_STACK_SIZE];
+    StaticTask_t displayTaskTCB;
 };
 
-extern struct displayMainTaskMemory displayMainMem;
+extern struct displayTaskMemory displayMem;
 
 // Exposed Functions
 status_t display_init(void);

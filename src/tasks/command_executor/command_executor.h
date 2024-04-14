@@ -23,6 +23,6 @@ typedef struct {
     size_t len;
     status_t* p_result;
     (*callback)(status_t);
-}
+};
 
 #endif // COMMAND_EXECUTOR_H

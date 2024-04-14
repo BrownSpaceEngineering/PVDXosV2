@@ -29,7 +29,7 @@ int main(void) {
     // xTaskCreateStatic(main_func, "TaskName", StackSize, pvParameters, Priority, StackBuffer, TaskTCB);
 
     // Create the TaskManager initialization task
-    // The taskManager initializer initializes the watchdog and all necessary sensors
+    // The taskManager initializer initializes all other tasks running on the system
     TaskHandle_t taskManagerInitializerTaskHandle =
         xTaskCreateStatic(task_manager_init, "TaskManagerInit", TASK_MANAGER_TASK_STACK_SIZE, NULL, 2, taskManagerMem.taskManagerTaskStack,
                           &taskManagerMem.taskManagerTaskTCB);
@@ -40,46 +40,6 @@ int main(void) {
         fatal("main: TaskManagerInitializer task creation failed!\n");
     } else {
         info("main: TaskManagerInitializer task created!\n");
-    }
-
-    // Create the display main task
-    //  The display main task is a simple task that flips between two images in order to time our SPI transmission rates
-    TaskHandle_t displayMainTaskHandle = xTaskCreateStatic(display_main, "DisplayMain", DISPLAYMAIN_TASK_STACK_SIZE, NULL, 1,
-                                                           displayMainMem.displayMainTaskStack, &displayMainMem.displayMainTaskTCB);
-
-    watchdog_register_task(DISPLAY_TASK);
-
-    if (displayMainTaskHandle == NULL) {
-        fatal("main: DisplayMain task creation failed!\n");
-    } else {
-        info("main: DisplayMain task created!\n");
-    }
-
-    // Create the heartbeat task
-    // The heartbeat task is a simple task that blinks the LEDs in a pattern to indicate that the system is running
-    TaskHandle_t heartbeatTaskHandle = xTaskCreateStatic(heartbeat_main, "Heartbeat", HEARTBEAT_TASK_STACK_SIZE, NULL, 1,
-                                                         heartbeatMem.heartbeatTaskStack, &heartbeatMem.heartbeatTaskTCB);
-
-    watchdog_register_task(HEARTBEAT_TASK); // Register the heartbeat task with the watchdog so that it can check in
-
-    if (heartbeatTaskHandle == NULL) {
-        fatal("main: Heartbeat task creation failed!\n");
-    } else {
-        info("main: Heartbeat task created!\n");
-    }
-
-    // Create watchdog task
-    // The watchdog task is responsible for checking in with all the other tasks and resetting the system if a task has
-    // not checked in within the allowed time
-    TaskHandle_t watchdogTaskHandle = xTaskCreateStatic(watchdog_main, "Watchdog", WATCHDOG_TASK_STACK_SIZE, NULL, 2,
-                                                        watchdogMem.watchdogTaskStack, &watchdogMem.watchdogTaskTCB);
-
-    watchdog_register_task(WATCHDOG_TASK); // Register the watchdog task with itself so that it can check in
-
-    if (watchdogTaskHandle == NULL) {
-        fatal("main: Watchdog task creation failed!\n");
-    } else {
-        info("main: Watchdog task created!\n");
     }
 
     #if defined(UNITTEST) || defined(DEVBUILD)
