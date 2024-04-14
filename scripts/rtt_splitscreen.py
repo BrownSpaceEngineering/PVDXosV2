@@ -10,17 +10,11 @@ ABOUT THIS FILE:
 This is supposed to use the curses module to create a split screen terminal interface with both the PVDX Shell and the log output in the same screen
 It's a very fragile script, has only been tested on windows, and much of it is AI-generated
 Therefore, if anything needs to be changed it's probably best to start from scratch
-
-BUGS: In Windows, the colors are completely wrong lol
 """
 
 def setup_color_pairs():
     curses.start_color()
     curses.use_default_colors()
-    # Explicitly initializing color content might help
-    curses.init_color(curses.COLOR_RED, 1000, 0, 0)
-    curses.init_color(curses.COLOR_GREEN, 0, 1000, 0)
-    curses.init_color(curses.COLOR_BLUE, 0, 0, 1000)
     color_map = {
         30: curses.COLOR_BLACK,   # Black
         31: curses.COLOR_RED,     # Red
@@ -73,7 +67,7 @@ def parse_and_print(window, text):
                         # Background modifier
                         if 40 <= colorcode <= 47:
                             bg_index = colorcode - 40
-                    current_pair = curses.color_pair(fg_index * 8 + bg_index + 1)
+                    current_pair = curses.color_pair(1 + (fg_index * 8 + bg_index + 1))
         else:
             # Make sure to handle the case where part might still contain null characters
             part = part.replace('\0', '')
@@ -82,28 +76,42 @@ def parse_and_print(window, text):
 
 def open_rtt_channels(stdscr, logfile = None):
     setup_color_pairs()
-    stdscr.clear()
-    win0 = curses.newwin(curses.LINES // 2, curses.COLS, 0, 0)
-    win0.scrollok(True)
-    y = curses.LINES // 2  # Draw horizontal line to separate windows
-    for x in range(curses.COLS):  # Draw across the entire width of the screen
-        stdscr.addch(y, x, curses.ACS_HLINE)  # Using horizontal line character
-    win1 = curses.newwin(curses.LINES // 2 - 1, curses.COLS, curses.LINES // 2 + 1, 0)
-    win1.scrollok(True)
+
     jlink = pylink.JLink()
     jlink.open()
     jlink.connect(chip_name='ATSAMD51P20A')
     jlink.rtt_start()
 
-    win0.nodelay(True)
+    def redraw_windows():
+        stdscr.clear()  # Clear the main screen (stdscr)
+        rows, cols = stdscr.getmaxyx()  # Get the new dimensions of the screen
 
-    stdscr.refresh()
+        # Reinitialize windows with new dimensions
+        win0 = curses.newwin(rows // 2, cols, 0, 0)
+        win1 = curses.newwin(rows // 2 - 1, cols, rows // 2 + 1, 0)
+        win0.scrollok(True)
+        win1.scrollok(True)
+        win0.nodelay(True)
+
+        # Redraw the horizontal separator line
+        y = rows // 2
+        for x in range(cols):
+            stdscr.addch(y, x, curses.ACS_HLINE)
+
+        stdscr.refresh()
+        return win0, win1
+
+    win0, win1 = redraw_windows()
 
     user_input = ""
 
     while True:
         # Check for user input
         ch = win0.getch()
+        if ch == curses.KEY_RESIZE:
+            #Not sure if this ever works...
+            win0, win1 = redraw_windows()
+            continue
         if 0 < ch <= 127:
             if ch == 8: # If the user presses backspace, move the cursor back one space
                 if len(user_input) == 0:
@@ -157,9 +165,17 @@ def main():
     current_time = datetime.datetime.now()
     log_filename = current_time.strftime("%Y-%m-%d_%H-%M-%S.log")
     log_file_path = os.path.join(logs_path, log_filename)
+
+    def curses_opener(stdscr):
+        with open (log_file_path, "w") as file:
+            try:
+                open_rtt_channels(stdscr, log_file_path)
+            except Exception as e:
+                #Clean up the whole curses thing
+                print(f"An error occurred: {e}")
+                curses.endwin()
     
-    with open (log_file_path, "w") as file:
-        curses.wrapper(lambda stdscr: open_rtt_channels(stdscr, file))
+    curses.wrapper(curses_opener)
 
 if __name__ == "__main__":
-    
+    main()
