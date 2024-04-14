@@ -27,6 +27,7 @@
    - To connect to the PVDXos Shell, use Telnet to establish a connection to localhost:19021. You can use PuTTY for this on Windows, or `nc localhost 19021` to connect with netcat on a Mac/Linux terminal
    - If using PuTTY, go to 'Terminal' and check the box for 'Implicit CR in every LF' so that line endings work correctly
    - Log output can be viewed by running `python3 scripts/rtt_logs.py` in a separate terminal window. This will also record logs to the `/logs` folder.
+   - - If the script fails to run, you may need to install 'pylink-square' (`pip install pylink-square`)
    - Alternatively, you can try running `python3 scripts/rtt_splitscreen.py` for both the PVDXos Shell and log output in the same terminal window, but this might not work!
 
 ## Toolchain Installation
