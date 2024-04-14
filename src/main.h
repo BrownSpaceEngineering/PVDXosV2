@@ -1,3 +1,6 @@
+#ifndef MAIN_H
+#define MAIN_H
+
 #include "SEGGER_RTT.h"
 #include "cosmicmonkey_task.h"
 #include "globals.h"
@@ -48,5 +51,4 @@ If you want to get rid of the red squiggly lines:
     #error "Multiple build type flags set! (UNITTEST && RELEASE) Must be exactly one of: {DEVBUILD, UNITTEST, RELEASE}"
 #endif
 
-int main(void);
-void hardware_init(void);
+#endif // MAIN_H

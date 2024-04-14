@@ -4,10 +4,12 @@
 
 cosmicmonkeyTaskArguments_t cm_args = {0};
 
+static status_t PVDX_init(void);
+
 int main(void) {
     /* Initializes MCU, drivers and middleware */
     atmel_start_init();
-    hardware_init();
+    PVDX_init();
     info_impl(RTT_CTRL_RESET RTT_CTRL_CLEAR); //Reset the terminal
     info_impl("--- Atmel & Hardware Initialization Complete ---\n");
     info_impl("[+] Build Type: %s\n", BUILD_TYPE);
@@ -129,12 +131,12 @@ int main(void) {
     }
 }
 
-void hardware_init() {
+static status_t PVDX_init() {
     // Segger Buffer 0 is pre-configured at compile time according to segger documentation
     // Config the logging output channel (assuming it's not zero)
     if (LOGGING_RTT_OUTPUT_CHANNEL != 0) {
         SEGGER_RTT_ConfigUpBuffer(LOGGING_RTT_OUTPUT_CHANNEL, "Log Output", SEGGER_RTT_LOG_BUFFER, SEGGER_RTT_LOG_BUFFER_SIZE,
                                   SEGGER_RTT_MODE_NO_BLOCK_SKIP);
     }
-    return;
+    return SUCCESS;
 }
