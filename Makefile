@@ -41,7 +41,7 @@ export EXTRA_VPATH := \
 ../../src \
 ../../src/tasks \
 ../../src/tasks/heartbeat \
-../../src/tfasks/watchdog \
+../../src/tasks/watchdog \
 ../../src/misc \
 ../../src/misc/printf \
 ../../src/misc/rtos_support \
