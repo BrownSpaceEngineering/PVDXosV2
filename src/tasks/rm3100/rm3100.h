@@ -1,7 +1,10 @@
 #ifndef RM3100_H_
 #define RM3100_H_
 
+#include <atmel_start.h>
+#include <driver_init.h>
 #include "globals.h"
+#include "rtos_start.h"
 
 //Need to put the holy grail of values here
 #define RM3100Address 0x20 // Hexadecimal slave address for RM3100 with Pin 2 and Pin 4 set to LOW

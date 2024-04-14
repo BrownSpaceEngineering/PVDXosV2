@@ -32,7 +32,7 @@ export OBJS := \
 ../src/tasks/shell/shell_main.o \
 ../src/tasks/shell/shell_helpers.o \
 ../src/tasks/shell/shell_commands.o \
-../src/sensor_drivers/rm3100.o \
+../src/tasks/rm3100/rm3100.o \
 
 
 
@@ -54,7 +54,7 @@ export EXTRA_VPATH := \
 ../../src/tasks/task_manager \
 ../../src/tasks/display/image_buffers \
 ../../src/tasks/shell \
-../../src/sensor_drivers \
+../../src/tasks/rm3100 \
 
 
 ###############################################################################

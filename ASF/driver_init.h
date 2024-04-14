@@ -43,6 +43,8 @@ extern struct adc_sync_descriptor ADC_1;
 extern struct usart_sync_descriptor USART_0;
 extern struct spi_m_sync_descriptor SPI_0;
 
+extern struct i2c_m_sync_desc I2C_0;
+
 extern struct rand_sync_desc RAND_0;
 
 extern struct wdt_descriptor WDT_0;

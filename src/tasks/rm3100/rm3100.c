@@ -5,6 +5,7 @@
  * By: Nathan Kim
 */
 #include "rm3100.h"
+#include "logging.h"
 
 //Io descriptor for the RM3100
 struct io_descriptor *rm3100_io;
@@ -23,7 +24,7 @@ int init_rm3100(void) {
     uint8_t revid;
     uint32_t error = RM3100ReadReg(RM3100_REVID_REG, &revid);
     if (revid != 0x22) {
-        printf("RM3100 not detected correctly! Errored with code: %ld\n", error);
+        warning("RM3100 not detected correctly! Errored with code: %ld\n", error);
         return -1;
     }
 
@@ -94,7 +95,7 @@ void changeCycleCount(uint16_t newCC) {
     returnVal = RM3100WriteReg(RM3100_CCZ0_REG, CCLSB);
 
     if ((int32_t) returnVal < 0) {
-        printf("It errored\n");
+        debug("It errored\n");
     }
 }
 
@@ -103,10 +104,10 @@ int32_t RM3100ReadReg(uint8_t addr, uint8_t *val) {
     writeBuf[0] = addr;
     int32_t rv;
     if ((rv = io_write(rm3100_io, writeBuf, 1)) != 0){
-        printf("Error in RM3100 Write");
+        warning("Error in RM3100 Write");
     } else {
         if ((rv = io_read(rm3100_io, val, 1)) != 0) {
-            printf("Error in RM3100 Write");
+            warning("Error in RM3100 Write");
         }
     }
     return rv;
