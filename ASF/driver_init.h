@@ -32,6 +32,8 @@ extern "C" {
 
 #include <hal_delay.h>
 
+#include <hal_rand_sync.h>
+
 #include <hal_wdt.h>
 
 extern struct adc_sync_descriptor ADC_0;
@@ -42,6 +44,8 @@ extern struct usart_sync_descriptor USART_0;
 
 extern struct i2c_m_sync_desc       I2C_0;
 extern struct spi_m_sync_descriptor SPI_0;
+
+extern struct rand_sync_desc RAND_0;
 
 extern struct wdt_descriptor WDT_0;
 
@@ -66,6 +70,9 @@ void SPI_0_CLOCK_init(void);
 void SPI_0_init(void);
 
 void delay_driver_init(void);
+
+void RAND_0_CLOCK_init(void);
+void RAND_0_init(void);
 
 void WDT_0_CLOCK_init(void);
 void WDT_0_init(void);
