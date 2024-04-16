@@ -7,15 +7,15 @@ void watchdog_main(void *pvParameters) {
         // Iterate through the running times and check if any tasks have not checked in within the allowed time
         uint32_t current_time = xTaskGetTickCount();
 
-        for (int i = 0; i < NUM_TASKS; i++) {
-            if (should_checkin[i]) {
-                uint32_t time_since_last_checkin = current_time - running_times[i];
+        for (int i = 0; taskList[i].id != NULL; i++) {
+            if (taskList[i].shouldCheckin) {
+                uint32_t time_since_last_checkin = current_time - taskList[i].lastCheckin;
 
-                if (time_since_last_checkin > allowed_times[i]) {
+                if (time_since_last_checkin > taskList[i].watchdogTimeout) {
                     // The task has not checked in within the allowed time, so we should reset the system
-                    fatal("watchdog: Task %d has not checked in within the allowed time! (time since last checkin: %d, allowed time: %d). "
+                    fatal("watchdog: %s Task has not checked in within the allowed time! (time since last checkin: %d, allowed time: %d). "
                           "Resetting system...\n",
-                          i, time_since_last_checkin, allowed_times[i]);
+                          taskList[i].name, time_since_last_checkin, taskList[i].watchdogTimeout);
                     watchdog_kick();
                 }
             }
