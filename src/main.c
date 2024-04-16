@@ -34,7 +34,7 @@ int main(void) {
         xTaskCreateStatic(task_manager_init, "TaskManagerInit", TASK_MANAGER_TASK_STACK_SIZE, NULL, 2, taskManagerMem.taskManagerTaskStack,
                           &taskManagerMem.taskManagerTaskTCB);
 
-    watchdog_register_task(TASK_MANAGER_TASK);
+    watchdog_register_task(TASK_MANAGER_TASK_ID);
 
     if (taskManagerInitializerTaskHandle == NULL) {
         fatal("main: TaskManagerInitializer task creation failed!\n");

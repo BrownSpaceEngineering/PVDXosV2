@@ -32,8 +32,8 @@ void watchdog_pet(void);
 void watchdog_kick(void);
 
 // The following functions return 0 on success, -1 on failure
-int watchdog_checkin(TaskHandle_t task_handle);
-int watchdog_register_task(TaskHandle_t task_handle);
-int watchdog_unregister_task(TaskHandle_t task_handle);
+int watchdog_checkin(TaskID_t id);
+int watchdog_register_task(TaskID_t id);
+int watchdog_unregister_task(TaskID_t id);
 
 #endif // WATCHDOG_TASK_H

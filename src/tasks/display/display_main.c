@@ -19,6 +19,6 @@ void display_main(void *pvParameters) {
         display_update();
         debug("Second image completed\n");
         vTaskDelay(pdMS_TO_TICKS(500));
-        watchdog_checkin(DISPLAY_TASK);
+        watchdog_checkin(DISPLAY_TASK_ID);
     }
 }

@@ -54,6 +54,6 @@ void heartbeat_main(void *pvParameters) {
         vTaskDelay(pdMS_TO_TICKS(500));
         #endif
 
-        watchdog_checkin(HEARTBEAT_TASK); // Check in with the watchdog
+        watchdog_checkin(HEARTBEAT_TASK_ID); // Check in with the watchdog
     }
 }
