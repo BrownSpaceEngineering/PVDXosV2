@@ -7,6 +7,7 @@
 #include "logging.h"
 #include "rtos_start.h"
 #include "watchdog_task.h"
+#include "command_executor_task.h"
 
 #include <atmel_start.h>
 #include <driver_init.h>
@@ -24,10 +25,19 @@ struct taskManagerTaskMemory {
 
 extern struct taskManagerTaskMemory taskManagerMem;
 
+typedef enum {
+    WATCHDOG_TASK_ID = 0,
+    TASK_MANAGER_TASK_ID,
+    COMMAND_EXECUTOR_TASK_ID,
+    DISPLAY_TASK_ID,
+    HEARTBEAT_TASK_ID,
+} TaskID_t;
+
 typedef struct {
-    TaskHandle_t handle;      // Handle to the task (used to communicate with the task)
-    TaskFunction_t function;  // Main entry point for the task
     char *name;               // Name of the task
+    TaskID_t id;              // ID of the task (used for accessing the task in the task list)
+    TaskHandle_t handle;      // FreeRTOS handle to the task
+    TaskFunction_t function;  // Main entry point for the task
     uint32_t stackSize;       // Size of the stack in words (multiply by 4 to get bytes)
     StackType_t *stackBuffer; // Buffer for the stack
     void *pvParameters;       // Parameters to pass to the task's main function
@@ -35,14 +45,15 @@ typedef struct {
     StaticTask_t *taskTCB;    // Task control block
     uint32_t watchdogTimeout; // How frequently the task should check in with the watchdog (in milliseconds)
     uint32_t lastCheckin;     // Last time the task checked in with the watchdog
-    bool shouldCheckin;       // Whether the task is being monitored by the watchdog
+    bool shouldCheckin;       // Whether the task is being monitored by the watchdog (initialized to NULL)
 } PVDXTask_t;
 
-// Global information about all tasks running on the system
+// Global information about all tasks running on the system. This list is null-terminated.
 extern PVDXTask_t taskList[];
 
 // Exposed Functions
 void task_manager_init(void);
 void task_manager_main(void *pvParameters);
+PVDXTask_t task_manager_get_task(TaskID_t id);
 
 #endif // TASK_MANAGER_TASK_H

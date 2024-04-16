@@ -6,6 +6,7 @@
 #include "hardware_watchdog_utils.h"
 #include "logging.h"
 #include "rtos_start.h"
+#include "task_manager_task.h"
 
 #define WATCHDOG_MS_DELAY 1000 // Controls how often the Watchdog thread runs and verifies task checkins
 
@@ -31,8 +32,8 @@ void watchdog_pet(void);
 void watchdog_kick(void);
 
 // The following functions return 0 on success, -1 on failure
-int watchdog_checkin(task_type_t task_index);
-int watchdog_register_task(task_type_t task_index);
-int watchdog_unregister_task(task_type_t task_index);
+int watchdog_checkin(TaskHandle_t task_handle);
+int watchdog_register_task(TaskHandle_t task_handle);
+int watchdog_unregister_task(TaskHandle_t task_handle);
 
 #endif // WATCHDOG_TASK_H
