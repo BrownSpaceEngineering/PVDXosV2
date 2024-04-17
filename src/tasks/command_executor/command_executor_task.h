@@ -31,8 +31,8 @@ typedef struct {
     char* p_data;
     size_t len;
     status_t* p_result;
-    (*callback)(status_t);
-};
+    void (*callback)(status_t* p_result);
+} cmd_t;
 
 // Exposed functions
 void command_executor_main(void* pvParameters);

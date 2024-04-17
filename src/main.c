@@ -28,18 +28,30 @@ int main(void) {
 
     // xTaskCreateStatic(main_func, "TaskName", StackSize, pvParameters, Priority, StackBuffer, TaskTCB);
 
-    // Create the TaskManager initialization task
-    // The taskManager initializer initializes all other tasks running on the system
-    TaskHandle_t taskManagerInitializerTaskHandle =
-        xTaskCreateStatic(task_manager_init, "TaskManagerInit", TASK_MANAGER_TASK_STACK_SIZE, NULL, 2, taskManagerMem.taskManagerTaskStack,
-                          &taskManagerMem.taskManagerTaskTCB);
+    // Find the task manager in the task list
+    for (int i = 0; taskList[i].name != NULL; i++) {
+        if (taskList[i].function == &task_manager_main) {
+            //Found the task manager!
+            taskList[i].handle = xTaskGetCurrentTaskHandle();
+            
+            taskList[i].handle = xTaskCreateStatic(
+                taskList[i].function, 
+                taskList[i].name, 
+                taskList[i].stackSize, 
+                taskList[i].pvParameters, 
+                taskList[i].priority, 
+                taskList[i].stackBuffer, 
+                taskList[i].taskTCB
+            );
 
-    watchdog_register_task(TASK_MANAGER_TASK_ID);
+            if (taskList[i].handle == NULL) {
+                fatal("task_manager_init: %s task creation failed!\n", taskList[i].name);
+            } else {
+                info("task_manager_init: %s task created!\n", taskList[i].name);
+            }
 
-    if (taskManagerInitializerTaskHandle == NULL) {
-        fatal("main: TaskManagerInitializer task creation failed!\n");
-    } else {
-        info("main: TaskManagerInitializer task created!\n");
+            watchdog_register_task(taskList[i].handle);
+        }
     }
 
     #if defined(UNITTEST) || defined(DEVBUILD)

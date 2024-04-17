@@ -11,11 +11,12 @@ bool watchdog_enabled = false;
 
 void watchdog_init(uint8_t watchdog_period, bool always_on) {
     // Initialize the 'lastCheckin' field of each task
-    for (int i = 0; taskList[i].id != NULL; i++) {
+    // Iterate using the 'name' field rather than the handle field, since not all tasks will have a handle at this point
+    for (int i = 0; taskList[i].name != NULL; i++) {
         taskList[i].lastCheckin = 0; // 0 Is a special value that indicates that the task has not checked in yet (or is not running)
     }
 
-    for (int i = 0; taskList[i].id != NULL; i++) {
+    for (int i = 0; taskList[i].name != NULL; i++) {
         taskList[i].shouldCheckin = false;
     }
 
@@ -84,8 +85,10 @@ void watchdog_kick(void) {
     // this function should never return because the system should reset
 }
 
-int watchdog_checkin(TaskID_t id) {
-    PVDXTask_t task = task_manager_get_task(id);
+int watchdog_checkin() {
+    //Tasks should only check-in for themselves, so we can get the task handle from RTOS
+    TaskHandle_t handle = xTaskGetCurrentTaskHandle();
+    PVDXTask_t task = task_manager_get_task(handle);
 
     if (!task.shouldCheckin) {
         return -1;
@@ -97,8 +100,11 @@ int watchdog_checkin(TaskID_t id) {
     return 0;
 }
 
-int watchdog_register_task(TaskID_t id) {
-    PVDXTask_t task = task_manager_get_task(id);
+int watchdog_register_task(TaskHandle_t handle) {
+    if (handle == NULL) {
+        fatal("Tried to register a NULL task handle\n");
+    }
+    PVDXTask_t task = task_manager_get_task(handle);
 
     if (task.shouldCheckin) {
         // something went wrong because we define unregistered tasks to have 'should_checkin' set to false
@@ -112,8 +118,11 @@ int watchdog_register_task(TaskID_t id) {
     return 0;
 }
 
-int watchdog_unregister_task(TaskID_t id) {
-    PVDXTask_t task = task_manager_get_task(id);
+int watchdog_unregister_task(TaskHandle_t handle) {
+    if (handle == NULL) {
+        fatal("Tried to unregister a NULL task handle\n");
+    }
+    PVDXTask_t task = task_manager_get_task(handle);
 
     if (!task.shouldCheckin) {
         // something went wrong because we define unregistered tasks to have 'should_checkin' set to false

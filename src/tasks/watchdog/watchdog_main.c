@@ -7,7 +7,7 @@ void watchdog_main(void *pvParameters) {
         // Iterate through the running times and check if any tasks have not checked in within the allowed time
         uint32_t current_time = xTaskGetTickCount();
 
-        for (int i = 0; taskList[i].id != NULL; i++) {
+        for (int i = 0; taskList[i].name != NULL; i++) {
             if (taskList[i].shouldCheckin) {
                 uint32_t time_since_last_checkin = current_time - taskList[i].lastCheckin;
 
@@ -21,7 +21,7 @@ void watchdog_main(void *pvParameters) {
             }
         }
 
-        watchdog_checkin(WATCHDOG_TASK_ID); // Watchdog checks in with itself
+        watchdog_checkin(); // Watchdog checks in with itself
 
         // if we get here, then all tasks have checked in within the allowed time
         watchdog_pet();

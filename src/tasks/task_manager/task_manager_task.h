@@ -25,17 +25,8 @@ struct taskManagerTaskMemory {
 
 extern struct taskManagerTaskMemory taskManagerMem;
 
-typedef enum {
-    WATCHDOG_TASK_ID = 0,
-    TASK_MANAGER_TASK_ID,
-    COMMAND_EXECUTOR_TASK_ID,
-    DISPLAY_TASK_ID,
-    HEARTBEAT_TASK_ID,
-} TaskID_t;
-
 typedef struct {
     char *name;               // Name of the task
-    TaskID_t id;              // ID of the task (used for accessing the task in the task list)
     TaskHandle_t handle;      // FreeRTOS handle to the task
     TaskFunction_t function;  // Main entry point for the task
     uint32_t stackSize;       // Size of the stack in words (multiply by 4 to get bytes)
@@ -54,6 +45,6 @@ extern PVDXTask_t taskList[];
 // Exposed Functions
 void task_manager_init(void);
 void task_manager_main(void *pvParameters);
-PVDXTask_t task_manager_get_task(TaskID_t id);
+PVDXTask_t task_manager_get_task(TaskHandle_t id);
 
 #endif // TASK_MANAGER_TASK_H

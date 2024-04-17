@@ -12,7 +12,6 @@
 /* ----------------------------------------------------------- */
 
 #define TASK_STACK_OVERFLOW_PADDING 16 // Buffer for the stack size so that overflow doesn't corrupt any TCBs
-#define size_t uint32_t;
 
 typedef enum {
     SUCCESS = 0,
