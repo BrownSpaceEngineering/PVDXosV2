@@ -91,7 +91,8 @@ int watchdog_checkin() {
     PVDXTask_t task = task_manager_get_task(handle);
 
     if (!task.shouldCheckin) {
-        return -1;
+        // something went wrong because a task that is checking in should have 'should_checkin' set to true
+        watchdog_kick();
     }
 
     // update the last checkin time

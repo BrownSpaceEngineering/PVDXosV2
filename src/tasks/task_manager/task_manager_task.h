@@ -44,6 +44,7 @@ extern PVDXTask_t taskList[];
 
 // Exposed Functions
 void task_manager_init(void);
+void task_manager_init_subtasks(void);
 void task_manager_main(void *pvParameters);
 PVDXTask_t task_manager_get_task(TaskHandle_t id);
 

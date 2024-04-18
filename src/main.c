@@ -26,33 +26,10 @@ int main(void) {
     watchdog_init(WDT_CONFIG_PER_CYC16384, true);
     info("Watchdog initialized\n");
 
-    // xTaskCreateStatic(main_func, "TaskName", StackSize, pvParameters, Priority, StackBuffer, TaskTCB);
+    // Initialize the task manager, which will initialize all other tasks on the system
+    task_manager_init();
+    info("Task Manager initialized\n");
 
-    // Find the task manager in the task list
-    for (int i = 0; taskList[i].name != NULL; i++) {
-        if (taskList[i].function == &task_manager_main) {
-            //Found the task manager!
-            taskList[i].handle = xTaskGetCurrentTaskHandle();
-            
-            taskList[i].handle = xTaskCreateStatic(
-                taskList[i].function, 
-                taskList[i].name, 
-                taskList[i].stackSize, 
-                taskList[i].pvParameters, 
-                taskList[i].priority, 
-                taskList[i].stackBuffer, 
-                taskList[i].taskTCB
-            );
-
-            if (taskList[i].handle == NULL) {
-                fatal("task_manager_init: %s task creation failed!\n", taskList[i].name);
-            } else {
-                info("task_manager_init: %s task created!\n", taskList[i].name);
-            }
-
-            watchdog_register_task(taskList[i].handle);
-        }
-    }
 
     #if defined(UNITTEST) || defined(DEVBUILD)
         #if defined(UNITTEST)
