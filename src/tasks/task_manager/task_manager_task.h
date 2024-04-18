@@ -8,6 +8,7 @@
 #include "rtos_start.h"
 #include "watchdog_task.h"
 #include "command_executor_task.h"
+#include "shell_task.h"
 
 #include <atmel_start.h>
 #include <driver_init.h>
@@ -27,6 +28,7 @@ extern struct taskManagerTaskMemory taskManagerMem;
 
 typedef struct {
     char *name;               // Name of the task
+    bool enabled;             // Whether the task is enabled
     TaskHandle_t handle;      // FreeRTOS handle to the task
     TaskFunction_t function;  // Main entry point for the task
     uint32_t stackSize;       // Size of the stack in words (multiply by 4 to get bytes)

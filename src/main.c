@@ -36,20 +36,6 @@ int main(void) {
     task_manager_init();
     info("Task Manager initialized\n");
 
-
-    // ------- SHELL TASK -------
-
-    TaskHandle_t shellTaskHandle =
-        xTaskCreateStatic(shell_main, "Shell", SHELL_TASK_STACK_SIZE, NULL, 2, shellMem.shellTaskStack, &shellMem.shellTaskTCB);
-
-    watchdog_register_task(SHELL_TASK); // Register the shell task with the watchdog so that it can check in
-
-    if (shellTaskHandle == NULL) {
-        fatal("main: Shell task creation failed!\n");
-    } else {
-        info("main: Shell task created!\n");
-    }
-
     // ------- COSMIC MONKEY TASK -------
 
     #if defined(UNITTEST) || defined(DEVBUILD)
@@ -73,6 +59,7 @@ int main(void) {
     // Start the scheduler
     vTaskStartScheduler();
     fatal("vTaskStartScheduler Returned! -- Should never happen!\n");
+
     while (true) {
         // Loop forever, but we should never get here anyways
     }

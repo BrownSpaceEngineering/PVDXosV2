@@ -97,7 +97,7 @@ int watchdog_checkin() {
 
     // update the last checkin time
     task.lastCheckin = xTaskGetTickCount();
-    debug("watchdog: %s Task checked in\n", task.name);
+    debug("watchdog: %s task checked in\n", task.name);
     return 0;
 }
 
@@ -115,7 +115,7 @@ int watchdog_register_task(TaskHandle_t handle) {
     // initialize running times and require the task to check in
     task.lastCheckin = xTaskGetTickCount();
     task.shouldCheckin = true;
-    debug("watchdog: %s Task registered\n", task.name);
+    debug("watchdog: %s task registered\n", task.name);
     return 0;
 }
 
@@ -133,6 +133,6 @@ int watchdog_unregister_task(TaskHandle_t handle) {
 
     task.lastCheckin = 0xDEADBEEF; // 0xDEADBEEF is a special value that indicates that the task is not running
     task.shouldCheckin = false;
-    debug("watchdog: %s Task unregistered\n", task.name);
+    debug("watchdog: %s task unregistered\n", task.name);
     return 0;
 }
