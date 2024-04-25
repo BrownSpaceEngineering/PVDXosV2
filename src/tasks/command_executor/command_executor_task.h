@@ -12,6 +12,7 @@
 #define COMMAND_EXECUTOR_TASK_STACK_SIZE  128            // Size of the stack in words (multiply by 4 to get bytes)
 #define MAX_COMMANDS                      50             // Maximum number of commands that can be queued at once
 #define QUEUE_ITEM_SIZE                   sizeof(void*)  // Size of each item in the queue
+#define COMMAND_QUEUE_WAIT_MS             1000           // Wait time for receiving a command from the queue (in ms)
 
 // Placed in a struct to ensure that the TCB is placed higher than the stack in memory
 //^ This ensures that stack overflows do not corrupt the TCB (since the stack grows downwards)
