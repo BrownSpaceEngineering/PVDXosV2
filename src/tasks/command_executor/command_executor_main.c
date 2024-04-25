@@ -10,9 +10,6 @@ void command_executor_main(void *pvParameters) {
     BaseType_t xStatus;
 
     while (true) {
-        // TODO: Implement command execution
-        // don't forget to checkin with the watchdog
-
         // Check if there is a command to execute
         xStatus = xQueueReceive(commandQueue, &p_cmd, 0);
 
@@ -24,5 +21,8 @@ void command_executor_main(void *pvParameters) {
             // No command to execute, or error occurred, delay
             vTaskDelay(pdMS_TO_TICKS(100));
         }
+
+        // Check in with the watchdog
+        watchdog_checkin();
     }
 }

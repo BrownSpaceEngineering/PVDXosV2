@@ -85,7 +85,7 @@ void watchdog_kick(void) {
     // this function should never return because the system should reset
 }
 
-int watchdog_checkin() {
+void watchdog_checkin(void) {
     //Tasks should only check-in for themselves, so we can get the task handle from RTOS
     TaskHandle_t handle = xTaskGetCurrentTaskHandle();
     PVDXTask_t task = task_manager_get_task(handle);
@@ -98,10 +98,9 @@ int watchdog_checkin() {
     // update the last checkin time
     task.lastCheckin = xTaskGetTickCount();
     debug("watchdog: %s task checked in\n", task.name);
-    return 0;
 }
 
-int watchdog_register_task(TaskHandle_t handle) {
+void watchdog_register_task(TaskHandle_t handle) {
     if (handle == NULL) {
         fatal("Tried to register a NULL task handle\n");
     }
@@ -116,13 +115,13 @@ int watchdog_register_task(TaskHandle_t handle) {
     task.lastCheckin = xTaskGetTickCount();
     task.shouldCheckin = true;
     debug("watchdog: %s task registered\n", task.name);
-    return 0;
 }
 
-int watchdog_unregister_task(TaskHandle_t handle) {
+void watchdog_unregister_task(TaskHandle_t handle) {
     if (handle == NULL) {
         fatal("Tried to unregister a NULL task handle\n");
     }
+    
     PVDXTask_t task = task_manager_get_task(handle);
 
     if (!task.shouldCheckin) {
@@ -134,5 +133,4 @@ int watchdog_unregister_task(TaskHandle_t handle) {
     task.lastCheckin = 0xDEADBEEF; // 0xDEADBEEF is a special value that indicates that the task is not running
     task.shouldCheckin = false;
     debug("watchdog: %s task unregistered\n", task.name);
-    return 0;
 }

@@ -30,10 +30,8 @@ void watchdog_main(void *pvParameters);
 void watchdog_early_warning_callback(void);
 void watchdog_pet(void);
 void watchdog_kick(void);
-
-// The following functions return 0 on success, -1 on failure
-int watchdog_checkin();
-int watchdog_register_task(TaskHandle_t handle);
-int watchdog_unregister_task(TaskHandle_t handle);
+void watchdog_checkin(void);
+void watchdog_register_task(TaskHandle_t handle);
+void watchdog_unregister_task(TaskHandle_t handle);
 
 #endif // WATCHDOG_TASK_H
