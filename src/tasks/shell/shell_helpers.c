@@ -6,7 +6,7 @@ size_t get_line_from_terminal(uint8_t *p_linebuffer) {
     size_t linebuffer_idx = 0;
     while (1) {
         // This is really the loop that we expect the program to spend most of its time in, so pet the watchdog here
-        watchdog_checkin(SHELL_TASK);
+        watchdog_checkin();
 
         int character_read = SEGGER_RTT_GetKey();
         if (character_read < 0 || character_read > 255) {
