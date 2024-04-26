@@ -1,11 +1,13 @@
 #ifndef COSMICMONKEY_TASK_H
 #define COSMICMONKEY_TASK_H
 
+// Includes
 #include <atmel_start.h>
 #include <driver_init.h>
 #include "globals.h"
 #include "rtos_start.h"
 
+// Constants
 #define COSMICMONKEY_TASK_STACK_SIZE 128
 
 struct cosmicmonkeyTaskMemory {

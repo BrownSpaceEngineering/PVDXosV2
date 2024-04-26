@@ -1,6 +1,7 @@
 #ifndef SHELL_TASK_H
 #define SHELL_TASK_H
 
+// Includes
 #include "globals.h"
 #include "rtos_start.h"
 #include "watchdog_task.h"
@@ -8,6 +9,7 @@
 #include <atmel_start.h>
 #include <driver_init.h>
 
+// Constants
 #define SHELL_ASCII_ART                                                                                                                    \
     " ______     ________  __\n"                                                                                                           \
     "|  _ \\ \\   / /  _ \\ \\/ /___  ___  \n"                                                                                             \

@@ -30,6 +30,7 @@ export OBJS := \
 ../src/tasks/cosmic_monkey/cosmicmonkey_helpers.o \
 ../src/tasks/display/display_main.o \
 ../src/tasks/display/display_helpers.o \
+../src/tasks/display/display_hal.o \
 ../src/tasks/task_manager/task_manager_main.o \
 ../src/tasks/task_manager/task_manager_helpers.o \
 ../src/tasks/command_executor/command_executor_main.o \

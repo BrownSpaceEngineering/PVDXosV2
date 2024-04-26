@@ -1,6 +1,7 @@
 #ifndef WATCHDOG_TASK_H
 #define WATCHDOG_TASK_H
 
+// Includes
 #include "globals.h"
 #include "atmel_start.h"
 #include "hardware_watchdog_utils.h"
@@ -8,6 +9,7 @@
 #include "rtos_start.h"
 #include "task_manager_task.h"
 
+// Constants
 #define WATCHDOG_MS_DELAY 1000 // Controls how often the Watchdog thread runs and verifies task checkins
 
 // Memory for the watchdog task

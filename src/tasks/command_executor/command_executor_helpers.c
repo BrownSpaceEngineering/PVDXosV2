@@ -6,7 +6,7 @@ QueueHandle_t commandQueue;
 
 // Initialize the command queue, which stores pointers to command structs
 void command_executor_init(void) {
-    commandQueue = xQueueCreateStatic(MAX_COMMANDS, QUEUE_ITEM_SIZE, commandExecutorQueueBuffer, &commandExecutorMem.commandQueue);
+    commandQueue = xQueueCreateStatic(MAX_COMMANDS, QUEUE_ITEM_SIZE, commandExecutorQueueBuffer, &commandExecutorMem.commandExecutorTaskQueue);
 
     if (commandQueue == NULL) {
         fatal("command-executor: Failed to create command queue!\n");
@@ -22,4 +22,18 @@ void command_executor_enqueue(cmd_t* p_cmd) {
     if (xStatus != pdPASS) {
         fatal("command-executor: %s task failed to enqueue command!\n", callingTask.name);
     }
+}
+
+// Forward a dequeued command to the appropriate task for execution
+void command_executor_exec(cmd_t* p_cmd) {
+    switch (p_cmd->target) {
+        case TASK_DISPLAY:
+            display_exec(p_cmd);
+            break;
+        default:
+            fatal("command-executor: Invalid target task!\n");
+            break;
+    }
+
+    // all subtask exec functions should only ever be called from the command executor
 }

@@ -14,13 +14,18 @@ void command_executor_main(void *pvParameters) {
         // --------------------------------------
         // When xQueueReceive() is called with a non-zero timeout and the queue is empty, it will block the calling 
         // task until either an item is received or the timeout period expires. If an item arrives during the timeout 
-        // period, the task will unblock immediately, retrieve the item, and proceed with processing. This way, the
+        // period, the task will unblock immediately, retrieve the item, and proceed with processing. This way, the 
         // command executor task will not consume CPU cycles when there are no commands to execute.
         xStatus = xQueueReceive(commandQueue, &p_cmd, pdMS_TO_TICKS(COMMAND_QUEUE_WAIT_MS));
 
         if (xStatus == pdPASS) {
             // Command received, so execute it
+            debug("command_executor: Command popped off queue.\n");
             command_executor_exec(p_cmd);
+        }
+        else {
+            // No command received, so continue
+            debug("command_executor: No commands queued.\n")
         }
 
         // Check in with the watchdog

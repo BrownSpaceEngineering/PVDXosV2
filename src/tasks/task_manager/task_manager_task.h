@@ -1,19 +1,21 @@
 #ifndef TASK_MANAGER_TASK_H
 #define TASK_MANAGER_TASK_H
 
-#include "display_task.h"
+// Includes
 #include "globals.h"
-#include "heartbeat_task.h"
 #include "logging.h"
 #include "rtos_start.h"
-#include "watchdog_task.h"
-#include "command_executor_task.h"
-#include "shell_task.h"
-
 #include <atmel_start.h>
 #include <driver_init.h>
+#include "display_task.h"
+#include "heartbeat_task.h"
+#include "watchdog_task.h"
+#include "shell_task.h"
+#include "command_executor_task.h"
 
-// Memory for the heartbeat task
+// Constants
+
+// Memory for the task manager task
 #define TASK_MANAGER_TASK_STACK_SIZE 128 // Size of the stack in words (multiply by 4 to get bytes)
 
 // Placed in a struct to ensure that the TCB is placed higher than the stack in memory
@@ -26,6 +28,7 @@ struct taskManagerTaskMemory {
 
 extern struct taskManagerTaskMemory taskManagerMem;
 
+// A struct defining a task's lifecycle in the PVDXos RTOS
 typedef struct {
     char *name;               // Name of the task
     bool enabled;             // Whether the task is enabled

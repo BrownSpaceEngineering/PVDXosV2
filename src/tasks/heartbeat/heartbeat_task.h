@@ -1,6 +1,7 @@
 #ifndef HEARTBEAT_TASK_H
 #define HEARTBEAT_TASK_H
 
+// Includes
 #include <atmel_start.h>
 #include <driver_init.h>
 #include "globals.h"
