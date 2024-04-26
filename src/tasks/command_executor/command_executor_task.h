@@ -13,8 +13,8 @@
 
 // Constants
 #define COMMAND_EXECUTOR_TASK_STACK_SIZE  128            // Size of the stack in words (multiply by 4 to get bytes)
-#define MAX_COMMANDS                      15             // Maximum number of commands that can be queued at once
-#define QUEUE_ITEM_SIZE                   sizeof(void*)  // Size of each item in the queue
+#define COMMAND_QUEUE_MAX_COMMANDS        15             // Maximum number of commands that can be queued at once for any task
+#define COMMAND_QUEUE_ITEM_SIZE           sizeof(cmd_t)  // Size of each item in command queues
 #define COMMAND_QUEUE_WAIT_MS             1000           // Wait time for receiving a command from the queue (in ms)
 
 // Placed in a struct to ensure that the TCB is placed higher than the stack in memory
@@ -43,7 +43,7 @@ typedef enum {
     OPERATION_SET_BUFFER = 0,
     OPERATION_UPDATE,
     OPERATION_POWER_OFF, 
-    OPERATION_SET_LEVEL,
+    OPERATION_SET_LOG_LEVEL,
 } operation_t;
 
 // A struct to represent a command that the command-executor can execute
@@ -59,6 +59,6 @@ typedef struct {
 // Exposed functions
 void command_executor_init(void);
 void command_executor_main(void* pvParameters);
-void command_executor_enqueue(cmd_t* p_cmd);
+void command_executor_enqueue(cmd_t cmd);
 
 #endif // COMMAND_EXECUTOR_H

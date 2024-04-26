@@ -6,7 +6,7 @@ void command_executor_main(void *pvParameters) {
 
     info("command_executor: Task Started!");
 
-    cmd_t* p_cmd;
+    cmd_t cmd;
     BaseType_t xStatus;
 
     while (true) {
@@ -16,12 +16,12 @@ void command_executor_main(void *pvParameters) {
         // task until either an item is received or the timeout period expires. If an item arrives during the timeout 
         // period, the task will unblock immediately, retrieve the item, and proceed with processing. This way, the 
         // command executor task will not consume CPU cycles when there are no commands to execute.
-        xStatus = xQueueReceive(commandQueue, &p_cmd, pdMS_TO_TICKS(COMMAND_QUEUE_WAIT_MS));
+        xStatus = xQueueReceive(commandQueue, &cmd, pdMS_TO_TICKS(COMMAND_QUEUE_WAIT_MS));
 
         if (xStatus == pdPASS) {
             // Command received, so execute it
             debug("command_executor: Command popped off queue.\n");
-            command_executor_exec(p_cmd);
+            command_executor_exec(cmd);
         }
         else {
             // No command received, so continue
