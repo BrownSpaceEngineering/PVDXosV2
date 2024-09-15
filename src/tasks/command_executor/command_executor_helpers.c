@@ -26,9 +26,16 @@ void command_executor_enqueue(cmd_t cmd) {
 
 // Forward a dequeued command to the appropriate task for execution
 void command_executor_exec(cmd_t cmd) {
+    BaseType_t xStatus;
+
     switch (cmd.target) {
         case TASK_DISPLAY:
-            display_exec(cmd);
+            xStatus = xQueueSendToBack(displayQueue, &cmd, 0);
+
+            if (xStatus != pdPASS) {
+                fatal("command-executor: Failed to forward command to display task!\n");
+            }
+            
             break;
         default:
             fatal("command-executor: Invalid target task!\n");

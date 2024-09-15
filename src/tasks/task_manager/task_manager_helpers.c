@@ -87,6 +87,21 @@ void init_task(int i) {
     watchdog_register_task(taskList[i].handle);
 }
 
+status_t toggle_task(int i) {
+    if (taskList[i].handle == NULL) {
+        fatal("Task to be toggled was never initialized\n");
+        return ERROR_UNINITIALIZED;
+    }
+
+    if (taskList[i].enabled) {
+        vTaskSuspend(taskList[i].handle);
+    } else {
+        vTaskResume(taskList[i].handle);
+    }
+    taskList[i].enabled = !taskList[i].enabled;
+    return SUCCESS;
+}
+
 // Returns the PVDXTask_t struct associated with a FreeRTOS task handle
 PVDXTask_t task_manager_get_task(TaskHandle_t handle) {
     for (int i = 0; taskList[i].name != NULL; i++) {

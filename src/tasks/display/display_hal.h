@@ -77,7 +77,7 @@
 #define POINT uint16_t // 16 bits per coordinate (larger than 8-bit for overflow checking)
 #define COLOR uint8_t // 4 bits per pixel (16 greyscale levels)
 
-// Exposed Functions
+// Initializes display hardware parameters
 status_t display_init(void);
 
 // Variables

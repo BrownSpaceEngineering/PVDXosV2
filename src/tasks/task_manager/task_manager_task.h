@@ -51,6 +51,7 @@ extern PVDXTask_t taskList[];
 void task_manager_init(void);
 void task_manager_init_subtasks(void);
 void task_manager_main(void *pvParameters);
+status_t toggle_task(int i)
 PVDXTask_t task_manager_get_task(TaskHandle_t id);
 
 #endif // TASK_MANAGER_TASK_H

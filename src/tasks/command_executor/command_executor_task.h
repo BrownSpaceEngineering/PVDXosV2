@@ -15,15 +15,15 @@
 #define COMMAND_EXECUTOR_TASK_STACK_SIZE  128            // Size of the stack in words (multiply by 4 to get bytes)
 #define COMMAND_QUEUE_MAX_COMMANDS        15             // Maximum number of commands that can be queued at once for any task
 #define COMMAND_QUEUE_ITEM_SIZE           sizeof(cmd_t)  // Size of each item in command queues
-#define COMMAND_QUEUE_WAIT_MS             1000           // Wait time for receiving a command from the queue (in ms)
+#define COMMAND_QUEUE_WAIT_MS             1000           // Wait time for sending/receiving a command to/from the queue (in ms)
 
 // Placed in a struct to ensure that the TCB is placed higher than the stack in memory
 //^ This ensures that stack overflows do not corrupt the TCB (since the stack grows downwards)
 struct commandExecutorTaskMemory {
     StackType_t OverflowBuffer[TASK_STACK_OVERFLOW_PADDING];
     StackType_t commandExecutorTaskStack[COMMAND_EXECUTOR_TASK_STACK_SIZE];
-    StaticTask_t commandExecutorTaskTCB;
     StaticQueue_t commandExecutorTaskQueue;
+    StaticTask_t commandExecutorTaskTCB;
 };
 
 extern struct commandExecutorTaskMemory commandExecutorMem;
@@ -31,7 +31,7 @@ extern struct commandExecutorTaskMemory commandExecutorMem;
 // Queue for commands to be executed by the command executor
 extern QueueHandle_t commandQueue;
 
-// An enum to represent the varous tasks/daemons that the command executor can interact with
+// An enum to represent the various tasks/daemons that the command executor can interact with
 typedef enum {
     TASK_COMMAND_EXECUTOR = 0,
     TASK_DISPLAY,

@@ -16,11 +16,14 @@
 struct displayTaskMemory {
     StackType_t OverflowBuffer[TASK_STACK_OVERFLOW_PADDING];
     StackType_t displayTaskStack[DISPLAY_TASK_STACK_SIZE];
-    StaticTask_t displayTaskTCB;
     StaticQueue_t displayTaskQueue;
+    StaticTask_t displayTaskTCB;
 };
 
 extern struct displayTaskMemory displayMem;
+
+// Queue for commands to be executed by the display task
+extern QueueHandle_t displayQueue;
 
 // Exposed Functions
 void display_main(void *pvParameters);

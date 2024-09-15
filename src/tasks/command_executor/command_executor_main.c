@@ -1,10 +1,10 @@
 #include "command_executor_task.h"
 
 void command_executor_main(void *pvParameters) {
+    info("command_executor: Task Started!");
+
     // Initialize the command queue
     command_executor_init();
-
-    info("command_executor: Task Started!");
 
     cmd_t cmd;
     BaseType_t xStatus;
