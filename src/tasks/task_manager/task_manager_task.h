@@ -14,15 +14,17 @@
 #include "command_executor_task.h"
 
 // Constants
-
-// Memory for the task manager task
-#define TASK_MANAGER_TASK_STACK_SIZE 128 // Size of the stack in words (multiply by 4 to get bytes)
+#define TASK_MANAGER_TASK_STACK_SIZE           128            // Size of the stack in words (multiply by 4 to get bytes)
+#define TASK_MANAGER_QUEUE_MAX_COMMANDS        15             // Maximum number of commands that can be queued at once for any task
+#define TASK_MANAGER_QUEUE_ITEM_SIZE           sizeof(cmd_t)  // Size of each item in command queues
+#define TASK_MANAGER_QUEUE_WAIT_MS             1000           // Wait time for sending/receiving a command to/from the queue (in ms)
 
 // Placed in a struct to ensure that the TCB is placed higher than the stack in memory
 //^ This ensures that stack overflows do not corrupt the TCB (since the stack grows downwards)
 struct taskManagerTaskMemory {
     StackType_t OverflowBuffer[TASK_STACK_OVERFLOW_PADDING];
     StackType_t taskManagerTaskStack[TASK_MANAGER_TASK_STACK_SIZE];
+    StaticQueue_t taskManagerTaskQueue;
     StaticTask_t taskManagerTaskTCB;
 };
 

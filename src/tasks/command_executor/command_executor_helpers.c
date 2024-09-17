@@ -29,6 +29,21 @@ void command_executor_exec(cmd_t cmd) {
     BaseType_t xStatus;
 
     switch (cmd.target) {
+        case TASK_MANAGER:
+            break;
+        case TASK_SHELL:
+            break;
+        case TASK_HEARTBEAT:
+            break;
+        case TASK_MAGNETOMETER:
+            fatal("command-executor: Failed; Magnetometer queue does not exist");
+            break;
+        case TASK_CAMERA:
+            fatal("command-executor: Failed; Camera queue does not exist");
+            break;
+        case TASK_9AXIS:
+            fatal("command-executor: Failed; 9Axis queue does not exist");
+            break;
         case TASK_DISPLAY:
             xStatus = xQueueSendToBack(displayQueue, &cmd, 0);
 

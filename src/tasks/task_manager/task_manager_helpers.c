@@ -3,6 +3,8 @@
 #include "logging.h"
 
 struct taskManagerTaskMemory taskManagerMem;
+uint8_t task_manager_queue_buffer[TASK_MANAGER_QUEUE_MAX_COMMANDS * TASK_MANAGER_QUEUE_ITEM_SIZE];
+QueueHandle_t task_manager_queue;
 
 #define NULL_TASK ((PVDXTask_t){NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL})
 
@@ -35,6 +37,12 @@ PVDXTask_t taskList[] = {
 
 // Initializes the task manager task (it should be the first task in the global task list)
 void task_manager_init(void) {
+    task_manager_queue = xQueueCreateStatic(TASK_MANAGER_TASK_STACK_SIZE, TASK_MANAGER_QUEUE_ITEM_SIZE, task_manager_queue_buffer, &taskManagerMem.taskManagerTaskQueue);
+
+    if (task_manager_queue == NULL) {
+        fatal("task-manager: Failed to create task manager queue!\n");
+    }
+
     if (taskList[0].function == &task_manager_main) {
         init_task(0);
     } else {

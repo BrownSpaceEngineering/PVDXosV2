@@ -34,7 +34,13 @@ extern QueueHandle_t commandQueue;
 // An enum to represent the various tasks/daemons that the command executor can interact with
 typedef enum {
     TASK_COMMAND_EXECUTOR = 0,
+    TASK_MANAGER,
     TASK_DISPLAY,
+    TASK_SHELL, 
+    TASK_HEARTBEAT,
+    TASK_MAGNETOMETER,
+    TASK_CAMERA,
+    TASK_9AXIS
 } task_t;
 
 // An enum to represent the different operations that the command executor can perform
