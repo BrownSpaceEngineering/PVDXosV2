@@ -30,6 +30,12 @@ void command_executor_exec(cmd_t cmd) {
 
     switch (cmd.target) {
         case TASK_MANAGER:
+            xStatus = xQueueSendToBack(task_manager_queue, &cmd, 0);
+
+            if (xStatus != pdPASS) {
+                fatal("command-executor: Failed to forward command to task manager task!\n");
+            }
+            
             break;
         case TASK_SHELL:
             break;

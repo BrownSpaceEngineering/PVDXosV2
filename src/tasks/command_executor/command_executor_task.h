@@ -46,10 +46,13 @@ typedef enum {
 // An enum to represent the different operations that the command executor can perform
 // NOTE: The same operation can have different meanings depending on the target task
 typedef enum {
+    // General operations (can be overloaded by any task)
     OPERATION_SET_BUFFER = 0,
     OPERATION_UPDATE,
     OPERATION_POWER_OFF, 
     OPERATION_SET_LOG_LEVEL,
+    // Task-Manager specific operations
+    OPERATION_INIT_SUBTASKS,
 } operation_t;
 
 // A struct to represent a command that the command-executor can execute

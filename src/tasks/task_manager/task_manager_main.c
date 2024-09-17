@@ -1,54 +1,35 @@
 #include "task_manager_task.h"
 
+// typedef struct {
+//     task_t target;
+//     operation_t operation;
+//     char* p_data;
+//     size_t len;
+//     status_t* p_result;
+//     void (*callback)(status_t* p_result);
+// } cmd_t;
+
 void task_manager_main(void *pvParameters) {
     info("task-manager: Task started!\n");
 
+    // Enqueue a command to initialize all subtasks
+    status_t result;
+    cmd_t command_task_manager_init_subtasks = {TASK_MANAGER, OPERATION_INIT_SUBTASKS, NULL, 0, &result, NULL};
+    command_executor_enqueue(command_task_manager_init_subtasks);
+
     // Initialize all other tasks on the system
-    task_manager_init_subtasks();
-    // TODO: create a queue for the task manager to receive commands ***
+    // need to call command_executor_enqueue() to add the below function to the queue
+    // task_manager_init_subtasks();
+    // TODO: use the queue
     // TODO: create a function to enable a suspended task
     // TODO: create a function to disable a running task
     // (using the logic below)
     // Toggle task done!
 
     while (true) {
-        // TODO: Add task manager logic here
+        // if there's something in the queue, pop it and execute it
         
         vTaskDelay(pdMS_TO_TICKS(1000));
         watchdog_checkin();
     }
 }
-
-
-
-
-
-
-
-// DONT WORRY ABOUT THIS!
-// don't forget to check in with the watchdog
-        // for (uint32_t i = 0; taskList[i].name != NULL; i++) {
-        //     // Prevent the task manager from disabling itself (xTaskGetCurrentTaskHandle() is the task manager's handle)
-        //     if (taskList[i].handle != xTaskGetCurrentTaskHandle()) {
-        //         if ((taskList[i].enabled)) {
-        //             // There should never be a NULL handle if the task is enabled
-        //             if (taskList[i].handle == NULL){
-        //                 fatal("Task Supposed To Be Initialized, but it wasn't");
-        //                 continue;
-        //             }
-
-
-        //            vTaskSuspend(taskList[i].handle);
-        //         } else {
-        //             // TODO: Figure out how to kill task
-        //             if (taskList[i].handle == NULL) {
-        //                 fatal("Task to be disabled was never initialized");
-        //                 continue;
-        //             }
-                    
-        //             vTaskResume(taskList[i].handle); 
-        //         }
-        //     }
-        // }
-
-    

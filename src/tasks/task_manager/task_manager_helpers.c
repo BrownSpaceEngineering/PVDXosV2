@@ -63,7 +63,7 @@ void task_manager_init_subtasks(void) {
 
             continue;
         }
-
+        
         init_task(i);
     }
 }
@@ -119,4 +119,17 @@ PVDXTask_t task_manager_get_task(TaskHandle_t handle) {
     }
 
     return NULL_TASK;
+}
+
+void task_manager_exec(cmd_t cmd) {
+    BaseType_t xStatus;
+
+    switch (cmd.target) {
+        case OPERATION_INIT_SUBTASKS:
+            task_manager_init_subtasks();
+            break;
+        default:
+            fatal("task-manager: Invalid operation!\n");
+            break;
+    }
 }
