@@ -5,6 +5,7 @@
 #include <driver_init.h>
 #include "globals.h"
 #include "rtos_start.h"
+#include "watchdog_task.h"
 
 #define RM3100_TASK_STACK_SIZE 128
 
@@ -36,6 +37,54 @@
 #define RM3100_MZ1_REG 0x2B
 #define RM3100_MZ0_REG 0x2C
 
+#define MAX_I2C_WRITE               32
+
+#define RM3100_I2C_ADDRESS_7bit			0x20
+#define RM3100_I2C_ADDRESS_8bit			0x20 << 1 // MBED uses 8 bit address
+
+#define RM3100_MAG_REG              0x00
+#define RM3100_BEACON_REG           0x01
+#define RM3100_TMRC_REG             0x0B
+
+#define RM3100_REVID_REG            0x36
+#define RM3100_TEST3_REG            0x72
+
+#define RM3100_LROSCADJ_REG         0x63
+
+#define RM3100_LROSCADJ_VALUE       0xA7
+#define RM3100_SLPOSCADJ_VALUE      0x08 
+
+#define RM3100_ENABLED              0x79
+#define RM3100_DISABLED             0x00
+
+#define RM3100_QX2_REG		0x24
+#define RM3100_QX1_REG		0x25
+#define RM3100_QX0_REG		0x26
+#define RM3100_QY2_REG		0x27
+#define RM3100_QY1_REG		0x28
+#define RM3100_QY0_REG		0x29
+#define RM3100_QZ2_REG		0x2A
+#define RM3100_QZ1_REG		0x2B
+#define RM3100_QZ0_REG		0x2C
+
+#define RM3100_PNI_KEY1_REG		0x2D
+#define RM3100_PNI_KEY2_REG		0x2E
+
+#define RM3100_CCPX1_REG		0x04
+#define RM3100_CCPX0_REG		0x05
+#define RM3100_CCPY1_REG		0x06
+#define RM3100_CCPY0_REG		0x07
+#define RM3100_CCPZ1_REG		0x08
+#define RM3100_CCPZ0_REG		0x09
+
+#define RM3100_NOS_REG			0x0A
+
+#define CCP0	0xC8	/* 200 Cycle Count */
+#define CCP1	0x00
+#define NOS		0x01	/* Number of Samples for averaging*/
+
+#define TMRC	0x04	/* Default rate 125 Hz */
+
 //options
 #define initialCC 200 // Set the cycle count
 #define singleMode 0 //0 = use continuous measurement mode; 1 = use single measurement mode
@@ -51,8 +100,31 @@ typedef struct {
     long z;
 } RM3100_return_t;
 
+typedef enum {
+	/* Valid Responses */
+	SensorOK,                       /**< @brief Sensor responded with expected data. */
+	SensorInitialized,              /**< @brief Sensor has been initialized. */
+
+	/* Error Responses */
+	SensorUnknownError,             /**< @brief An unknown error has occurred. */
+	SensorErrorNonExistant,         /**< @brief Unable to communicate with sensor, sensor did not ACK. */
+	SensorErrorUnexpectedDevice,    /**< @brief A different sensor was detected at the address. */
+
+	SensorStatusPending = 255,      /**< @brief Reserved for internal used */
+} SensorStatus;
+
+typedef enum {
+	SensorPowerModePowerDown = 0,       
+	SensorPowerModeSuspend = 1,       
+	SensorPowerModeActive = 255,  
+} SensorPowerMode;
+
 RM3100_return_t values_loop();
 
-void changeCycleCount(uint16_t);
+SensorPowerMode mag_set_power_mode(SensorPowerMode mode);
+
+SensorStatus mag_disable_interrupts();
+SensorPowerMode mag_set_power_mode(SensorPowerMode mode);
+unsigned short mag_set_sample_rate(unsigned short sample_rate);
 
 #endif // rm3100_h_

@@ -100,16 +100,16 @@ int main(void) {
     }
 
     // ------- RM3100 TASK -------
-    // TaskHandle_t rm3100TaskHandle =
-    //     xTaskCreateStatic(rm3100_main, "RM3100", SHELL_TASK_STACK_SIZE, NULL, 2, shellMem.shellTaskStack, &shellMem.shellTaskTCB);
+    TaskHandle_t rm3100TaskHandle =
+        xTaskCreateStatic(rm3100_main, "RM3100", SHELL_TASK_STACK_SIZE, NULL, 2, shellMem.shellTaskStack, &shellMem.shellTaskTCB);
     
-    // watchdog_register_task(RM3100_TASK);
+    watchdog_register_task(RM3100_TASK);
 
-    // if (rm3100TaskHandle == NULL) {
-    //     fatal("main: Shell task creation failed!\n");
-    // } else {
-    //     info("main: Shell task created!\n");
-    // }
+    if (rm3100TaskHandle == NULL) {
+        fatal("main: RM3100 task creation failed!\n");
+    } else {
+        info("main: RM3100 task created!\n");
+    }
 
     // ------- COSMIC MONKEY TASK -------
 

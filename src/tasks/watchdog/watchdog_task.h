@@ -15,6 +15,7 @@
 #define WATCHDOG_TASK_ALLOWED_TIME 1500  // 1.5 Seconds, watchdog should be running often.
 #define DISPLAY_TASK_ALLOWED_TIME      10000 // In order two allow for the delay in between
 #define SHELL_TASK_ALLOWED_TIME 5000     // 5 seconds, since the shell task is not critical
+#define RM3100_TASK_ALLOWED_TIME 10000 // 10 to allow for init
 
 /* REMEMBER TO ALSO ADD YOUR TIME TO THE ALLOWED_TIMES LIST IN WATCHDOG_MAIN.C */
 

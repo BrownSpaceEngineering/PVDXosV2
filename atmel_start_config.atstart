@@ -1133,7 +1133,7 @@ drivers:
           slow_gclk_selection: Generic clock generator 3
   SPI_0:
     user_label: SPI_0
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::SERCOM1::driver_config_definition::SPI.Master::HAL:Driver:SPI.Master.Sync
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::SERCOM3::driver_config_definition::SPI.Master::HAL:Driver:SPI.Master.Sync
     functionality: SPI
     api: HAL:Driver:SPI_Master_Sync
     configuration:
@@ -1152,20 +1152,20 @@ drivers:
     variant:
       specification: TXPO=0, RXPO=2
       required_signals:
-      - name: SERCOM1/PAD/0
-        pad: PA00
+      - name: SERCOM3/PAD/0
+        pad: PC23
         label: MOSI
-      - name: SERCOM1/PAD/1
-        pad: PA01
+      - name: SERCOM3/PAD/1
+        pad: PC22
         label: SCK
-      - name: SERCOM1/PAD/2
+      - name: SERCOM3/PAD/2
         pad: PA18
         label: MISO
     clocks:
       domain_group:
         nodes:
         - name: Core
-          input: Generic clock generator 0
+          input: Generic clock generator 2
           external: false
           external_frequency: 0
         - name: Slow
@@ -1173,7 +1173,7 @@ drivers:
           external: false
           external_frequency: 0
         configuration:
-          core_gclk_selection: Generic clock generator 0
+          core_gclk_selection: Generic clock generator 2
           slow_gclk_selection: Generic clock generator 3
   I2C_0:
     user_label: I2C_0
@@ -1252,18 +1252,6 @@ drivers:
     clocks:
       domain_group: null
 pads:
-  PA00:
-    name: PA00
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA00
-    mode: Digital output
-    user_label: PA00
-    configuration: null
-  PA01:
-    name: PA01
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA01
-    mode: Digital output
-    user_label: PA01
-    configuration: null
   PA04:
     name: PA04
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA04
@@ -1293,6 +1281,18 @@ pads:
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA18
     mode: Digital input
     user_label: PA18
+    configuration: null
+  PC22:
+    name: PC22
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC22
+    mode: Digital output
+    user_label: PC22
+    configuration: null
+  PC23:
+    name: PC23
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC23
+    mode: Digital output
+    user_label: PC23
     configuration: null
   DRDY_PIN:
     name: PD21

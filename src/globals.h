@@ -23,7 +23,7 @@ typedef enum {
     HEARTBEAT_TASK = 2,
     DISPLAY_TASK = 3,
     SHELL_TASK = 4,
-    // RM3100_TASK = 5,
+    RM3100_TASK = 5,
 } task_type_t;
 
 typedef enum {
