@@ -34,6 +34,13 @@ int main(void) {
 
     // Initialize the task manager, which will initialize all other tasks on the system
     task_manager_init();
+
+    if (taskList[0].function != &task_manager_main) {
+        fatal("Task Manager not found at index 0 of task list!\n");
+    }
+    // bit flip here????
+    watchdog_register_task(taskList[0].handle) // TODO: Fix magic number in here 
+    taskList[0].enable = true;  // Enable task manager
     info("Task Manager initialized\n");
 
     // ------- COSMIC MONKEY TASK -------

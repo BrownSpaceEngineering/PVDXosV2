@@ -104,9 +104,9 @@ void watchdog_register_task(TaskHandle_t handle) {
     if (handle == NULL) {
         fatal("Tried to register a NULL task handle\n");
     }
-    PVDXTask_t task = task_manager_get_task(handle);
+    PVDXTask_t *task = task_manager_get_task(handle);
 
-    if (task.shouldCheckin) {
+    if (task->enabled) {
         // something went wrong because we define unregistered tasks to have 'should_checkin' set to false
         watchdog_kick();
     }
@@ -122,7 +122,7 @@ void watchdog_unregister_task(TaskHandle_t handle) {
         fatal("Tried to unregister a NULL task handle\n");
     }
     
-    PVDXTask_t task = task_manager_get_task(handle);
+    PVDXTask_t *task = task_manager_get_task(handle);
 
     if (!task.shouldCheckin) {
         // something went wrong because we define unregistered tasks to have 'should_checkin' set to false

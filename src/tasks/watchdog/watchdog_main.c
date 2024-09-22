@@ -8,7 +8,7 @@ void watchdog_main(void *pvParameters) {
         uint32_t current_time = xTaskGetTickCount();
 
         for (int i = 0; taskList[i].name != NULL; i++) {
-            if (taskList[i].shouldCheckin) {
+            if (taskList[i].enabled) {
                 uint32_t time_since_last_checkin = current_time - taskList[i].lastCheckin;
 
                 if (time_since_last_checkin > taskList[i].watchdogTimeout) {

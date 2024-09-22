@@ -28,7 +28,10 @@ struct taskManagerTaskMemory {
     StaticTask_t taskManagerTaskTCB;
 };
 
+// Global memory for the task manager task
 extern struct taskManagerTaskMemory taskManagerMem;
+extern uint8_t task_manager_queue_buffer[TASK_MANAGER_QUEUE_MAX_COMMANDS * TASK_MANAGER_QUEUE_ITEM_SIZE];
+extern QueueHandle_t task_manager_cmd_queue;
 
 // A struct defining a task's lifecycle in the PVDXos RTOS
 typedef struct {
@@ -43,7 +46,7 @@ typedef struct {
     StaticTask_t *taskTCB;    // Task control block
     uint32_t watchdogTimeout; // How frequently the task should check in with the watchdog (in milliseconds)
     uint32_t lastCheckin;     // Last time the task checked in with the watchdog
-    bool shouldCheckin;       // Whether the task is being monitored by the watchdog (initialized to NULL)
+    bool has_registered;       // Whether the task is being monitored by the watchdog (initialized to NULL)
 } PVDXTask_t;
 
 // Global information about all tasks running on the system. This list is null-terminated.
@@ -53,7 +56,7 @@ extern PVDXTask_t taskList[];
 void task_manager_init(void);
 void task_manager_init_subtasks(void);
 void task_manager_main(void *pvParameters);
-status_t toggle_task(int i)
-PVDXTask_t task_manager_get_task(TaskHandle_t id);
+status_t toggle_task(int i);
+PVDXTask_t* task_manager_get_task(TaskHandle_t id);
 
 #endif // TASK_MANAGER_TASK_H

@@ -1,45 +1,11 @@
 #include "task_manager_task.h"
-
 #include "logging.h"
-
-struct taskManagerTaskMemory taskManagerMem;
-uint8_t task_manager_queue_buffer[TASK_MANAGER_QUEUE_MAX_COMMANDS * TASK_MANAGER_QUEUE_ITEM_SIZE];
-QueueHandle_t task_manager_queue;
-
-#define NULL_TASK ((PVDXTask_t){NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL})
-
-// TODO: tune watchdog timeout values
-PVDXTask_t taskList[] = {
-    // List of tasks to be initialized by the task manager (see PVDXTask_t definition in task_manager.h)
-    // NOTE: Task Manager task must be the first task in the list
-    {
-        "TaskManager", true, NULL, task_manager_main, TASK_MANAGER_TASK_STACK_SIZE, taskManagerMem.taskManagerTaskStack, NULL, 2, &taskManagerMem.taskManagerTaskTCB, 5000, NULL, NULL
-    },
-    {
-        "Watchdog", true, NULL, watchdog_main, WATCHDOG_TASK_STACK_SIZE, watchdogMem.watchdogTaskStack, NULL, 3, &watchdogMem.watchdogTaskTCB, 1500, NULL, NULL
-    },
-    {
-        "CommandExecutor", true, NULL, command_executor_main, COMMAND_EXECUTOR_TASK_STACK_SIZE, commandExecutorMem.commandExecutorTaskStack, NULL, 2, &commandExecutorMem.commandExecutorTaskTCB, 10000, NULL, NULL
-    },
-    {
-        "Shell", true, NULL, shell_main, SHELL_TASK_STACK_SIZE, shellMem.shellTaskStack, NULL, 2, &shellMem.shellTaskTCB, 10000, NULL, NULL
-    },
-    {
-        "Display", true, NULL, display_main, DISPLAY_TASK_STACK_SIZE, displayMem.displayTaskStack, NULL, 2, &displayMem.displayTaskTCB, 10000, NULL, NULL
-    },
-    {
-        "Heartbeat", true, NULL, heartbeat_main, HEARTBEAT_TASK_STACK_SIZE, heartbeatMem.heartbeatTaskStack, NULL, 1, &heartbeatMem.heartbeatTaskTCB, 10000, NULL, NULL
-    },
-
-    // Null terminator for the array (since size is unspecified)
-    NULL_TASK
-};
 
 // Initializes the task manager task (it should be the first task in the global task list)
 void task_manager_init(void) {
-    task_manager_queue = xQueueCreateStatic(TASK_MANAGER_TASK_STACK_SIZE, TASK_MANAGER_QUEUE_ITEM_SIZE, task_manager_queue_buffer, &taskManagerMem.taskManagerTaskQueue);
+    task_manager_cmd_queue = xQueueCreateStatic(TASK_MANAGER_TASK_STACK_SIZE, TASK_MANAGER_QUEUE_ITEM_SIZE, task_manager_queue_buffer, &taskManagerMem.taskManagerTaskQueue);
 
-    if (task_manager_queue == NULL) {
+    if (task_manager_cmd_queue == NULL) {
         fatal("task-manager: Failed to create task manager queue!\n");
     }
 
@@ -53,9 +19,8 @@ void task_manager_init(void) {
 // Initialize all other tasks running on the system
 void task_manager_init_subtasks(void) {
     for(int i = 0; taskList[i].name != NULL; i++) {
-        // Skip initialization of task manager since it has already been created in main.c
+        // Verify that the current thread is the task 
         if (taskList[i].function == &task_manager_main) {
-            // We are the task manager, so no action needed.
             // Sanity check: Make sure the task manager's handle is our current handle
             if (taskList[i].handle != xTaskGetCurrentTaskHandle()) {
                 fatal("Task Manager handle does not match current task handle!\n");
@@ -111,14 +76,14 @@ status_t toggle_task(int i) {
 }
 
 // Returns the PVDXTask_t struct associated with a FreeRTOS task handle
-PVDXTask_t task_manager_get_task(TaskHandle_t handle) {
+PVDXTask_t* task_manager_get_task(TaskHandle_t handle) {
     for (int i = 0; taskList[i].name != NULL; i++) {
         if (taskList[i].handle == handle) {
-            return taskList[i];
+            return &taskList[i];
         }
     }
 
-    return NULL_TASK;
+    return &NULL_TASK;
 }
 
 void task_manager_exec(cmd_t cmd) {

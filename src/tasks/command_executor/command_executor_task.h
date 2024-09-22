@@ -29,7 +29,7 @@ struct commandExecutorTaskMemory {
 extern struct commandExecutorTaskMemory commandExecutorMem;
 
 // Queue for commands to be executed by the command executor
-extern QueueHandle_t commandQueue;
+extern QueueHandle_t command_executor_cmd_queue;
 
 // An enum to represent the various tasks/daemons that the command executor can interact with
 typedef enum {
@@ -53,6 +53,8 @@ typedef enum {
     OPERATION_SET_LOG_LEVEL,
     // Task-Manager specific operations
     OPERATION_INIT_SUBTASKS,
+    OPERATION_ENABLE_SUBTASK,
+    OPERATION_DISABLE_SUBTASK
 } operation_t;
 
 // A struct to represent a command that the command-executor can execute

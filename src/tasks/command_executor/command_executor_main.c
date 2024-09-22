@@ -16,7 +16,7 @@ void command_executor_main(void *pvParameters) {
         // task until either an item is received or the timeout period expires. If an item arrives during the timeout 
         // period, the task will unblock immediately, retrieve the item, and proceed with processing. This way, the 
         // command executor task will not consume CPU cycles when there are no commands to execute.
-        xStatus = xQueueReceive(commandQueue, &cmd, pdMS_TO_TICKS(COMMAND_QUEUE_WAIT_MS));
+        xStatus = xQueueReceive(command_executor_cmd_queue, &cmd, pdMS_TO_TICKS(COMMAND_QUEUE_WAIT_MS));
 
         if (xStatus == pdPASS) {
             // Command received, so execute it
