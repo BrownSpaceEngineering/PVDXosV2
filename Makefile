@@ -35,7 +35,6 @@ export OBJS := \
 ../src/tasks/rm3100/rm3100.o \
 
 
-
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###
 ### THESE ARE WRITTEN RELATIVE TO THE ./ASF/gcc/Makefile FILE ###
 export EXTRA_VPATH := \
@@ -158,10 +157,10 @@ clean:
 # Connects to remote target, loads program, and sets breakpoint at main
 connect:
 ifeq (,$(findstring microsoft,$(shell uname -r))) #Detects a WSL kernel name, and runs a WSL-specific command for connecting to the GDB server
-	@gdb-multiarch -ex "target remote localhost:2331" -ex "load" -ex "monitor halt" -ex "monitor reset" -ex "b main" -ex "continue" ./PVDXos.elf
+	@gdb -ex "target remote localhost:2331" -ex "load" -ex "monitor halt" -ex "monitor reset" -ex "b main" -ex "continue" ./PVDXos.elf
 else #Run the windows-specific command
 	@hostname=$(shell hostname) && \
-	gdb-multiarch -ex "target remote localhost:2331" -ex "load" -ex "monitor halt" -ex "monitor reset" -ex "b main" -ex "continue" ./PVDXos.elf
+	gdb-multiarch -ex "target remote $$hostname.local:2331" -ex "load" -ex "monitor halt" -ex "monitor reset" -ex "b main" -ex "continue" ./PVDXos.elf
 endif
 
 #Builds the bootloader, then flashes it to the board. Make connect needs to be run after this.
@@ -169,7 +168,7 @@ flash_bootloader:
 	$(MAKE) -C ./bootloader clean
 	$(MAKE) -C ./bootloader # Builds the bootloader
 ifeq (,$(findstring microsoft,$(shell uname -r))) #Detects a WSL kernel name, and runs a WSL-specific command for connecting to the GDB server
-	@gdb-multiarch -ex "target remote localhost:2331" -ex "load" -ex "monitor halt" -ex "monitor reset" -ex "set confirm off" -ex "add-symbol-file PVDXos.elf" -ex "set confirm on" ./bootloader/bootloader.elf
+	@gdb -ex "target remote localhost:2331" -ex "load" -ex "monitor halt" -ex "monitor reset" -ex "set confirm off" -ex "add-symbol-file PVDXos.elf" -ex "set confirm on" ./bootloader/bootloader.elf
 else #Run the windows-specific command
 	@hostname=$(shell hostname) && \
 	gdb-multiarch -ex "target remote $$hostname.local:2331" -ex "load" -ex "monitor halt" -ex "monitor reset" -ex "set confirm off" -ex "add-symbol-file PVDXos.elf" -ex "set confirm on" ./bootloader/bootloader.elf

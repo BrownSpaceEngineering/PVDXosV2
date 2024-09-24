@@ -72,6 +72,7 @@ struct rm3100TaskMemory {
 #define RM3100_QZ2_REG		0x2A
 #define RM3100_QZ1_REG		0x2B
 #define RM3100_QZ0_REG		0x2C
+#define RM3100_BIST_REG		0x33
 
 #define RM3100_PNI_KEY1_REG		0x2D
 #define RM3100_PNI_KEY2_REG		0x2E
@@ -101,9 +102,13 @@ void rm3100_main(void *pvParameters);
 int init_rm3100(void);
 
 typedef struct {
-    int32_t x;
-    int32_t y;
-    int32_t z;
+    uint8_t bist;
+} RM3100_bist_t;
+
+typedef struct {
+    uint32_t x;
+    uint32_t y;
+    uint32_t z;
 } RM3100_return_t;
 
 typedef enum {
@@ -128,6 +133,7 @@ typedef enum {
 extern struct rm3100TaskMemory rm3100Mem;
 
 RM3100_return_t values_loop();
+RM3100_bist_t bist_register_get();
 
 SensorPowerMode mag_set_power_mode(SensorPowerMode mode);
 
