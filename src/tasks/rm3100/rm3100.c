@@ -4,6 +4,8 @@
  * Created: Dec 7, 2023 2:22 AM
  * By: Nathan Kim
 */
+#include <stdlib.h>
+#include <string.h>
 #include "rm3100.h"
 #include "logging.h"
 
@@ -29,7 +31,7 @@ int init_rm3100(void) {
     i2c_m_sync_set_baudrate(&I2C_0, 0, 115200);
     i2c_m_sync_get_io_descriptor(&I2C_0, &rm3100_io);
     i2c_m_sync_enable(&I2C_0);
-    i2c_m_sync_set_slaveaddr(&I2C_0, RM3100Address, I2C_M_SEVEN);
+    i2c_m_sync_set_slaveaddr(&I2C_0, RM3100_I2C_ADDRESS_7bit, I2C_M_SEVEN);
 
     uint8_t i2cbuffer[2];
     uint8_t settings[7];
@@ -85,11 +87,16 @@ void rm3100_main(void *pvParameters) {
 
     while(1) {
         if (setup == 0) {
+            while(gpio_get_pin_level(DRDY_PIN) == 0) {
+                vTaskDelay(pdMS_TO_TICKS(1000));
+                watchdog_checkin(RM3100_TASK);
+            }
+
             RM3100_return_t values = values_loop();
 
-            uint32_t x = (float)values.x / gain;
-            uint32_t y = (float)values.y / gain;
-            uint32_t z = (float)values.z / gain;
+            int32_t x = (float)values.x / gain;
+            int32_t y = (float)values.y / gain;
+            int32_t z = (float)values.z / gain;
 
             if (x == 0 && y == 0 && z == 0) {
                 vTaskDelay(pdMS_TO_TICKS(1));
@@ -105,15 +112,15 @@ RM3100_return_t values_loop() {
 
     RM3100ReadReg(RM3100_QX2_REG, (uint8_t *)&mSamples, sizeof(mSamples)/sizeof(char));
     
-    returnVals.x = ((signed char)mSamples[0]) * 256 * 256;
+    returnVals.x = ((uint8_t)mSamples[0]) * 256 * 256;
     returnVals.x |= mSamples[1] * 256;
     returnVals.x |= mSamples[2];
 
-    returnVals.y = ((signed char)mSamples[3]) * 256 * 256;
+    returnVals.y = ((uint8_t)mSamples[3]) * 256 * 256;
     returnVals.y |= mSamples[4] * 256;
     returnVals.y |= mSamples[5];
 
-    returnVals.z = ((signed char)mSamples[6]) * 256 * 256;
+    returnVals.z = ((uint8_t)mSamples[6]) * 256 * 256;
     returnVals.z |= mSamples[7] * 256;
     returnVals.z |= mSamples[8];
 
@@ -135,11 +142,11 @@ int32_t RM3100ReadReg(uint8_t addr, uint8_t *val, uint16_t size) {
 }
 
 int32_t RM3100WriteReg(uint8_t addr, uint8_t *data, uint16_t size) {
-    // uint8_t writeBuf1[2] = {addr, data};
+    uint8_t writeBuffer[MAX_I2C_WRITE + 1];
+    writeBuffer[0] = addr;
+    memcpy(&writeBuffer[1], data, size);
     i2c_m_sync_get_io_descriptor(&I2C_0, &rm3100_io);
-    io_write(rm3100_io, &addr, 1);
-    //vTaskDelay(pdMS_TO_TICKS(20));
-    return io_write(rm3100_io, data, size);
+    return io_write(rm3100_io, writeBuffer, size + 1);
 }
 
 SensorStatus mag_enable_interrupts()

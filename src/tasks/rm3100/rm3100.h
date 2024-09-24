@@ -101,9 +101,9 @@ void rm3100_main(void *pvParameters);
 int init_rm3100(void);
 
 typedef struct {
-    uint32_t x;
-    uint32_t y;
-    uint32_t z;
+    int32_t x;
+    int32_t y;
+    int32_t z;
 } RM3100_return_t;
 
 typedef enum {
