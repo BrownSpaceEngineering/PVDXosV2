@@ -9,6 +9,9 @@
 
 #define I2C_SERCOM       SERCOM5
 //Io descriptor for the RM3100
+
+struct rm3100TaskMemory rm3100Mem;
+
 struct io_descriptor *rm3100_io;
 
 static unsigned short int           mSampleRate;
@@ -27,23 +30,7 @@ int init_rm3100(void) {
     i2c_m_sync_get_io_descriptor(&I2C_0, &rm3100_io);
     i2c_m_sync_enable(&I2C_0);
     i2c_m_sync_set_slaveaddr(&I2C_0, RM3100Address, I2C_M_SEVEN);
-    //TODO Check REVID
-    // uint8_t revid;
-    // uint32_t error = RM3100ReadReg(RM3100_REVID_REG, &revid);
-    // if (revid != 0x22) {
-    //     warning("RM3100 not detected correctly! Errored with code: %ld\n", error);
-    //     return -1;
-    // }
 
-    // changeCycleCount(initialCC);
-
-    // if (singleMode) {
-    //     RM3100WriteReg(RM3100_CMM_REG, 0);
-    //     RM3100WriteReg(RM3100_POLL_REG, 0x70);
-    // } else {
-    //     RM3100WriteReg(RM3100_CMM_REG, 0x79);
-    // }
-    // return 0;
     uint8_t i2cbuffer[2];
     uint8_t settings[7];
      

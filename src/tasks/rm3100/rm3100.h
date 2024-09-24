@@ -9,6 +9,12 @@
 
 #define RM3100_TASK_STACK_SIZE 128
 
+struct rm3100TaskMemory {
+    StackType_t OverflowBuffer[TASK_STACK_OVERFLOW_PADDING];
+    StackType_t rm3100TaskStack[RM3100_TASK_STACK_SIZE];
+    StaticTask_t rm3100TaskTCB;
+};
+
 //Need to put the holy grail of values here
 #define RM3100Address 0x20 // Hexadecimal slave address for RM3100 with Pin 2 and Pin 4 set to LOW
 
@@ -118,6 +124,8 @@ typedef enum {
 	SensorPowerModeSuspend = 1,       
 	SensorPowerModeActive = 255,  
 } SensorPowerMode;
+
+extern struct rm3100TaskMemory rm3100Mem;
 
 RM3100_return_t values_loop();
 

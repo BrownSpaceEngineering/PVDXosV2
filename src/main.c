@@ -101,7 +101,7 @@ int main(void) {
 
     // ------- RM3100 TASK -------
     TaskHandle_t rm3100TaskHandle =
-        xTaskCreateStatic(rm3100_main, "RM3100", SHELL_TASK_STACK_SIZE, NULL, 2, shellMem.shellTaskStack, &shellMem.shellTaskTCB);
+        xTaskCreateStatic(rm3100_main, "RM3100", RM3100_TASK_STACK_SIZE, NULL, 2, rm3100Mem.rm3100TaskStack, &rm3100Mem.rm3100TaskTCB);
     
     watchdog_register_task(RM3100_TASK);
 
