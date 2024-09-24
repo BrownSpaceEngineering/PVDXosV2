@@ -1177,7 +1177,7 @@ drivers:
           slow_gclk_selection: Generic clock generator 3
   I2C_0:
     user_label: I2C_0
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::SERCOM5::driver_config_definition::I2C.Master.Standard~2FFast-mode::HAL:Driver:I2C.Master.Sync
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::SERCOM6::driver_config_definition::I2C.Master.Standard~2FFast-mode::HAL:Driver:I2C.Master.Sync
     functionality: I2C
     api: HAL:Driver:I2C_Master_Sync
     configuration:
@@ -1195,11 +1195,11 @@ drivers:
     variant:
       specification: SDA=0, SCL=1
       required_signals:
-      - name: SERCOM5/PAD/0
-        pad: PA23
+      - name: SERCOM6/PAD/0
+        pad: PD09
         label: SDA
-      - name: SERCOM5/PAD/1
-        pad: PA22
+      - name: SERCOM6/PAD/1
+        pad: PD08
         label: SCL
     clocks:
       domain_group:
@@ -1276,6 +1276,18 @@ pads:
     mode: Digital output
     user_label: Display_DC
     configuration: null
+  PD08:
+    name: PD08
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PD08
+    mode: I2C
+    user_label: PD08
+    configuration: null
+  PD09:
+    name: PD09
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PD09
+    mode: I2C
+    user_label: PD09
+    configuration: null
   PA18:
     name: PA18
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA18
@@ -1299,24 +1311,13 @@ pads:
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PD21
     mode: Digital input
     user_label: DRDY_PIN
-    configuration: null
+    configuration:
+      pad_pull_config: Pull-down
   Display_CS:
     name: PB20
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB20
     mode: Digital output
     user_label: Display_CS
-    configuration: null
-  PA22:
-    name: PA22
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA22
-    mode: I2C
-    user_label: PA22
-    configuration: null
-  PA23:
-    name: PA23
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA23
-    mode: I2C
-    user_label: PA23
     configuration: null
   LED_Orange1:
     name: PC30

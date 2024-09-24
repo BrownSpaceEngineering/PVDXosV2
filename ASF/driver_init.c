@@ -144,7 +144,7 @@ void SPI_0_init(void)
 void I2C_0_PORT_init(void)
 {
 
-	gpio_set_pin_pull_mode(PA23,
+	gpio_set_pin_pull_mode(PD09,
 	                       // <y> Pull configuration
 	                       // <id> pad_pull_config
 	                       // <GPIO_PULL_OFF"> Off
@@ -152,9 +152,9 @@ void I2C_0_PORT_init(void)
 	                       // <GPIO_PULL_DOWN"> Pull-down
 	                       GPIO_PULL_OFF);
 
-	gpio_set_pin_function(PA23, PINMUX_PA23D_SERCOM5_PAD0);
+	gpio_set_pin_function(PD09, PINMUX_PD09D_SERCOM6_PAD0);
 
-	gpio_set_pin_pull_mode(PA22,
+	gpio_set_pin_pull_mode(PD08,
 	                       // <y> Pull configuration
 	                       // <id> pad_pull_config
 	                       // <GPIO_PULL_OFF"> Off
@@ -162,21 +162,21 @@ void I2C_0_PORT_init(void)
 	                       // <GPIO_PULL_DOWN"> Pull-down
 	                       GPIO_PULL_OFF);
 
-	gpio_set_pin_function(PA22, PINMUX_PA22D_SERCOM5_PAD1);
+	gpio_set_pin_function(PD08, PINMUX_PD08D_SERCOM6_PAD1);
 }
 
 void I2C_0_CLOCK_init(void)
 {
-	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM5_GCLK_ID_CORE, CONF_GCLK_SERCOM5_CORE_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
-	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM5_GCLK_ID_SLOW, CONF_GCLK_SERCOM5_SLOW_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM6_GCLK_ID_CORE, CONF_GCLK_SERCOM6_CORE_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM6_GCLK_ID_SLOW, CONF_GCLK_SERCOM6_SLOW_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
 
-	hri_mclk_set_APBDMASK_SERCOM5_bit(MCLK);
+	hri_mclk_set_APBDMASK_SERCOM6_bit(MCLK);
 }
 
 void I2C_0_init(void)
 {
 	I2C_0_CLOCK_init();
-	i2c_m_sync_init(&I2C_0, SERCOM5);
+	i2c_m_sync_init(&I2C_0, SERCOM6);
 	I2C_0_PORT_init();
 }
 
@@ -306,7 +306,7 @@ void system_init(void)
 	                       // <GPIO_PULL_OFF"> Off
 	                       // <GPIO_PULL_UP"> Pull-up
 	                       // <GPIO_PULL_DOWN"> Pull-down
-	                       GPIO_PULL_OFF);
+	                       GPIO_PULL_DOWN);
 
 	gpio_set_pin_function(DRDY_PIN, GPIO_PIN_FUNCTION_OFF);
 

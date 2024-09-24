@@ -7,6 +7,7 @@
 #include "rm3100.h"
 #include "logging.h"
 
+#define I2C_SERCOM       SERCOM5
 //Io descriptor for the RM3100
 struct io_descriptor *rm3100_io;
 
@@ -22,10 +23,10 @@ int32_t RM3100WriteReg(uint8_t addr, uint8_t *data, uint16_t size);
 
 int init_rm3100(void) {
     //Initialize the I2C Communications
-    i2c_m_sync_get_io_descriptor(&I2C_0, NULL);
+    i2c_m_sync_set_baudrate(&I2C_0, 0, 115200);
+    i2c_m_sync_get_io_descriptor(&I2C_0, &rm3100_io);
     i2c_m_sync_enable(&I2C_0);
     i2c_m_sync_set_slaveaddr(&I2C_0, RM3100Address, I2C_M_SEVEN);
-
     //TODO Check REVID
     // uint8_t revid;
     // uint32_t error = RM3100ReadReg(RM3100_REVID_REG, &revid);
@@ -77,7 +78,6 @@ int init_rm3100(void) {
     /*  Write register settings */
     RM3100WriteReg(RM3100_CCPX1_REG, settings, 7);
     
-    mag_set_sample_rate(100);
     mag_set_power_mode(SensorPowerModePowerDown);
         
     return SensorOK;
@@ -87,23 +87,34 @@ void rm3100_main(void *pvParameters) {
     info("RM3100 Task Started!\r\n");
 
     int setup = init_rm3100();
+
+    mag_set_sample_rate(100); //100Hz
+
+	mag_set_power_mode(SensorPowerModeActive);
+
+    int CycleCount = CCP0 | (CCP1 << 8);
+	float gain = 0.3671 * CycleCount + 1.5;
+    watchdog_checkin(RM3100_TASK);
+
     while(1) {
         if (setup == 0) {
-            values_loop();
+            RM3100_return_t values = values_loop();
+
+            uint32_t x = (float)values.x / gain;
+            uint32_t y = (float)values.y / gain;
+            uint32_t z = (float)values.z / gain;
+
+            if (x == 0 && y == 0 && z == 0) {
+                vTaskDelay(pdMS_TO_TICKS(1));
+            }
         }
-        //vTaskDelay(pdMS_TO_TICKS(100));
+        vTaskDelay(pdMS_TO_TICKS(1000));
         watchdog_checkin(RM3100_TASK);
     }
 }
 
 RM3100_return_t values_loop() {
     RM3100_return_t returnVals;
-
-    if (useDRDYPin) {
-        while(gpio_get_pin_level(DRDY_PIN) == 0) {
-            //vTaskDelay(pdMS_TO_TICKS(100));
-        }
-    }
 
     RM3100ReadReg(RM3100_QX2_REG, (uint8_t *)&mSamples, sizeof(mSamples)/sizeof(char));
     
