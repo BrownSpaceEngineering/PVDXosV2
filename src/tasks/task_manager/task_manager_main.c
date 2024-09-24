@@ -4,8 +4,6 @@ struct taskManagerTaskMemory taskManagerMem;
 uint8_t task_manager_queue_buffer[TASK_MANAGER_QUEUE_MAX_COMMANDS * TASK_MANAGER_QUEUE_ITEM_SIZE];
 QueueHandle_t task_manager_cmd_queue;
 
-#define NULL_TASK ((PVDXTask_t){NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL})
-
 // TODO: tune watchdog timeout values
 PVDXTask_t taskList[] = {
     // List of tasks to be initialized by the task manager (see PVDXTask_t definition in task_manager.h)
@@ -64,26 +62,12 @@ void task_manager_main(void *pvParameters) {
         }
         else {
             // No command received, so continue
-            debug("task_manager: No commands queued.\n")
+            debug("task_manager: No commands queued.\n");
         }
         
         // vTaskDelay(pdMS_TO_TICKS(1000));
         watchdog_checkin();
     }
-}
-
-status_t enable_task(PVDXTask_t *task_ptr) {
-    if (task_ptr->enabled) {
-        info("task_manager: task already enabled\n");
-        return SUCCESS;
-    }
-    vTaskResume(task_ptr->handle);
-    
-    return SUCCESS;
-}
-
-status_t disable_task(TaskHandle_t task) {
-    return SUCCESS;    
 }
 
 // for (uint32_t i = 0; taskList[i].name != NULL; i++) {

@@ -17,7 +17,7 @@ void watchdog_init(uint8_t watchdog_period, bool always_on) {
     }
 
     for (int i = 0; taskList[i].name != NULL; i++) {
-        taskList[i].shouldCheckin = false;
+        taskList[i].has_registered = false;
     }
 
     // Disable the watchdog before configuring
@@ -88,16 +88,16 @@ void watchdog_kick(void) {
 void watchdog_checkin(void) {
     //Tasks should only check-in for themselves, so we can get the task handle from RTOS
     TaskHandle_t handle = xTaskGetCurrentTaskHandle();
-    PVDXTask_t task = task_manager_get_task(handle);
+    PVDXTask_t *task = task_manager_get_task(handle);
 
-    if (!task.shouldCheckin) {
-        // something went wrong because a task that is checking in should have 'should_checkin' set to true
+    if (!task->has_registered) {
+        // something went wrong because a task that is checking in should have 'has_registered' set to true
         watchdog_kick();
     }
 
     // update the last checkin time
-    task.lastCheckin = xTaskGetTickCount();
-    debug("watchdog: %s task checked in\n", task.name);
+    task->lastCheckin = xTaskGetTickCount();
+    debug("watchdog: %s task checked in\n", task->name);
 }
 
 void watchdog_register_task(TaskHandle_t handle) {
@@ -106,15 +106,15 @@ void watchdog_register_task(TaskHandle_t handle) {
     }
     PVDXTask_t *task = task_manager_get_task(handle);
 
-    if (task->enabled) {
+    if (task->has_registered) {
         // something went wrong because we define unregistered tasks to have 'should_checkin' set to false
         watchdog_kick();
     }
 
     // initialize running times and require the task to check in
-    task.lastCheckin = xTaskGetTickCount();
-    task.shouldCheckin = true;
-    debug("watchdog: %s task registered\n", task.name);
+    task->lastCheckin = xTaskGetTickCount();
+    task->has_registered = true;
+    debug("watchdog: %s task registered\n", task->name);
 }
 
 void watchdog_unregister_task(TaskHandle_t handle) {
@@ -124,13 +124,13 @@ void watchdog_unregister_task(TaskHandle_t handle) {
     
     PVDXTask_t *task = task_manager_get_task(handle);
 
-    if (!task.shouldCheckin) {
+    if (!task->has_registered) {
         // something went wrong because we define unregistered tasks to have 'should_checkin' set to false
         // and an unregistered task should not be able to unregister itself again
         watchdog_kick();
     }
 
-    task.lastCheckin = 0xDEADBEEF; // 0xDEADBEEF is a special value that indicates that the task is not running
-    task.shouldCheckin = false;
-    debug("watchdog: %s task unregistered\n", task.name);
+    task->lastCheckin = 0xDEADBEEF; // 0xDEADBEEF is a special value that indicates that the task is not running
+    task->has_registered = false;
+    debug("watchdog: %s task unregistered\n", task->name);
 }

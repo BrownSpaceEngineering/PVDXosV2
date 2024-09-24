@@ -75,6 +75,40 @@ status_t toggle_task(int i) {
     return SUCCESS;
 }
 
+status_t enable_task(int i) {
+    // If given an unitialized task, inform and abort enabling
+    if(taskList[i].handle == NULL) {
+        info("task_manager: Attempted to enable uninitialized task");
+        return ERROR_UNINITIALIZED;
+    }
+    // If given an already enabled task, inform then return success
+    if(taskList[i].enabled) {
+        info("task_manager: Given task had already been enabled");
+        return SUCCESS;
+    }
+    vTaskResume(taskList[i].handle);
+    taskList[i].enabled = true;
+    
+    return SUCCESS;
+}
+
+// Disables a task
+status_t disable_task(int i) {
+    if (taskList[i].handle == NULL) {
+        fatal("task_manager: Trying to disale task that was never initialized");
+        return ERROR_UNINITIALIZED;
+    }
+    // Only unregister the task from the watchdog if it has not already been uniregistered
+    if (taskList[i].has_registered) {
+        watchdog_unregister_task(taskList[i].handle);
+        taskList[i].has_registered = false;
+    }
+    vTaskSuspend(taskList[i].handle);
+    taskList[i].enabled = false;
+
+    return SUCCESS;
+}
+
 // Returns the PVDXTask_t struct associated with a FreeRTOS task handle
 PVDXTask_t* task_manager_get_task(TaskHandle_t handle) {
     for (int i = 0; taskList[i].name != NULL; i++) {

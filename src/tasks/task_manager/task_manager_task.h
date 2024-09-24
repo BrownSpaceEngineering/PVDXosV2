@@ -19,6 +19,9 @@
 #define TASK_MANAGER_QUEUE_ITEM_SIZE           sizeof(cmd_t)  // Size of each item in command queues
 #define TASK_MANAGER_QUEUE_WAIT_MS             1000           // Wait time for sending/receiving a command to/from the queue (in ms)
 
+// Represents the end of a PVDXTask_t array, contains all null parameters
+#define NULL_TASK ((PVDXTask_t){NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL})
+
 // Placed in a struct to ensure that the TCB is placed higher than the stack in memory
 //^ This ensures that stack overflows do not corrupt the TCB (since the stack grows downwards)
 struct taskManagerTaskMemory {
