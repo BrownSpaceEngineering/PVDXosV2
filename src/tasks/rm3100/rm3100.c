@@ -129,19 +129,21 @@ RM3100_return_t values_loop() {
 
 RM3100_bist_t bist_register_get() {
     RM3100_bist_t returnVals;
-    uint8_t bistVal[1]; 
+    uint8_t bistVal; 
 
-    uint8_t sendVal[1] = { 0b10000000 };
+    uint8_t sendVal[2] = { 0x33, 0b10000000 };
+    uint8_t randomZero = 0;
 
-    RM3100WriteReg(RM3100_BIST_REG, (uint8_t *) &sendVal, sizeof(sendVal)/sizeof(uint8_t));
-    RM3100WriteReg(RM3100_POLL_REG, (uint8_t *) &sendVal, sizeof(sendVal)/sizeof(uint8_t));
+    RM3100WriteReg(RM3100_BIST_REG, (uint8_t *) &sendVal, 1);
+    RM3100WriteReg(RM3100_POLL_REG, &randomZero, 1);
+        while(gpio_get_pin_level(DRDY_PIN) == 0) {
+            vTaskDelay(pdMS_TO_TICKS(100));
+            watchdog_checkin(RM3100_TASK);
+        }
 
-    vTaskDelay(pdMS_TO_TICKS(1000));
+    RM3100ReadReg(RM3100_BIST_REG, &bistVal, 1);
 
-    RM3100WriteReg(RM3100_BIST_REG, (uint8_t *) &sendVal, sizeof(sendVal)/sizeof(uint8_t));
-    RM3100ReadReg(RM3100_BIST_REG, (uint8_t *) &bistVal, sizeof(bistVal)/sizeof(uint8_t));
-
-    returnVals.bist = bistVal[0];
+    returnVals.bist = bistVal;
 
     return returnVals;
 }
