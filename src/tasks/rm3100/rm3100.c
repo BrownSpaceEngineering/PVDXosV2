@@ -77,26 +77,33 @@ void rm3100_main(void *pvParameters) {
 
     mag_set_sample_rate(100); //100Hz
 
-	mag_set_power_mode(SensorPowerModeActive);
+    if (!singleMode)
+    {
+        mag_set_power_mode(SensorPowerModeActive);
 
-    int CycleCount = CCP0 | (CCP1 << 8);
-	float gain = 0.3671 * CycleCount + 1.5;
-    watchdog_checkin(RM3100_TASK);
-
-    while(1) {
-        if (setup == 0) {
-            RM3100_return_t values = values_loop();
-
-            uint32_t x = (float)values.x / gain;
-            uint32_t y = (float)values.y / gain;
-            uint32_t z = (float)values.z / gain;
-
-            if (x == 0 && y == 0 && z == 0) {
-                 vTaskDelay(pdMS_TO_TICKS(1));
-            }
-        }
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        int CycleCount = CCP0 | (CCP1 << 8);
+        float gain = 0.3671 * CycleCount + 1.5;
         watchdog_checkin(RM3100_TASK);
+
+        while(1) {
+            if (setup == 0) {
+                RM3100_return_t values = values_loop();
+
+                uint32_t x = (float)values.x / gain;
+                uint32_t y = (float)values.y / gain;
+                uint32_t z = (float)values.z / gain;
+
+                if (x == 0 && y == 0 && z == 0) {
+                    vTaskDelay(pdMS_TO_TICKS(1));
+                }
+            }
+            vTaskDelay(pdMS_TO_TICKS(1000));
+            watchdog_checkin(RM3100_TASK);
+        }
+    }
+    else
+    {
+        uint8_t i2cbuffer[2];
     }
 }
 
@@ -125,9 +132,10 @@ RM3100_bist_t bist_register_get() {
     uint8_t bistVal; 
 
     uint8_t sendVal[2] = { 0x33, 0b10000000 };
-    uint8_t randomZero = 0;
+    uint8_t zero = 0;
 
-    RM3100WriteReg(RM3100_BIST_REG, (uint8_t *) &sendVal, 1);
+    RM3100WriteReg(RM3100_CMM_REG, (uint8_t *) &zero, 1);
+    RM3100WriteReg(RM3100_BIST_REG, (uint8_t *) &sendVal, 2);
     RM3100WriteReg(RM3100_POLL_REG, &randomZero, 1);
         while(gpio_get_pin_level(DRDY_PIN) == 0) {
             vTaskDelay(pdMS_TO_TICKS(100));
@@ -195,8 +203,12 @@ SensorPowerMode mag_set_power_mode(SensorPowerMode mode)
             break;
 
         case SensorPowerModeActive:
-            mSensorMode = SensorPowerModeActive;
+            mSensorMode = mode;
             mag_enable_interrupts();
+            break;
+        case SensorPowerModeSingle:
+            mSensorMode = mode;
+            mag_enable_single();
             break;
     }
 

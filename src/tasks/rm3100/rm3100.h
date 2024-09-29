@@ -128,6 +128,7 @@ typedef enum {
 	SensorPowerModePowerDown = 0,       
 	SensorPowerModeSuspend = 1,       
 	SensorPowerModeActive = 255,  
+	SensorPowerModeSingle = 0
 } SensorPowerMode;
 
 extern struct rm3100TaskMemory rm3100Mem;
