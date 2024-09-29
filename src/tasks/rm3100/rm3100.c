@@ -79,27 +79,20 @@ void rm3100_main(void *pvParameters) {
 
 	mag_set_power_mode(SensorPowerModeActive);
 
-    // int CycleCount = CCP0 | (CCP1 << 8);
-	// float gain = 0.3671 * CycleCount + 1.5;
+    int CycleCount = CCP0 | (CCP1 << 8);
+	float gain = 0.3671 * CycleCount + 1.5;
     watchdog_checkin(RM3100_TASK);
 
     while(1) {
         if (setup == 0) {
-            // RM3100_return_t values = values_loop();
+            RM3100_return_t values = values_loop();
 
-            // uint32_t x = (float)values.x / gain;
-            // uint32_t y = (float)values.y / gain;
-            // uint32_t z = (float)values.z / gain;
+            uint32_t x = (float)values.x / gain;
+            uint32_t y = (float)values.y / gain;
+            uint32_t z = (float)values.z / gain;
 
-            uint8_t bist = bist_register_get().bist;
-
-            // if (x == 0 && y == 0 && z == 0) {
-            //     vTaskDelay(pdMS_TO_TICKS(1));
-            // }
-
-            if (bist != 0)
-            {
-                vTaskDelay(pdMS_TO_TICKS(1));
+            if (x == 0 && y == 0 && z == 0) {
+                 vTaskDelay(pdMS_TO_TICKS(1));
             }
         }
         vTaskDelay(pdMS_TO_TICKS(1000));
