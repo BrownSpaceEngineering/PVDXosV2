@@ -60,21 +60,6 @@ void init_task(int i) {
     watchdog_register_task(taskList[i].handle);
 }
 
-status_t toggle_task(int i) {
-    if (taskList[i].handle == NULL) {
-        fatal("Task to be toggled was never initialized\n");
-        return ERROR_UNINITIALIZED;
-    }
-
-    if (taskList[i].enabled) {
-        vTaskSuspend(taskList[i].handle);
-    } else {
-        vTaskResume(taskList[i].handle);
-    }
-    taskList[i].enabled = !taskList[i].enabled;
-    return SUCCESS;
-}
-
 status_t enable_task(int i) {
     // If given an unitialized task, inform and abort enabling
     if(taskList[i].handle == NULL) {
@@ -98,7 +83,7 @@ status_t disable_task(int i) {
         fatal("task_manager: Trying to disale task that was never initialized");
         return ERROR_UNINITIALIZED;
     }
-    // Only unregister the task from the watchdog if it has not already been uniregistered
+    // Only unregister the task from the watchdog if it has not already been unregistered
     if (taskList[i].has_registered) {
         watchdog_unregister_task(taskList[i].handle);
         taskList[i].has_registered = false;
@@ -123,9 +108,12 @@ PVDXTask_t* task_manager_get_task(TaskHandle_t handle) {
 void task_manager_exec(cmd_t cmd) {
     BaseType_t xStatus;
 
-    switch (cmd.target) {
+    switch (cmd.operation) {
         case OPERATION_INIT_SUBTASKS:
             task_manager_init_subtasks();
+            break;
+        case OPERATION_ENABLE_SUBTASK:
+            enable_task(task_manager_get_task(cmd.target)) // Turn this into an index
             break;
         default:
             fatal("task-manager: Invalid operation!\n");
