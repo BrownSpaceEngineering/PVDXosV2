@@ -65,7 +65,14 @@ int init_rm3100(void) {
     /*  Write register settings */
     RM3100WriteReg(RM3100_CCPX1_REG, settings, 7);
     
-    mag_set_power_mode(SensorPowerModePowerDown);
+    if (!singleMode)
+    {
+        mag_set_power_mode(SensorPowerModeSingle);
+    }
+    else
+    {
+        mag_set_power_mode(SensorPowerModePowerDown);
+    }
         
     return SensorOK;
 }
@@ -128,24 +135,7 @@ RM3100_return_t values_loop() {
 }
 
 RM3100_bist_t bist_register_get() {
-    RM3100_bist_t returnVals;
-    uint8_t bistVal; 
-
-    uint8_t sendVal[2] = { 0x33, 0b10000000 };
-    uint8_t zero = 0;
-
-    RM3100WriteReg(RM3100_CMM_REG, (uint8_t *) &zero, 1);
-    RM3100WriteReg(RM3100_BIST_REG, (uint8_t *) &sendVal, 2);
-    RM3100WriteReg(RM3100_POLL_REG, &randomZero, 1);
-        while(gpio_get_pin_level(DRDY_PIN) == 0) {
-            vTaskDelay(pdMS_TO_TICKS(100));
-            watchdog_checkin(RM3100_TASK);
-        }
-
-    RM3100ReadReg(RM3100_BIST_REG, &bistVal, 1);
-
-    returnVals.bist = bistVal;
-
+    RM3100_bist_t returnVals = { .bist = 0 };
     return returnVals;
 }
 
@@ -169,6 +159,16 @@ int32_t RM3100WriteReg(uint8_t addr, uint8_t *data, uint16_t size) {
     io_write(rm3100_io, &addr, 1);
     //vTaskDelay(pdMS_TO_TICKS(20));
     return io_write(rm3100_io, data, size);
+}
+
+SensorStatus mag_enable_single()
+{
+    static uint8_t data[] = { RM3100_SINGLE, 0 };
+    static uint8_t bist[] = { 0x33, 0b11111111 };
+
+    RM3100WriteReg(RM3100_MAG_REG, data, sizeof(data)/sizeof(char));
+    RM3100WriteReg(RM3100_BIST_REG, bist, sizeof(bist)/sizeof(char));
+    return SensorOK;
 }
 
 SensorStatus mag_enable_interrupts()

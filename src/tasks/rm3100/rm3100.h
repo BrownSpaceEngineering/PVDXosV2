@@ -61,6 +61,7 @@ struct rm3100TaskMemory {
 #define RM3100_SLPOSCADJ_VALUE      0x08 
 
 #define RM3100_ENABLED              0x79
+#define RM3100_SINGLE				0x70
 #define RM3100_DISABLED             0x00
 
 #define RM3100_QX2_REG		0x24
@@ -128,7 +129,7 @@ typedef enum {
 	SensorPowerModePowerDown = 0,       
 	SensorPowerModeSuspend = 1,       
 	SensorPowerModeActive = 255,  
-	SensorPowerModeSingle = 0
+	SensorPowerModeSingle = 2
 } SensorPowerMode;
 
 extern struct rm3100TaskMemory rm3100Mem;
