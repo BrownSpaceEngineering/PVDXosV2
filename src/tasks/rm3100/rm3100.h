@@ -107,9 +107,9 @@ typedef struct {
 } RM3100_bist_t;
 
 typedef struct {
-    uint32_t x;
-    uint32_t y;
-    uint32_t z;
+    int32_t x;
+    int32_t y;
+    int32_t z;
 } RM3100_return_t;
 
 typedef enum {
@@ -136,8 +136,6 @@ extern struct rm3100TaskMemory rm3100Mem;
 
 RM3100_return_t values_loop();
 RM3100_bist_t bist_register_get();
-
-SensorPowerMode mag_set_power_mode(SensorPowerMode mode);
 
 SensorStatus mag_disable_interrupts();
 SensorPowerMode mag_set_power_mode(SensorPowerMode mode);
