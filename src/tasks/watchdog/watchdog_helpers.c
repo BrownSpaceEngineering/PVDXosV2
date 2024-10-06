@@ -4,20 +4,24 @@
 // then the task has not checked in and the watchdog should reset the system. Refer to "globals.h" to see the order in which
 // tasks are registered
 
-struct watchdogTaskMemory watchdogMem;
+struct watchdogTaskMemory watchdog_mem;
 
 volatile Wdt *const p_watchdog = WDT;
 bool watchdog_enabled = false;
 
-void watchdog_init(uint8_t watchdog_period, bool always_on) {
+void watchdog_init(void) {
+    // Choose the period of the hardware watchdog timer
+    uint8_t watchdog_period = WDT_CONFIG_PER_CYC16384;
+    bool always_on = true;
+
     // Initialize the 'lastCheckin' field of each task
     // Iterate using the 'name' field rather than the handle field, since not all tasks will have a handle at this point
-    for (int i = 0; taskList[i].name != NULL; i++) {
-        taskList[i].lastCheckin = 0; // 0 Is a special value that indicates that the task has not checked in yet (or is not running)
+    for (size_t i = 0; task_list[i].name != NULL; i++) {
+        task_list[i].lastCheckin = 0; // 0 Is a special value that indicates that the task has not checked in yet (or is not running)
     }
 
-    for (int i = 0; taskList[i].name != NULL; i++) {
-        taskList[i].has_registered = false;
+    for (size_t i = 0; task_list[i].name != NULL; i++) {
+        task_list[i].has_registered = false;
     }
 
     // Disable the watchdog before configuring
@@ -88,7 +92,7 @@ void watchdog_kick(void) {
 void watchdog_checkin(void) {
     //Tasks should only check-in for themselves, so we can get the task handle from RTOS
     TaskHandle_t handle = xTaskGetCurrentTaskHandle();
-    PVDXTask_t *task = task_manager_get_task(handle);
+    PVDXTask *task = get_task(handle);
 
     if (!task->has_registered) {
         // something went wrong because a task that is checking in should have 'has_registered' set to true
@@ -101,10 +105,12 @@ void watchdog_checkin(void) {
 }
 
 void watchdog_register_task(TaskHandle_t handle) {
+    lock_mutex(task_list_mutex);
+
     if (handle == NULL) {
         fatal("Tried to register a NULL task handle\n");
     }
-    PVDXTask_t *task = task_manager_get_task(handle);
+    PVDXTask *task = get_task(handle);
 
     if (task->has_registered) {
         // something went wrong because we define unregistered tasks to have 'should_checkin' set to false
@@ -114,15 +120,19 @@ void watchdog_register_task(TaskHandle_t handle) {
     // initialize running times and require the task to check in
     task->lastCheckin = xTaskGetTickCount();
     task->has_registered = true;
+    unlock_mutex(task_list_mutex);
+
     debug("watchdog: %s task registered\n", task->name);
 }
 
 void watchdog_unregister_task(TaskHandle_t handle) {
+    lock_mutex(task_list_mutex);
+
     if (handle == NULL) {
         fatal("Tried to unregister a NULL task handle\n");
     }
     
-    PVDXTask_t *task = task_manager_get_task(handle);
+    PVDXTask *task = get_task(handle);
 
     if (!task->has_registered) {
         // something went wrong because we define unregistered tasks to have 'should_checkin' set to false
@@ -132,5 +142,8 @@ void watchdog_unregister_task(TaskHandle_t handle) {
 
     task->lastCheckin = 0xDEADBEEF; // 0xDEADBEEF is a special value that indicates that the task is not running
     task->has_registered = false;
+
+    unlock_mutex(task_list_mutex);
+    
     debug("watchdog: %s task unregistered\n", task->name);
 }

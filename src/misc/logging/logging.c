@@ -1,14 +1,14 @@
 #include "logging.h"
 
-#include "SEGGER_RTT.h"
-#include "watchdog_task.h"
-
 #include <stdarg.h>
 #include <stdlib.h>
 
+#include "SEGGER_RTT.h"
+#include "watchdog_task.h"
+
 // Macros for debugging functions so that file and line number info can be included
 
-log_level_t LOG_LEVEL = DEFAULT_LOG_LEVEL;
+LogLevel LOG_LEVEL = DEFAULT_LOG_LEVEL;
 uint8_t SEGGER_RTT_LOG_BUFFER[SEGGER_RTT_LOG_BUFFER_SIZE];
 
 void fatal_impl(const char *string, ...) {
@@ -70,10 +70,10 @@ void debug_impl(const char *string, ...) {
     va_end(args);
 }
 
-void set_log_level(log_level_t level) {
+void set_log_level(LogLevel level) {
     LOG_LEVEL = level;
 }
 
-log_level_t get_log_level() {
+LogLevel get_log_level() {
     return LOG_LEVEL;
 }

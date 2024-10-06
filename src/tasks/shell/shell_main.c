@@ -2,9 +2,10 @@
 #include "shell_helpers.h"
 #include "shell_task.h"
 
-struct shellTaskMemory shellMem = {0};
+struct shellTaskMemory shell_mem = {0};
 
-uint8_t SHELL_INPUT_BUFFER[SHELL_INPUT_BUFFER_SIZE] = {0}; //This is a layer ontop of the RTT internal buffer, which is of length 16 (BUFFER_SIZE_DOWN)
+uint8_t SHELL_INPUT_BUFFER[SHELL_INPUT_BUFFER_SIZE] = {
+    0}; // This is a layer ontop of the RTT internal buffer, which is of length 16 (BUFFER_SIZE_DOWN)
 
 void shell_main(void *pvParameters) {
     info("Shell task started\n");
@@ -18,16 +19,16 @@ void shell_main(void *pvParameters) {
         // Print the shell prompt
         terminal_printf(SHELL_PROMPT);
 
-        //Wait for a command
+        // Wait for a command
         size_t cmd_len = get_line_from_terminal(SHELL_INPUT_BUFFER);
         debug("Command received (len %d): %s\n", cmd_len, SHELL_INPUT_BUFFER);
 
         if (cmd_len == 0) {
-            //No command was entered, loop again
+            // No command was entered, loop again
             debug("Received empty command in shell task\n");
             continue;
         } else if (cmd_len >= SHELL_INPUT_BUFFER_SIZE) {
-            //The command was too long and reached the command limit!
+            // The command was too long and reached the command limit!
             warning("Command length limit reached! (Max: %d)\n", SHELL_INPUT_BUFFER_SIZE);
             warning("Ignoring command and clearing input buffer\n");
             clear_RTT_input_buffer();
@@ -53,7 +54,7 @@ void shell_main(void *pvParameters) {
         }
 
         // Find the associated command function
-        void (*command_func)(char **args, int arg_count) = NULL;
+        void ShellCommand(char **args, int arg_count) = NULL;
         for (shell_command_t *shell_command = shell_commands; shell_command->command_name != NULL; shell_command++) {
             if (strcmp(user_command, shell_command->command_name) == 0) {
                 // It's the right shell command, call the command function

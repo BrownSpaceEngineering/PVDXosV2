@@ -2,12 +2,12 @@
 #define SHELL_TASK_H
 
 // Includes
+#include <atmel_start.h>
+#include <driver_init.h>
+
 #include "globals.h"
 #include "rtos_start.h"
 #include "watchdog_task.h"
-
-#include <atmel_start.h>
-#include <driver_init.h>
 
 // Constants
 #define SHELL_ASCII_ART                                                                                                                    \
@@ -34,7 +34,7 @@ struct shellTaskMemory {
     StaticTask_t shellTaskTCB;
 };
 
-extern struct shellTaskMemory shellMem;
+extern struct shellTaskMemory shell_mem;
 
 void shell_main(void *pvParameters);
 

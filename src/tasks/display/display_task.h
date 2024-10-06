@@ -20,7 +20,7 @@ struct displayTaskMemory {
     StaticTask_t displayTaskTCB;
 };
 
-extern struct displayTaskMemory displayMem;
+extern struct displayTaskMemory display_mem;
 
 // Queue for commands to be executed by the display task
 extern QueueHandle_t displayQueue;

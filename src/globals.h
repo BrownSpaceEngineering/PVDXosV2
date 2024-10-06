@@ -14,6 +14,7 @@
 /* ----------------------------------------------------------- */
 
 #define TASK_STACK_OVERFLOW_PADDING 16 // Buffer for the stack size so that overflow doesn't corrupt any TCBs
+#define SUBTASK_START_INDEX 3          // The index of the first subtask in the task list
 
 typedef enum {
     SUCCESS = 0,
@@ -28,18 +29,19 @@ typedef enum {
     ERROR_MAX_SIZE_EXCEEDED,
     ERROR_UNINITIALIZED,
     ERROR_IO,
+    ERROR_TIMEOUT,
 
     // High significance errors start at 128 (0x80) (in these cases, restart the system)
     ERROR_UNRECOVERABLE = 0x80,
     ERROR_BITFLIP, // Specifically if we detect a bitflip, so we can increment counters.
-} status_t;
+} Status;
 
 typedef enum {
     DEBUG = 0,
     INFO,
     EVENT,
     WARNING,
-} log_level_t;
+} LogLevel;
 
 // Defines for printing out the build version
 #if defined(DEVBUILD)

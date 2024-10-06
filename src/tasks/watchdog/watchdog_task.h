@@ -2,8 +2,8 @@
 #define WATCHDOG_TASK_H
 
 // Includes
-#include "globals.h"
 #include "atmel_start.h"
+#include "globals.h"
 #include "hardware_watchdog_utils.h"
 #include "logging.h"
 #include "rtos_start.h"
@@ -23,11 +23,11 @@ struct watchdogTaskMemory {
     StaticTask_t watchdogTaskTCB;
 };
 
-extern struct watchdogTaskMemory watchdogMem;
+extern struct watchdogTaskMemory watchdog_mem;
 extern volatile Wdt *const p_watchdog;
 extern bool watchdog_enabled;
 
-void watchdog_init(uint8_t watchdog_period, bool always_on);
+void watchdog_init();
 void watchdog_main(void *pvParameters);
 void watchdog_early_warning_callback(void);
 void watchdog_pet(void);

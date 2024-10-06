@@ -5,10 +5,10 @@ typedef struct {
     char *command_name;
     void (*command_function)(char **args, int arg_count);
     void (*help_function)();
-} shell_command_t;
+} ShellCommand;
 
 // Null-terminated array of shell commands
-extern shell_command_t shell_commands[];
+extern ShellCommand shell_commands[];
 
 void shell_help(char **args, int arg_count);
 void help_help();

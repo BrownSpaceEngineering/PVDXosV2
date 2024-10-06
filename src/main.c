@@ -2,15 +2,15 @@
 
 // Buffer for Segger Logging Channel
 
-cosmicmonkeyTaskArguments_t cm_args = {0};
+CosmicMonkeyTaskArguments cm_args = {0};
 
-static status_t PVDX_init(void);
+static Status PVDX_init(void);
 
 int main(void) {
     /* Initializes MCU, drivers and middleware */
     atmel_start_init();
     PVDX_init();
-    info_impl(RTT_CTRL_RESET RTT_CTRL_CLEAR); //Reset the terminal
+    info_impl(RTT_CTRL_RESET RTT_CTRL_CLEAR); // Reset the terminal
     info_impl("--- Atmel & Hardware Initialization Complete ---\n");
     info_impl("[+] Build Type: %s\n", BUILD_TYPE);
     info_impl("[+] Build Date: %s\n", BUILD_DATE);
@@ -28,40 +28,53 @@ int main(void) {
         warning_impl("[!] Abnormal bootloader behavior (Magic Number: %x)\n", magic_number);
     }
 
-    // Initialize the watchdog as early as possible to ensure that the system is reset if the initialization hangs
-    watchdog_init(WDT_CONFIG_PER_CYC16384, true);
-    info("Watchdog initialized\n");
+    // ------- INIT WATCHDOG, COMMAND_EXECUTOR, TASK_MANAGER TASKS (in that order) -------
 
-    // Initialize the task manager, which will initialize all other tasks on the system
-    task_manager_init();
+    void (*main_functions[SUBTASK_START_INDEX])(void *pvParameters) = {
+        watchdog_main,
+        command_executor_main,
+        task_manager_main,
+    };
 
-    if (taskList[0].function != &task_manager_main) {
-        fatal("Task Manager not found at index 0 of task list!\n");
+    void (*init_functions[SUBTASK_START_INDEX])(void) = {
+        watchdog_init,
+        command_executor_init,
+        task_manager_init,
+    };
+
+    const char *task_names[SUBTASK_START_INDEX] = {"Watchdog Task", "Command Executor Task", "Task Manager Task"};
+
+    for (size_t i = 0; i < SUBTASK_START_INDEX; i++) {
+        init_functions[i]();
+
+        if (task_list[i].function == main_functions[i]) {
+            init_task(i);
+        } else {
+            fatal("%s not found at index %d of task list!\n", task_names[i], i);
+        }
+
+        info("%s initialized\n", task_names[i]);
     }
-    // bit flip here????
-    watchdog_register_task(taskList[0].handle) // TODO: Fix magic number in here 
-    taskList[0].enable = true;  // Enable task manager
-    info("Task Manager initialized\n");
 
     // ------- COSMIC MONKEY TASK -------
 
-    #if defined(UNITTEST) || defined(DEVBUILD)
-        #if defined(UNITTEST)
-        cm_args.frequency = 10;
-        #endif
-        #if defined(DEVBUILD)
-        cm_args.frequency = 1;
+#if defined(UNITTEST) || defined(DEVBUILD)
+    #if defined(UNITTEST)
+    cm_args.frequency = 10;
+    #endif
+    #if defined(DEVBUILD)
+    cm_args.frequency = 1;
     #endif
 
-        TaskHandle_t cosmicMonkeyTaskHandle =
-            xTaskCreateStatic(cosmicmonkey_main, "CosmicMonkey", COSMICMONKEY_TASK_STACK_SIZE, (void *)&cm_args, 1,
-                              cosmicmonkeyMem.cosmicmonkeyTaskStack, &cosmicmonkeyMem.cosmicmonkeyTaskTCB);
-        if (cosmicMonkeyTaskHandle == NULL) {
-            warning("Cosmic Monkey Task Creation Failed!\r\n");
-        } else {
-            info("Cosmic Monkey Task Created!\r\n");
-        }
-    #endif // Cosmic Monkey
+    TaskHandle_t cosmicMonkeyTaskHandle =
+        xTaskCreateStatic(cosmicmonkey_main, "CosmicMonkey", COSMICMONKEY_TASK_STACK_SIZE, (void *)&cm_args, 1,
+                          cosmicmonkeyMem.cosmicmonkeyTaskStack, &cosmicmonkeyMem.cosmicmonkeyTaskTCB);
+    if (cosmicMonkeyTaskHandle == NULL) {
+        warning("Cosmic Monkey Task Creation Failed!\r\n");
+    } else {
+        info("Cosmic Monkey Task Created!\r\n");
+    }
+#endif // Cosmic Monkey
 
     // Start the scheduler
     vTaskStartScheduler();
@@ -72,7 +85,7 @@ int main(void) {
     }
 }
 
-static status_t PVDX_init() {
+static Status PVDX_init() {
     // Segger Buffer 0 is pre-configured at compile time according to segger documentation
     // Config the logging output channel (assuming it's not zero)
     if (LOGGING_RTT_OUTPUT_CHANNEL != 0) {

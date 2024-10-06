@@ -27,8 +27,8 @@ export OBJS := \
 ../src/tasks/heartbeat/heartbeat_main.o \
 ../src/tasks/watchdog/watchdog_main.o \
 ../src/tasks/watchdog/watchdog_helpers.o \
-../src/tasks/cosmic_monkey/cosmicmonkey_main.o \
-../src/tasks/cosmic_monkey/cosmicmonkey_helpers.o \
+../src/tasks/cosmic_monkey/cosmic_monkey_main.o \
+../src/tasks/cosmic_monkey/cosmic_monkey_helpers.o \
 ../src/tasks/display/display_main.o \
 ../src/tasks/display/display_helpers.o \
 ../src/tasks/display/display_hal.o \

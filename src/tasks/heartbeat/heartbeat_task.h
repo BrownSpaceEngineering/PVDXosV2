@@ -19,7 +19,7 @@ struct heartbeatTaskMemory {
     StaticTask_t heartbeatTaskTCB;
 };
 
-extern struct heartbeatTaskMemory heartbeatMem;
+extern struct heartbeatTaskMemory heartbeat_mem;
 
 void heartbeat_main(void *pvParameters);
 
