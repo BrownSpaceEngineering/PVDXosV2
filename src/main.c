@@ -2,7 +2,7 @@
 
 // Buffer for Segger Logging Channel
 
-CosmicMonkeyTaskArguments cm_args = {0};
+cosmic_monkey_task_arguments_t cm_args = {0};
 
 static status_t PVDX_init(void);
 
@@ -66,10 +66,10 @@ int main(void) {
     cm_args.frequency = 1;
     #endif
 
-    TaskHandle_t cosmicMonkeyTaskHandle =
-        xTaskCreateStatic(cosmicmonkey_main, "CosmicMonkey", COSMICMONKEY_TASK_STACK_SIZE, (void *)&cm_args, 1,
-                          cosmicmonkeyMem.cosmicmonkeyTaskStack, &cosmicmonkeyMem.cosmicmonkeyTaskTCB);
-    if (cosmicMonkeyTaskHandle == NULL) {
+    TaskHandle_t cosmic_monkey_task_handle =
+        xTaskCreateStatic(cosmic_monkey_main, "CosmicMonkey", COSMIC_MONKEY_TASK_STACK_SIZE, (void *)&cm_args, 1,
+                          cosmic_monkey_mem.cosmic_monkey_task_stack, &cosmic_monkey_mem.cosmic_monkey_task_tcb);
+    if (cosmic_monkey_task_handle == NULL) {
         warning("Cosmic Monkey Task Creation Failed!\r\n");
     } else {
         info("Cosmic Monkey Task Created!\r\n");
