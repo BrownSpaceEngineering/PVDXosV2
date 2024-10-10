@@ -20,7 +20,7 @@ uint8_t spi_tx_buffer[DISPLAY_SPI_BUFFER_CAPACITY] = {0x00};
 struct spi_xfer xfer = {.rxbuf = spi_rx_buffer, .txbuf = spi_tx_buffer, .size = 0};
 
 // Buffer for the display
-COLOR display_buffer[(SSD1362_WIDTH / 2) * SSD1362_HEIGHT] = {0x00};
+color_t display_buffer[(SSD1362_WIDTH / 2) * SSD1362_HEIGHT] = {0x00};
 
 // Write the contents of spi_tx_buffer to the display as a command
 status_t spi_write_command() {
@@ -82,8 +82,8 @@ status_t display_set_window() {
     return SUCCESS;
 }
 
-// Set a specific pixel in the display buffer to a given color. To actually update the display, call display_update()
-status_t display_set_buffer_pixel(POINT x, POINT y, COLOR color) {
+// Set a specific pixel in the display buffer to a given color_t. To actually update the display, call display_update()
+status_t display_set_buffer_pixel(point_t x, point_t y, color_t color) {
     // bounds checking
     if (x >= SSD1362_WIDTH || y >= SSD1362_HEIGHT) {
         return ERROR_INTERNAL;
@@ -102,7 +102,7 @@ status_t display_set_buffer_pixel(POINT x, POINT y, COLOR color) {
 }
 
 // Set the entire display buffer to the contents of the input buffer. To actually update the display, call display_update()
-status_t display_set_buffer(const COLOR* p_buffer) {
+status_t display_set_buffer(const color_t* p_buffer) {
     for (uint16_t i = 0; i < (SSD1362_WIDTH / 2) * SSD1362_HEIGHT; i++) {
         display_buffer[i] = p_buffer[i];
     }
@@ -111,7 +111,7 @@ status_t display_set_buffer(const COLOR* p_buffer) {
 }
 
 // Clear the display buffer. To actually update the display, call display_update()
-status_t display_clear_buffer() {
+status_t display_clear_buffer(void) {
     for (uint16_t i = 0; i < (SSD1362_WIDTH / 2) * SSD1362_HEIGHT; i++) {
         display_buffer[i] = 0x00;
     }
@@ -120,7 +120,7 @@ status_t display_clear_buffer() {
 }
 
 // Update the display with the contents of the display buffer
-status_t display_update() {
+status_t display_update(void) {
     // set the display window to the entire display
     display_set_window();
 
@@ -136,7 +136,7 @@ status_t display_update() {
 }
 
 // Initialize the display
-status_t display_init() {
+status_t display_init(void) {
     spi_m_sync_enable(&SPI_0); // if you forget this line, this function returns -20
 
     display_reset(); // setting reset pin low triggers a reset of the display

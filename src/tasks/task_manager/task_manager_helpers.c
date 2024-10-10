@@ -45,7 +45,7 @@ pvdx_task_t* get_task(TaskHandle_t handle) {
 
 // Initializes the task manager task (it should be the first task in the global task list)
 void task_manager_init(void) {
-    task_manager_cmd_queue = xQueueCreateStatic(TASK_MANAGER_TASK_STACK_SIZE, TASK_MANAGER_QUEUE_ITEM_SIZE, task_manager_queue_buffer, &task_manager_mem.taskManagerTaskQueue);
+    task_manager_cmd_queue = xQueueCreateStatic(TASK_MANAGER_TASK_STACK_SIZE, COMMAND_QUEUE_ITEM_SIZE, task_manager_queue_buffer, &task_manager_mem.task_manager_task_queue);
 
     if (task_manager_cmd_queue == NULL) {
         fatal("task-manager: Failed to create task manager queue!\n");
@@ -75,22 +75,22 @@ void task_manager_init_subtasks(void) {
     }
 }
 
-status_t task_manager_enable_task(size_t i) {
+status_t task_manager_enable_task(pvdx_task_t* task) {
     lock_mutex(task_list_mutex);
 
     // If given an unitialized task, inform and abort enabling
-    if(task_list[i].handle == NULL) {
+    if(task->handle == NULL) {
         info("task_manager: Attempted to enable uninitialized task");
         return ERROR_UNINITIALIZED;
     }
     // If given an already enabled task, inform then return success
-    if(task_list[i].enabled) {
+    if(task->enabled) {
         info("task_manager: Given task had already been enabled");
         return SUCCESS;
     }
-    vTaskResume(task_list[i].handle);
+    vTaskResume(task->handle);
 
-    task_list[i].enabled = true;
+    task->enabled = true;
 
     unlock_mutex(task_list_mutex);
 
@@ -98,20 +98,20 @@ status_t task_manager_enable_task(size_t i) {
 }
 
 // Disables a task
-status_t task_manager_disable_task(size_t i) {
+status_t task_manager_disable_task(pvdx_task_t* task) {
     lock_mutex(task_list_mutex);
 
-    if (task_list[i].handle == NULL) {
+    if (task->handle == NULL) {
         fatal("task_manager: Trying to disable task that was never initialized");
         return ERROR_UNINITIALIZED;
     }
     // Only unregister the task from the watchdog if it has not already been unregistered
-    if (task_list[i].has_registered) {
-        watchdog_unregister_task(task_list[i].handle);
-        task_list[i].has_registered = false;
+    if (task->has_registered) {
+        watchdog_unregister_task(task->handle);
+        task->has_registered = false;
     }
-    vTaskSuspend(task_list[i].handle);
-    task_list[i].enabled = false;
+    vTaskSuspend(task->handle);
+    task->enabled = false;
 
     unlock_mutex(task_list_mutex);
 
@@ -119,14 +119,17 @@ status_t task_manager_disable_task(size_t i) {
 }
 
 void task_manager_exec(command_t cmd) {
-    BaseType_t xStatus;
+    BaseType_t xStatus; // TODO: use this
 
     switch (cmd.operation) {
         case OPERATION_INIT_SUBTASKS:
             task_manager_init_subtasks();
             break;
         case OPERATION_ENABLE_SUBTASK:
-            enable_task(get_task(cmd.target)); // Turn this into an index
+            task_manager_enable_task(get_task((TaskHandle_t)cmd.p_data)); // Turn this into an index
+            break;
+        case OPERATION_DISABLE_SUBTASK:
+            task_manager_disable_task(get_task((TaskHandle_t)cmd.p_data)); // Turn this into an index
             break;
         default:
             fatal("task-manager: Invalid operation!\n");

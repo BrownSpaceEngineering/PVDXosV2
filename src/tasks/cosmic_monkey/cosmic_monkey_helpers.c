@@ -1,5 +1,5 @@
 #include "atmel_start.h"
-#include "cosmicmonkey_task.h"
+#include "cosmic_monkey_task.h"
 #include "logging.h"
 
 static const int VALID_MEMORY_RANGE_START = 0x20000000;

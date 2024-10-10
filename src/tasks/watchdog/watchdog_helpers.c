@@ -4,20 +4,14 @@
 // then the task has not checked in and the watchdog should reset the system. Refer to "globals.h" to see the order in which
 // tasks are registered
 
-struct watchdogTaskMemory watchdog_mem;
-
-volatile Wdt *const p_watchdog = WDT;
-bool watchdog_enabled = false;
-
 void watchdog_init(void) {
     // Choose the period of the hardware watchdog timer
     uint8_t watchdog_period = WDT_CONFIG_PER_CYC16384;
-    bool always_on = true;
 
-    // Initialize the 'lastCheckin' field of each task
+    // Initialize the 'last_checkin' field of each task
     // Iterate using the 'name' field rather than the handle field, since not all tasks will have a handle at this point
     for (size_t i = 0; task_list[i].name != NULL; i++) {
-        task_list[i].lastCheckin = 0; // 0 Is a special value that indicates that the task has not checked in yet (or is not running)
+        task_list[i].last_checkin = 0; // 0 Is a special value that indicates that the task has not checked in yet (or is not running)
     }
 
     for (size_t i = 0; task_list[i].name != NULL; i++) {
@@ -100,7 +94,7 @@ void watchdog_checkin(void) {
     }
 
     // update the last checkin time
-    task->lastCheckin = xTaskGetTickCount();
+    task->last_checkin = xTaskGetTickCount();
     debug("watchdog: %s task checked in\n", task->name);
 }
 
@@ -118,7 +112,7 @@ void watchdog_register_task(TaskHandle_t handle) {
     }
 
     // initialize running times and require the task to check in
-    task->lastCheckin = xTaskGetTickCount();
+    task->last_checkin = xTaskGetTickCount();
     task->has_registered = true;
     unlock_mutex(task_list_mutex);
 
@@ -140,7 +134,7 @@ void watchdog_unregister_task(TaskHandle_t handle) {
         watchdog_kick();
     }
 
-    task->lastCheckin = 0xDEADBEEF; // 0xDEADBEEF is a special value that indicates that the task is not running
+    task->last_checkin = 0xDEADBEEF; // 0xDEADBEEF is a special value that indicates that the task is not running
     task->has_registered = false;
 
     unlock_mutex(task_list_mutex);

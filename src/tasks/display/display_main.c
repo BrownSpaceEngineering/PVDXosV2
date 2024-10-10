@@ -2,8 +2,8 @@
 
 // Display Task memory structures
 display_task_memory_t display_mem;
-uint8_t displayQueueBuffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
-QueueHandle_t displayQueue;
+uint8_t display_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
+QueueHandle_t display_queue;
 
 void display_main(void *pvParameters) {
     info("display: Task started!\n");

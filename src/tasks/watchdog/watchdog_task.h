@@ -8,6 +8,7 @@
 #include "logging.h"
 #include "rtos_start.h"
 #include "task_manager_task.h"
+#include "utils.h"
 
 // Constants
 #define WATCHDOG_MS_DELAY 1000 // Controls how often the Watchdog thread runs and verifies task checkins
@@ -18,9 +19,9 @@
 // Placed in a struct to ensure that the TCB is placed higher than the stack in memory
 // ^ This ensures that stack overflows do not corrupt the TCB (since the stack grows downwards)
 typedef struct {
-    StackType_t OverflowBuffer[TASK_STACK_OVERFLOW_PADDING];
-    StackType_t watchdogTaskStack[WATCHDOG_TASK_STACK_SIZE];
-    StaticTask_t watchdogTaskTCB;
+    StackType_t overflow_buffer[TASK_STACK_OVERFLOW_PADDING];
+    StackType_t watchdog_task_stack[WATCHDOG_TASK_STACK_SIZE];
+    StaticTask_t watchdog_task_tcb;
 } watchdog_task_memory_t;
 
 extern watchdog_task_memory_t watchdog_mem;

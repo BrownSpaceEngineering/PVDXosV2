@@ -22,8 +22,8 @@ extern cosmic_monkey_task_memory_t cosmic_monkey_mem;
 status_t perform_flip();
 void cosmic_monkey_main(void *pvParameters);
 
-typedef struct CosmicMonkeyTaskArguments {
+typedef struct {
     int frequency;
-} CosmicMonkeyTaskArguments;
+} cosmic_monkey_task_arguments_t;
 
 #endif // COSMIC_MONKEY_TASK_H

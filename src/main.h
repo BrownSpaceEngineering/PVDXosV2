@@ -6,7 +6,7 @@
 #include <hal_adc_sync.h>
 
 #include "SEGGER_RTT.h"
-#include "cosmicmonkey_task.h"
+#include "cosmic_monkey_task.h"
 #include "globals.h"
 #include "heartbeat_task.h"
 #include "logging.h"

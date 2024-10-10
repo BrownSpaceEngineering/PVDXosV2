@@ -1,6 +1,8 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
+#include <freeRTOS.h>
+
 /* --------- HIGH-LEVEL CONFIG VARIABLES AND DEFINES --------- */
 
 #if defined(RELEASE)
@@ -15,6 +17,8 @@
 
 #define TASK_STACK_OVERFLOW_PADDING 16 // Buffer for the stack size so that overflow doesn't corrupt any TCBs
 #define SUBTASK_START_INDEX 3          // The index of the first subtask in the task list
+#define COMMAND_QUEUE_MAX_COMMANDS 15             // Maximum number of commands that can be queued at once for any task
+#define COMMAND_QUEUE_ITEM_SIZE sizeof(command_t) // Size of each item in command queues
 
 typedef enum {
     SUCCESS = 0,
@@ -35,6 +39,42 @@ typedef enum {
     ERROR_UNRECOVERABLE = 0x80,
     ERROR_BITFLIP, // Specifically if we detect a bitflip, so we can increment counters.
 } status_t;
+
+// An enum to represent the various tasks/daemons that the command executor can interact with
+typedef enum {
+    TASK_COMMAND_EXECUTOR = 0,
+    TASK_MANAGER,
+    TASK_DISPLAY,
+    TASK_SHELL,
+    TASK_HEARTBEAT,
+    TASK_MAGNETOMETER,
+    TASK_CAMERA,
+    TASK_9AXIS
+} task_t;
+
+// An enum to represent the different operations that the command executor can perform
+// NOTE: The same operation can have different meanings depending on the target task
+typedef enum {
+    // General operations (can be overloaded by any task)
+    OPERATION_SET_BUFFER = 0,
+    OPERATION_UPDATE,
+    OPERATION_POWER_OFF,
+    OPERATION_SET_LOG_LEVEL,
+    // Task-Manager specific operations
+    OPERATION_INIT_SUBTASKS,
+    OPERATION_ENABLE_SUBTASK,
+    OPERATION_DISABLE_SUBTASK
+} operation_t;
+
+// A struct to represent a command that OS tasks can execute
+typedef struct {
+    task_t target;
+    operation_t operation;
+    char* p_data;
+    size_t len;
+    status_t* p_result;
+    void (*callback)(status_t* p_result);
+} command_t;
 
 typedef enum {
     DEBUG = 0,

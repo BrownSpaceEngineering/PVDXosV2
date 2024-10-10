@@ -74,13 +74,18 @@
 #define SSD1362_DESELECT_VOLTAGE_RATIO 0x07  // TODO: what is this
 
 // Data types
-#define POINT uint16_t // 16 bits per coordinate (larger than 8-bit for overflow checking)
-#define COLOR uint8_t  // 4 bits per pixel (16 greyscale levels)
+typedef uint16_t point_t;// 16 bits per coordinate (larger than 8-bit for overflow checking)
+typedef uint8_t color_t;  // 4 bits per pixel (16 greyscale levels)
 
 // Initializes display hardware parameters
 status_t display_init(void);
 
 // Variables
-extern COLOR display_buffer[(SSD1362_WIDTH / 2) * SSD1362_HEIGHT]; // pixels are 4 bits, so 2 consecutive pixels per byte
+extern color_t display_buffer[(SSD1362_WIDTH / 2) * SSD1362_HEIGHT]; // pixels are 4 bits, so 2 consecutive pixels per byte
+
+// Functions
+status_t display_init(void);
+status_t display_update(void);
+status_t display_set_buffer(const color_t* p_buffer);
 
 #endif // DISPLAY_HAL_H

@@ -1,9 +1,9 @@
-#include "cosmicmonkey_task.h"
+#include "cosmic_monkey_task.h"
 
 cosmic_monkey_task_memory_t cosmic_monkey_mem;
 
-void cosmicmonkey_main(void *pvParameters) {
-    CosmicMonkeyTaskArguments args = *((CosmicMonkeyTaskArguments *)pvParameters);
+void cosmic_monkey_main(void *pvParameters) {
+    cosmic_monkey_task_arguments_t args = *((cosmic_monkey_task_arguments_t *)pvParameters);
 
     rand_sync_init(&RAND_0, TRNG); // Initialize random number generator
     rand_sync_enable(&RAND_0);     // Enable the random number generator clock

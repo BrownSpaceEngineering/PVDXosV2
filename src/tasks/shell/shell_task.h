@@ -29,9 +29,9 @@
 // Placed in a struct to ensure that the TCB is placed higher than the stack in memory
 //^ This ensures that stack overflows do not corrupt the TCB (since the stack grows downwards)
 typedef struct {
-    StackType_t OverflowBuffer[TASK_STACK_OVERFLOW_PADDING];
-    StackType_t shellTaskStack[SHELL_TASK_STACK_SIZE];
-    StaticTask_t shellTaskTCB;
+    StackType_t overflow_buffer[TASK_STACK_OVERFLOW_PADDING];
+    StackType_t shell_task_stack[SHELL_TASK_STACK_SIZE];
+    StaticTask_t shell_task_tcb;
 } shell_task_memory_t;
 
 extern shell_task_memory_t shell_mem;

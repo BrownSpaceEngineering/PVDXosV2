@@ -14,9 +14,9 @@
 //Placed in a struct to ensure that the TCB is placed higher than the stack in memory
 //^ This ensures that stack overflows do not corrupt the TCB (since the stack grows downwards)
 typedef struct {
-    StackType_t OverflowBuffer[TASK_STACK_OVERFLOW_PADDING];
-    StackType_t heartbeatTaskStack[HEARTBEAT_TASK_STACK_SIZE];
-    StaticTask_t heartbeatTaskTCB;
+    StackType_t overflow_buffer[TASK_STACK_OVERFLOW_PADDING];
+    StackType_t heartbeat_task_stack[HEARTBEAT_TASK_STACK_SIZE];
+    StaticTask_t heartbeat_task_tcb;
 } heartbeat_task_memory_t;
 
 extern heartbeat_task_memory_t heartbeat_mem;
