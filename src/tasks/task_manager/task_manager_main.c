@@ -1,6 +1,6 @@
 #include "task_manager_task.h"
 
-struct taskManagerTaskMemory task_manager_mem;
+task_manager_task_memory_t task_manager_mem;
 uint8_t task_manager_queue_buffer[TASK_MANAGER_QUEUE_MAX_COMMANDS * TASK_MANAGER_QUEUE_ITEM_SIZE];
 QueueHandle_t task_manager_cmd_queue;
 SemaphoreHandle_t task_list_mutex = NULL;
@@ -8,8 +8,8 @@ StaticSemaphore_t task_list_mutex_buffer;
 
 
 // TODO: tune watchdog timeout values
-PVDXTask task_list[] = {
-    // List of tasks to be initialized by the task manager (see PVDXTask definition in task_manager.h)
+pvdx_task_t task_list[] = {
+    // List of tasks to be initialized by the task manager (see pvdx_task_t definition in task_manager.h)
     // NOTE: Watchdog task must be first in the list, Command Executor second, and Task Manager third
     // DO NOT CHANGE THE ORDER OF THE FIRST THREE SUBTASKS !!!!
     {
@@ -39,8 +39,8 @@ void task_manager_main(void *pvParameters) {
     info("task-manager: Task started!\n");
 
     // Enqueue a command to initialize all subtasks
-    Status result;
-    Command command_task_manager_init_subtasks = {TASK_MANAGER, OPERATION_INIT_SUBTASKS, NULL, 0, &result, NULL};
+    status_t result;
+    command_t command_task_manager_init_subtasks = {TASK_MANAGER, OPERATION_INIT_SUBTASKS, NULL, 0, &result, NULL};
     command_executor_enqueue(command_task_manager_init_subtasks);
 
     // Initialize a mutex wrapping the shared PVDX task list struct
@@ -50,7 +50,7 @@ void task_manager_main(void *pvParameters) {
         fatal("Failed to create PVDX task list mutex");
     }
 
-    Command cmd;
+    command_t cmd;
     BaseType_t xStatus;
 
     while (true) {

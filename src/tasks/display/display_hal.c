@@ -23,7 +23,7 @@ struct spi_xfer xfer = {.rxbuf = spi_rx_buffer, .txbuf = spi_tx_buffer, .size = 
 COLOR display_buffer[(SSD1362_WIDTH / 2) * SSD1362_HEIGHT] = {0x00};
 
 // Write the contents of spi_tx_buffer to the display as a command
-Status spi_write_command() {
+status_t spi_write_command() {
     DC_LOW(); // set D/C# pin low to indicate that sent bytes are commands (not data)
     CS_LOW(); // select the display for SPI communication
 
@@ -37,7 +37,7 @@ Status spi_write_command() {
 }
 
 // Write the contents of spi_tx_buffer to the display as data
-Status spi_write_data() {
+status_t spi_write_data() {
     DC_HIGH(); // set D/C# pin high to indicate that sent bytes are data (not commands)
     CS_LOW();  // select the display for SPI communication
 
@@ -66,7 +66,7 @@ void display_reset(void) {
 }
 
 // Set the display window to cover the entire screen
-Status display_set_window() {
+status_t display_set_window() {
     xfer.size = 3;
     spi_tx_buffer[0] = SSD1362_CMD_3B_SETCOLUMN;
     spi_tx_buffer[1] = SSD_1362_COL_START;
@@ -83,7 +83,7 @@ Status display_set_window() {
 }
 
 // Set a specific pixel in the display buffer to a given color. To actually update the display, call display_update()
-Status display_set_buffer_pixel(POINT x, POINT y, COLOR color) {
+status_t display_set_buffer_pixel(POINT x, POINT y, COLOR color) {
     // bounds checking
     if (x >= SSD1362_WIDTH || y >= SSD1362_HEIGHT) {
         return ERROR_INTERNAL;
@@ -102,7 +102,7 @@ Status display_set_buffer_pixel(POINT x, POINT y, COLOR color) {
 }
 
 // Set the entire display buffer to the contents of the input buffer. To actually update the display, call display_update()
-Status display_set_buffer(const COLOR* p_buffer) {
+status_t display_set_buffer(const COLOR* p_buffer) {
     for (uint16_t i = 0; i < (SSD1362_WIDTH / 2) * SSD1362_HEIGHT; i++) {
         display_buffer[i] = p_buffer[i];
     }
@@ -111,7 +111,7 @@ Status display_set_buffer(const COLOR* p_buffer) {
 }
 
 // Clear the display buffer. To actually update the display, call display_update()
-Status display_clear_buffer() {
+status_t display_clear_buffer() {
     for (uint16_t i = 0; i < (SSD1362_WIDTH / 2) * SSD1362_HEIGHT; i++) {
         display_buffer[i] = 0x00;
     }
@@ -120,7 +120,7 @@ Status display_clear_buffer() {
 }
 
 // Update the display with the contents of the display buffer
-Status display_update() {
+status_t display_update() {
     // set the display window to the entire display
     display_set_window();
 
@@ -136,7 +136,7 @@ Status display_update() {
 }
 
 // Initialize the display
-Status display_init() {
+status_t display_init() {
     spi_m_sync_enable(&SPI_0); // if you forget this line, this function returns -20
 
     display_reset(); // setting reset pin low triggers a reset of the display

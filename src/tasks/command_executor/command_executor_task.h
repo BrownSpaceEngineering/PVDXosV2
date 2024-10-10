@@ -12,21 +12,21 @@
 #include "task_manager_task.h"
 
 // Constants
-#define COMMAND_EXECUTOR_TASK_STACK_SIZE 128    // Size of the stack in words (multiply by 4 to get bytes)
-#define COMMAND_QUEUE_MAX_COMMANDS 15           // Maximum number of commands that can be queued at once for any task
-#define COMMAND_QUEUE_ITEM_SIZE sizeof(Command) // Size of each item in command queues
-#define COMMAND_QUEUE_WAIT_MS 1000              // Wait time for sending/receiving a command to/from the queue (in ms)
+#define COMMAND_EXECUTOR_TASK_STACK_SIZE 128      // Size of the stack in words (multiply by 4 to get bytes)
+#define COMMAND_QUEUE_MAX_COMMANDS 15             // Maximum number of commands that can be queued at once for any task
+#define COMMAND_QUEUE_ITEM_SIZE sizeof(command_t) // Size of each item in command queues
+#define COMMAND_QUEUE_WAIT_MS 1000                // Wait time for sending/receiving a command to/from the queue (in ms)
 
 // Placed in a struct to ensure that the TCB is placed higher than the stack in memory
 //^ This ensures that stack overflows do not corrupt the TCB (since the stack grows downwards)
-struct CommandExecutorTaskMemory {
+typedef struct {
     StackType_t overflow_buffer[TASK_STACK_OVERFLOW_PADDING];
     StackType_t command_executor_task_stack[COMMAND_EXECUTOR_TASK_STACK_SIZE];
     StaticQueue_t command_executor_task_queue;
     StaticTask_t command_executor_task_tcb;
-};
+} command_executor_task_memory_t;
 
-extern struct CommandExecutorTaskMemory command_executor_mem;
+extern command_executor_task_memory_t command_executor_mem;
 
 // Queue for commands to be executed by the command executor
 extern QueueHandle_t command_executor_cmd_queue;
@@ -41,7 +41,7 @@ typedef enum {
     TASK_MAGNETOMETER,
     TASK_CAMERA,
     TASK_9AXIS
-} Task;
+} task_t;
 
 // An enum to represent the different operations that the command executor can perform
 // NOTE: The same operation can have different meanings depending on the target task
@@ -55,21 +55,21 @@ typedef enum {
     OPERATION_INIT_SUBTASKS,
     OPERATION_ENABLE_SUBTASK,
     OPERATION_DISABLE_SUBTASK
-} Operation;
+} operation_t;
 
 // A struct to represent a command that the command-executor can execute
 typedef struct {
-    Task target;
-    Operation operation;
+    task_t target;
+    operation_t operation;
     char* p_data;
     size_t len;
-    Status* p_result;
-    void (*callback)(Status* p_result);
-} Command;
+    status_t* p_result;
+    void (*callback)(status_t* p_result);
+} command_t;
 
 // Exposed functions
 void command_executor_init(void);
 void command_executor_main(void* pvParameters);
-void command_executor_enqueue(Command cmd);
+void command_executor_enqueue(command_t cmd);
 
 #endif // COMMAND_EXECUTOR_H

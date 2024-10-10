@@ -13,13 +13,13 @@
 
 //Placed in a struct to ensure that the TCB is placed higher than the stack in memory
 //^ This ensures that stack overflows do not corrupt the TCB (since the stack grows downwards)
-struct heartbeatTaskMemory {
+typedef struct {
     StackType_t OverflowBuffer[TASK_STACK_OVERFLOW_PADDING];
     StackType_t heartbeatTaskStack[HEARTBEAT_TASK_STACK_SIZE];
     StaticTask_t heartbeatTaskTCB;
-};
+} heartbeat_task_memory_t;
 
-extern struct heartbeatTaskMemory heartbeat_mem;
+extern heartbeat_task_memory_t heartbeat_mem;
 
 void heartbeat_main(void *pvParameters);
 

@@ -17,13 +17,13 @@
 
 // Placed in a struct to ensure that the TCB is placed higher than the stack in memory
 // ^ This ensures that stack overflows do not corrupt the TCB (since the stack grows downwards)
-struct watchdogTaskMemory {
+typedef struct {
     StackType_t OverflowBuffer[TASK_STACK_OVERFLOW_PADDING];
     StackType_t watchdogTaskStack[WATCHDOG_TASK_STACK_SIZE];
     StaticTask_t watchdogTaskTCB;
-};
+} watchdog_task_memory_t;
 
-extern struct watchdogTaskMemory watchdog_mem;
+extern watchdog_task_memory_t watchdog_mem;
 extern volatile Wdt *const p_watchdog;
 extern bool watchdog_enabled;
 

@@ -10,16 +10,16 @@
 // Constants
 #define COSMIC_MONKEY_TASK_STACK_SIZE 128
 
-struct CosmicMonkeyTaskMemory {
+typedef struct {
     StackType_t overflow_buffer[TASK_STACK_OVERFLOW_PADDING];
     StackType_t cosmic_monkey_task_stack[COSMIC_MONKEY_TASK_STACK_SIZE];
     StaticTask_t cosmic_monkey_task_tcb;
-};
+} cosmic_monkey_task_memory_t;
 
-extern struct CosmicMonkeyTaskMemory cosmic_monkey_mem;
+extern cosmic_monkey_task_memory_t cosmic_monkey_mem;
 
 // Exposed Functions
-Status perform_flip();
+status_t perform_flip();
 void cosmic_monkey_main(void *pvParameters);
 
 typedef struct CosmicMonkeyTaskArguments {

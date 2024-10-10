@@ -1,5 +1,7 @@
 #include "cosmicmonkey_task.h"
 
+cosmic_monkey_task_memory_t cosmic_monkey_mem;
+
 void cosmicmonkey_main(void *pvParameters) {
     CosmicMonkeyTaskArguments args = *((CosmicMonkeyTaskArguments *)pvParameters);
 

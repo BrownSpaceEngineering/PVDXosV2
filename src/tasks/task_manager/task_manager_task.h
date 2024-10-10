@@ -16,25 +16,25 @@
 #include "watchdog_task.h"
 
 // Constants
-#define TASK_MANAGER_TASK_STACK_SIZE 128           // Size of the stack in words (multiply by 4 to get bytes)
-#define TASK_MANAGER_QUEUE_MAX_COMMANDS 15         // Maximum number of commands that can be queued at once for any task
-#define TASK_MANAGER_QUEUE_ITEM_SIZE sizeof(Command) // Size of each item in command queues
-#define TASK_MANAGER_QUEUE_WAIT_MS 1000            // Wait time for sending/receiving a command to/from the queue (in ms)
+#define TASK_MANAGER_TASK_STACK_SIZE 128               // Size of the stack in words (multiply by 4 to get bytes)
+#define TASK_MANAGER_QUEUE_MAX_COMMANDS 15             // Maximum number of commands that can be queued at once for any task
+#define TASK_MANAGER_QUEUE_ITEM_SIZE sizeof(command_t) // Size of each item in command queues
+#define TASK_MANAGER_QUEUE_WAIT_MS 1000                // Wait time for sending/receiving a command to/from the queue (in ms)
 
-// Represents the end of a PVDXTask array, contains all null parameters
-#define NULL_TASK ((PVDXTask){NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL})
+// Represents the end of a pvdx_task_t array, contains all null parameters
+#define NULL_TASK ((pvdx_task_t){NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL})
 
 // Placed in a struct to ensure that the TCB is placed higher than the stack in memory
 //^ This ensures that stack overflows do not corrupt the TCB (since the stack grows downwards)
-struct taskManagerTaskMemory {
+typedef struct {
     StackType_t OverflowBuffer[TASK_STACK_OVERFLOW_PADDING];
     StackType_t taskManagerTaskStack[TASK_MANAGER_TASK_STACK_SIZE];
     StaticQueue_t taskManagerTaskQueue;
     StaticTask_t taskManagerTaskTCB;
-};
+} task_manager_task_memory_t;
 
 // Global memory for the task manager task
-extern struct taskManagerTaskMemory task_manager_mem;
+extern task_manager_task_memory_t task_manager_mem;
 extern uint8_t task_manager_queue_buffer[TASK_MANAGER_QUEUE_MAX_COMMANDS * TASK_MANAGER_QUEUE_ITEM_SIZE];
 extern QueueHandle_t task_manager_cmd_queue;
 
@@ -56,13 +56,13 @@ typedef struct {
     uint32_t watchdog_timeout; // How frequently the task should check in with the watchdog (in milliseconds)
     uint32_t last_checkin;     // Last time the task checked in with the watchdog
     bool has_registered;      // Whether the task is being monitored by the watchdog (initialized to NULL)
-} PVDXTask;
+} pvdx_task_t;
 
 // Global information about all tasks running on the system. This list is null-terminated.
-extern PVDXTask task_list[];
+extern pvdx_task_t task_list[];
 
 // Exposed Functions
-PVDXTask *get_task(TaskHandle_t id);
+pvdx_task_t *get_task(TaskHandle_t id);
 void init_task(size_t i);
 void task_manager_init(void);
 void task_manager_init_subtasks(void);

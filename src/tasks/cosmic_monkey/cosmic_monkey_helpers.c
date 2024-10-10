@@ -2,14 +2,12 @@
 #include "cosmicmonkey_task.h"
 #include "logging.h"
 
-struct CosmicMonkeyTaskMemory cosmic_monkey_mem;
-
 static const int VALID_MEMORY_RANGE_START = 0x20000000;
 static const int VALID_MEMORY_RANGE_IN_BYTES = 18;
 static const int RAND_THREE_BIT_MASK = 0x1c0000;
 static const int EIGHTEEN_BIT_MASK = 0x3FFFF;
 
-Status perform_flip() {
+status_t perform_flip() {
     /* Generate random number */
     uint32_t rand_int = rand_sync_read32(&RAND_0); // Mask the first 21 bits
     uintptr_t p_memory_addr =

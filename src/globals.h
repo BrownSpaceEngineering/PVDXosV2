@@ -34,14 +34,14 @@ typedef enum {
     // High significance errors start at 128 (0x80) (in these cases, restart the system)
     ERROR_UNRECOVERABLE = 0x80,
     ERROR_BITFLIP, // Specifically if we detect a bitflip, so we can increment counters.
-} Status;
+} status_t;
 
 typedef enum {
     DEBUG = 0,
     INFO,
     EVENT,
     WARNING,
-} LogLevel;
+} log_level_t;
 
 // Defines for printing out the build version
 #if defined(DEVBUILD)

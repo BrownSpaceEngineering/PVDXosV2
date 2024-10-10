@@ -50,7 +50,7 @@ void event_impl(const char *string, ...);
 void info_impl(char *string, ...);
 void debug_impl(const char *string, ...);
 
-void set_log_level(LogLevel level);
-LogLevel get_log_level();
+void set_log_level(log_level_t level);
+log_level_t get_log_level();
 
 #endif /* LOGGING_H */

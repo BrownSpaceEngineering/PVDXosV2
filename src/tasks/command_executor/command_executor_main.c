@@ -1,12 +1,16 @@
 #include "command_executor_task.h"
 
+command_executor_task_memory_t command_executor_mem;
+uint8_t command_executor_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
+QueueHandle_t command_executor_cmd_queue;
+
 void command_executor_main(void *pvParameters) {
     info("command_executor: Task Started!");
 
     // Initialize the command queue
     command_executor_init();
 
-    Command cmd;
+    command_t cmd;
     BaseType_t xStatus;
 
     while (true) {

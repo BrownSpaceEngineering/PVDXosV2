@@ -6,7 +6,7 @@
 #include "shell_helpers.h"
 #include "watchdog_task.h"
 
-ShellCommand shell_commands[] = {
+shell_command_t shell_commands[] = {
     {"help", shell_help, help_help},       {"echo", shell_echo, help_echo},
     {"clear", shell_clear, help_clear},    {"loglevel", shell_loglevel, help_loglevel},
     {"reboot", shell_reboot, help_reboot}, {NULL, NULL, NULL} // Null-terminated array
@@ -23,7 +23,7 @@ void shell_help(char **args, int arg_count) {
         terminal_printf("loglevel <level 0-3> - Set the log level for PVDX terminal output\n");
         terminal_printf("reboot - Reboot the satellite\n");
     } else if (arg_count == 2) {
-        for (ShellCommand *shell_command = shell_commands; shell_command->command_name != NULL; shell_command++) {
+        for (shell_command_t *shell_command = shell_commands; shell_command->command_name != NULL; shell_command++) {
             if (strcmp(args[1], shell_command->command_name) == 0) {
                 shell_command->help_function();
                 return;

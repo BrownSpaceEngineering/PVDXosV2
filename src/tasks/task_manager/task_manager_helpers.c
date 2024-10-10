@@ -32,8 +32,8 @@ void init_task(size_t i) {
     watchdog_register_task(task_list[i].handle);
 }
 
-// Returns the PVDXTask struct associated with a FreeRTOS task handle
-PVDXTask* get_task(TaskHandle_t handle) {
+// Returns the pvdx_task_t struct associated with a FreeRTOS task handle
+pvdx_task_t* get_task(TaskHandle_t handle) {
     for (size_t i = 0; task_list[i].name != NULL; i++) {
         if (task_list[i].handle == handle) {
             return &task_list[i];
@@ -75,7 +75,7 @@ void task_manager_init_subtasks(void) {
     }
 }
 
-Status task_manager_enable_task(size_t i) {
+status_t task_manager_enable_task(size_t i) {
     lock_mutex(task_list_mutex);
 
     // If given an unitialized task, inform and abort enabling
@@ -98,7 +98,7 @@ Status task_manager_enable_task(size_t i) {
 }
 
 // Disables a task
-Status task_manager_disable_task(size_t i) {
+status_t task_manager_disable_task(size_t i) {
     lock_mutex(task_list_mutex);
 
     if (task_list[i].handle == NULL) {
@@ -118,7 +118,7 @@ Status task_manager_disable_task(size_t i) {
     return SUCCESS;
 }
 
-void task_manager_exec(Command cmd) {
+void task_manager_exec(command_t cmd) {
     BaseType_t xStatus;
 
     switch (cmd.operation) {

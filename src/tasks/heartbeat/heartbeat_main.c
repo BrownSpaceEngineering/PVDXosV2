@@ -1,7 +1,7 @@
 #include "heartbeat_task.h"
 #include "logging.h"
 
-struct heartbeatTaskMemory heartbeat_mem;
+heartbeat_task_memory_t heartbeat_mem;
 
 void heartbeat_main(void *pvParameters) {
     info("Heartbeat Task Started!\r\n");

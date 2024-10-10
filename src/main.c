@@ -4,7 +4,7 @@
 
 CosmicMonkeyTaskArguments cm_args = {0};
 
-static Status PVDX_init(void);
+static status_t PVDX_init(void);
 
 int main(void) {
     /* Initializes MCU, drivers and middleware */
@@ -44,7 +44,7 @@ int main(void) {
 
     const char *task_names[SUBTASK_START_INDEX] = {"Watchdog Task", "Command Executor Task", "Task Manager Task"};
 
-    for (size_t i = 0; i < SUBTASK_START_INDEX; i++) {
+    for (int16_t i = 0; i < SUBTASK_START_INDEX; i++) {
         init_functions[i]();
 
         if (task_list[i].function == main_functions[i]) {
@@ -85,7 +85,7 @@ int main(void) {
     }
 }
 
-static Status PVDX_init() {
+static status_t PVDX_init() {
     // Segger Buffer 0 is pre-configured at compile time according to segger documentation
     // Config the logging output channel (assuming it's not zero)
     if (LOGGING_RTT_OUTPUT_CHANNEL != 0) {

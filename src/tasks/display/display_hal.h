@@ -78,7 +78,7 @@
 #define COLOR uint8_t  // 4 bits per pixel (16 greyscale levels)
 
 // Initializes display hardware parameters
-Status display_init(void);
+status_t display_init(void);
 
 // Variables
 extern COLOR display_buffer[(SSD1362_WIDTH / 2) * SSD1362_HEIGHT]; // pixels are 4 bits, so 2 consecutive pixels per byte

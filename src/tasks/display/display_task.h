@@ -13,14 +13,14 @@
 
 // Placed in a struct to ensure that the TCB is placed higher than the stack in memory
 //^ This ensures that stack overflows do not corrupt the TCB (since the stack grows downwards)
-struct displayTaskMemory {
+typedef struct {
     StackType_t OverflowBuffer[TASK_STACK_OVERFLOW_PADDING];
     StackType_t displayTaskStack[DISPLAY_TASK_STACK_SIZE];
     StaticQueue_t displayTaskQueue;
     StaticTask_t displayTaskTCB;
-};
+} display_task_memory_t;
 
-extern struct displayTaskMemory display_mem;
+extern display_task_memory_t display_mem;
 
 // Queue for commands to be executed by the display task
 extern QueueHandle_t displayQueue;

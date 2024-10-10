@@ -1,5 +1,10 @@
 #include "watchdog_task.h"
 
+watchdog_task_memory_t watchdog_mem;
+
+volatile Wdt *const p_watchdog = WDT;
+bool watchdog_enabled = false;
+
 void watchdog_main(void *pvParameters) {
     info("watchdog: Task started!\n");
 

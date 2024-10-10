@@ -92,7 +92,7 @@ void watchdog_kick(void) {
 void watchdog_checkin(void) {
     //Tasks should only check-in for themselves, so we can get the task handle from RTOS
     TaskHandle_t handle = xTaskGetCurrentTaskHandle();
-    PVDXTask *task = get_task(handle);
+    pvdx_task_t *task = get_task(handle);
 
     if (!task->has_registered) {
         // something went wrong because a task that is checking in should have 'has_registered' set to true
@@ -110,7 +110,7 @@ void watchdog_register_task(TaskHandle_t handle) {
     if (handle == NULL) {
         fatal("Tried to register a NULL task handle\n");
     }
-    PVDXTask *task = get_task(handle);
+    pvdx_task_t *task = get_task(handle);
 
     if (task->has_registered) {
         // something went wrong because we define unregistered tasks to have 'should_checkin' set to false
@@ -132,7 +132,7 @@ void watchdog_unregister_task(TaskHandle_t handle) {
         fatal("Tried to unregister a NULL task handle\n");
     }
     
-    PVDXTask *task = get_task(handle);
+    pvdx_task_t *task = get_task(handle);
 
     if (!task->has_registered) {
         // something went wrong because we define unregistered tasks to have 'should_checkin' set to false
