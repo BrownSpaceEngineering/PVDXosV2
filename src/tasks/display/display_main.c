@@ -11,7 +11,7 @@ void display_main(void *pvParameters) {
     // Initialize the display
     display_init();
 
-    // TODO: Receive commands from the command executor task to update the display
+    // TODO: Receive commands from the command dispatcher task to update the display
     while (true) {
         display_set_buffer(IMAGE_BUFFER_PVDX);
         debug("First buffer set\n");

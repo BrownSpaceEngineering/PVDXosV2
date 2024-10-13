@@ -5,7 +5,7 @@
 #include <atmel_start.h>
 #include <driver_init.h>
 
-#include "command_executor_task.h"
+#include "command_dispatcher_task.h"
 #include "display_task.h"
 #include "globals.h"
 #include "heartbeat_task.h"

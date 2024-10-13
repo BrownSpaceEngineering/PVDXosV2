@@ -34,8 +34,8 @@ export OBJS := \
 ../src/tasks/display/display_hal.o \
 ../src/tasks/task_manager/task_manager_main.o \
 ../src/tasks/task_manager/task_manager_helpers.o \
-../src/tasks/command_executor/command_executor_main.o \
-../src/tasks/command_executor/command_executor_helpers.o \
+../src/tasks/command_dispatcher/command_dispatcher_main.o \
+../src/tasks/command_dispatcher/command_dispatcher_helpers.o \
 ../src/tasks/shell/shell_main.o \
 ../src/tasks/shell/shell_helpers.o \
 ../src/tasks/shell/shell_commands.o \
@@ -59,7 +59,7 @@ export EXTRA_VPATH := \
 ../../src/tasks/display \
 ../../src/tasks/display/image_buffers \
 ../../src/tasks/task_manager \
-../../src/tasks/command_executor \
+../../src/tasks/command_dispatcher \
 ../../src/tasks/shell \
 
 

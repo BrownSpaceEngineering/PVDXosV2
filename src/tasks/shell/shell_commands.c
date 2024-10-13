@@ -14,6 +14,7 @@ shell_command_t shell_commands[] = {
 
 // ----- HELP COMMAND -----
 
+// This function is a utility that will only exist on the ground station
 void shell_help(char **args, int arg_count) {
     if (arg_count == 1) {
         terminal_printf("🚀 Available commands 🚀\n");

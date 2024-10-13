@@ -40,9 +40,9 @@ typedef enum {
     ERROR_BITFLIP, // Specifically if we detect a bitflip, so we can increment counters.
 } status_t;
 
-// An enum to represent the various tasks/daemons that the command executor can interact with
+// An enum to represent the various tasks/daemons that the command dispatcher can interact with
 typedef enum {
-    TASK_COMMAND_EXECUTOR = 0,
+    TASK_COMMAND_DISPATCHER = 0,
     TASK_MANAGER,
     TASK_DISPLAY,
     TASK_SHELL,
@@ -52,13 +52,14 @@ typedef enum {
     TASK_9AXIS
 } task_t;
 
-// An enum to represent the different operations that the command executor can perform
+// An enum to represent the different operations that the command dispatcher can perform
 // NOTE: The same operation can have different meanings depending on the target task
 typedef enum {
     // General operations (can be overloaded by any task)
     OPERATION_SET_BUFFER = 0,
     OPERATION_UPDATE,
     OPERATION_POWER_OFF,
+    // Shell-specific operations
     OPERATION_SET_LOG_LEVEL,
     // Task-Manager specific operations
     OPERATION_INIT_SUBTASKS,

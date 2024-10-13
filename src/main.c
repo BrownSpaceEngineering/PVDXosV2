@@ -28,21 +28,21 @@ int main(void) {
         warning_impl("[!] Abnormal bootloader behavior (Magic Number: %x)\n", magic_number);
     }
 
-    // ------- INIT WATCHDOG, COMMAND_EXECUTOR, TASK_MANAGER TASKS (in that order) -------
+    // ------- INIT WATCHDOG, COMMAND_DISPATCHER, TASK_MANAGER TASKS (in that order) -------
 
     void (*main_functions[SUBTASK_START_INDEX])(void *pvParameters) = {
         watchdog_main,
-        command_executor_main,
+        command_dispatcher_main,
         task_manager_main,
     };
 
     void (*init_functions[SUBTASK_START_INDEX])(void) = {
         watchdog_init,
-        command_executor_init,
+        command_dispatcher_init,
         task_manager_init,
     };
 
-    const char *task_names[SUBTASK_START_INDEX] = {"Watchdog Task", "Command Executor Task", "Task Manager Task"};
+    const char *task_names[SUBTASK_START_INDEX] = {"Watchdog Task", "Command Dispatcher Task", "Task Manager Task"};
 
     for (int16_t i = 0; i < SUBTASK_START_INDEX; i++) {
         init_functions[i]();
