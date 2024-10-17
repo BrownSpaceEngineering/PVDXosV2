@@ -83,32 +83,48 @@ void watchdog_kick(void) {
     // this function should never return because the system should reset
 }
 
-void watchdog_checkin(void) {
-    //Tasks should only check-in for themselves, so we can get the task handle from RTOS
+// NOTE: This function should be called directly by subtasks to check in with the watchdog
+// and should not go through the command dispatcher
+// TODO: The above comment is not true. This function should be sent through the command dispatcher as a
+// high-priority command with xQueueSendToFront 
+// TODO: Should registration on init pass through the command dispatcher?
+// TODO: Enable task needs to register and disable task needs to unregister
+void checkin_with_watchdog(void) {
+    lock_mutex(task_list_mutex);
+
+    // Tasks should only check-in for themselves, so we can get the task handle from RTOS
     TaskHandle_t handle = xTaskGetCurrentTaskHandle();
     pvdx_task_t *task = get_task(handle);
 
     if (!task->has_registered) {
         // something went wrong because a task that is checking in should have 'has_registered' set to true
-        watchdog_kick();
+        fatal("watchdog: %s task tried to check in without registering\n", task->name);
     }
 
     // update the last checkin time
     task->last_checkin = xTaskGetTickCount();
+
+    unlock_mutex(task_list_mutex);
+
     debug("watchdog: %s task checked in\n", task->name);
 }
 
-void watchdog_register_task(TaskHandle_t handle) {
+status_t watchdog_register_task(TaskHandle_t handle) {
     lock_mutex(task_list_mutex);
+    status_t result;
 
     if (handle == NULL) {
-        fatal("Tried to register a NULL task handle\n");
+        fatal("watchdog: Tried to register a NULL task handle\n");
     }
+
     pvdx_task_t *task = get_task(handle);
 
+    if (task->handle != handle) {
+        fatal("watchdog: Task Manager handle does not match current task handle!\n");
+    }
+
     if (task->has_registered) {
-        // something went wrong because we define unregistered tasks to have 'should_checkin' set to false
-        watchdog_kick();
+        fatal("watchdog: %s task tried to register a second time\n", task->name);
     }
 
     // initialize running times and require the task to check in
@@ -119,25 +135,27 @@ void watchdog_register_task(TaskHandle_t handle) {
     debug("watchdog: %s task registered\n", task->name);
 }
 
-void watchdog_unregister_task(TaskHandle_t handle) {
+status_t watchdog_unregister_task(TaskHandle_t handle) {
     lock_mutex(task_list_mutex);
+    status_t result;
 
     if (handle == NULL) {
-        fatal("Tried to unregister a NULL task handle\n");
+        fatal("watchdog: Tried to unregister a NULL task handle\n");
     }
     
     pvdx_task_t *task = get_task(handle);
 
+    if (task->handle != handle) {
+        fatal("watchdog: Task Manager handle does not match current task handle!\n");
+    }
+
     if (!task->has_registered) {
-        // something went wrong because we define unregistered tasks to have 'should_checkin' set to false
-        // and an unregistered task should not be able to unregister itself again
-        watchdog_kick();
+        fatal("watchdog: %s task tried to unregister a second time\n", task->name);
     }
 
     task->last_checkin = 0xDEADBEEF; // 0xDEADBEEF is a special value that indicates that the task is not running
     task->has_registered = false;
 
     unlock_mutex(task_list_mutex);
-    
     debug("watchdog: %s task unregistered\n", task->name);
 }

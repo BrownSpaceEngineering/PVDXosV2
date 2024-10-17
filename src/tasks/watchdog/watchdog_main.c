@@ -12,8 +12,11 @@ void watchdog_main(void *pvParameters) {
         // Iterate through the running times and check if any tasks have not checked in within the allowed time
         uint32_t current_time = xTaskGetTickCount();
 
+        // Acquire the mutex to prevent the task list from being modified while we are iterating through it
+        lock_mutex(task_list_mutex);
+
         for (size_t i = 0; task_list[i].name != NULL; i++) {
-            if (task_list[i].enabled) {
+            if (task_list[i].has_registered) {
                 uint32_t time_since_last_checkin = current_time - task_list[i].last_checkin;
 
                 if (time_since_last_checkin > task_list[i].watchdog_timeout) {
@@ -26,6 +29,9 @@ void watchdog_main(void *pvParameters) {
                 }
             }
         }
+
+        // Release the mutex
+        unlock_mutex(task_list_mutex);
 
         watchdog_checkin(); // Watchdog checks in with itself
 

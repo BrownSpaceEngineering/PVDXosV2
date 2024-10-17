@@ -15,8 +15,9 @@
 
 /* ----------------------------------------------------------- */
 
-#define TASK_STACK_OVERFLOW_PADDING 16 // Buffer for the stack size so that overflow doesn't corrupt any TCBs
-#define SUBTASK_START_INDEX 3          // The index of the first subtask in the task list
+#define TASK_STACK_OVERFLOW_PADDING 16            // Buffer for the stack size so that overflow doesn't corrupt any TCBs
+#define SUBTASK_START_INDEX 3                     // The index of the first subtask in the task list
+#define MINIMUM_HIGH_PRIORITY 128                 // The minimum value for a high-priority operation
 #define COMMAND_QUEUE_MAX_COMMANDS 15             // Maximum number of commands that can be queued at once for any task
 #define COMMAND_QUEUE_ITEM_SIZE sizeof(command_t) // Size of each item in command queues
 
@@ -31,12 +32,12 @@ typedef enum {
     ERROR_NOT_YET_IMPLEMENTED,
     ERROR_RESOURCE_IN_USE, // Similar to EAGAIN in Linux (Basically, this WOULD work but busy rn, try again later)
     ERROR_MAX_SIZE_EXCEEDED,
-    ERROR_UNINITIALIZED,
+    ERROR_NULL_HANDLE,
     ERROR_IO,
     ERROR_TIMEOUT,
-
+    
     // High significance errors start at 128 (0x80) (in these cases, restart the system)
-    ERROR_UNRECOVERABLE = 0x80,
+    ERROR_UNRECOVERABLE = MINIMUM_HIGH_PRIORITY,
     ERROR_BITFLIP, // Specifically if we detect a bitflip, so we can increment counters.
 } status_t;
 
@@ -45,6 +46,7 @@ typedef enum {
     TASK_COMMAND_DISPATCHER = 0,
     TASK_MANAGER,
     TASK_DISPLAY,
+    // Anything beyond this point is a subtask
     TASK_SHELL,
     TASK_HEARTBEAT,
     TASK_MAGNETOMETER,
@@ -63,6 +65,7 @@ typedef enum {
     OPERATION_SET_LOG_LEVEL,
     // Task-Manager specific operations
     OPERATION_INIT_SUBTASKS,
+    // Anything beyond this point is a high-priority operation
     OPERATION_ENABLE_SUBTASK,
     OPERATION_DISABLE_SUBTASK
 } operation_t;

@@ -11,24 +11,24 @@ StaticSemaphore_t task_list_mutex_buffer;
 pvdx_task_t task_list[] = {
     // List of tasks to be initialized by the task manager (see pvdx_task_t definition in task_manager.h)
     // NOTE: Watchdog task must be first in the list, Command Dispatcher second, and Task Manager third
-    // DO NOT CHANGE THE ORDER OF THE FIRST THREE SUBTASKS !!!!
+    // *** DO NOT CHANGE THE ORDER OF THE FIRST THREE SUBTASKS ***
     {
-        "Watchdog", true, NULL, watchdog_main, WATCHDOG_TASK_STACK_SIZE, watchdog_mem.watchdog_task_stack, NULL, 3, &watchdog_mem.watchdog_task_tcb, 1500, 0, NULL
+        "Watchdog", true, NULL, watchdog_main, WATCHDOG_TASK_STACK_SIZE, watchdog_mem.watchdog_task_stack, NULL, 3, &watchdog_mem.watchdog_task_tcb, 1500, 0, false
     },
     {
-        "CommandDispatcher", true, NULL, command_dispatcher_main, COMMAND_DISPATCHER_TASK_STACK_SIZE, command_dispatcher_mem.command_dispatcher_task_stack, NULL, 2, &command_dispatcher_mem.command_dispatcher_task_tcb, 10000, 0, NULL
+        "CommandDispatcher", true, NULL, command_dispatcher_main, COMMAND_DISPATCHER_TASK_STACK_SIZE, command_dispatcher_mem.command_dispatcher_task_stack, NULL, 2, &command_dispatcher_mem.command_dispatcher_task_tcb, 10000, 0, false
     },
     {
-        "TaskManager", true, NULL, task_manager_main, TASK_MANAGER_TASK_STACK_SIZE, task_manager_mem.task_manager_task_stack, NULL, 2, &task_manager_mem.task_manager_task_tcb, 5000, 0, NULL
+        "TaskManager", true, NULL, task_manager_main, TASK_MANAGER_TASK_STACK_SIZE, task_manager_mem.task_manager_task_stack, NULL, 2, &task_manager_mem.task_manager_task_tcb, 5000, 0, false
     },
     {
-        "Shell", true, NULL, shell_main, SHELL_TASK_STACK_SIZE, shell_mem.shell_task_stack, NULL, 2, &shell_mem.shell_task_tcb, 10000, 0, NULL
+        "Shell", true, NULL, shell_main, SHELL_TASK_STACK_SIZE, shell_mem.shell_task_stack, NULL, 2, &shell_mem.shell_task_tcb, 10000, 0, false
     },
     {
-        "Display", true, NULL, display_main, DISPLAY_TASK_STACK_SIZE, display_mem.display_task_stack, NULL, 2, &display_mem.display_task_tcb, 10000, 0, NULL
+        "Display", true, NULL, display_main, DISPLAY_TASK_STACK_SIZE, display_mem.display_task_stack, NULL, 2, &display_mem.display_task_tcb, 10000, 0, false
     },
     {
-        "Heartbeat", true, NULL, heartbeat_main, HEARTBEAT_TASK_STACK_SIZE, heartbeat_mem.heartbeat_task_stack, NULL, 1, &heartbeat_mem.heartbeat_task_tcb, 10000, 0, NULL
+        "Heartbeat", true, NULL, heartbeat_main, HEARTBEAT_TASK_STACK_SIZE, heartbeat_mem.heartbeat_task_stack, NULL, 1, &heartbeat_mem.heartbeat_task_tcb, 10000, 0, false
     },
 
     // Null terminator for the array (since size is unspecified)

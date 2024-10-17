@@ -33,6 +33,7 @@ void init_task(size_t i) {
 }
 
 // Returns the pvdx_task_t struct associated with a FreeRTOS task handle
+// WARNING: This function is not thread-safe and should only be called from within a critical section
 pvdx_task_t* get_task(TaskHandle_t handle) {
     for (size_t i = 0; task_list[i].name != NULL; i++) {
         if (task_list[i].handle == handle) {
@@ -77,50 +78,62 @@ void task_manager_init_subtasks(void) {
 
 status_t task_manager_enable_task(pvdx_task_t* task) {
     lock_mutex(task_list_mutex);
+    status_t result;
 
-    // If given an unitialized task, inform and abort enabling
-    if(task->handle == NULL) {
+    // If given an unintialized task, inform and abort enabling
+    if (task->handle == NULL) {
         info("task_manager: Attempted to enable uninitialized task");
-        return ERROR_UNINITIALIZED;
+        result = ERROR_NULL_HANDLE;
     }
-    // If given an already enabled task, inform then return success
-    if(task->enabled) {
-        info("task_manager: Given task had already been enabled");
-        return SUCCESS;
-    }
-    vTaskResume(task->handle);
 
+    // If given an already enabled task, inform then return success
+    if (task->enabled) {
+        info("task_manager: Tried to enable a task that has already been enabled");
+        result = SUCCESS;
+    }
+
+    if (result != SUCCESS) {
+        unlock_mutex(task_list_mutex);
+        return result;
+    }
+    
+    vTaskResume(task->handle);
     task->enabled = true;
 
     unlock_mutex(task_list_mutex);
-
-    return SUCCESS;
+    return result;
 }
 
 // Disables a task
 status_t task_manager_disable_task(pvdx_task_t* task) {
     lock_mutex(task_list_mutex);
+    status_t result;
 
+    // If given an unintialized task, inform and abort disabling
     if (task->handle == NULL) {
-        fatal("task_manager: Trying to disable task that was never initialized");
-        return ERROR_UNINITIALIZED;
+        info("task_manager: Trying to disable task that was never initialized");
+        result = ERROR_NULL_HANDLE;
     }
-    // Only unregister the task from the watchdog if it has not already been unregistered
-    if (task->has_registered) {
-        watchdog_unregister_task(task->handle);
-        task->has_registered = false;
+
+    // If given an already disabled task, inform then return success
+    if (!task->enabled) {
+        info("task_manager: Tried to disable a task that has already been disabled");
+        result = SUCCESS;
     }
+
+    if (result != SUCCESS) {
+        unlock_mutex(task_list_mutex);
+        return result;
+    }
+
     vTaskSuspend(task->handle);
     task->enabled = false;
 
     unlock_mutex(task_list_mutex);
-
-    return SUCCESS;
+    return result;
 }
 
 void task_manager_exec(command_t cmd) {
-    BaseType_t xStatus; // TODO: use this
-
     switch (cmd.operation) {
         case OPERATION_INIT_SUBTASKS:
             task_manager_init_subtasks();
