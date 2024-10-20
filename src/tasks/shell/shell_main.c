@@ -54,7 +54,7 @@ void main_shell(void *pvParameters) {
         }
 
         // Find the associated command function
-        void shell_command_t(char **args, int arg_count) = NULL;
+        void (*command_func)(char **args, int arg_count) = NULL;
         for (shell_command_t *shell_command = shell_commands; shell_command->command_name != NULL; shell_command++) {
             if (strcmp(user_command, shell_command->command_name) == 0) {
                 // It's the right shell command, call the command function

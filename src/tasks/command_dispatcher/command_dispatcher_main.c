@@ -25,7 +25,7 @@ void main_command_dispatcher(void *pvParameters) {
         if (xStatus == pdPASS) {
             // Command received, so dispatch it
             debug("command_dispatcher: Command popped off queue.\n");
-            command_dispatcher_exec(cmd);
+            exec_command_command_dispatcher(cmd);
         } else {
             // No command received, so continue
             debug("command_dispatcher: No commands queued.\n");

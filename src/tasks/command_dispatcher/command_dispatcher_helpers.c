@@ -22,12 +22,12 @@ void command_dispatcher_enqueue(command_t cmd) {
 }
 
 // Forward a dequeued command to the appropriate task for execution
-void command_dispatcher_exec(command_t cmd) {
+void exec_command_command_dispatcher(command_t cmd) {
     BaseType_t xStatus;
 
     switch (cmd.target) {
         case TASK_MANAGER:
-            xStatus = xQueueSendToBack(task_manager_queue, &cmd, 0);
+            xStatus = xQueueSendToBack(task_manager_command_queue, &cmd, 0);
 
             if (xStatus != pdPASS) {
                 fatal("command-dispatcher: Failed to forward command to task manager task!\n");
@@ -49,7 +49,7 @@ void command_dispatcher_exec(command_t cmd) {
             fatal("command-dispatcher: Failed; 9Axis queue does not exist");
             break;
         case TASK_DISPLAY:
-            xStatus = xQueueSendToBack(displayQueue, &cmd, 0);
+            xStatus = xQueueSendToBack(display_command_queue, &cmd, 0);
 
             if (xStatus != pdPASS) {
                 fatal("command-dispatcher: Failed to forward command to display task!\n");

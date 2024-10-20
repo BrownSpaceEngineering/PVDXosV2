@@ -2,7 +2,7 @@
 
 task_manager_task_memory_t task_manager_mem;
 uint8_t task_manager_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
-QueueHandle_t task_manager_cmd_queue;
+QueueHandle_t task_manager_command_queue;
 SemaphoreHandle_t task_list_mutex = NULL;
 StaticSemaphore_t task_list_mutex_buffer;
 
@@ -55,12 +55,12 @@ void main_task_manager(void *pvParameters) {
 
     while (true) {
         // if there's something in the queue, pop it and execute it
-        xStatus = xQueueReceive(task_manager_cmd_queue, &cmd, pdMS_TO_TICKS(COMMAND_QUEUE_WAIT_MS));
+        xStatus = xQueueReceive(task_manager_command_queue, &cmd, pdMS_TO_TICKS(COMMAND_QUEUE_WAIT_MS));
 
         if (xStatus == pdPASS) {
             // Command received, so execute it
             debug("task_manager: Command popped off queue.\n");
-            task_manager_exec(cmd);
+            exec_command_task_manager(cmd);
         }
         else {
             // No command received, so continue

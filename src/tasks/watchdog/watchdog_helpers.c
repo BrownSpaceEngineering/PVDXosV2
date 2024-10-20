@@ -108,9 +108,8 @@ void watchdog_checkin(void) {
 }
 
 // This function is a helper and does not get sent through the command dispatcher
-status_t register_task_with_watchdog(TaskHandle_t handle) {
+void register_task_with_watchdog(TaskHandle_t handle) {
     lock_mutex(task_list_mutex);
-    status_t result;
 
     if (handle == NULL) {
         fatal("watchdog: Tried to register a NULL task handle\n");
@@ -135,9 +134,8 @@ status_t register_task_with_watchdog(TaskHandle_t handle) {
 }
 
 // This function is a helper and does not get sent through the command dispatcher
-status_t unregister_task_with_watchdog(TaskHandle_t handle) {
+void unregister_task_with_watchdog(TaskHandle_t handle) {
     lock_mutex(task_list_mutex);
-    status_t result;
 
     if (handle == NULL) {
         fatal("watchdog: Tried to unregister a NULL task handle\n");

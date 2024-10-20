@@ -39,20 +39,23 @@ void init_task(size_t i) {
 // Returns the pvdx_task_t struct associated with a FreeRTOS task handle
 // WARNING: This function is not thread-safe and should only be called from within a critical section
 pvdx_task_t* get_task(TaskHandle_t handle) {
-    for (size_t i = 0; task_list[i].name != NULL; i++) {
-        if (task_list[i].handle == handle) {
-            return &task_list[i];
-        }
-    }
+    pvdx_task_t* p_task = task_list;
 
-    return &NULL_TASK;
+    while (p_task->name != NULL) {
+        if (p_task->handle == handle) {
+            return p_task;
+        }
+        p_task++;
+    }
+    
+    return p_task;
 }
 
 // Initializes the task manager task (it should be the first task in the global task list)
 void init_task_manager(void) {
-    task_manager_cmd_queue = xQueueCreateStatic(TASK_MANAGER_TASK_STACK_SIZE, COMMAND_QUEUE_ITEM_SIZE, task_manager_queue_buffer, &task_manager_mem.task_manager_task_queue);
+    task_manager_command_queue = xQueueCreateStatic(TASK_MANAGER_TASK_STACK_SIZE, COMMAND_QUEUE_ITEM_SIZE, task_manager_queue_buffer, &task_manager_mem.task_manager_task_queue);
 
-    if (task_manager_cmd_queue == NULL) {
+    if (task_manager_command_queue == NULL) {
         fatal("task-manager: Failed to create task manager queue!\n");
     }
 
@@ -80,25 +83,17 @@ void task_manager_init_subtasks(void) {
     }
 }
 
-status_t task_manager_enable_task(pvdx_task_t* task) {
+void task_manager_enable_task(pvdx_task_t* task) {
     lock_mutex(task_list_mutex);
-    status_t result;
 
-    // If given an unintialized task, inform and abort enabling
+    // If given an unintialized task, something went wrong
     if (task->handle == NULL) {
-        info("task_manager: Attempted to enable uninitialized task");
-        result = ERROR_NULL_HANDLE;
+        fatal("task_manager: Attempted to enable uninitialized task");
     }
 
-    // If given an already enabled task, inform then return success
+    // If given an already enabled task, something went wrong
     if (task->enabled) {
-        info("task_manager: Tried to enable a task that has already been enabled");
-        result = SUCCESS;
-    }
-
-    if (result != SUCCESS) {
-        unlock_mutex(task_list_mutex);
-        return result;
+        fatal("task_manager: Tried to enable a task that has already been enabled");
     }
     
     vTaskResume(task->handle);
@@ -106,29 +101,20 @@ status_t task_manager_enable_task(pvdx_task_t* task) {
     unlock_mutex(task_list_mutex);
 
     register_task_with_watchdog(task->handle);
-    return result;
 }
 
 // Disables a task
-status_t task_manager_disable_task(pvdx_task_t* task) {
+void task_manager_disable_task(pvdx_task_t* task) {
     lock_mutex(task_list_mutex);
-    status_t result;
 
-    // If given an unintialized task, inform and abort disabling
+    // If given an unintialized task, something went wrong
     if (task->handle == NULL) {
-        info("task_manager: Trying to disable task that was never initialized");
-        result = ERROR_NULL_HANDLE;
+        fatal("task_manager: Trying to disable task that was never initialized");
     }
 
-    // If given an already disabled task, inform then return success
+    // If given an already disabled task, something went wrong
     if (!task->enabled) {
-        info("task_manager: Tried to disable a task that has already been disabled");
-        result = SUCCESS;
-    }
-
-    if (result != SUCCESS) {
-        unlock_mutex(task_list_mutex);
-        return result;
+        fatal("task_manager: Tried to disable a task that has already been disabled");
     }
 
     vTaskSuspend(task->handle);
@@ -136,10 +122,9 @@ status_t task_manager_disable_task(pvdx_task_t* task) {
     unlock_mutex(task_list_mutex);
 
     unregister_task_with_watchdog(task->handle);
-    return result;
 }
 
-void task_manager_exec(command_t cmd) {
+void exec_command_task_manager(command_t cmd) {
     switch (cmd.operation) {
         case OPERATION_INIT_SUBTASKS:
             task_manager_init_subtasks();

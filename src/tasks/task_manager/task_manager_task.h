@@ -34,7 +34,7 @@ typedef struct {
 // Global memory for the task manager task
 extern task_manager_task_memory_t task_manager_mem;
 extern uint8_t task_manager_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
-extern QueueHandle_t task_manager_cmd_queue;
+extern QueueHandle_t task_manager_command_queue;
 
 // Mutex related variables
 extern SemaphoreHandle_t task_list_mutex;
@@ -64,9 +64,11 @@ pvdx_task_t *get_task(TaskHandle_t id);
 void init_task(size_t i);
 void init_task_manager(void);
 void main_task_manager(void *pvParameters);
+void exec_command_task_manager(command_t cmd);
 // Exposed functions that go through the command dispatcher
 void task_manager_init_subtasks(void);
-void task_manager_exec(command_t cmd);
+void task_manager_enable_task(pvdx_task_t* task);
+void task_manager_disable_task(pvdx_task_t* task);
 
 
 #endif // TASK_MANAGER_TASK_H

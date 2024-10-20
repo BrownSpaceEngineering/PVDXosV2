@@ -27,11 +27,13 @@ typedef struct {
 extern command_dispatcher_task_memory_t command_dispatcher_mem;
 
 // Queue for commands to be executed by the command dispatcher
+extern uint8_t command_dispatcher_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
 extern QueueHandle_t command_dispatcher_cmd_queue;
 
 // Exposed functions
 void init_command_dispatcher(void);
 void main_command_dispatcher(void* pvParameters);
+void exec_command_command_dispatcher(command_t cmd);
 // Exposed functions that go through the command dispatcher
 void command_dispatcher_enqueue(command_t cmd);
 
