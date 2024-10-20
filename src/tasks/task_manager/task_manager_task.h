@@ -12,7 +12,7 @@
 #include "logging.h"
 #include "rtos_start.h"
 #include "shell_task.h"
-#include "utils.h"
+#include "mutexes.h"
 #include "watchdog_task.h"
 
 // Constants

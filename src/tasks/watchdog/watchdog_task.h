@@ -8,7 +8,7 @@
 #include "logging.h"
 #include "rtos_start.h"
 #include "task_manager_task.h"
-#include "utils.h"
+#include "mutexes.h"
 
 // Constants
 #define WATCHDOG_MS_DELAY 1000 // Controls how often the Watchdog thread runs and verifies task checkins

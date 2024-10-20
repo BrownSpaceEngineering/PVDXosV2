@@ -1,5 +1,5 @@
 #include "globals.h"
-#include "utils.h"
+#include "mutexes.h"
 
 // How long to wait before trying to lock a mutex again (in ms)
 #define POLLING_DELAY_MS 5

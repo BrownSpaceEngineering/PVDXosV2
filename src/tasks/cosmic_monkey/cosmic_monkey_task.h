@@ -6,6 +6,7 @@
 #include <driver_init.h>
 #include "globals.h"
 #include "rtos_start.h"
+#include "logging.h"
 
 // Constants
 #define COSMIC_MONKEY_TASK_STACK_SIZE 128
