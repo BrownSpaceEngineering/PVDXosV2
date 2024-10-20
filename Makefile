@@ -32,6 +32,8 @@ export OBJS := \
 ../src/tasks/display/display_main.o \
 ../src/tasks/display/display_helpers.o \
 ../src/tasks/display/display_hal.o \
+../src/tasks/display/image_buffers/image_buffer_BrownLogo.o \
+../src/tasks/display/image_buffers/image_buffer_PVDX.o \
 ../src/tasks/task_manager/task_manager_main.o \
 ../src/tasks/task_manager/task_manager_helpers.o \
 ../src/tasks/command_dispatcher/command_dispatcher_main.o \
@@ -165,6 +167,8 @@ clean:
 connect:
 ifeq (,$(findstring microsoft,$(shell uname -r))) #Detects a WSL kernel name, and runs a WSL-specific command for connecting to the GDB server
 	@gdb -ex "target remote localhost:2331" -ex "load" -ex "monitor halt" -ex "monitor reset" -ex "b main" -ex "continue" ./PVDXos.elf
+else ifeq (,$(findstring generic,$(shell uname -r)))
+	@gdb-multiarch -ex "target remote localhost:2331" -ex "load" -ex "monitor halt" -ex "monitor reset" -ex "b main" -ex "continue" ./PVDXos.elf
 else #Run the windows-specific command
 	@hostname=$(shell hostname) && \
 	gdb-multiarch -ex "target remote $$hostname.local:2331" -ex "load" -ex "monitor halt" -ex "monitor reset" -ex "b main" -ex "continue" ./PVDXos.elf
