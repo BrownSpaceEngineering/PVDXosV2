@@ -4,7 +4,7 @@
 // then the task has not checked in and the watchdog should reset the system. Refer to "globals.h" to see the order in which
 // tasks are registered
 
-void watchdog_init(void) {
+void init_watchdog(void) {
     // Choose the period of the hardware watchdog timer
     uint8_t watchdog_period = WDT_CONFIG_PER_CYC16384;
 
@@ -53,7 +53,7 @@ void WDT_Handler(void) {
 }
 */
 
-void watchdog_early_warning_callback(void) {
+void early_warning_callback_watchdog(void) {
     warning("watchdog: Early warning callback executed\n");
     // This function gets called when the watchdog is almost out of time
     // TODO: Test if this works
@@ -72,24 +72,22 @@ void watchdog_early_warning_callback(void) {
     vTaskDelay(pdMS_TO_TICKS(300));;
 }
 
-void watchdog_pet(void) {
+void pet_watchdog(void) {
     debug("watchdog: Petted\n");
     watchdog_feed(p_watchdog);
 }
 
-void watchdog_kick(void) {
+void kick_watchdog(void) {
     debug("watchdog: Kicked\n");
     watchdog_set_clear_register(p_watchdog, 0x12); // set intentionally wrong clear key, so the watchdog will reset the system
     // this function should never return because the system should reset
 }
 
-// NOTE: This function should be called directly by subtasks to check in with the watchdog
-// and should not go through the command dispatcher
-// TODO: The above comment is not true. This function should be sent through the command dispatcher as a
-// high-priority command with xQueueSendToFront 
+// TODO: This function should be sent through the command dispatcher as a
+// high-priority command with xQueueSendToFront
 // TODO: Should registration on init pass through the command dispatcher?
 // TODO: Enable task needs to register and disable task needs to unregister
-void checkin_with_watchdog(void) {
+void watchdog_checkin(void) {
     lock_mutex(task_list_mutex);
 
     // Tasks should only check-in for themselves, so we can get the task handle from RTOS
@@ -109,7 +107,8 @@ void checkin_with_watchdog(void) {
     debug("watchdog: %s task checked in\n", task->name);
 }
 
-status_t watchdog_register_task(TaskHandle_t handle) {
+// This function is a helper and does not get sent through the command dispatcher
+status_t register_task_with_watchdog(TaskHandle_t handle) {
     lock_mutex(task_list_mutex);
     status_t result;
 
@@ -135,7 +134,8 @@ status_t watchdog_register_task(TaskHandle_t handle) {
     debug("watchdog: %s task registered\n", task->name);
 }
 
-status_t watchdog_unregister_task(TaskHandle_t handle) {
+// This function is a helper and does not get sent through the command dispatcher
+status_t unregister_task_with_watchdog(TaskHandle_t handle) {
     lock_mutex(task_list_mutex);
     status_t result;
 

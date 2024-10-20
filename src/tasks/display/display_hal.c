@@ -136,7 +136,7 @@ status_t display_update(void) {
 }
 
 // Initialize the display
-status_t display_init(void) {
+status_t init_display(void) {
     spi_m_sync_enable(&SPI_0); // if you forget this line, this function returns -20
 
     display_reset(); // setting reset pin low triggers a reset of the display

@@ -23,7 +23,7 @@ void fatal_impl(const char *string, ...) {
     warning_impl("FATAL ERROR OCCURRED! RESTARTING SYSTEM...\n");
 
     // TODO: Gracefully shut down the system and then kick the watchdog.
-    watchdog_kick();
+    kick_watchdog();
 
     va_end(args);
 }

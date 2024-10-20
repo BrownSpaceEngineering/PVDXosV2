@@ -12,6 +12,8 @@ void init_task(size_t i) {
         return;
     }
 
+    lock_mutex(task_list_mutex);
+    
     task_list[i].handle = xTaskCreateStatic(
         task_list[i].function,
         task_list[i].name,
@@ -22,14 +24,16 @@ void init_task(size_t i) {
         task_list[i].task_tcb
     );
 
+    unlock_mutex(task_list_mutex);
+
     if (task_list[i].handle == NULL) {
         fatal("task-manager: %s task creation failed!\n", task_list[i].name);
     } else {
         info("task-manager: %s task created!\n", task_list[i].name);
     }
 
-    // Register the task with the watchdog (this will automatically handle duplicate initialization attempts)
-    watchdog_register_task(task_list[i].handle);
+    // Register the task with the watchdog allowing it to be monitored
+    register_task_with_watchdog(task_list[i].handle);
 }
 
 // Returns the pvdx_task_t struct associated with a FreeRTOS task handle
@@ -45,14 +49,14 @@ pvdx_task_t* get_task(TaskHandle_t handle) {
 }
 
 // Initializes the task manager task (it should be the first task in the global task list)
-void task_manager_init(void) {
+void init_task_manager(void) {
     task_manager_cmd_queue = xQueueCreateStatic(TASK_MANAGER_TASK_STACK_SIZE, COMMAND_QUEUE_ITEM_SIZE, task_manager_queue_buffer, &task_manager_mem.task_manager_task_queue);
 
     if (task_manager_cmd_queue == NULL) {
         fatal("task-manager: Failed to create task manager queue!\n");
     }
 
-    if (task_list[0].function == &task_manager_main) {
+    if (task_list[0].function == &main_task_manager) {
         init_task(0);
     } else {
         fatal("Task Manager not found at index 0 of task list!\n");
@@ -63,7 +67,7 @@ void task_manager_init(void) {
 void task_manager_init_subtasks(void) {
     for(size_t i = SUBTASK_START_INDEX; task_list[i].name != NULL; i++) {
         // Verify that the current thread is the task
-        if (task_list[i].function == &task_manager_main) {
+        if (task_list[i].function == &main_task_manager) {
             // Sanity check: Make sure the task manager's handle is our current handle
             if (task_list[i].handle != xTaskGetCurrentTaskHandle()) {
                 fatal("Task Manager handle does not match current task handle!\n");
@@ -99,8 +103,9 @@ status_t task_manager_enable_task(pvdx_task_t* task) {
     
     vTaskResume(task->handle);
     task->enabled = true;
-
     unlock_mutex(task_list_mutex);
+
+    register_task_with_watchdog(task->handle);
     return result;
 }
 
@@ -128,8 +133,9 @@ status_t task_manager_disable_task(pvdx_task_t* task) {
 
     vTaskSuspend(task->handle);
     task->enabled = false;
-
     unlock_mutex(task_list_mutex);
+
+    unregister_task_with_watchdog(task->handle);
     return result;
 }
 

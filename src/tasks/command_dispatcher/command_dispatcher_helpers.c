@@ -1,7 +1,7 @@
 #include "command_dispatcher_task.h"
 
 // Initialize the command queue, which stores pointers to command structs
-void command_dispatcher_init(void) {
+void init_command_dispatcher(void) {
     command_dispatcher_cmd_queue = xQueueCreateStatic(COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE, command_dispatcher_queue_buffer,
                                                     &command_dispatcher_mem.command_dispatcher_task_queue);
 

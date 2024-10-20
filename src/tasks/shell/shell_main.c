@@ -7,7 +7,7 @@ shell_task_memory_t shell_mem = {0};
 uint8_t SHELL_INPUT_BUFFER[SHELL_INPUT_BUFFER_SIZE] = {
     0}; // This is a layer ontop of the RTT internal buffer, which is of length 16 (BUFFER_SIZE_DOWN)
 
-void shell_main(void *pvParameters) {
+void main_shell(void *pvParameters) {
     info("Shell task started\n");
     clear_RTT_input_buffer();
     terminal_printf(RTT_CTRL_TEXT_BRIGHT_YELLOW "\n\n\n\n\n\n\n\nPVDX Shell Initialized! [%s (%s:%s), Built %s]\n" RTT_CTRL_RESET,

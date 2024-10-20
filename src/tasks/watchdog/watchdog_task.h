@@ -28,13 +28,15 @@ extern watchdog_task_memory_t watchdog_mem;
 extern volatile Wdt *const p_watchdog;
 extern bool watchdog_enabled;
 
-void watchdog_init();
-void watchdog_main(void *pvParameters);
-void watchdog_early_warning_callback(void);
-void watchdog_pet(void);
-void watchdog_kick(void);
+// Exposed functions
+void init_watchdog();
+void main_watchdog(void *pvParameters);
+void early_warning_callback_watchdog(void);
+void register_task_with_watchdog(TaskHandle_t handle);
+void unregister_task_with_watchdog(TaskHandle_t handle);
+void pet_watchdog(void);
+void kick_watchdog(void);
+// Exposed functions that go through the command dispatcher
 void watchdog_checkin(void);
-void watchdog_register_task(TaskHandle_t handle);
-void watchdog_unregister_task(TaskHandle_t handle);
 
 #endif // WATCHDOG_TASK_H

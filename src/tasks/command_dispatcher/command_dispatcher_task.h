@@ -30,8 +30,9 @@ extern command_dispatcher_task_memory_t command_dispatcher_mem;
 extern QueueHandle_t command_dispatcher_cmd_queue;
 
 // Exposed functions
-void command_dispatcher_init(void);
-void command_dispatcher_main(void* pvParameters);
+void init_command_dispatcher(void);
+void main_command_dispatcher(void* pvParameters);
+// Exposed functions that go through the command dispatcher
 void command_dispatcher_enqueue(command_t cmd);
 
 #endif // COMMAND_DISPATCHER_H

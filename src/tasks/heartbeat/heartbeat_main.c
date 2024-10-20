@@ -3,7 +3,7 @@
 
 heartbeat_task_memory_t heartbeat_mem;
 
-void heartbeat_main(void *pvParameters) {
+void main_heartbeat(void *pvParameters) {
     info("Heartbeat Task Started!\r\n");
 // NOTE: false is on for some reason on the orange LEDs
 

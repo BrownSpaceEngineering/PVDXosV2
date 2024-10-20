@@ -125,7 +125,7 @@ void shell_reboot(char **args, int arg_count) {
     warning("Reboot command executed by user\n");
     terminal_printf("Rebooting the satellite...\n");
     delay_ms(1000);  // Give the message time to print
-    watchdog_kick(); // Kick the watchdog to trigger a reboot
+    kick_watchdog(); // Kick the watchdog to trigger a reboot
 }
 
 void help_reboot() {

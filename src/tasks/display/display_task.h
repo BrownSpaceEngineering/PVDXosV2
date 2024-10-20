@@ -27,7 +27,7 @@ extern uint8_t display_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_I
 extern QueueHandle_t display_queue;
 
 // Exposed Functions
-void display_task_init(void);
-void display_main(void *pvParameters);
+void init_display_task(void);
+void main_display(void *pvParameters);
 
 #endif // DISPLAY_TASK_H

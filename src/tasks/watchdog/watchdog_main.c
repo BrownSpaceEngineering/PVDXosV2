@@ -5,7 +5,7 @@ watchdog_task_memory_t watchdog_mem;
 volatile Wdt *const p_watchdog = WDT;
 bool watchdog_enabled = false;
 
-void watchdog_main(void *pvParameters) {
+void main_watchdog(void *pvParameters) {
     info("watchdog: Task started!\n");
 
     while (1) {
@@ -25,7 +25,7 @@ void watchdog_main(void *pvParameters) {
                         "watchdog: %s task has not checked in within the allowed time! (time since last checkin: %d, allowed time: %d). "
                         "Resetting system...\n",
                         task_list[i].name, time_since_last_checkin, task_list[i].watchdog_timeout);
-                    watchdog_kick();
+                    kick_watchdog();
                 }
             }
         }
@@ -36,7 +36,7 @@ void watchdog_main(void *pvParameters) {
         watchdog_checkin(); // Watchdog checks in with itself
 
         // if we get here, then all tasks have checked in within the allowed time
-        watchdog_pet();
+        pet_watchdog();
         vTaskDelay(pdMS_TO_TICKS(WATCHDOG_MS_DELAY));
     }
 }

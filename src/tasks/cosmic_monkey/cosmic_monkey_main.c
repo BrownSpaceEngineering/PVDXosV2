@@ -2,7 +2,7 @@
 
 cosmic_monkey_task_memory_t cosmic_monkey_mem;
 
-void cosmic_monkey_main(void *pvParameters) {
+void main_cosmic_monkey(void *pvParameters) {
     cosmic_monkey_task_arguments_t args = *((cosmic_monkey_task_arguments_t *)pvParameters);
 
     rand_sync_init(&RAND_0, TRNG); // Initialize random number generator

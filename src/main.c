@@ -31,15 +31,15 @@ int main(void) {
     // ------- INIT WATCHDOG, COMMAND_DISPATCHER, TASK_MANAGER TASKS (in that order) -------
 
     void (*main_functions[SUBTASK_START_INDEX])(void *pvParameters) = {
-        watchdog_main,
-        command_dispatcher_main,
-        task_manager_main,
+        main_watchdog,
+        main_command_dispatcher,
+        main_task_manager,
     };
 
     void (*init_functions[SUBTASK_START_INDEX])(void) = {
-        watchdog_init,
-        command_dispatcher_init,
-        task_manager_init,
+        init_watchdog,
+        init_command_dispatcher,
+        init_task_manager,  
     };
 
     const char *task_names[SUBTASK_START_INDEX] = {"Watchdog Task", "Command Dispatcher Task", "Task Manager Task"};
@@ -67,7 +67,7 @@ int main(void) {
     #endif
 
     TaskHandle_t cosmic_monkey_task_handle =
-        xTaskCreateStatic(cosmic_monkey_main, "CosmicMonkey", COSMIC_MONKEY_TASK_STACK_SIZE, (void *)&cm_args, 1,
+        xTaskCreateStatic(main_cosmic_monkey, "CosmicMonkey", COSMIC_MONKEY_TASK_STACK_SIZE, (void *)&cm_args, 1,
                           cosmic_monkey_mem.cosmic_monkey_task_stack, &cosmic_monkey_mem.cosmic_monkey_task_tcb);
     if (cosmic_monkey_task_handle == NULL) {
         warning("Cosmic Monkey Task Creation Failed!\r\n");

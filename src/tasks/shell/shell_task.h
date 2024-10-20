@@ -36,7 +36,7 @@ typedef struct {
 
 extern shell_task_memory_t shell_mem;
 
-void shell_main(void *pvParameters);
+void main_shell(void *pvParameters);
 
 // Defines that will never run in practice, but are useful for the IDE not throwing a billion errors:
 

@@ -4,11 +4,11 @@ command_dispatcher_task_memory_t command_dispatcher_mem;
 uint8_t command_dispatcher_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
 QueueHandle_t command_dispatcher_cmd_queue;
 
-void command_dispatcher_main(void *pvParameters) {
+void main_command_dispatcher(void *pvParameters) {
     info("command_dispatcher: Task Started!");
 
     // Initialize the command queue
-    command_dispatcher_init();
+    init_command_dispatcher();
 
     command_t cmd;
     BaseType_t xStatus;

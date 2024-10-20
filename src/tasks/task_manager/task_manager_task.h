@@ -42,18 +42,18 @@ extern StaticSemaphore_t task_list_mutex_buffer;
 
 // A struct defining a task's lifecycle in the PVDXos RTOS
 typedef struct {
-    char* name;               // Name of the task
-    bool enabled;             // Whether the task is enabled
-    TaskHandle_t handle;      // FreeRTOS handle to the task
-    TaskFunction_t function;  // Main entry point for the task
+    char* name;                // Name of the task
+    bool enabled;              // Whether the task is enabled
+    TaskHandle_t handle;       // FreeRTOS handle to the task
+    TaskFunction_t function;   // Main entry point for the task
     uint32_t stack_size;       // Size of the stack in words (multiply by 4 to get bytes)
     StackType_t* stack_buffer; // Buffer for the stack
-    void* pvParameters;       // Parameters to pass to the task's main function
-    UBaseType_t priority;     // Priority of the task in the RTOS scheduler
+    void* pvParameters;        // Parameters to pass to the task's main function
+    UBaseType_t priority;      // Priority of the task in the RTOS scheduler
     StaticTask_t* task_tcb;    // Task control block
     uint32_t watchdog_timeout; // How frequently the task should check in with the watchdog (in milliseconds)
     uint32_t last_checkin;     // Last time the task checked in with the watchdog
-    bool has_registered;      // Whether the task is being monitored by the watchdog (initialized to NULL)
+    bool has_registered;       // Whether the task is being monitored by the watchdog (initialized to NULL)
 } pvdx_task_t;
 
 // Global information about all tasks running on the system. This list is null-terminated.
@@ -62,9 +62,10 @@ extern pvdx_task_t task_list[];
 // Exposed Functions
 pvdx_task_t *get_task(TaskHandle_t id);
 void init_task(size_t i);
-void task_manager_init(void);
+void init_task_manager(void);
+void main_task_manager(void *pvParameters);
+// Exposed functions that go through the command dispatcher
 void task_manager_init_subtasks(void);
-void task_manager_main(void *pvParameters);
 void task_manager_exec(command_t cmd);
 
 
