@@ -1,6 +1,7 @@
 #include "watchdog_task.h"
 
 watchdog_task_memory_t watchdog_mem;
+QueueHandle_t watchdog_command_queue;
 
 volatile Wdt *const p_watchdog = WDT;
 bool watchdog_enabled = false;
