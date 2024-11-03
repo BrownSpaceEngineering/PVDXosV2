@@ -1,7 +1,7 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
-#include <freeRTOS.h>
+#include <FreeRTOS.h>
 
 /* --------- HIGH-LEVEL CONFIG VARIABLES AND DEFINES --------- */
 
@@ -35,7 +35,7 @@ typedef enum {
     ERROR_NULL_HANDLE,
     ERROR_IO,
     ERROR_TIMEOUT,
-    
+
     // High significance errors start at 128 (0x80) (in these cases, restart the system)
     ERROR_UNRECOVERABLE = MINIMUM_HIGH_PRIORITY,
     ERROR_BITFLIP, // Specifically if we detect a bitflip, so we can increment counters.
@@ -78,7 +78,7 @@ typedef enum {
 typedef struct {
     task_t target;
     operation_t operation;
-    char* p_data;
+    void* p_data;
     size_t len;
     status_t* p_result;
     void (*callback)(status_t* p_result);
