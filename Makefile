@@ -28,6 +28,8 @@ export OBJS := \
 ../src/misc/exception_handlers/default_handler.o \
 ../src/misc/exception_handlers/specific_handlers.o \
 ../src/tasks/display/display_ssd1362.o \
+../src/tasks/display/image_buffers/image_buffer_BrownLogo.o \
+../src/tasks/display/image_buffers/image_buffer_PVDX.o \
 ../src/tasks/task_manager/task_manager.o \
 ../src/tasks/shell/shell_main.o \
 ../src/tasks/shell/shell_helpers.o \
