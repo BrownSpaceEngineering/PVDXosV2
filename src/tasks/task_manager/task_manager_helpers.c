@@ -33,7 +33,10 @@ void init_task(size_t i) {
     }
 
     // Register the task with the watchdog allowing it to be monitored
-    register_task_with_watchdog(task_list[i].handle);
+    
+    command_t register_task = {};
+    command_dispatcher_enqueue(register_task);
+    //register_task_with_watchdog(task_list[i].handle);
 }
 
 // Returns the pvdx_task_t struct associated with a FreeRTOS task handle

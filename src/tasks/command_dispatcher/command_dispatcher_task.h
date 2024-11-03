@@ -28,7 +28,7 @@ extern command_dispatcher_task_memory_t command_dispatcher_mem;
 
 // Queue for commands to be executed by the command dispatcher
 extern uint8_t command_dispatcher_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
-extern QueueHandle_t command_dispatcher_cmd_queue;
+extern QueueHandle_t command_dispatcher_command_queue;
 
 // Exposed functions
 void init_command_dispatcher(void);

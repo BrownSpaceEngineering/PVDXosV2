@@ -61,6 +61,9 @@ typedef enum {
     OPERATION_SET_BUFFER = 0,
     OPERATION_UPDATE,
     OPERATION_POWER_OFF,
+    // Watchdog specific operations
+    OPERATION_REGISTER_TASK,
+    OPERATION_UNREGISTER_TASK,
     // Shell-specific operations
     OPERATION_SET_LOG_LEVEL,
     // Task-Manager specific operations

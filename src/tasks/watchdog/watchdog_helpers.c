@@ -8,6 +8,14 @@ void init_watchdog(void) {
     // Choose the period of the hardware watchdog timer
     uint8_t watchdog_period = WDT_CONFIG_PER_CYC16384;
 
+    // TODO: Create command queue
+    watchdog_command_queue = xQueueCreateStatic(TASK_MANAGER_TASK_STACK_SIZE, COMMAND_QUEUE_ITEM_SIZE,
+        task_manager_queue_buffer, &task_manager_mem.task_manager_task_queue);
+
+    if (watchdog_command_queue == NULL) {
+        fatal("watchdog: Failed to create watchdog queue!\n");
+    }
+
     // Initialize the 'last_checkin' field of each task
     // Iterate using the 'name' field rather than the handle field, since not all tasks will have a handle at this point
     for (size_t i = 0; task_list[i].name != NULL; i++) {

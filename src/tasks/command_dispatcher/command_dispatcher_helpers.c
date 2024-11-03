@@ -2,10 +2,10 @@
 
 // Initialize the command queue, which stores pointers to command structs
 void init_command_dispatcher(void) {
-    command_dispatcher_cmd_queue = xQueueCreateStatic(COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE, command_dispatcher_queue_buffer,
+    command_dispatcher_command_queue = xQueueCreateStatic(COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE, command_dispatcher_queue_buffer,
                                                     &command_dispatcher_mem.command_dispatcher_task_queue);
 
-    if (command_dispatcher_cmd_queue == NULL) {
+    if (command_dispatcher_command_queue == NULL) {
         fatal("command-dispatcher: Failed to create command queue!\n");
     }
 }
@@ -14,7 +14,7 @@ void init_command_dispatcher(void) {
 void command_dispatcher_enqueue(command_t cmd) {
     pvdx_task_t* calling_task = get_task(xTaskGetCurrentTaskHandle());
 
-    BaseType_t xStatus = xQueueSendToBack(command_dispatcher_cmd_queue, &cmd, 0);
+    BaseType_t xStatus = xQueueSendToBack(command_dispatcher_command_queue, &cmd, 0);
 
     if (xStatus != pdPASS) {
         fatal("command-dispatcher: %s task failed to enqueue command!\n", calling_task->name);
@@ -33,6 +33,9 @@ void exec_command_command_dispatcher(command_t cmd) {
                 fatal("command-dispatcher: Failed to forward command to task manager task!\n");
             }
 
+            break;
+        case TASK_WATCHDOG:
+            // TODO: Implement watchdog command queue (for checkins)
             break;
         case TASK_SHELL:
             break;

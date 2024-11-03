@@ -2,7 +2,7 @@
 
 command_dispatcher_task_memory_t command_dispatcher_mem;
 uint8_t command_dispatcher_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
-QueueHandle_t command_dispatcher_cmd_queue;
+QueueHandle_t command_dispatcher_command_queue;
 
 void main_command_dispatcher(void *pvParameters) {
     info("command_dispatcher: Task Started!");
@@ -20,7 +20,7 @@ void main_command_dispatcher(void *pvParameters) {
         // task until either an item is received or the timeout period expires. If an item arrives during the timeout
         // period, the task will unblock immediately, retrieve the item, and proceed with processing. This way, the
         // command dispatcher task will not consume CPU cycles when there are no commands to execute.
-        xStatus = xQueueReceive(command_dispatcher_cmd_queue, &cmd, pdMS_TO_TICKS(COMMAND_QUEUE_WAIT_MS));
+        xStatus = xQueueReceive(command_dispatcher_command_queue, &cmd, pdMS_TO_TICKS(COMMAND_QUEUE_WAIT_MS));
 
         if (xStatus == pdPASS) {
             // Command received, so dispatch it

@@ -21,12 +21,14 @@
 typedef struct {
     StackType_t overflow_buffer[TASK_STACK_OVERFLOW_PADDING];
     StackType_t watchdog_task_stack[WATCHDOG_TASK_STACK_SIZE];
+    StaticQueue_t watchdog_task_queue;
     StaticTask_t watchdog_task_tcb;
 } watchdog_task_memory_t;
 
 extern watchdog_task_memory_t watchdog_mem;
 extern volatile Wdt *const p_watchdog;
 extern bool watchdog_enabled;
+extern QueueHandle_t watchdog_command_queue;
 
 // Exposed functions
 void init_watchdog();
