@@ -35,7 +35,12 @@ void exec_command_command_dispatcher(command_t cmd) {
 
             break;
         case TASK_WATCHDOG:
-            // TODO: Implement watchdog command queue (for checkins)
+            xStatus = xQueueSendToBack(watchdog_command_queue, &cmd, 0);
+
+            if (xStatus != pdPASS) {
+                fatal("command-dispatcher: Failed to foward command to watchdog task!\n");
+            }
+
             break;
         case TASK_SHELL:
             break;

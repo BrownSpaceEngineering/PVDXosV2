@@ -46,6 +46,7 @@ typedef enum {
     TASK_COMMAND_DISPATCHER = 0,
     TASK_MANAGER,
     TASK_DISPLAY,
+    TASK_WATCHDOG,
     // Anything beyond this point is a subtask
     TASK_SHELL,
     TASK_HEARTBEAT,

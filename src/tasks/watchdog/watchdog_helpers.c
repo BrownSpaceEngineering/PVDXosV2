@@ -165,3 +165,17 @@ void unregister_task_with_watchdog(TaskHandle_t handle) {
     unlock_mutex(task_list_mutex);
     debug("watchdog: %s task unregistered\n", task->name);
 }
+
+void exec_command_watchdog(command_t cmd) {
+    switch (cmd.operation) {
+        case OPERATION_REGISTER_TASK:
+            register_task_with_watchdog((TaskHandle_t)cmd.p_data);
+            break;
+        case OPERATION_UNREGISTER_TASK:
+            unregister_task_with_watchdog((TaskHandle_t)cmd.p_data);
+            break;
+        default:
+            fatal("watchdog: Invalid operation!\n");
+            break;
+    }
+}
