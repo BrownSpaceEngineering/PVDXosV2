@@ -43,13 +43,6 @@ void main_task_manager(void *pvParameters) {
     command_t command_task_manager_init_subtasks = {TASK_MANAGER, OPERATION_INIT_SUBTASKS, NULL, 0, &result, NULL};
     command_dispatcher_enqueue(command_task_manager_init_subtasks);
 
-    // Initialize a mutex wrapping the shared PVDX task list struct
-    task_list_mutex = xSemaphoreCreateMutexStatic(&task_list_mutex_buffer);
-    
-    if (task_list_mutex == NULL){
-        fatal("Failed to create PVDX task list mutex");
-    }
-
     command_t cmd;
     BaseType_t xStatus;
 

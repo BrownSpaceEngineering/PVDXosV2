@@ -33,10 +33,7 @@ void init_task(size_t i) {
     }
 
     // Register the task with the watchdog allowing it to be monitored
-
-    status_t result;
-    command_t register_task = {TASK_WATCHDOG, OPERATION_REGISTER_TASK, (char*)task_list[0].handle, sizeof(TaskHandle_t), &result, NULL};
-    command_dispatcher_enqueue(register_task);
+    register_task_with_watchdog(task_list[i].handle);
 }
 
 // Returns the pvdx_task_t struct associated with a FreeRTOS task handle
@@ -103,9 +100,8 @@ void task_manager_enable_task(pvdx_task_t* task) {
     task->enabled = true;
     unlock_mutex(task_list_mutex);
 
-    status_t result;
-    command_t register_task = {TASK_WATCHDOG, OPERATION_REGISTER_TASK, (char*)task->handle, sizeof(TaskHandle_t), &result, NULL};
-    command_dispatcher_enqueue(register_task);
+    // Register the task with the watchdog allowing it to be monitored
+    register_task_with_watchdog(task->handle);
 }
 
 // Disables a task
@@ -126,9 +122,8 @@ void task_manager_disable_task(pvdx_task_t* task) {
     task->enabled = false;
     unlock_mutex(task_list_mutex);
 
-    status_t result;
-    command_t unregister_task = {TASK_WATCHDOG, OPERATION_UNREGISTER_TASK, (char*)task->handle, sizeof(TaskHandle_t), &result, NULL};
-    command_dispatcher_enqueue(unregister_task);
+    // Unregister the task with the watchdog so it is no longer monitored
+    unregister_task_with_watchdog(task->handle);
 }
 
 void exec_command_task_manager(command_t cmd) {

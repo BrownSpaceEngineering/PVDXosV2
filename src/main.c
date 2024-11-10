@@ -30,6 +30,13 @@ int main(void) {
 
     // ------- INIT WATCHDOG, COMMAND_DISPATCHER, TASK_MANAGER TASKS (in that order) -------
 
+    // Initialize a mutex wrapping the shared PVDX task list struct
+    task_list_mutex = xSemaphoreCreateMutexStatic(&task_list_mutex_buffer);
+    
+    if (task_list_mutex == NULL){
+        fatal("Failed to create PVDX task list mutex");
+    }
+
     void (*main_functions[SUBTASK_START_INDEX])(void *pvParameters) = {
         main_watchdog,
         main_command_dispatcher,

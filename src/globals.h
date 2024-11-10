@@ -63,8 +63,7 @@ typedef enum {
     OPERATION_UPDATE,
     OPERATION_POWER_OFF,
     // Watchdog specific operations
-    OPERATION_REGISTER_TASK,
-    OPERATION_UNREGISTER_TASK,
+    OPERATION_CHECKIN,
     // Shell-specific operations
     OPERATION_SET_LOG_LEVEL,
     // Task-Manager specific operations

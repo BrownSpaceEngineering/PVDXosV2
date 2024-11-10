@@ -95,11 +95,9 @@ void kick_watchdog(void) {
 // high-priority command with xQueueSendToFront
 // TODO: Should registration on init pass through the command dispatcher?
 // TODO: Enable task needs to register and disable task needs to unregister
-void watchdog_checkin(void) {
+void watchdog_checkin(TaskHandle_t handle) {
     lock_mutex(task_list_mutex);
-
-    // Tasks should only check-in for themselves, so we can get the task handle from RTOS
-    TaskHandle_t handle = xTaskGetCurrentTaskHandle();
+    
     pvdx_task_t *task = get_task(handle);
 
     if (!task->has_registered) {
@@ -166,13 +164,11 @@ void unregister_task_with_watchdog(TaskHandle_t handle) {
     debug("watchdog: %s task unregistered\n", task->name);
 }
 
+// TODO: set the payload of the command to the task handle
 void exec_command_watchdog(command_t cmd) {
     switch (cmd.operation) {
-        case OPERATION_REGISTER_TASK:
-            register_task_with_watchdog((TaskHandle_t)cmd.p_data);
-            break;
-        case OPERATION_UNREGISTER_TASK:
-            unregister_task_with_watchdog((TaskHandle_t)cmd.p_data);
+        case OPERATION_CHECKIN:
+            watchdog_checkin();
             break;
         default:
             fatal("watchdog: Invalid operation!\n");
