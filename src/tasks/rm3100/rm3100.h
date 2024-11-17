@@ -91,6 +91,7 @@ struct rm3100TaskMemory {
 #define NOS		0x01	/* Number of Samples for averaging*/
 
 #define TMRC	0x04	/* Default rate 125 Hz */
+#define REQUEST 0b01110000
 
 //options
 #define initialCC 200 // Set the cycle count
