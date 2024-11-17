@@ -32,6 +32,7 @@ void main_command_dispatcher(void *pvParameters) {
         }
 
         // Check in with the watchdog
-        watchdog_checkin();
+        TaskHandle_t handle = xTaskGetCurrentTaskHandle();
+        command_t command_checkin = {TASK_WATCHDOG, OPERATION_CHECKIN, NULL, 0, &handle, NULL};
     }
 }
