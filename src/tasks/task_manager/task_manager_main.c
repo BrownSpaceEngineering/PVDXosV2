@@ -12,6 +12,8 @@ pvdx_task_t task_list[] = {
     // List of tasks to be initialized by the task manager (see pvdx_task_t definition in task_manager.h)
     // NOTE: Watchdog task must be first in the list, Command Dispatcher second, and Task Manager third
     // *** DO NOT CHANGE THE ORDER OF THE FIRST THREE SUBTASKS ***
+    // *** If you change the order of any of these, make sure that the task list indices in task_manager_task.h
+    //     are up to date!!! ***
     {
         "Watchdog", true, NULL, main_watchdog, WATCHDOG_TASK_STACK_SIZE, watchdog_mem.watchdog_task_stack, NULL, 3, &watchdog_mem.watchdog_task_tcb, 1500, 0, false
     },

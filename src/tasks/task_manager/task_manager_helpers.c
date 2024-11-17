@@ -59,11 +59,12 @@ void init_task_manager(void) {
         fatal("task-manager: Failed to create task manager queue!\n");
     }
 
-    if (task_list[0].function == &main_task_manager) {
-        init_task(0);
-    } else {
-        fatal("Task Manager not found at index 0 of task list!\n");
-    }
+    // We already call init_task in main.c, so this could probably be deleted
+    // if (task_list[TASK_MANAGER_TASK_INDEX].function == &main_task_manager) {
+    //     init_task(TASK_MANAGER_TASK_INDEX);
+    // } else {
+    //     fatal("Task Manager not found at index %d of task list!\n", TASK_MANAGER_TASK_INDEX);
+    // }
 }
 
 // Initialize all other tasks running on the system

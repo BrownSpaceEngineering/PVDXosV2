@@ -171,7 +171,7 @@ void exec_command_watchdog(command_t cmd) {
             watchdog_checkin(*((TaskHandle_t*)cmd.p_data));
             break;
         default:
-            fatal("watchdog: Invalid operation!\n");
+            fatal("watchdog: Invalid operation! target: %d operation: %d\n", cmd.target, cmd.operation);
             break;
     }
 }

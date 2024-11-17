@@ -19,6 +19,9 @@
 #define TASK_MANAGER_TASK_STACK_SIZE 128               // Size of the stack in words (multiply by 4 to get bytes)
 #define TASK_MANAGER_QUEUE_WAIT_MS 1000                // Wait time for sending/receiving a command to/from the queue (in ms)
 
+// Task list indices
+#define TASK_MANAGER_TASK_INDEX 2
+
 // Represents the end of a pvdx_task_t array, contains all null parameters
 #define NULL_TASK ((pvdx_task_t){NULL, false, NULL, NULL, 0, NULL, NULL, 0, NULL, 0, 0, false})
 
