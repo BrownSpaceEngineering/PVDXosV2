@@ -12,6 +12,9 @@ void main_watchdog(void *pvParameters) {
     command_t cmd;
     BaseType_t xStatus;
 
+    TaskHandle_t handle = xTaskGetCurrentTaskHandle();
+    command_t command_checkin = {TASK_WATCHDOG, OPERATION_CHECKIN, &handle, sizeof(TaskHandle_t*), NULL, NULL};
+
     while (1) {
         // Iterate through the running times and check if any tasks have not checked in within the allowed time
         uint32_t current_time = xTaskGetTickCount();
@@ -49,7 +52,7 @@ void main_watchdog(void *pvParameters) {
         // Release the mutex
         unlock_mutex(task_list_mutex);
 
-        watchdog_checkin(); // Watchdog checks in with itself
+        command_dispatcher_enqueue(&command_checkin); // Watchdog checks in with itself
 
         // if we get here, then all tasks have checked in within the allowed time
         pet_watchdog();

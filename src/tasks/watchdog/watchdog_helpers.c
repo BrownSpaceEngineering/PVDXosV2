@@ -168,7 +168,7 @@ void unregister_task_with_watchdog(TaskHandle_t handle) {
 void exec_command_watchdog(command_t cmd) {
     switch (cmd.operation) {
         case OPERATION_CHECKIN:
-            watchdog_checkin();
+            watchdog_checkin(*((TaskHandle_t*)cmd.p_data));
             break;
         default:
             fatal("watchdog: Invalid operation!\n");

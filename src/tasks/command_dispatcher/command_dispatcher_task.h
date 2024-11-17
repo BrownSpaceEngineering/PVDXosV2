@@ -35,6 +35,6 @@ void init_command_dispatcher(void);
 void main_command_dispatcher(void* pvParameters);
 void exec_command_command_dispatcher(command_t cmd);
 // Exposed functions that go through the command dispatcher
-void command_dispatcher_enqueue(command_t cmd);
+void command_dispatcher_enqueue(command_t *p_cmd);
 
 #endif // COMMAND_DISPATCHER_H

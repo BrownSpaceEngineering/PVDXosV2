@@ -40,6 +40,6 @@ void pet_watchdog(void);
 void kick_watchdog(void);
 void exec_command_watchdog(command_t cmd);
 // Exposed functions that go through the command dispatcher
-void watchdog_checkin(void);
+void watchdog_checkin(TaskHandle_t handle);
 
 #endif // WATCHDOG_TASK_H

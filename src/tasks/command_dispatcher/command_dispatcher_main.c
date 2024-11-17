@@ -12,6 +12,8 @@ void main_command_dispatcher(void *pvParameters) {
 
     command_t cmd;
     BaseType_t xStatus;
+    TaskHandle_t handle = xTaskGetCurrentTaskHandle();
+    command_t command_checkin = {TASK_WATCHDOG, OPERATION_CHECKIN, &handle, sizeof(TaskHandle_t*), NULL, NULL};
 
     while (true) {
         // Check if there is a command to dispatch
@@ -32,7 +34,6 @@ void main_command_dispatcher(void *pvParameters) {
         }
 
         // Check in with the watchdog
-        TaskHandle_t handle = xTaskGetCurrentTaskHandle();
-        command_t command_checkin = {TASK_WATCHDOG, OPERATION_CHECKIN, NULL, 0, &handle, NULL};
+        command_dispatcher_enqueue(&command_checkin);
     }
 }

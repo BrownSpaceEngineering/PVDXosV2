@@ -41,10 +41,13 @@ void main_task_manager(void *pvParameters) {
     // Enqueue a command to initialize all subtasks
     status_t result;
     command_t command_task_manager_init_subtasks = {TASK_MANAGER, OPERATION_INIT_SUBTASKS, NULL, 0, &result, NULL};
-    command_dispatcher_enqueue(command_task_manager_init_subtasks);
+    command_dispatcher_enqueue(&command_task_manager_init_subtasks);
 
     command_t cmd;
     BaseType_t xStatus;
+
+    TaskHandle_t handle = xTaskGetCurrentTaskHandle();
+    command_t command_checkin = {TASK_WATCHDOG, OPERATION_CHECKIN, &handle, sizeof(TaskHandle_t*), NULL, NULL};
 
     while (true) {
         // if there's something in the queue, pop it and execute it
@@ -61,6 +64,6 @@ void main_task_manager(void *pvParameters) {
         }
         
         // vTaskDelay(pdMS_TO_TICKS(1000));
-        watchdog_checkin();
+        command_dispatcher_enqueue(&command_checkin);
     }
 }

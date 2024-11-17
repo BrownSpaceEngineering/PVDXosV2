@@ -11,10 +11,10 @@ void init_command_dispatcher(void) {
 }
 
 // Enqueue a command to be executed by the command dispatcher
-void command_dispatcher_enqueue(command_t cmd) {
+void command_dispatcher_enqueue(command_t *p_cmd) {
     pvdx_task_t* calling_task = get_task(xTaskGetCurrentTaskHandle());
 
-    BaseType_t xStatus = xQueueSendToBack(command_dispatcher_command_queue, &cmd, 0);
+    BaseType_t xStatus = xQueueSendToBack(command_dispatcher_command_queue, p_cmd, 0);
 
     if (xStatus != pdPASS) {
         fatal("command-dispatcher: %s task failed to enqueue command!\n", calling_task->name);

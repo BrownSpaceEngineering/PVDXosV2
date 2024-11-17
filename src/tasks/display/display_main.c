@@ -10,6 +10,8 @@ void main_display(void *pvParameters) {
 
     // Initialize the display
     init_display();
+    TaskHandle_t handle = xTaskGetCurrentTaskHandle();
+    command_t command_checkin = {TASK_WATCHDOG, OPERATION_CHECKIN, &handle, sizeof(TaskHandle_t*), NULL, NULL};
 
     // TODO: Receive commands from the command dispatcher task to update the display
     while (true) {
@@ -24,6 +26,7 @@ void main_display(void *pvParameters) {
         display_update();
         debug("Second image completed\n");
         vTaskDelay(pdMS_TO_TICKS(500));
-        watchdog_checkin();
+        
+        command_dispatcher_enqueue(&command_checkin);
     }
 }

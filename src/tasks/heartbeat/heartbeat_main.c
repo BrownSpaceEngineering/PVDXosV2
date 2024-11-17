@@ -13,6 +13,8 @@ void main_heartbeat(void *pvParameters) {
     gpio_set_pin_level(LED_Orange2, true);
 #endif
 
+    TaskHandle_t handle = xTaskGetCurrentTaskHandle();
+    command_t command_checkin = {TASK_WATCHDOG, OPERATION_CHECKIN, &handle, sizeof(TaskHandle_t*), NULL, NULL};
     while (1) {
         // Print the current time
         uint32_t current_time = xTaskGetTickCount();
@@ -54,6 +56,6 @@ void main_heartbeat(void *pvParameters) {
         vTaskDelay(pdMS_TO_TICKS(500));
 #endif
 
-        watchdog_checkin(); // Check in with the watchdog
+        command_dispatcher_enqueue(&command_checkin);
     }
 }
