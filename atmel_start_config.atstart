@@ -1190,7 +1190,7 @@ drivers:
       i2c_master_arch_sdahold: 300-600ns hold time
       i2c_master_arch_sexttoen: false
       i2c_master_arch_trise: 215
-      i2c_master_baud_rate: 100000
+      i2c_master_baud_rate: 115200
     optional_signals: []
     variant:
       specification: SDA=0, SCL=1

@@ -2,7 +2,7 @@
  * Code for the RM3100 Magnetometer Sensor
  * 
  * Created: Dec 7, 2023 2:22 AM
- * By: Nathan Kim
+ * By: Nathan Kim, Alexander Thaep
 */
 #include "rm3100.h"
 #include "string.h"
@@ -15,15 +15,19 @@ struct rm3100TaskMemory rm3100Mem;
 
 struct io_descriptor *rm3100_io;
 
-static unsigned short int           mSampleRate;
-static SensorPowerMode              mSensorMode;
+static uint16_t                     mSampleRate;
 static int8_t                       mSamples[9];
+static SensorPowerMode              mSensorMode;
+
+static uint8_t                      cycleCount;
 
 int32_t RM3100ReadReg(uint8_t addr, uint8_t *val, uint16_t size);
 int32_t RM3100WriteReg(uint8_t addr, uint8_t *data, uint16_t size);
 
 //https://github.com/inventorandy/atmel-samd21/blob/master/07_I2CTSYS/07_I2CTSYS/ext_tsys01.h#L15
 //https://os.mbed.com/users/ddelsuc/code/RM3100BB_Sample_Code/
+
+// For future reference, PIN 51 goes to SCL and PIN 52 goes to SDA
 
 int init_rm3100(void) {
     //Initialize the I2C Communications
@@ -33,50 +37,40 @@ int init_rm3100(void) {
     i2c_m_sync_set_slaveaddr(&I2C_0, RM3100Address, I2C_M_SEVEN);
 
     uint8_t i2cbuffer[2];
-    uint8_t settings[7];
 
-    int32_t bytes_read = RM3100ReadReg(RM3100_LROSCADJ_REG, i2cbuffer, 2);
+    // if(RM3100ReadReg(RM3100_LROSCADJ_REG, i2cbuffer, 2) < SensorOK)
+    // {
+    //     return SensorErrorNonExistant;
+    // }
 
-    if(bytes_read < 0)
-    {
-        return SensorErrorNonExistant;
-    }
-
-    if (    (i2cbuffer[0] != RM3100_LROSCADJ_VALUE) ||
-            (i2cbuffer[1] != RM3100_SLPOSCADJ_VALUE))
-    {
-        return SensorErrorUnexpectedDevice;
-    }
+    // if (    (i2cbuffer[0] != RM3100_LROSCADJ_VALUE) ||
+    //         (i2cbuffer[1] != RM3100_SLPOSCADJ_VALUE))
+    // {
+    //     return SensorErrorUnexpectedDevice;
+    // }
 
     /* Zero buffer content */
     i2cbuffer[0]=0; 
     i2cbuffer[1]=0;
-    
-    /* Clears MAG and BEACON register and any pending measurement */
-    RM3100WriteReg(RM3100_MAG_REG, i2cbuffer, 2);
-    
-    /* Initialize settings */
-    settings[0]=CCP1; /* CCPX1 */
-    settings[1]=CCP0; /* CCPX0 */
-    settings[2]=CCP1; /* CCPY1 */
-    settings[3]=CCP0; /* CCPY0 */
-    settings[4]=CCP1; /* CCPZ1 */
-    settings[5]=CCP0; /* CCPZ0 */
-    settings[6]=NOS;
-    /* settings[7]=TMRC;  */
-    
-    /*  Write register settings */
-    RM3100WriteReg(RM3100_CCPX1_REG, settings, 7);
-    
+
+    // mag_set_sample_rate(100); //100Hz
+
+    changeCycleCount(initialCC);
+    RM3100ReadReg(RM3100_CCX1_REG, i2cbuffer, 1);
+    RM3100ReadReg(RM3100_CCX0_REG, i2cbuffer + 1, 1);
+
+    cycleCount = i2cbuffer[0];
+    cycleCount = (cycleCount << 8) | i2cbuffer[1];
+
     if (!singleMode)
     {
-        mag_set_power_mode(SensorPowerModeSingle);
+        mag_set_power_mode(SensorPowerModeActive);
     }
     else
     {
-        mag_set_power_mode(SensorPowerModePowerDown);
+        mag_set_power_mode(SensorPowerModeSingle);
     }
-        
+
     return SensorOK;
 }
 
@@ -90,18 +84,18 @@ void rm3100_main(void *pvParameters) {
         return;
     }
 
-    mag_set_sample_rate(100); //100Hz
+    watchdog_checkin(RM3100_TASK);
 
-    int CycleCount = CCP0 | (CCP1 << 8);
-    float gain = 0.3671 * CycleCount + 1.5;
+    float gain = 0.3671 * cycleCount + 1.5;
 
     if (!singleMode)
     {
-        mag_set_power_mode(SensorPowerModeActive);
-
-        watchdog_checkin(RM3100_TASK);
-
         while(1) {
+            while(gpio_get_pin_level(DRDY_PIN) == 0) {
+                vTaskDelay(pdMS_TO_TICKS(100));
+                watchdog_checkin(RM3100_TASK);
+            }
+
             RM3100_return_t values = values_loop();
 
             float x = (float)values.x / gain;
@@ -118,11 +112,11 @@ void rm3100_main(void *pvParameters) {
         {
             watchdog_checkin(RM3100_TASK);
 
-            // static uint8_t data[] = { RM3100_SINGLE }; 
-            // RM3100WriteReg(RM3100_POLL_REG, data, 1);
+            static uint8_t data[] = { 0b01110000 }; 
+            RM3100WriteReg(RM3100_POLL_REG, data, 1);
 
             while(gpio_get_pin_level(DRDY_PIN) == 0) {
-                vTaskDelay(pdMS_TO_TICKS(1));
+                vTaskDelay(pdMS_TO_TICKS(100));
                 watchdog_checkin(RM3100_TASK);
             }
 
@@ -142,7 +136,7 @@ RM3100_return_t values_loop() {
     RM3100_return_t returnVals;
 
     // read out sensor data
-    RM3100ReadReg(RM3100_QX2_REG, (uint8_t*) mSamples, sizeof(mSamples)/sizeof(char));
+    RM3100ReadReg(RM3100_QX2_REG, (uint8_t*) &mSamples, sizeof(mSamples)/sizeof(char));
     
     returnVals.x = ((int8_t)mSamples[0]) * 256 * 256;
     returnVals.x |= mSamples[1] * 256;
@@ -159,55 +153,79 @@ RM3100_return_t values_loop() {
     return returnVals;
 }
 
-RM3100_bist_t bist_register_get() {
-    RM3100_bist_t returnVals = { .bist = 0 };
-    return returnVals;
+uint8_t mag_get_hshake() {
+    uint8_t readBuf[1] = { 0 };
+    RM3100ReadReg(RM3100_HSHAKE_REG, readBuf, 1);
+
+    return readBuf[0];
 }
 
-int32_t RM3100ReadReg(uint8_t addr, uint8_t *val, uint16_t size) {
-    i2c_m_sync_get_io_descriptor(&I2C_0, &rm3100_io);
+uint8_t mag_get_status() {
+    uint8_t readBuf[1] = { 0 };
+    uint8_t writeBuf[1] = { RM3100_STATUS_VALUE };
+    RM3100WriteReg(RM3100_STATUS_REG, writeBuf, 1);
+    RM3100ReadReg(RM3100_STATUS_REG, readBuf, 1);
+
+    return readBuf[0];
+}
+
+uint8_t mag_get_revid() {
+    // We are on revision 34 (decimal)
+    uint8_t readBuf[1] = { 0 };
+    uint8_t writeBuf[1] = { RM3100_REVID_VALUE };
+    RM3100WriteReg(RM3100_REVID_REG, writeBuf, 1);
+    RM3100ReadReg(RM3100_REVID_REG, readBuf, 1);
+
+    return readBuf[0];
+}
+
+int32_t RM3100ReadReg(uint8_t addr, uint8_t *readBuf, uint16_t size) {
     uint8_t writeBuf[1] = { addr };
     int32_t rv;
     if ((rv = io_write(rm3100_io, writeBuf, 1)) < 0){
         warning("Error in RM3100 Write");
     }
-    if ((rv = io_read(rm3100_io, val, size)) < 0) {
+    if ((rv = io_read(rm3100_io, readBuf, size)) < 0) {
         warning("Error in RM3100 Read");
     }
     return rv;
 }
 
 int32_t RM3100WriteReg(uint8_t addr, uint8_t *data, uint16_t size) {
-    i2c_m_sync_get_io_descriptor(&I2C_0, &rm3100_io);
     uint8_t writeBuf[MAX_I2C_WRITE + 1];
     writeBuf[0] = addr;
-    memcpy(&writeBuf[1], data, size);
-    //vTaskDelay(pdMS_TO_TICKS(20));
-    return io_write(rm3100_io, data, size);
+    memcpy(&(writeBuf[1]), data, size);
+    int32_t rv;
+    if ((rv = io_write(rm3100_io, writeBuf, size + 1)) < 0){
+        warning("Error in RM3100 Write");
+    }
+    return rv;
 }
 
-// SensorStatus mag_enable_single()
-// {
-//     static uint8_t data[] = { RM3100_SINGLE, 0 };
-//     static uint8_t bist[] = { 0x33, 0b11111111 };
+SensorStatus mag_enable_single()
+{
+    uint8_t data_0[] = { 0 };
+    uint8_t data_1[] = { RM3100_SINGLE };
 
-//     RM3100WriteReg(RM3100_MAG_REG, data, sizeof(data)/sizeof(char));
-//     RM3100WriteReg(RM3100_BIST_REG, bist, sizeof(bist)/sizeof(char));
-//     return SensorOK;
-// }
+    RM3100WriteReg(RM3100_CMM_REG, data_0, 1);
+    RM3100WriteReg(RM3100_POLL_REG, data_1, 1);
+    return SensorOK;
+}
 
 SensorStatus mag_enable_interrupts()
 {
-    static uint8_t data[] = { RM3100_ENABLED };
+    uint8_t data[] = { RM3100_ENABLED };
 
-    RM3100WriteReg(RM3100_BEACON_REG, data, sizeof(data)/sizeof(char));
+    RM3100WriteReg(RM3100_CMM_REG, data, 1);
     return SensorOK;
 }
 
 SensorStatus mag_disable_interrupts()
 {
-    static uint8_t data[] = { RM3100_DISABLED };
-    RM3100WriteReg(RM3100_BEACON_REG, data, sizeof(data)/sizeof(char));
+    uint8_t data[] = { RM3100_DISABLED };
+
+    RM3100WriteReg(RM3100_CMM_REG, data, 1);
+    RM3100WriteReg(RM3100_POLL_REG, data, 1);
     return SensorOK;
 }
 
@@ -218,7 +236,6 @@ SensorPowerMode mag_set_power_mode(SensorPowerMode mode)
         default:
             return mSensorMode;
         case SensorPowerModePowerDown:
-        case SensorPowerModeSuspend:
             mSensorMode = mode;
             mag_disable_interrupts();
             break;
@@ -226,10 +243,10 @@ SensorPowerMode mag_set_power_mode(SensorPowerMode mode)
             mSensorMode = mode;
             mag_enable_interrupts();
             break;
-        // case SensorPowerModeSingle:
-        //     mSensorMode = mode;
-        //     mag_enable_single();
-        //     break;
+        case SensorPowerModeSingle:
+            mSensorMode = mode;
+            mag_enable_single();
+            break;
     }
 
     return mSensorMode;
@@ -274,4 +291,34 @@ unsigned short mag_set_sample_rate(unsigned short sample_rate)
 
     return mSampleRate;
 
+}
+
+void changeCycleCount(uint16_t newCC){
+    uint8_t settings[6];
+
+    uint8_t CCMSB = (newCC & 0xFF00) >> 8; //get the most significant byte
+    uint8_t CCLSB = newCC & 0xFF; //get the least significant byte
+
+    /* Initialize settings */
+    settings[0]=CCMSB; /* CCPX1 */
+    settings[1]=CCLSB; /* CCPX0 */
+    settings[2]=CCMSB; /* CCPY1 */
+    settings[3]=CCLSB; /* CCPY0 */
+    settings[4]=CCMSB; /* CCPZ1 */
+    settings[5]=CCLSB; /* CCPZ0 */
+
+    /*  Write register settings */
+    RM3100WriteReg(RM3100_CCPX1_REG, settings, 6);
+
+    /*
+    Wire.beginTransmission(RM3100Address);
+    Wire.write(RM3100_CCX1_REG);
+    Wire.write(CCMSB);  //write new cycle count to ccx1
+    Wire.write(CCLSB);  //write new cycle count to ccx0
+    Wire.write(CCMSB);  //write new cycle count to ccy1
+    Wire.write(CCLSB);  //write new cycle count to ccy0
+    Wire.write(CCMSB);  //write new cycle count to ccz1
+    Wire.write(CCLSB);  //write new cycle count to ccz0     
+    Wire.endTransmission(); 
+    */ 
 }

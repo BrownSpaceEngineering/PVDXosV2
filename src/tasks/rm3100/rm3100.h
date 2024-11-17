@@ -18,15 +18,13 @@ struct rm3100TaskMemory {
 //Need to put the holy grail of values here
 #define RM3100Address 0x20 // Hexadecimal slave address for RM3100 with Pin 2 and Pin 4 set to LOW
 
-//pin definitions
-#define PIN_DRDY 9 //Set pin D9 to be the Data Ready Pin
-
 // Data reading regs are numbered in the opposite from documentation so we're reading 0-1-2 rather than 2-1-0 cause we hate RM3100
 //internal register values without the R/W bit
 #define RM3100_REVID_REG 0x36 // Hexadecimal address for the Revid internal register
 #define RM3100_POLL_REG 0x00 // Hexadecimal address for the Poll internal register
 #define RM3100_CMM_REG 0x01 // Hexadecimal address for the CMM internal register
 #define RM3100_STATUS_REG 0x34 // Hexadecimal address for the Status internal register
+#define RM3100_HSHAKE_REG 0x35
 #define RM3100_CCX1_REG 0x04 // Hexadecimal address for Cycle Count X1 internal register
 #define RM3100_CCX0_REG 0x05 // Hexadecimal address for the Cycle Count X0 internal register
 #define RM3100_CCY1_REG 0x06
@@ -45,9 +43,6 @@ struct rm3100TaskMemory {
 
 #define MAX_I2C_WRITE               32
 
-#define RM3100_I2C_ADDRESS_7bit			0x20
-#define RM3100_I2C_ADDRESS_8bit			0x20 << 1 // MBED uses 8 bit address
-
 #define RM3100_MAG_REG              0x00
 #define RM3100_BEACON_REG           0x01
 #define RM3100_TMRC_REG             0x0B
@@ -59,6 +54,10 @@ struct rm3100TaskMemory {
 
 #define RM3100_LROSCADJ_VALUE       0xA7
 #define RM3100_SLPOSCADJ_VALUE      0x08 
+
+#define RM3100_REVID_VALUE          0xB6 
+#define RM3100_HSHAKE_VALUE			0xB5
+#define RM3100_STATUS_VALUE         0xB4 
 
 #define RM3100_ENABLED              0x79
 #define RM3100_SINGLE				0x70
@@ -95,16 +94,8 @@ struct rm3100TaskMemory {
 
 //options
 #define initialCC 200 // Set the cycle count
-#define singleMode 0 //0 = use continuous measurement mode; 1 = use single measurement mode
+#define singleMode 1 //0 = use continuous measurement mode; 1 = use single measurement mode
 #define useDRDYPin 1 //0 = not using DRDYPin ; 1 = using DRDYPin to wait for data
-
-void rm3100_main(void *pvParameters);
-
-int init_rm3100(void);
-
-typedef struct {
-    uint8_t bist;
-} RM3100_bist_t;
 
 typedef struct {
     int32_t x;
@@ -127,16 +118,19 @@ typedef enum {
 
 typedef enum {
 	SensorPowerModePowerDown = 0,       
-	SensorPowerModeSuspend = 1,       
-	SensorPowerModeActive = 255,  
+	SensorPowerModeActive = 1,  
 	SensorPowerModeSingle = 2
 } SensorPowerMode;
 
 extern struct rm3100TaskMemory rm3100Mem;
 
 RM3100_return_t values_loop();
-RM3100_bist_t bist_register_get();
-
+uint8_t mag_get_revid();
+uint8_t mag_get_status();
+uint8_t mag_get_hshake();
+void rm3100_main(void *pvParameters);
+void changeCycleCount(uint16_t newCC);
+int init_rm3100(void);
 SensorStatus mag_disable_interrupts();
 SensorPowerMode mag_set_power_mode(SensorPowerMode mode);
 unsigned short mag_set_sample_rate(unsigned short sample_rate);
