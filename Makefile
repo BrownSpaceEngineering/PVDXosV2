@@ -35,6 +35,7 @@ export OBJS := \
 ../src/tasks/shell/shell_helpers.o \
 ../src/tasks/shell/shell_commands.o \
 ../src/tasks/rm3100/rm3100.o \
+../src/tasks/arducam/arducam.o \
 
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###
 ### THESE ARE WRITTEN RELATIVE TO THE ./ASF/gcc/Makefile FILE ###
@@ -55,6 +56,7 @@ export EXTRA_VPATH := \
 ../../src/tasks/display/image_buffers \
 ../../src/tasks/shell \
 ../../src/tasks/rm3100 \
+../../src/tasks/arducam \
 
 ###############################################################################
 ###############################################################################

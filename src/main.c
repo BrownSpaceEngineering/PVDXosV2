@@ -111,6 +111,18 @@ int main(void) {
         info("main: RM3100 task created!\n");
     }
 
+    // ------- ARDUCAM TASK -------
+    TaskHandle_t arducamTaskHandle =
+        xTaskCreateStatic(arducam_main, "ARDUCAM", ARDUCAM_TASK_STACK_SIZE, NULL, 2, arducamMem.arducamTaskStack, &arducamMem.arducamTaskTCB);
+    
+    watchdog_register_task(ARDUCAM_TASK);
+
+    if (arducamTaskHandle == NULL) {
+        fatal("main: Arducam task creation failed!\n");
+    } else {
+        info("main: Arducam task created!\n");
+    }
+
     // ------- COSMIC MONKEY TASK -------
 
     #if defined(UNITTEST) || defined(DEVBUILD)

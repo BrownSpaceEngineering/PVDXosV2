@@ -92,7 +92,7 @@ void rm3100_main(void *pvParameters) {
     {
         while(1) {
             while(gpio_get_pin_level(DRDY_PIN) == 0) {
-                vTaskDelay(pdMS_TO_TICKS(100));
+                vTaskDelay(pdMS_TO_TICKS(50));
                 watchdog_checkin(RM3100_TASK);
             }
 
@@ -114,7 +114,7 @@ void rm3100_main(void *pvParameters) {
             RM3100WriteReg(RM3100_POLL_REG, data, 1);
 
             while(gpio_get_pin_level(DRDY_PIN) == 0) {
-                vTaskDelay(pdMS_TO_TICKS(100));
+                vTaskDelay(pdMS_TO_TICKS(50));
                 watchdog_checkin(RM3100_TASK);
             }
 

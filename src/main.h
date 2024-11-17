@@ -8,6 +8,7 @@
 #include "watchdog_task.h"
 #include "task_manager.h"
 #include "rm3100.h"
+#include "arducam.h"
 
 #include <atmel_start.h>
 #include <driver_init.h>
