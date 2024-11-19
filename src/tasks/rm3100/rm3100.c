@@ -36,7 +36,15 @@ int init_rm3100(void) {
     i2c_m_sync_enable(&I2C_0);
     i2c_m_sync_set_slaveaddr(&I2C_0, RM3100Address, I2C_M_SEVEN);
 
-    uint8_t i2cbuffer[2];
+    uint32_t revid = mag_get_revid();
+    uint32_t hshake = mag_get_hshake();
+    info("HSHAKE: %d", hshake);
+    info("REVID: %d", revid);
+    
+    if (revid != 0x22 || hshake != 0x1B)
+    { 
+        return SensorErrorNonExistant;
+    }
 
     // if(RM3100ReadReg(RM3100_LROSCADJ_REG, i2cbuffer, 2) < SensorOK)
     // {
@@ -50,9 +58,8 @@ int init_rm3100(void) {
     // }
 
     /* Zero buffer content */
-    i2cbuffer[0]=0; 
-    i2cbuffer[1]=0;
 
+    uint8_t i2cbuffer[2] = { 0, 0 };
     // mag_set_sample_rate(100); //100Hz
 
     changeCycleCount(initialCC);
@@ -79,7 +86,7 @@ void rm3100_main(void *pvParameters) {
 
     int setup = init_rm3100();
 
-    if (setup > 0)
+    if (setup != 0)
     {
         return;
     }
@@ -160,8 +167,6 @@ uint8_t mag_get_hshake() {
 
 uint8_t mag_get_status() {
     uint8_t readBuf[1] = { 0 };
-    uint8_t writeBuf[1] = { RM3100_STATUS_VALUE };
-    RM3100WriteReg(RM3100_STATUS_REG, writeBuf, 1);
     RM3100ReadReg(RM3100_STATUS_REG, readBuf, 1);
 
     return readBuf[0];
@@ -170,8 +175,6 @@ uint8_t mag_get_status() {
 uint8_t mag_get_revid() {
     // We are on revision 34 (decimal)
     uint8_t readBuf[1] = { 0 };
-    uint8_t writeBuf[1] = { RM3100_REVID_VALUE };
-    RM3100WriteReg(RM3100_REVID_REG, writeBuf, 1);
     RM3100ReadReg(RM3100_REVID_REG, readBuf, 1);
 
     return readBuf[0];

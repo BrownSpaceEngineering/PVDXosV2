@@ -7,7 +7,7 @@
 #include "rtos_start.h"
 #include "watchdog_task.h"
 
-#define RM3100_TASK_STACK_SIZE 128
+#define RM3100_TASK_STACK_SIZE 256
 
 struct rm3100TaskMemory {
     StackType_t OverflowBuffer[TASK_STACK_OVERFLOW_PADDING];
@@ -95,7 +95,7 @@ struct rm3100TaskMemory {
 
 //options
 #define initialCC 200 // Set the cycle count
-#define singleMode 1 //0 = use continuous measurement mode; 1 = use single measurement mode
+#define singleMode 0 //0 = use continuous measurement mode; 1 = use single measurement mode
 #define useDRDYPin 1 //0 = not using DRDYPin ; 1 = using DRDYPin to wait for data
 
 typedef struct {
