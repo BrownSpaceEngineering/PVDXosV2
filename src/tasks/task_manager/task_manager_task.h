@@ -36,8 +36,8 @@ typedef struct {
 
 // Global memory for the task manager task
 extern task_manager_task_memory_t task_manager_mem;
-extern uint8_t task_manager_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
-extern QueueHandle_t task_manager_command_queue;
+extern uint8_t task_manager_command_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
+extern QueueHandle_t task_manager_command_queue_handle;
 
 // Mutex related variables
 extern SemaphoreHandle_t task_list_mutex;

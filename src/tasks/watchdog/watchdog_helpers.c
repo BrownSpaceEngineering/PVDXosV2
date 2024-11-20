@@ -8,11 +8,11 @@ void init_watchdog(void) {
     // Choose the period of the hardware watchdog timer
     uint8_t watchdog_period = WDT_CONFIG_PER_CYC16384;
 
-    // TODO: Create command queue
-    watchdog_command_queue = xQueueCreateStatic(TASK_MANAGER_TASK_STACK_SIZE, COMMAND_QUEUE_ITEM_SIZE,
-        task_manager_queue_buffer, &task_manager_mem.task_manager_task_queue);
+    // Create watchdog command queue
+    watchdog_command_queue_handle = xQueueCreateStatic(WATCHDOG_TASK_STACK_SIZE, COMMAND_QUEUE_ITEM_SIZE,
+        watchdog_command_queue_buffer, &watchdog_mem.watchdog_task_queue);
 
-    if (watchdog_command_queue == NULL) {
+    if (watchdog_command_queue_handle == NULL) {
         fatal("watchdog: Failed to create watchdog queue!\n");
     }
 
@@ -166,6 +166,10 @@ void unregister_task_with_watchdog(TaskHandle_t handle) {
 
 // TODO: set the payload of the command to the task handle
 void exec_command_watchdog(command_t cmd) {
+    if (cmd.target != TASK_WATCHDOG) {
+        fatal("watchdog: command target is not watchdog! target: %d operation: %d\n", cmd.target, cmd.operation);
+    }
+    
     switch (cmd.operation) {
         case OPERATION_CHECKIN:
             watchdog_checkin(*((TaskHandle_t*)cmd.p_data));

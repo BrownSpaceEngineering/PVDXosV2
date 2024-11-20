@@ -1,8 +1,8 @@
 #include "task_manager_task.h"
 
 task_manager_task_memory_t task_manager_mem;
-uint8_t task_manager_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
-QueueHandle_t task_manager_command_queue;
+uint8_t task_manager_command_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
+QueueHandle_t task_manager_command_queue_handle;
 SemaphoreHandle_t task_list_mutex = NULL;
 StaticSemaphore_t task_list_mutex_buffer;
 
@@ -53,7 +53,7 @@ void main_task_manager(void *pvParameters) {
 
     while (true) {
         // if there's something in the queue, pop it and execute it
-        xStatus = xQueueReceive(task_manager_command_queue, &cmd, pdMS_TO_TICKS(COMMAND_QUEUE_WAIT_MS));
+        xStatus = xQueueReceive(task_manager_command_queue_handle, &cmd, pdMS_TO_TICKS(COMMAND_QUEUE_WAIT_MS));
 
         if (xStatus == pdPASS) {
             // Command received, so execute it

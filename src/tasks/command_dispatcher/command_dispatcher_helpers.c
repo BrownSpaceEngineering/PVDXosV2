@@ -2,10 +2,10 @@
 
 // Initialize the command queue, which stores pointers to command structs
 void init_command_dispatcher(void) {
-    command_dispatcher_command_queue = xQueueCreateStatic(COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE, command_dispatcher_queue_buffer,
+    command_dispatcher_command_queue_handle = xQueueCreateStatic(COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE, command_dispatcher_command_queue_buffer,
                                                     &command_dispatcher_mem.command_dispatcher_task_queue);
 
-    if (command_dispatcher_command_queue == NULL) {
+    if (command_dispatcher_command_queue_handle == NULL) {
         fatal("command-dispatcher: Failed to create command queue!\n");
     }
 }
@@ -14,7 +14,7 @@ void init_command_dispatcher(void) {
 void command_dispatcher_enqueue(command_t *p_cmd) {
     pvdx_task_t* calling_task = get_task(xTaskGetCurrentTaskHandle());
 
-    BaseType_t xStatus = xQueueSendToBack(command_dispatcher_command_queue, p_cmd, 0);
+    BaseType_t xStatus = xQueueSendToBack(command_dispatcher_command_queue_handle, p_cmd, 0);
 
     if (xStatus != pdPASS) {
         fatal("command-dispatcher: %s task failed to enqueue command!\n", calling_task->name);
@@ -22,12 +22,12 @@ void command_dispatcher_enqueue(command_t *p_cmd) {
 }
 
 // Forward a dequeued command to the appropriate task for execution
-void exec_command_command_dispatcher(command_t cmd) {
+void dispatch_command_command_dispatcher(command_t cmd) {
     BaseType_t xStatus;
 
     switch (cmd.target) {
         case TASK_MANAGER:
-            xStatus = xQueueSendToBack(task_manager_command_queue, &cmd, 0);
+            xStatus = xQueueSendToBack(task_manager_command_queue_handle, &cmd, 0);
 
             if (xStatus != pdPASS) {
                 fatal("command-dispatcher: Failed to forward command to task manager task!\n");
@@ -35,10 +35,10 @@ void exec_command_command_dispatcher(command_t cmd) {
 
             break;
         case TASK_WATCHDOG:
-            xStatus = xQueueSendToBack(watchdog_command_queue, &cmd, 0);
+            xStatus = xQueueSendToBack(watchdog_command_queue_handle, &cmd, 0);
 
             if (xStatus != pdPASS) {
-                fatal("command-dispatcher: Failed to foward command to watchdog task!\n");
+                fatal("command-dispatcher: Failed to forward command to watchdog task!\n");
             }
 
             break;
@@ -57,7 +57,7 @@ void exec_command_command_dispatcher(command_t cmd) {
             fatal("command-dispatcher: Failed; 9Axis queue does not exist");
             break;
         case TASK_DISPLAY:
-            xStatus = xQueueSendToBack(display_command_queue, &cmd, 0);
+            xStatus = xQueueSendToBack(display_command_queue_handle, &cmd, 0);
 
             if (xStatus != pdPASS) {
                 fatal("command-dispatcher: Failed to forward command to display task!\n");

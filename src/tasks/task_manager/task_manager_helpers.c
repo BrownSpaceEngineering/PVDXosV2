@@ -53,9 +53,9 @@ pvdx_task_t* get_task(TaskHandle_t handle) {
 
 // Initializes the task manager task (it should be the first task in the global task list)
 void init_task_manager(void) {
-    task_manager_command_queue = xQueueCreateStatic(TASK_MANAGER_TASK_STACK_SIZE, COMMAND_QUEUE_ITEM_SIZE, task_manager_queue_buffer, &task_manager_mem.task_manager_task_queue);
+    task_manager_command_queue_handle = xQueueCreateStatic(TASK_MANAGER_TASK_STACK_SIZE, COMMAND_QUEUE_ITEM_SIZE, task_manager_command_queue_buffer, &task_manager_mem.task_manager_task_queue);
 
-    if (task_manager_command_queue == NULL) {
+    if (task_manager_command_queue_handle == NULL) {
         fatal("task-manager: Failed to create task manager queue!\n");
     }
 
@@ -128,6 +128,9 @@ void task_manager_disable_task(pvdx_task_t* task) {
 }
 
 void exec_command_task_manager(command_t cmd) {
+    if (cmd.target != TASK_MANAGER) {
+        fatal("task manager: command target is not task manager! target: %d operation: %d\n", cmd.target, cmd.operation);
+    }
     switch (cmd.operation) {
         case OPERATION_INIT_SUBTASKS:
             task_manager_init_subtasks();

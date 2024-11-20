@@ -1,7 +1,8 @@
 #include "watchdog_task.h"
 
 watchdog_task_memory_t watchdog_mem;
-QueueHandle_t watchdog_command_queue;
+QueueHandle_t watchdog_command_queue_handle;
+uint8_t watchdog_command_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
 
 volatile Wdt *const p_watchdog = WDT;
 bool watchdog_enabled = false;
@@ -38,7 +39,7 @@ void main_watchdog(void *pvParameters) {
         }
 
         // Pop any commands off of the watchdog command queue
-        xStatus = xQueueReceive(watchdog_command_queue, &cmd, pdMS_TO_TICKS(COMMAND_QUEUE_WAIT_MS));
+        xStatus = xQueueReceive(watchdog_command_queue_handle, &cmd, pdMS_TO_TICKS(COMMAND_QUEUE_WAIT_MS));
 
         if (xStatus == pdPASS) {
             // Command received, so execute it

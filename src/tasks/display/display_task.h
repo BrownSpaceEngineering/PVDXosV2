@@ -21,10 +21,10 @@ typedef struct {
 } display_task_memory_t;
 
 extern display_task_memory_t display_mem;
-extern uint8_t display_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
+extern uint8_t display_command_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
 
 // Queue for commands to be executed by the display task
-extern QueueHandle_t display_command_queue;
+extern QueueHandle_t display_command_queue_handle;
 
 // Exposed Functions
 void init_display_task(void);
