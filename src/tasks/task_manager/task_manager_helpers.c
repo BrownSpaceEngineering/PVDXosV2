@@ -70,16 +70,6 @@ void init_task_manager(void) {
 // Initialize all other tasks running on the system
 void task_manager_init_subtasks(void) {
     for(size_t i = SUBTASK_START_INDEX; task_list[i].name != NULL; i++) {
-        // Verify that the current thread is the task
-        if (task_list[i].function == &main_task_manager) {
-            // Sanity check: Make sure the task manager's handle is our current handle
-            if (task_list[i].handle != xTaskGetCurrentTaskHandle()) {
-                fatal("Task Manager handle does not match current task handle!\n");
-            }
-
-            continue;
-        }
-
         init_task(i);
     }
 }
