@@ -5,7 +5,7 @@ uint8_t command_dispatcher_command_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COM
 QueueHandle_t command_dispatcher_command_queue_handle;
 
 void main_command_dispatcher(void *pvParameters) {
-    info("command_dispatcher: Task Started!");
+    info("command_dispatcher: Task Started!\n");
 
     // Initialize the command queue
     init_command_dispatcher();
