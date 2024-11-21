@@ -7,7 +7,7 @@
 #include "rtos_start.h"
 #include "watchdog_task.h"
 
-#define RM3100_TASK_STACK_SIZE 128
+#define RM3100_TASK_STACK_SIZE 256
 
 struct rm3100TaskMemory {
     StackType_t OverflowBuffer[TASK_STACK_OVERFLOW_PADDING];

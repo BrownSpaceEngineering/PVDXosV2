@@ -7,9 +7,9 @@
 #include "rtos_start.h"
 #include "watchdog_task.h"
 
-#define ARDUCAM_TASK_STACK_SIZE 128
+#define ARDUCAM_TASK_STACK_SIZE 256
 
-#define ARDUCAMAddress 0x42
+#define ARDUCAMAddress 0x60
 
 #define OV2640_CHIPID_HIGH 	0x0A
 #define OV2640_CHIPID_LOW 	0x0B
@@ -21,6 +21,11 @@ struct arducamTaskMemory {
 };
 
 extern struct arducamTaskMemory arducamMem;
+
+typedef enum
+{
+    JPEG
+} Format;
 
 void arducam_main(void *pvParameters);
 void init_arducam();

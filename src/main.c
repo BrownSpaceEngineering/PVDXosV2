@@ -61,7 +61,7 @@ int main(void) {
 
     // Create the heartbeat task
     // The heartbeat task is a simple task that blinks the LEDs in a pattern to indicate that the system is running
-    TaskHandle_t heartbeatTaskHandle = xTaskCreateStatic(heartbeat_main, "Heartbeat", RM3100_TASK_STACK_SIZE, NULL, 1,
+    TaskHandle_t heartbeatTaskHandle = xTaskCreateStatic(heartbeat_main, "Heartbeat", HEARTBEAT_TASK_STACK_SIZE, NULL, 1,
                                                          heartbeatMem.heartbeatTaskStack, &heartbeatMem.heartbeatTaskTCB);
 
     watchdog_register_task(HEARTBEAT_TASK); // Register the heartbeat task with the watchdog so that it can check in

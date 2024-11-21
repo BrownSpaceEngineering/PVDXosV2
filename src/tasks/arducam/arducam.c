@@ -15,6 +15,8 @@ struct arducamTaskMemory arducamMem;
 
 struct io_descriptor *arducam_io;
 
+static Format cformat;
+
 void init_arducam()
 {
     i2c_m_sync_set_baudrate(&I2C_0, 0, 115200);
@@ -23,6 +25,8 @@ void init_arducam()
     i2c_m_sync_set_slaveaddr(&I2C_0, ARDUCAMAddress >> 1, I2C_M_SEVEN);
 
     watchdog_checkin(ARDUCAM_TASK);
+
+    cformat = JPEG;
 
     uint8_t vidpid[2] = { 0, 0 };
     uint8_t data[1] = { 0x01 };
@@ -43,6 +47,8 @@ void init_arducam()
 
 void arducam_main(void *pvParameters) {
     info("Arducam Task Started!\r\n");
+
+    init_arducam();
 
     while (1)
     {
