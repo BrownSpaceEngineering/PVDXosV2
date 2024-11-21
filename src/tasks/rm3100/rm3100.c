@@ -3,75 +3,84 @@
  * 
  * Created: Dec 7, 2023 2:22 AM
  * By: Nathan Kim, Alexander Thaep
-*/
+**/
+
 #include "rm3100.h"
 #include "string.h"
 #include "logging.h"
 
+// IO descriptor for the RM3100
 #define I2C_SERCOM       SERCOM6
-//Io descriptor for the RM3100
 
 struct rm3100TaskMemory rm3100Mem;
-
 struct io_descriptor *rm3100_io;
 
-static uint16_t                     mSampleRate;
-static int8_t                       mSamples[9];
 static SensorPowerMode              mSensorMode;
-
-static uint8_t                      cycleCount;
+static uint16_t                     mSampleRate;
+static uint8_t                      mCycleCount;
+static int8_t                       mSamples[9];
+static float                        mXYZ[3];
+static float                        mGain;
 
 int32_t RM3100ReadReg(uint8_t addr, uint8_t *val, uint16_t size);
+uint8_t RM3100ByteReadReg(uint8_t addr);
 int32_t RM3100WriteReg(uint8_t addr, uint8_t *data, uint16_t size);
+SensorStatus RM3100WriteGatherData(float *storeAddress);
 
-//https://github.com/inventorandy/atmel-samd21/blob/master/07_I2CTSYS/07_I2CTSYS/ext_tsys01.h#L15
-//https://os.mbed.com/users/ddelsuc/code/RM3100BB_Sample_Code/
+void mag_change_cycle_count(uint16_t newCC);
+SensorPowerMode mag_set_power_mode(SensorPowerMode mode);
+uint16_t mag_set_sample_rate(uint16_t sample_rate);
+SensorStatus mag_modify_interrupts(uint8_t cmm_value, uint8_t poll_value);
 
-// For future reference, PIN 51 goes to SCL and PIN 52 goes to SDA
+int init_rm3100(void);
+
+RM3100_return_t mag_read_data();
+
+// https://www.tri-m.com/products/pni/RM3100-User-Manual.pdf
+// https://github.com/inventorandy/atmel-samd21/blob/master/07_I2CTSYS/07_I2CTSYS/ext_tsys01.h#L15
+// https://os.mbed.com/users/ddelsuc/code/RM3100BB_Sample_Code/
+
+// For future reference, PIN 51 -> SCL & PIN 52 -> SDA
 
 int init_rm3100(void) {
-    //Initialize the I2C Communications
+    // Initialize I2C
     i2c_m_sync_set_baudrate(&I2C_0, 0, 115200);
     i2c_m_sync_get_io_descriptor(&I2C_0, &rm3100_io);
     i2c_m_sync_enable(&I2C_0);
     i2c_m_sync_set_slaveaddr(&I2C_0, RM3100Address, I2C_M_SEVEN);
 
-    uint32_t revid = mag_get_revid();
-    uint32_t hshake = mag_get_hshake();
-    info("HSHAKE: %d", hshake);
-    info("REVID: %d", revid);
+    uint8_t init_values[4] = { 0, 0, 0, 0 };
+    uint8_t cycle_values[2] = { 0, 0 };
+
+    init_values[0] = RM3100ByteReadReg(RM3100_REVID_REG);
+    init_values[1] = RM3100ByteReadReg(RM3100_HSHAKE_REG);
     
-    if (revid != 0x22 || hshake != 0x1B)
+    if (init_values[0] != RM3100_REVID_VALUE || init_values[1] != RM3100_HSHAKE_VALUE)
     { 
+        return SensorI2CError;
+    }
+
+    if(RM3100ReadReg(RM3100_LROSCADJ_REG, &init_values[2], 2) < SensorOK)
+    {
         return SensorErrorNonExistant;
     }
 
-    // if(RM3100ReadReg(RM3100_LROSCADJ_REG, i2cbuffer, 2) < SensorOK)
-    // {
-    //     return SensorErrorNonExistant;
-    // }
+    if ((init_values[2] != RM3100_LROSCADJ_VALUE) || (init_values[3] != RM3100_SLPOSCADJ_VALUE))
+    {
+        return SensorErrorUnexpectedDevice;
+    }
 
-    // if (    (i2cbuffer[0] != RM3100_LROSCADJ_VALUE) ||
-    //         (i2cbuffer[1] != RM3100_SLPOSCADJ_VALUE))
-    // {
-    //     return SensorErrorUnexpectedDevice;
-    // }
+    mag_change_cycle_count(initialCC);
+    RM3100ReadReg(RM3100_CCX1_REG, &cycle_values[0], 1);
+    RM3100ReadReg(RM3100_CCX0_REG, &cycle_values[1], 1);
 
-    /* Zero buffer content */
-
-    uint8_t i2cbuffer[2] = { 0, 0 };
-    // mag_set_sample_rate(100); //100Hz
-
-    changeCycleCount(initialCC);
-    RM3100ReadReg(RM3100_CCX1_REG, i2cbuffer, 1);
-    RM3100ReadReg(RM3100_CCX0_REG, i2cbuffer + 1, 1);
-
-    cycleCount = i2cbuffer[0];
-    cycleCount = (cycleCount << 8) | i2cbuffer[1];
+    mCycleCount = cycle_values[0];
+    mCycleCount = (mCycleCount << 8) | cycle_values[1];
 
     if (!singleMode)
     {
-        mag_set_power_mode(SensorPowerModeActive);
+        mag_set_power_mode(SensorPowerModeContinuous);
+        mag_set_sample_rate(100); // 100 HZ
     }
     else
     {
@@ -82,62 +91,72 @@ int init_rm3100(void) {
 }
 
 void rm3100_main(void *pvParameters) {
-    info("RM3100 Task Started!\r\n");
-
-    int setup = init_rm3100();
-
-    if (setup != 0)
+    if (init_rm3100() != SensorOK)
     {
         return;
-    }
+    };
 
     watchdog_checkin(RM3100_TASK);
 
-    float gain = 0.3671 * cycleCount + 1.5;
+    mGain = 0.3671 * mCycleCount + 1.5;
 
-    if (!singleMode)
+    while (1)
     {
-        while(1) {
-            while(gpio_get_pin_level(DRDY_PIN) == 0) {
-                vTaskDelay(pdMS_TO_TICKS(100));
-                watchdog_checkin(RM3100_TASK);
-            }
-
-            RM3100_return_t values = values_loop();
-
-            float x = (float)values.x / gain;
-            float y = (float)values.y / gain;
-            float z = (float)values.z / gain;
-
-            info("X: %f, Y: %f, Z: %f", x, y, z);
+        while(gpio_get_pin_level(DRDY_PIN) == 0)
+        {
+            vTaskDelay(pdMS_TO_TICKS(100));
             watchdog_checkin(RM3100_TASK);
         }
-    }
-    else
-    {
-        while(1)
-        {
-            static uint8_t data[] = { REQUEST }; 
-            RM3100WriteReg(RM3100_POLL_REG, data, 1);
 
-            while(gpio_get_pin_level(DRDY_PIN) == 0) {
-                vTaskDelay(pdMS_TO_TICKS(100));
-                watchdog_checkin(RM3100_TASK);
-            }
-
-            RM3100_return_t values = values_loop();
-
-            float x = (float)values.x / gain;
-            float y = (float)values.y / gain;
-            float z = (float)values.z / gain;
-
-            info("X: %f, Y: %f, Z: %f", x, y, z);
-            watchdog_checkin(RM3100_TASK);
-        }  
+        mag_read_data();
     }
 }
 
-RM3100_return_t values_loop() {
+uint8_t RM3100ByteReadReg(uint8_t addr) {
+    uint8_t readBuf[1] = { 0 };
+    RM3100ReadReg(addr, readBuf, 1);
+
+    return readBuf[0];
+}
+
+int32_t RM3100ReadReg(uint8_t addr, uint8_t *readBuf, uint16_t size) {
+    uint8_t writeBuf[1] = { addr };
+    int32_t rv;
+
+    if ((rv = io_write(rm3100_io, writeBuf, 1)) < 0){
+        warning("Error in RM3100 Write");
+    }
+    if ((rv = io_read(rm3100_io, readBuf, size)) < 0) {
+        warning("Error in RM3100 Read");
+    }
+    return rv;
+}
+
+SensorStatus RM3100WGatherData(float *storeAddress)
+{
+    uint8_t data[] = { REQUEST }; 
+    RM3100WriteReg(RM3100_POLL_REG, data, 1);
+
+    storeAddress[0] = mXYZ[0];
+    storeAddress[1] = mXYZ[1];
+    storeAddress[2] = mXYZ[2];
+
+    return SensorOK;
+}
+
+int32_t RM3100WriteReg(uint8_t addr, uint8_t *data, uint16_t size) {
+    uint8_t writeBuf[MAX_I2C_WRITE + 1];
+    int32_t rv;
+
+    writeBuf[0] = addr;
+    memcpy(&(writeBuf[1]), data, size);
+    if ((rv = io_write(rm3100_io, writeBuf, size + 1)) < 0){
+        warning("Error in RM3100 Write");
+    }
+    return rv;
+}
+
+RM3100_return_t mag_read_data() {
     RM3100_return_t returnVals;
 
     // read out sensor data
@@ -155,78 +174,20 @@ RM3100_return_t values_loop() {
     returnVals.z |= mSamples[7] * 256;
     returnVals.z |= mSamples[8];
 
+    // stow sensor data
+    mXYZ[0] = (float) returnVals.x / mGain;
+    mXYZ[1] = (float) returnVals.y / mGain;
+    mXYZ[2] = (float) returnVals.z / mGain;
+
     return returnVals;
 }
 
-uint8_t mag_get_hshake() {
-    uint8_t readBuf[1] = { 0 };
-    RM3100ReadReg(RM3100_HSHAKE_REG, readBuf, 1);
-
-    return readBuf[0];
-}
-
-uint8_t mag_get_status() {
-    uint8_t readBuf[1] = { 0 };
-    RM3100ReadReg(RM3100_STATUS_REG, readBuf, 1);
-
-    return readBuf[0];
-}
-
-uint8_t mag_get_revid() {
-    // We are on revision 34 (decimal)
-    uint8_t readBuf[1] = { 0 };
-    RM3100ReadReg(RM3100_REVID_REG, readBuf, 1);
-
-    return readBuf[0];
-}
-
-int32_t RM3100ReadReg(uint8_t addr, uint8_t *readBuf, uint16_t size) {
-    uint8_t writeBuf[1] = { addr };
-    int32_t rv;
-    if ((rv = io_write(rm3100_io, writeBuf, 1)) < 0){
-        warning("Error in RM3100 Write");
-    }
-    if ((rv = io_read(rm3100_io, readBuf, size)) < 0) {
-        warning("Error in RM3100 Read");
-    }
-    return rv;
-}
-
-int32_t RM3100WriteReg(uint8_t addr, uint8_t *data, uint16_t size) {
-    uint8_t writeBuf[MAX_I2C_WRITE + 1];
-    writeBuf[0] = addr;
-    memcpy(&(writeBuf[1]), data, size);
-    int32_t rv;
-    if ((rv = io_write(rm3100_io, writeBuf, size + 1)) < 0){
-        warning("Error in RM3100 Write");
-    }
-    return rv;
-}
-
-SensorStatus mag_enable_single()
+SensorStatus mag_modify_interrupts(uint8_t cmm_value, uint8_t poll_value)
 {
-    uint8_t data_0[] = { 0 };
-    uint8_t data_1[] = { RM3100_SINGLE };
+    uint8_t data[2] = { cmm_value, poll_value };
 
-    RM3100WriteReg(RM3100_CMM_REG, data_0, 1);
-    RM3100WriteReg(RM3100_POLL_REG, data_1, 1);
-    return SensorOK;
-}
-
-SensorStatus mag_enable_interrupts()
-{
-    uint8_t data[] = { RM3100_ENABLED };
-
-    RM3100WriteReg(RM3100_CMM_REG, data, 1);
-    return SensorOK;
-}
-
-SensorStatus mag_disable_interrupts()
-{
-    uint8_t data[] = { RM3100_DISABLED };
-
-    RM3100WriteReg(RM3100_CMM_REG, data, 1);
-    RM3100WriteReg(RM3100_POLL_REG, data, 1);
+    RM3100WriteReg(RM3100_CMM_REG, &data[0], 1);
+    RM3100WriteReg(RM3100_POLL_REG, &data[1], 1);
     return SensorOK;
 }
 
@@ -234,30 +195,27 @@ SensorPowerMode mag_set_power_mode(SensorPowerMode mode)
 {
     switch(mode)
     {
-        default:
-            return mSensorMode;
-        case SensorPowerModePowerDown:
+        case SensorPowerModeInactive:
             mSensorMode = mode;
-            mag_disable_interrupts();
+            mag_modify_interrupts(RM3100_DISABLED, RM3100_DISABLED);
             break;
-        case SensorPowerModeActive:
-            mSensorMode = mode;
-            mag_enable_interrupts();
+        case SensorPowerModeContinuous:
+            mag_modify_interrupts(RM3100_ENABLED, RM3100_DISABLED);
             break;
         case SensorPowerModeSingle:
-            mSensorMode = mode;
-            mag_enable_single();
+            mag_modify_interrupts(RM3100_DISABLED, RM3100_SINGLE);
             break;
     }
 
+    mSensorMode = mode;
     return mSensorMode;
 }
 
-unsigned short mag_set_sample_rate(unsigned short sample_rate)
+uint16_t mag_set_sample_rate(uint16_t sample_rate)
 {
     uint64_t i;
-    static uint8_t i2cbuffer[1];
-    const unsigned short int supported_rates[][2] = \
+    uint8_t i2cbuffer[1];
+    const uint16_t supported_rates[][2] = \
     {
         /* [Hz], register value */
         {   2, 0x0A},   // up to 2Hz
@@ -268,16 +226,16 @@ unsigned short mag_set_sample_rate(unsigned short sample_rate)
         {  62, 0x05},   // up to 62Hz
         {  125, 0x04},  // up to 125Hz
         {  220, 0x03}   // up to 250Hz
-        };
+    };
         
-    for(i = 0; i < sizeof(supported_rates)/(sizeof(unsigned short int)*2) - 1; i++)
+    for(i = 0; i < sizeof(supported_rates)/(sizeof(uint16_t)*2) - 1; i++)
     {
         if(sample_rate <= supported_rates[i][0]) break;
     }
             
-    if (mSensorMode == SensorPowerModeActive) 
+    if (mSensorMode == SensorPowerModeContinuous) 
     {
-        mag_disable_interrupts();
+        mag_modify_interrupts(RM3100_DISABLED, RM3100_DISABLED);
     }
     
     mSampleRate = supported_rates[i][0];
@@ -285,20 +243,21 @@ unsigned short mag_set_sample_rate(unsigned short sample_rate)
   
     RM3100WriteReg(RM3100_TMRC_REG, i2cbuffer, 1);
     
-    if (mSensorMode == SensorPowerModeActive) 
+    if (mSensorMode == SensorPowerModeContinuous) 
     {
-        mag_enable_interrupts();
+        mag_modify_interrupts(RM3100_ENABLED, RM3100_DISABLED);
     }
 
-    return mSampleRate;
+    RM3100ReadReg(RM3100_TMRC_REG, i2cbuffer, 1);
 
+    return i2cbuffer[0];
 }
 
-void changeCycleCount(uint16_t newCC){
+void mag_change_cycle_count(uint16_t newCC){
     uint8_t settings[6];
 
-    uint8_t CCMSB = (newCC & 0xFF00) >> 8; //get the most significant byte
-    uint8_t CCLSB = newCC & 0xFF; //get the least significant byte
+    uint8_t CCMSB = (newCC & 0xFF00) >> 8; // get the most significant byte
+    uint8_t CCLSB = newCC & 0xFF; // get the least significant byte
 
     /* Initialize settings */
     settings[0]=CCMSB; /* CCPX1 */
@@ -309,17 +268,5 @@ void changeCycleCount(uint16_t newCC){
     settings[5]=CCLSB; /* CCPZ0 */
 
     /*  Write register settings */
-    RM3100WriteReg(RM3100_CCPX1_REG, settings, 6);
-
-    /*
-    Wire.beginTransmission(RM3100Address);
-    Wire.write(RM3100_CCX1_REG);
-    Wire.write(CCMSB);  //write new cycle count to ccx1
-    Wire.write(CCLSB);  //write new cycle count to ccx0
-    Wire.write(CCMSB);  //write new cycle count to ccy1
-    Wire.write(CCLSB);  //write new cycle count to ccy0
-    Wire.write(CCMSB);  //write new cycle count to ccz1
-    Wire.write(CCLSB);  //write new cycle count to ccz0     
-    Wire.endTransmission(); 
-    */ 
+    RM3100WriteReg(RM3100_CCX1_REG, settings, 6);
 }
