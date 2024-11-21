@@ -73,8 +73,9 @@ struct rm3100TaskMemory {
 #define REQUEST 0x70 // 0b 0111 0000
 
 // options
-#define initialCC 200 // Set the cycle count
-#define singleMode 0 // 0 = use continuous measurement mode; 1 = use single measurement mode
+#define initialCC  200 // Set the cycle count
+#define sampleRate   2 // 2 HZ
+#define singleMode   0 // 0 = use continuous measurement mode; 1 = use single measurement mode
 
 typedef struct {
     int32_t x;

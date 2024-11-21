@@ -25,7 +25,7 @@ static float                        mGain;
 int32_t RM3100ReadReg(uint8_t addr, uint8_t *val, uint16_t size);
 uint8_t RM3100ByteReadReg(uint8_t addr);
 int32_t RM3100WriteReg(uint8_t addr, uint8_t *data, uint16_t size);
-SensorStatus RM3100WriteGatherData(float *storeAddress);
+void RM3100GatherData(float *storeAddress);
 
 void mag_change_cycle_count(uint16_t newCC);
 SensorPowerMode mag_set_power_mode(SensorPowerMode mode);
@@ -80,7 +80,7 @@ int init_rm3100(void) {
     if (!singleMode)
     {
         mag_set_power_mode(SensorPowerModeContinuous);
-        mag_set_sample_rate(100); // 100 HZ
+        mag_set_sample_rate(sampleRate);
     }
     else
     {
@@ -132,7 +132,7 @@ int32_t RM3100ReadReg(uint8_t addr, uint8_t *readBuf, uint16_t size) {
     return rv;
 }
 
-SensorStatus RM3100WGatherData(float *storeAddress)
+void RM3100GatherData(float *storeAddress)
 {
     uint8_t data[] = { REQUEST }; 
     RM3100WriteReg(RM3100_POLL_REG, data, 1);
@@ -141,7 +141,7 @@ SensorStatus RM3100WGatherData(float *storeAddress)
     storeAddress[1] = mXYZ[1];
     storeAddress[2] = mXYZ[2];
 
-    return SensorOK;
+    return;
 }
 
 int32_t RM3100WriteReg(uint8_t addr, uint8_t *data, uint16_t size) {
