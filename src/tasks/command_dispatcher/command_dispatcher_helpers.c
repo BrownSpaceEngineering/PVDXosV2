@@ -42,7 +42,7 @@ void dispatch_command_command_dispatcher(command_t cmd) {
             if (xStatus != pdPASS) {
                 fatal("command-dispatcher: Failed to forward command to watchdog task!\n");
             } else {
-                debug("command_dispatcher: Successfully enqueued a command to watchdog command queue");
+                debug("command_dispatcher: Successfully enqueued a command to watchdog command queue\n");
             }
 
             break;
@@ -52,13 +52,13 @@ void dispatch_command_command_dispatcher(command_t cmd) {
             warning("command-dispatcher: Heartbeat task does not accept commands!\n");
             break;
         case TASK_MAGNETOMETER:
-            fatal("command-dispatcher: Failed; Magnetometer queue does not exist");
+            fatal("command-dispatcher: Failed; Magnetometer queue does not exist\n");
             break;
         case TASK_CAMERA:
-            fatal("command-dispatcher: Failed; Camera queue does not exist");
+            fatal("command-dispatcher: Failed; Camera queue does not exist\n");
             break;
         case TASK_9AXIS:
-            fatal("command-dispatcher: Failed; 9Axis queue does not exist");
+            fatal("command-dispatcher: Failed; 9Axis queue does not exist\n");
             break;
         case TASK_DISPLAY:
             xStatus = xQueueSendToBack(display_command_queue_handle, &cmd, 0);

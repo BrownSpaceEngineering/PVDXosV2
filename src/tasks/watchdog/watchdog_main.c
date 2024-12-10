@@ -23,7 +23,10 @@ void main_watchdog(void *pvParameters) {
 
         // Acquire the mutex to prevent the task list from being modified while we are iterating through it
         debug("watchdog: Acquiring task_list_mutex lock...\n");
+
+        // Enter critical section
         lock_mutex(task_list_mutex);
+
         debug("watchdog: task_list_mutex lock acquired!\n");
 
         for (size_t i = 0; task_list[i].name != NULL; i++) {
@@ -44,6 +47,9 @@ void main_watchdog(void *pvParameters) {
             }
         }
 
+        // Release the mutex and exit the critical section
+        unlock_mutex(task_list_mutex);
+
         // Pop all commands off of the watchdog command queue
         while ((xStatus = xQueueReceive(watchdog_command_queue_handle, &cmd, 0)) == pdPASS) {
             debug("watchdog: Command popped off queue.\n");
@@ -51,8 +57,7 @@ void main_watchdog(void *pvParameters) {
         }
         debug("watchdog: No commands queued.\n");
 
-        // Release the mutex
-        unlock_mutex(task_list_mutex);
+        
 
         // if we get here, then all tasks have checked in within the allowed time
         pet_watchdog();
