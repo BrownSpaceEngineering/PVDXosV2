@@ -15,7 +15,7 @@ void lock_mutex(SemaphoreHandle_t mutex) {
         vTaskDelay(pdMS_TO_TICKS(POLLING_DELAY_MS));
         num_tries++;
         if (num_tries > MAX_TRIES) {
-            fatal("Failed to lock mutex after %d tries", MAX_TRIES);
+            fatal("Failed to lock mutex after %d tries\n", MAX_TRIES);
         }
     }
 }
@@ -25,6 +25,6 @@ void unlock_mutex(SemaphoreHandle_t mutex) {
     // Unlock the mutex after data has been modified
 
     if (!success) {
-        fatal("Failed to unlock a mutex");
+        fatal("Failed to unlock a mutex\n");
     }
 }

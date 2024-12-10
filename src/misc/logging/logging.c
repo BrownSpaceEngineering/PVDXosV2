@@ -22,6 +22,9 @@ void fatal_impl(const char *string, ...) {
     warning_impl("FATAL ERROR OCCURRED! RESTARTING SYSTEM...\n");
     warning_impl("FATAL ERROR OCCURRED! RESTARTING SYSTEM...\n");
 
+    // REMOVE THIS LATER:
+    vTaskDelay(pdMS_TO_TICKS(1000));
+
     // TODO: Gracefully shut down the system and then kick the watchdog.
     kick_watchdog();
 

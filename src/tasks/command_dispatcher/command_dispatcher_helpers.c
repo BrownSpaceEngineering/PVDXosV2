@@ -41,6 +41,8 @@ void dispatch_command_command_dispatcher(command_t cmd) {
 
             if (xStatus != pdPASS) {
                 fatal("command-dispatcher: Failed to forward command to watchdog task!\n");
+            } else {
+                debug("command_dispatcher: Successfully enqueued a command to watchdog command queue");
             }
 
             break;

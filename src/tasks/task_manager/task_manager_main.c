@@ -15,13 +15,13 @@ pvdx_task_t task_list[] = {
     // *** If you change the order of any of these, make sure that the task list indices in task_manager_task.h
     //     are up to date!!! ***
     {
-        "Watchdog", true, NULL, main_watchdog, WATCHDOG_TASK_STACK_SIZE, watchdog_mem.watchdog_task_stack, NULL, 3, &watchdog_mem.watchdog_task_tcb, 1500, 0, false
+        "Watchdog", true, NULL, main_watchdog, WATCHDOG_TASK_STACK_SIZE, watchdog_mem.watchdog_task_stack, NULL, 3, &watchdog_mem.watchdog_task_tcb, 10000, 0, false
     },
     {
         "CommandDispatcher", true, NULL, main_command_dispatcher, COMMAND_DISPATCHER_TASK_STACK_SIZE, command_dispatcher_mem.command_dispatcher_task_stack, NULL, 2, &command_dispatcher_mem.command_dispatcher_task_tcb, 10000, 0, false
     },
     {
-        "TaskManager", true, NULL, main_task_manager, TASK_MANAGER_TASK_STACK_SIZE, task_manager_mem.task_manager_task_stack, NULL, 2, &task_manager_mem.task_manager_task_tcb, 5000, 0, false
+        "TaskManager", true, NULL, main_task_manager, TASK_MANAGER_TASK_STACK_SIZE, task_manager_mem.task_manager_task_stack, NULL, 2, &task_manager_mem.task_manager_task_tcb, 10000, 0, false
     },
     // {
     //     "Shell", true, NULL, main_shell, SHELL_TASK_STACK_SIZE, shell_mem.shell_task_stack, NULL, 2, &shell_mem.shell_task_tcb, 10000, 0, false
@@ -54,11 +54,11 @@ void main_task_manager(void *pvParameters) {
     while (true) {
         debug("task_manager: Started main loop\n");
         // if there's something in the queue, pop it and execute it
-        xStatus = xQueueReceive(task_manager_command_queue_handle, &cmd, pdMS_TO_TICKS(COMMAND_QUEUE_WAIT_MS));
+        xStatus = xQueueReceive(task_manager_command_queue_handle, &cmd, 0);
 
         if (xStatus == pdPASS) {
             // Command received, so execute it
-            debug("task_manager: Command popped off queue.\n");
+            debug("task_manager: Command popped off queue. Target: %d, Operation: %d\n", cmd.target, cmd.operation);
             exec_command_task_manager(cmd);
         }
         else {
@@ -66,7 +66,7 @@ void main_task_manager(void *pvParameters) {
             debug("task_manager: No commands queued.\n");
         }
         
-        // vTaskDelay(pdMS_TO_TICKS(1000));
         command_dispatcher_enqueue(&command_checkin);
+        vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }

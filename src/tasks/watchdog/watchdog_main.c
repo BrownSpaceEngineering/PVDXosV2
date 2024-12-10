@@ -22,9 +22,12 @@ void main_watchdog(void *pvParameters) {
         uint32_t current_time = xTaskGetTickCount();
 
         // Acquire the mutex to prevent the task list from being modified while we are iterating through it
+        debug("watchdog: Acquiring task_list_mutex lock...\n");
         lock_mutex(task_list_mutex);
+        debug("watchdog: task_list_mutex lock acquired!\n");
 
         for (size_t i = 0; task_list[i].name != NULL; i++) {
+            debug("watchdog: Determining whether task %d has checked in\n", i);
             if (task_list[i].has_registered) {
                 uint32_t time_since_last_checkin = current_time - task_list[i].last_checkin;
 
@@ -36,28 +39,26 @@ void main_watchdog(void *pvParameters) {
                         task_list[i].name, time_since_last_checkin, task_list[i].watchdog_timeout);
                     kick_watchdog();
                 }
+            } else {
+                debug("watchdog: Task %d has not registered, skipping it ...\n", i);
             }
         }
 
-        // Pop any commands off of the watchdog command queue
-        xStatus = xQueueReceive(watchdog_command_queue_handle, &cmd, pdMS_TO_TICKS(COMMAND_QUEUE_WAIT_MS));
-
-        if (xStatus == pdPASS) {
-            // Command received, so execute it
+        // Pop all commands off of the watchdog command queue
+        while ((xStatus = xQueueReceive(watchdog_command_queue_handle, &cmd, 0)) == pdPASS) {
             debug("watchdog: Command popped off queue.\n");
             exec_command_watchdog(cmd);
-        } else {
-            // No command received, so continue
-            debug("task_manager: No commands queued.\n");
         }
+        debug("watchdog: No commands queued.\n");
 
         // Release the mutex
         unlock_mutex(task_list_mutex);
 
-        command_dispatcher_enqueue(&command_checkin); // Watchdog checks in with itself
-
         // if we get here, then all tasks have checked in within the allowed time
         pet_watchdog();
-        vTaskDelay(pdMS_TO_TICKS(WATCHDOG_MS_DELAY));
+        
+        // Wait for 1 second before monitoring task checkins again
+        command_dispatcher_enqueue(&command_checkin); // Watchdog checks in with itself
+        vTaskDelay(pdMS_TO_TICKS(WATCHDOG_MS_DELAY)); 
     }
 }
