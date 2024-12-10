@@ -16,8 +16,9 @@ void main_command_dispatcher(void *pvParameters) {
     command_t command_checkin = {TASK_WATCHDOG, OPERATION_CHECKIN, &handle, sizeof(TaskHandle_t*), NULL, NULL};
 
     while (true) {
+        debug("command_dispatcher: Started main loop\n");
         // Check if there is a command to dispatch
-        // --------------------------------------
+        // ---------------------------------------
         // When xQueueReceive() is called with a non-zero timeout and the queue is empty, it will block the calling
         // task until either an item is received or the timeout period expires. If an item arrives during the timeout
         // period, the task will unblock immediately, retrieve the item, and proceed with processing. This way, the

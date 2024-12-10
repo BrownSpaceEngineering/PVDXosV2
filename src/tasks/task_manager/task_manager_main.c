@@ -23,15 +23,15 @@ pvdx_task_t task_list[] = {
     {
         "TaskManager", true, NULL, main_task_manager, TASK_MANAGER_TASK_STACK_SIZE, task_manager_mem.task_manager_task_stack, NULL, 2, &task_manager_mem.task_manager_task_tcb, 5000, 0, false
     },
-    {
-        "Shell", true, NULL, main_shell, SHELL_TASK_STACK_SIZE, shell_mem.shell_task_stack, NULL, 2, &shell_mem.shell_task_tcb, 10000, 0, false
-    },
-    {
-        "Display", true, NULL, main_display, DISPLAY_TASK_STACK_SIZE, display_mem.display_task_stack, NULL, 2, &display_mem.display_task_tcb, 10000, 0, false
-    },
-    {
-        "Heartbeat", true, NULL, main_heartbeat, HEARTBEAT_TASK_STACK_SIZE, heartbeat_mem.heartbeat_task_stack, NULL, 1, &heartbeat_mem.heartbeat_task_tcb, 10000, 0, false
-    },
+    // {
+    //     "Shell", true, NULL, main_shell, SHELL_TASK_STACK_SIZE, shell_mem.shell_task_stack, NULL, 2, &shell_mem.shell_task_tcb, 10000, 0, false
+    // },
+    // {
+    //     "Display", true, NULL, main_display, DISPLAY_TASK_STACK_SIZE, display_mem.display_task_stack, NULL, 2, &display_mem.display_task_tcb, 10000, 0, false
+    // },
+    // {
+    //     "Heartbeat", true, NULL, main_heartbeat, HEARTBEAT_TASK_STACK_SIZE, heartbeat_mem.heartbeat_task_stack, NULL, 1, &heartbeat_mem.heartbeat_task_tcb, 10000, 0, false
+    // },
 
     // Null terminator for the array (since size is unspecified)
     NULL_TASK
@@ -52,6 +52,7 @@ void main_task_manager(void *pvParameters) {
     command_t command_checkin = {TASK_WATCHDOG, OPERATION_CHECKIN, &handle, sizeof(TaskHandle_t*), NULL, NULL};
 
     while (true) {
+        debug("task_manager: Started main loop\n");
         // if there's something in the queue, pop it and execute it
         xStatus = xQueueReceive(task_manager_command_queue_handle, &cmd, pdMS_TO_TICKS(COMMAND_QUEUE_WAIT_MS));
 

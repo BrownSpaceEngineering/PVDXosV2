@@ -15,7 +15,7 @@ void command_dispatcher_enqueue(command_t *p_cmd) {
     pvdx_task_t* calling_task = get_task(xTaskGetCurrentTaskHandle());
 
     BaseType_t xStatus = xQueueSendToBack(command_dispatcher_command_queue_handle, p_cmd, 0);
-
+    
     if (xStatus != pdPASS) {
         fatal("command-dispatcher: %s task failed to enqueue command!\n", calling_task->name);
     }
@@ -27,6 +27,7 @@ void dispatch_command_command_dispatcher(command_t cmd) {
 
     switch (cmd.target) {
         case TASK_MANAGER:
+            debug("command-dispatcher: popped task manager command\n");
             xStatus = xQueueSendToBack(task_manager_command_queue_handle, &cmd, 0);
 
             if (xStatus != pdPASS) {
@@ -35,6 +36,7 @@ void dispatch_command_command_dispatcher(command_t cmd) {
 
             break;
         case TASK_WATCHDOG:
+            debug("command-dispatcher: popped watchdog command\n");
             xStatus = xQueueSendToBack(watchdog_command_queue_handle, &cmd, 0);
 
             if (xStatus != pdPASS) {

@@ -17,6 +17,7 @@ void main_watchdog(void *pvParameters) {
     command_t command_checkin = {TASK_WATCHDOG, OPERATION_CHECKIN, &handle, sizeof(TaskHandle_t*), NULL, NULL};
 
     while (1) {
+        debug("watchdog: Started main loop\n");
         // Iterate through the running times and check if any tasks have not checked in within the allowed time
         uint32_t current_time = xTaskGetTickCount();
 

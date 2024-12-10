@@ -88,7 +88,7 @@ int main(void) {
     fatal("vTaskStartScheduler Returned! -- Should never happen!\n");
 
     while (true) {
-        // Loop forever, but we should never get here anyways
+        // Loop forever, but we should never get here 
     }
 }
 
