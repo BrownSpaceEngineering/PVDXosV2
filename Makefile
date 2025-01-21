@@ -1,17 +1,12 @@
-###############################################################################
-##################### ADDING SOMETHING?  READ THIS FIRST! #####################
-###############################################################################
-###
-###  When adding a new C file to the source, you must do 2 things:
-###    - Add the file to the OBJS list below (with a .o extension)
-###    - If it is in a new directory, Add the directory to the EXTRA_VPATH list below (with a .c extension)
-###  Remember to add the trailing \ to the end of each line!
-###
-###############################################################################
-###############################################################################
-###############################################################################
-
-
+#####################################################################################
+###                       ADDING SOMETHING? READ THIS FIRST!                      ###
+#####################################################################################
+###   When adding a new C file to the source, you must do 2 things: 		      ###
+###     - Add the file to the OBJS list below (with a .o extension) 		      ###
+###     - If it is in a new directory, Add the directory to the EXTRA_VPATH list  ###
+###       below (with a .c extension) 										      ###
+###   Remember to add the trailing \ to the end of each line!                     ###
+#####################################################################################
 
 ### ALL C FILES SHOULD HAVE AN OBJECT FILE LISTED HERE ###
 export OBJS := \
@@ -42,8 +37,6 @@ export OBJS := \
 ../src/tasks/shell/shell_helpers.o \
 ../src/tasks/shell/shell_commands.o \
 
-
-
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###
 ### THESE ARE WRITTEN RELATIVE TO THE ./ASF/gcc/Makefile FILE ###
 export EXTRA_VPATH := \
@@ -64,13 +57,9 @@ export EXTRA_VPATH := \
 ../../src/tasks/command_dispatcher \
 ../../src/tasks/shell \
 
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-#Technical stuff
+###################################################################
+###   Compiler Flags and Build-Specific Configuration Options   ###
+###################################################################
 
 #Makefile usually uses /bin/sh to evaluate commands, so we need to change it to /bin/bash
 #To allow for the if statement in the connect target to execute correctly
@@ -103,8 +92,6 @@ else
     GIT_COMMIT_HASH := \"NONE\"
 endif
 
-
-# Compiler flags
 # Include git branch and commit hash in the build
 CFLAGS += -D'GIT_BRANCH_NAME="$(GIT_BRANCH_NAME)"' -D'GIT_COMMIT_HASH="$(GIT_COMMIT_HASH)"'
 
@@ -133,6 +120,9 @@ export OBJS_AS_ARGS := $(foreach obj,$(OBJS),$(patsubst ../%,%,$(obj)))
 
 export DEPS_AS_ARGS := $(patsubst %.o,%.d,$(OBJS_AS_ARGS))
 
+###########################################
+###  Targets for Building and Cleaning  ###
+###########################################
 
 .PHONY: all dev release test clean connect update_asf flash_bootloader
 
@@ -163,27 +153,69 @@ clean:
 	&& rm -f ./PVDXos.elf \
 	&& echo " --- Cleaned Build Files --- "
 
-# Connects to remote target, loads program, and sets breakpoint at main
-connect:
-ifeq (,$(findstring microsoft,$(shell uname -r))) #Detects a WSL kernel name, and runs a WSL-specific command for connecting to the GDB server
-	@gdb-multiarch -ex "target remote localhost:2331" -ex "load" -ex "monitor halt" -ex "monitor reset" -ex "b main" -ex "continue" ./PVDXos.elf
-else ifeq (,$(findstring generic,$(shell uname -r)))
-	@gdb-multiarch -ex "target remote localhost:2331" -ex "load" -ex "monitor halt" -ex "monitor reset" -ex "b main" -ex "continue" ./PVDXos.elf
-else #Run the windows-specific command
-	@hostname=$(shell hostname) && \
-	gdb-multiarch -ex "target remote $$hostname.local:2331" -ex "load" -ex "monitor halt" -ex "monitor reset" -ex "b main" -ex "continue" ./PVDXos.elf
+#############################################
+###  Targets for Connecting and Flashing  ###
+#############################################
+
+# Detect OS and set:
+#   1) GDBCMD    = the GDB (or gdb-multiarch) command to run
+#   2) GDBTARGET = either localhost:2331 or hostname.local:2331, etc.
+
+ifeq ($(OS),Windows_NT)
+    # Pure Windows (e.g. MSYS2/MinGW). Note that in WSL, $(OS) is *not* Windows_NT.
+    GDBCMD    = gdb-multiarch
+    GDBTARGET = $(shell hostname).local:2331
+else
+    # We are in a Unix-like environment (Linux or macOS or WSL). Here, $(OS) is not defined.
+    UNAME_S := $(shell uname -s)
+    UNAME_R := $(shell uname -r)
+
+    ifeq ($(UNAME_S),Darwin)
+        # macOS
+        GDBCMD    = gdb
+        GDBTARGET = localhost:2331
+    else ifeq ($(UNAME_S),Linux)
+        # Linux or WSL. Check if it's WSL by searching "microsoft" in uname -r
+        ifneq (,$(findstring microsoft,$(UNAME_R)))
+            # WSL
+            GDBCMD    = gdb
+            GDBTARGET = localhost:2331
+        else
+            # "Pure" Linux
+            GDBCMD    = gdb-multiarch
+            GDBTARGET = localhost:2331
+        endif
+    else
+        $(error Unknown or unsupported OS)
+    endif
 endif
 
-#Builds the bootloader, then flashes it to the board. Make connect needs to be run after this.
+connect:
+	@$(GDBCMD) \
+	  -ex "target remote $(GDBTARGET)" \
+	  -ex "load" \
+	  -ex "monitor halt" \
+	  -ex "monitor reset" \
+	  -ex "b main" \
+	  -ex "continue" \
+	  ./PVDXos.elf
+
 flash_bootloader:
-	$(MAKE) -C ./bootloader clean
-	$(MAKE) -C ./bootloader # Builds the bootloader
-ifeq (,$(findstring microsoft,$(shell uname -r))) #Detects a WSL kernel name, and runs a WSL-specific command for connecting to the GDB server
-	@gdb-multiarch -ex "target remote localhost:2331" -ex "load" -ex "monitor halt" -ex "monitor reset" -ex "set confirm off" -ex "add-symbol-file PVDXos.elf" -ex "set confirm on" ./bootloader/bootloader.elf
-else #Run the windows-specific command
-	@hostname=$(shell hostname) && \
-	gdb-multiarch -ex "target remote $$hostname.local:2331" -ex "load" -ex "monitor halt" -ex "monitor reset" -ex "set confirm off" -ex "add-symbol-file PVDXos.elf" -ex "set confirm on" ./bootloader/bootloader.elf
-endif
+	@$(MAKE) -C ./bootloader clean
+	@$(MAKE) -C ./bootloader  # Builds the bootloader
+	@$(GDBCMD) \
+	  -ex "target remote $(GDBTARGET)" \
+	  -ex "load" \
+	  -ex "monitor halt" \
+	  -ex "monitor reset" \
+	  -ex "set confirm off" \
+	  -ex "add-symbol-file PVDXos.elf" \
+	  -ex "set confirm on" \
+	  ./bootloader/bootloader.elf
+
+############################################
+### Target for ASF Configuration Update  ###
+############################################
 
 # When updating the ASF configuration, this must be run once in order to automatically integrate the new ASF config
 # Hopefully nobody ever needs to touch this, but you can add to it if you want to automatically trigger an action when the ASF is updated
