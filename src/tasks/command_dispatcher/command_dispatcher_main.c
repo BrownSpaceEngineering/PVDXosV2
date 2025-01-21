@@ -28,14 +28,14 @@ void main_command_dispatcher(void *pvParameters) {
         if (xStatus == pdPASS) {
             // Command received, so dispatch it
             debug("command_dispatcher: Command popped off queue. Target: %d, Operation: %d\n", cmd.target, cmd.operation);
-            dispatch_command_command_dispatcher(cmd);
+            dispatch_command(cmd);
         } else {
             // No command received, so continue
             debug("command_dispatcher: No commands queued.\n");
         }
 
         // Check in with the watchdog
-        command_dispatcher_enqueue(&command_checkin);
+        enqueue_command(&command_checkin);
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }

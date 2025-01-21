@@ -38,6 +38,4 @@ extern shell_task_memory_t shell_mem;
 
 void main_shell(void *pvParameters);
 
-// Defines that will never run in practice, but are useful for the IDE not throwing a billion errors:
-
 #endif // SHELL_TASK_H

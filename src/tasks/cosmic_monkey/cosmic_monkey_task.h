@@ -19,7 +19,6 @@ typedef struct {
 
 extern cosmic_monkey_task_memory_t cosmic_monkey_mem;
 
-// Exposed Functions
 status_t perform_flip();
 void main_cosmic_monkey(void *pvParameters);
 

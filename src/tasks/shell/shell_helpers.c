@@ -9,7 +9,7 @@ size_t get_line_from_terminal(uint8_t *p_linebuffer) {
     command_t command_checkin = {TASK_WATCHDOG, OPERATION_CHECKIN, &handle, sizeof(TaskHandle_t*), NULL, NULL};
     while (1) {
         // This is really the loop that we expect the program to spend most of its time in, so pet the watchdog here
-        command_dispatcher_enqueue(&command_checkin);
+        enqueue_command(&command_checkin);
 
         int character_read = SEGGER_RTT_GetKey();
         if (character_read < 0 || character_read > 255) {

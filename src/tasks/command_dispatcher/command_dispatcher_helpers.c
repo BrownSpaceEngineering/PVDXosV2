@@ -6,14 +6,13 @@ void init_command_dispatcher(void) {
                                                     &command_dispatcher_mem.command_dispatcher_task_queue);
 
     if (command_dispatcher_command_queue_handle == NULL) {
-        fatal("command-dispatcher: Failed to create command queue!\n");
+        fatal("Failed to create command queue!\n");
     }
 }
 
 // Enqueue a command to be executed by the command dispatcher
-void command_dispatcher_enqueue(command_t *p_cmd) {
+void enqueue_command(command_t *p_cmd) {
     pvdx_task_t* calling_task = get_task(xTaskGetCurrentTaskHandle());
-
     BaseType_t xStatus = xQueueSendToBack(command_dispatcher_command_queue_handle, p_cmd, 0);
     
     if (xStatus != pdPASS) {
@@ -22,7 +21,7 @@ void command_dispatcher_enqueue(command_t *p_cmd) {
 }
 
 // Forward a dequeued command to the appropriate task for execution
-void dispatch_command_command_dispatcher(command_t cmd) {
+void dispatch_command(command_t cmd) {
     BaseType_t xStatus;
 
     switch (cmd.target) {
@@ -61,6 +60,7 @@ void dispatch_command_command_dispatcher(command_t cmd) {
             fatal("command-dispatcher: Failed; 9Axis queue does not exist\n");
             break;
         case TASK_DISPLAY:
+            debug("command-dispatcher: popped display command\n");
             xStatus = xQueueSendToBack(display_command_queue_handle, &cmd, 0);
 
             if (xStatus != pdPASS) {

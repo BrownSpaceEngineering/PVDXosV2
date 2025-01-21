@@ -4,7 +4,7 @@
 heartbeat_task_memory_t heartbeat_mem;
 
 void main_heartbeat(void *pvParameters) {
-    info("Heartbeat Task Started!\r\n");
+    info("heartbeat: Started main loop\n");
 // NOTE: false is on for some reason on the orange LEDs
 
 // In release build, make sure orange LEDs are off
@@ -56,6 +56,6 @@ void main_heartbeat(void *pvParameters) {
         vTaskDelay(pdMS_TO_TICKS(500));
 #endif
 
-        command_dispatcher_enqueue(&command_checkin);
+        enqueue_command(&command_checkin);
     }
 }

@@ -31,7 +31,6 @@ extern bool watchdog_enabled;
 extern QueueHandle_t watchdog_command_queue_handle;
 extern uint8_t watchdog_command_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
 
-// Exposed functions
 void init_watchdog();
 void main_watchdog(void *pvParameters);
 void early_warning_callback_watchdog(void);
@@ -40,7 +39,6 @@ void unregister_task_with_watchdog(TaskHandle_t handle);
 void pet_watchdog(void);
 void kick_watchdog(void);
 void exec_command_watchdog(command_t cmd);
-// Exposed functions that go through the command dispatcher
 void watchdog_checkin(TaskHandle_t handle);
 
 #endif // WATCHDOG_TASK_H

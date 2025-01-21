@@ -5,13 +5,6 @@
 
 // Initializes the task at index i in the task list
 void init_task(size_t i) {
-    // There may be tasks that are not enabled by default (on startup); if so, then they will have
-    // task_list[i].enabled set to false. In this case, we should not initialize the task.
-    if (!task_list[i].enabled) {
-        info("task-manager: %s task is disabled. Skipped initialization.\n", task_list[i].name);
-        return;
-    }
-
     lock_mutex(task_list_mutex);
     
     task_list[i].handle = xTaskCreateStatic(
@@ -24,16 +17,24 @@ void init_task(size_t i) {
         task_list[i].task_tcb
     );
 
-    unlock_mutex(task_list_mutex);
-
     if (task_list[i].handle == NULL) {
-        fatal("task-manager: %s task creation failed!\n", task_list[i].name);
+        fatal("%s task creation failed!\n", task_list[i].name);
     } else {
-        info("task-manager: %s task created!\n", task_list[i].name);
+        info("%s task created!\n", task_list[i].name);
     }
 
-    // Register the task with the watchdog allowing it to be monitored
-    register_task_with_watchdog(task_list[i].handle);
+    if (task_list[i].enabled) {
+        // Register the task with the watchdog allowing it to be monitored
+        register_task_with_watchdog(task_list[i].handle);
+    } else {
+        // There may be tasks that are disabled on startup; if so, then they MUST have task_list[i].enabled 
+        // set to false. In this case, we still allocate memory and create the task, but immediately suspend 
+        // it so that vTaskStartScheduler() doesn't run the task.
+        vTaskSuspend(task_list[i].handle);
+        info("%s task is disabled on startup.\n", task_list[i].name);
+    }
+
+    unlock_mutex(task_list_mutex);
 }
 
 // Returns the pvdx_task_t struct associated with a FreeRTOS task handle
@@ -56,7 +57,7 @@ void init_task_manager(void) {
     task_manager_command_queue_handle = xQueueCreateStatic(TASK_MANAGER_TASK_STACK_SIZE, COMMAND_QUEUE_ITEM_SIZE, task_manager_command_queue_buffer, &task_manager_mem.task_manager_task_queue);
 
     if (task_manager_command_queue_handle == NULL) {
-        fatal("task-manager: Failed to create task manager queue!\n");
+        fatal("Failed to create task manager queue!\n");
     }
 }
 
@@ -65,6 +66,7 @@ void task_manager_init_subtasks(void) {
     for(size_t i = SUBTASK_START_INDEX; task_list[i].name != NULL; i++) {
         init_task(i);
     }
+    debug("task_manager: All subtasks initialized\n");
 }
 
 void task_manager_enable_task(pvdx_task_t* task) {
@@ -82,10 +84,12 @@ void task_manager_enable_task(pvdx_task_t* task) {
     
     vTaskResume(task->handle);
     task->enabled = true;
-    unlock_mutex(task_list_mutex);
 
     // Register the task with the watchdog allowing it to be monitored
     register_task_with_watchdog(task->handle);
+
+    unlock_mutex(task_list_mutex);
+    debug("task_manager: %s task enabled\n", task->name);
 }
 
 // Disables a task
@@ -104,10 +108,12 @@ void task_manager_disable_task(pvdx_task_t* task) {
 
     vTaskSuspend(task->handle);
     task->enabled = false;
-    unlock_mutex(task_list_mutex);
 
     // Unregister the task with the watchdog so it is no longer monitored
     unregister_task_with_watchdog(task->handle);
+
+    unlock_mutex(task_list_mutex);
+    debug("task_manager: %s task disabled\n", task->name);
 }
 
 void exec_command_task_manager(command_t cmd) {

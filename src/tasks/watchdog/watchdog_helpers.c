@@ -13,7 +13,7 @@ void init_watchdog(void) {
         watchdog_command_queue_buffer, &watchdog_mem.watchdog_task_queue);
 
     if (watchdog_command_queue_handle == NULL) {
-        fatal("watchdog: Failed to create watchdog queue!\n");
+        fatal("Failed to create watchdog queue!\n");
     }
 
     // Initialize the 'last_checkin' field of each task
@@ -45,7 +45,7 @@ void init_watchdog(void) {
     NVIC_EnableIRQ(WDT_IRQn); // Enable the WDT_IRQn interrupt
     NVIC_SetVector(WDT_IRQn, (uint32_t)(&WDT_Handler)); // When the WDT_IRQn interrupt is triggered, call the WDT_Handler function
 
-    info("watchdog: Initialized\n");
+    info("Watchdog Initialized\n");
 }
 
 /* Temporarily commented out (so that specific_handlers.c works)
@@ -62,7 +62,7 @@ void WDT_Handler(void) {
 */
 
 void early_warning_callback_watchdog(void) {
-    warning("watchdog: Early warning callback executed\n");
+    warning("Early warning callback executed\n");
     // This function gets called when the watchdog is almost out of time
     // TODO: Test if this works
     // This is also fine to leave blank
@@ -81,12 +81,12 @@ void early_warning_callback_watchdog(void) {
 }
 
 void pet_watchdog(void) {
-    debug("watchdog: Petted\n");
+    debug("hardware-watchdog: Petted\n");
     watchdog_feed(p_watchdog);
 }
 
 void kick_watchdog(void) {
-    debug("watchdog: Kicked\n");
+    debug("hardware-watchdog: Kicked\n");
     watchdog_set_clear_register(p_watchdog, 0x12); // set intentionally wrong clear key, so the watchdog will reset the system
     // this function should never return because the system should reset
 }
@@ -113,58 +113,53 @@ void watchdog_checkin(TaskHandle_t handle) {
     debug("watchdog: %s task checked in\n", task->name);
 }
 
-// This function is a helper and does not get sent through the command dispatcher
+// This function is a helper and does not get sent through the command dispatcher.
+// WARNING: This function is not thread-safe and should only be called from within a critical section
 void register_task_with_watchdog(TaskHandle_t handle) {
-    lock_mutex(task_list_mutex);
-
     if (handle == NULL) {
-        fatal("watchdog: Tried to register a NULL task handle\n");
+        fatal("Tried to register a NULL task handle with watchdog\n");
     }
 
     pvdx_task_t *task = get_task(handle);
 
     if (task->handle != handle) {
-        fatal("watchdog: Task Manager handle does not match current task handle!\n");
+        fatal("Task Manager handle does not match current task handle!\n");
     }
 
     if (task->has_registered) {
-        fatal("watchdog: %s task tried to register a second time\n", task->name);
+        fatal("%s task tried to register a second time with watchdog\n", task->name);
     }
 
     // initialize running times and require the task to check in
     task->last_checkin = xTaskGetTickCount();
     task->has_registered = true;
-    unlock_mutex(task_list_mutex);
 
-    debug("watchdog: %s task registered\n", task->name);
+    debug("%s task registered with watchdog\n", task->name);
 }
 
 // This function is a helper and does not get sent through the command dispatcher
+// WARNING: This function is not thread-safe and should only be called from within a critical section
 void unregister_task_with_watchdog(TaskHandle_t handle) {
-    lock_mutex(task_list_mutex);
-
     if (handle == NULL) {
-        fatal("watchdog: Tried to unregister a NULL task handle\n");
+        fatal("Tried to unregister a NULL task handle with watchdog\n");
     }
     
     pvdx_task_t *task = get_task(handle);
 
     if (task->handle != handle) {
-        fatal("watchdog: Task Manager handle does not match current task handle!\n");
+        fatal("Task Manager handle does not match current task handle!\n");
     }
 
     if (!task->has_registered) {
-        fatal("watchdog: %s task tried to unregister a second time\n", task->name);
+        fatal("%s task tried to unregister a second time with watchdog\n", task->name);
     }
 
     task->last_checkin = 0xDEADBEEF; // 0xDEADBEEF is a special value that indicates that the task is not running
     task->has_registered = false;
 
-    unlock_mutex(task_list_mutex);
-    debug("watchdog: %s task unregistered\n", task->name);
+    debug("%s task unregistered with watchdog\n", task->name);
 }
 
-// TODO: set the payload of the command to the task handle
 void exec_command_watchdog(command_t cmd) {
     if (cmd.target != TASK_WATCHDOG) {
         fatal("watchdog: command target is not watchdog! target: %d operation: %d\n", cmd.target, cmd.operation);

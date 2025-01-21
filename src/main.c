@@ -42,13 +42,11 @@ int main(void) {
         main_command_dispatcher,
         main_task_manager,
     };
-
     void (*init_functions[SUBTASK_START_INDEX])(void) = {
         init_watchdog,
         init_command_dispatcher,
         init_task_manager,  
     };
-
     const char *task_names[SUBTASK_START_INDEX] = {"Watchdog Task", "Command Dispatcher Task", "Task Manager Task"};
 
     for (int16_t i = 0; i < SUBTASK_START_INDEX; i++) {

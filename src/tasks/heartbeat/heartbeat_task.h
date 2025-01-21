@@ -21,7 +21,6 @@ typedef struct {
 
 extern heartbeat_task_memory_t heartbeat_mem;
 
-// Exposed functions
 void main_heartbeat(void *pvParameters);
 
 #endif // HEARTBEAT_TASK_H

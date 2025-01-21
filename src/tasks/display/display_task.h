@@ -26,7 +26,6 @@ extern uint8_t display_command_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND
 // Queue for commands to be executed by the display task
 extern QueueHandle_t display_command_queue_handle;
 
-// Exposed Functions
 void init_display_task(void);
 void main_display(void *pvParameters);
 

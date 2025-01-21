@@ -21,13 +21,7 @@ void main_watchdog(void *pvParameters) {
         // Iterate through the running times and check if any tasks have not checked in within the allowed time
         uint32_t current_time = xTaskGetTickCount();
 
-        // Acquire the mutex to prevent the task list from being modified while we are iterating through it
-        debug("watchdog: Acquiring task_list_mutex lock...\n");
-
-        // Enter critical section
         lock_mutex(task_list_mutex);
-
-        debug("watchdog: task_list_mutex lock acquired!\n");
 
         for (size_t i = 0; task_list[i].name != NULL; i++) {
             debug("watchdog: Determining whether task %d has checked in\n", i);
@@ -47,7 +41,6 @@ void main_watchdog(void *pvParameters) {
             }
         }
 
-        // Release the mutex and exit the critical section
         unlock_mutex(task_list_mutex);
 
         // Pop all commands off of the watchdog command queue
@@ -57,13 +50,11 @@ void main_watchdog(void *pvParameters) {
         }
         debug("watchdog: No commands queued.\n");
 
-        
-
         // if we get here, then all tasks have checked in within the allowed time
         pet_watchdog();
         
         // Wait for 1 second before monitoring task checkins again
-        command_dispatcher_enqueue(&command_checkin); // Watchdog checks in with itself
+        enqueue_command(&command_checkin); // Watchdog checks in with itself
         vTaskDelay(pdMS_TO_TICKS(WATCHDOG_MS_DELAY)); 
     }
 }

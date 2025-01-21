@@ -6,7 +6,7 @@ uint8_t display_command_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_
 QueueHandle_t display_command_queue_handle;
 
 void main_display(void *pvParameters) {
-    info("display: Task started!\n");
+    info("display: Started main loop\n");
 
     // Initialize the display
     init_display();
@@ -16,17 +16,17 @@ void main_display(void *pvParameters) {
     // TODO: Receive commands from the command dispatcher task to update the display
     while (true) {
         display_set_buffer(IMAGE_BUFFER_PVDX);
-        debug("First buffer set\n");
+        debug("display: First buffer set\n");
         display_update();
-        debug("First image completed\n");
+        debug("display: First image completed\n");
         vTaskDelay(pdMS_TO_TICKS(500));
 
         display_set_buffer(IMAGE_BUFFER_BROWNLOGO);
-        debug("Second image buffer set\n");
+        debug("display: Second image buffer set\n");
         display_update();
-        debug("Second image completed\n");
+        debug("display: Second image completed\n");
         vTaskDelay(pdMS_TO_TICKS(500));
         
-        command_dispatcher_enqueue(&command_checkin);
+        enqueue_command(&command_checkin);
     }
 }
