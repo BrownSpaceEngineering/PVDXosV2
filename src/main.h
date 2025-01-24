@@ -8,12 +8,9 @@
 #include "SEGGER_RTT.h"
 #include "cosmic_monkey_task.h"
 #include "globals.h"
-#include "heartbeat_task.h"
 #include "logging.h"
 #include "rtos_start.h"
-#include "shell_task.h"
-#include "task_manager_task.h"
-#include "watchdog_task.h"
+#include "task_list.h"
 
 /*
 Standard definitions for main.c

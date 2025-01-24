@@ -11,7 +11,7 @@
 ### ALL C FILES SHOULD HAVE AN OBJECT FILE LISTED HERE ###
 export OBJS := \
 ../src/main.o \
-../src/mutexes.o \
+../src/mutexes/mutexes.o \
 ../src/misc/printf/SEGGER_RTT.o \
 ../src/misc/printf/SEGGER_RTT_printf.o \
 ../src/misc/rtos_support/rtos_static_memory.o \
@@ -36,6 +36,7 @@ export OBJS := \
 ../src/tasks/shell/shell_main.o \
 ../src/tasks/shell/shell_helpers.o \
 ../src/tasks/shell/shell_commands.o \
+../src/tasks/task_list.o \
 
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###
 ### THESE ARE WRITTEN RELATIVE TO THE ./ASF/gcc/Makefile FILE ###
@@ -56,6 +57,7 @@ export EXTRA_VPATH := \
 ../../src/tasks/task_manager \
 ../../src/tasks/command_dispatcher \
 ../../src/tasks/shell \
+../../src/mutexes \
 
 ###################################################################
 ###   Compiler Flags and Build-Specific Configuration Options   ###

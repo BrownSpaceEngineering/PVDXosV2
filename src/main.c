@@ -1,12 +1,20 @@
 #include "main.h"
 
-// Buffer for Segger Logging Channel
-
 cosmic_monkey_task_arguments_t cm_args = {0};
 
-static status_t PVDX_init(void);
+static status_t PVDX_init(void) {
+    // Segger Buffer 0 is pre-configured at compile time according to segger documentation
+    // Config the logging output channel (assuming it's not zero)
+    if (LOGGING_RTT_OUTPUT_CHANNEL != 0) {
+        SEGGER_RTT_ConfigUpBuffer(LOGGING_RTT_OUTPUT_CHANNEL, "Log Output", SEGGER_RTT_LOG_BUFFER, SEGGER_RTT_LOG_BUFFER_SIZE,
+                                  SEGGER_RTT_MODE_NO_BLOCK_SKIP);
+    }
+    return SUCCESS;
+}
 
 int main(void) {
+    /* ---------- HARDWARE & LOGGING INITIALIZATION + BOOTLOADER CHECK ---------- */
+
     /* Initializes MCU, drivers and middleware */
     atmel_start_init();
     PVDX_init();
@@ -28,7 +36,7 @@ int main(void) {
         warning_impl("[!] Abnormal bootloader behavior (Magic Number: %x)\n", magic_number);
     }
 
-    // ------- INIT WATCHDOG, COMMAND_DISPATCHER, TASK_MANAGER TASKS (in that order) -------
+    /* ---------- INIT WATCHDOG, COMMAND_DISPATCHER, TASK_MANAGER TASKS (in that order) ---------- */
 
     // Initialize a mutex wrapping the shared PVDX task list struct
     task_list_mutex = xSemaphoreCreateMutexStatic(&task_list_mutex_buffer);
@@ -61,41 +69,29 @@ int main(void) {
         info("%s initialized\n", task_names[i]);
     }
 
-    // ------- COSMIC MONKEY TASK -------
+    /* ---------- COSMIC MONKEY TASK ---------- */
 
-#if defined(UNITTEST) || defined(DEVBUILD)
-    #if defined(UNITTEST)
-    cm_args.frequency = 10;
-    #endif
-    #if defined(DEVBUILD)
-    cm_args.frequency = 1;
-    #endif
+    #if defined(UNITTEST) || defined(DEVBUILD)
+        #if defined(UNITTEST)
+        cm_args.frequency = 10;
+        #endif
+        #if defined(DEVBUILD)
+        cm_args.frequency = 1;
+        #endif
 
-    TaskHandle_t cosmic_monkey_task_handle =
-        xTaskCreateStatic(main_cosmic_monkey, "CosmicMonkey", COSMIC_MONKEY_TASK_STACK_SIZE, (void *)&cm_args, 1,
-                          cosmic_monkey_mem.cosmic_monkey_task_stack, &cosmic_monkey_mem.cosmic_monkey_task_tcb);
-    if (cosmic_monkey_task_handle == NULL) {
-        warning("Cosmic Monkey Task Creation Failed!\r\n");
-    } else {
-        info("Cosmic Monkey Task Created!\r\n");
-    }
-#endif // Cosmic Monkey
+        TaskHandle_t cosmic_monkey_task_handle =
+            xTaskCreateStatic(main_cosmic_monkey, "CosmicMonkey", COSMIC_MONKEY_TASK_STACK_SIZE, (void *)&cm_args, 1,
+                            cosmic_monkey_mem.cosmic_monkey_task_stack, &cosmic_monkey_mem.cosmic_monkey_task_tcb);
+        if (cosmic_monkey_task_handle == NULL) {
+            warning("Cosmic Monkey Task Creation Failed!\n");
+        } else {
+            info("Cosmic Monkey Task initialized\n");
+        }
+    #endif // Cosmic Monkey
+
+    /* ---------- START FREERTOS SCHEDULER ---------- */
 
     // Start the scheduler
     vTaskStartScheduler();
     fatal("vTaskStartScheduler Returned! -- Should never happen!\n");
-
-    while (true) {
-        // Loop forever, but we should never get here 
-    }
-}
-
-static status_t PVDX_init() {
-    // Segger Buffer 0 is pre-configured at compile time according to segger documentation
-    // Config the logging output channel (assuming it's not zero)
-    if (LOGGING_RTT_OUTPUT_CHANNEL != 0) {
-        SEGGER_RTT_ConfigUpBuffer(LOGGING_RTT_OUTPUT_CHANNEL, "Log Output", SEGGER_RTT_LOG_BUFFER, SEGGER_RTT_LOG_BUFFER_SIZE,
-                                  SEGGER_RTT_MODE_NO_BLOCK_SKIP);
-    }
-    return SUCCESS;
 }

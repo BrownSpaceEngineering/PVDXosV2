@@ -2,8 +2,10 @@
 #define GLOBALS_H
 
 #include <FreeRTOS.h>
+#include <task.h>
+#include <stdbool.h>
 
-/* --------- HIGH-LEVEL CONFIG VARIABLES AND DEFINES --------- */
+/* ---------- LOGGING CONSTANTS ---------- */
 
 #if defined(RELEASE)
     #define DEFAULT_LOG_LEVEL INFO // The default log level for the system on release builds
@@ -13,7 +15,7 @@
 
 #define SEGGER_RTT_LOG_BUFFER_SIZE 2048 // How big the RTT buffer is for logging (this buffer is flushed to the host regularly)
 
-/* ----------------------------------------------------------- */
+/* ---------- TASK CONSTANTS ---------- */
 
 #define TASK_STACK_OVERFLOW_PADDING 16            // Buffer for the stack size so that overflow doesn't corrupt any TCBs
 #define SUBTASK_START_INDEX 3                     // The index of the first subtask in the task list
@@ -21,6 +23,9 @@
 #define COMMAND_QUEUE_MAX_COMMANDS 15             // Maximum number of commands that can be queued at once for any task
 #define COMMAND_QUEUE_ITEM_SIZE sizeof(command_t) // Size of each item in command queues
 
+/* ---------- ENUMS ---------- */
+
+// An enum to represent the different statuses that a function can return
 typedef enum {
     SUCCESS = 0,
 
@@ -73,22 +78,43 @@ typedef enum {
     OPERATION_DISABLE_SUBTASK
 } operation_t;
 
-// A struct to represent a command that OS tasks can execute
-typedef struct {
-    task_t target;
-    operation_t operation;
-    void* p_data;
-    size_t len;
-    status_t* p_result;
-    void (*callback)(status_t* p_result);
-} command_t;
-
+// An enum to represent the different log levels that functions can use
 typedef enum {
     DEBUG = 0,
     INFO,
     EVENT,
     WARNING,
 } log_level_t;
+
+/* ---------- STRUCTS ---------- */
+
+// A struct to represent a command that OS tasks can execute
+typedef struct {
+    task_t target;                        // The target task for the command
+    operation_t operation;                // The operation to perform
+    void* p_data;                         // Pointer to data needed for the operation
+    size_t len;                           // Length of the data
+    status_t* p_result;                   // Pointer to the result of the operation
+    void (*callback)(status_t* p_result); // Callback function to call after the operation is complete
+} command_t;
+
+// A struct defining a task's lifecycle in the PVDXos RTOS
+typedef struct {
+    char* name;                // Name of the task
+    bool enabled;              // Whether the task is enabled
+    TaskHandle_t handle;       // FreeRTOS handle to the task
+    TaskFunction_t function;   // Main entry point for the task
+    uint32_t stack_size;       // Size of the stack in words (multiply by 4 to get bytes)
+    StackType_t* stack_buffer; // Buffer for the stack
+    void* pvParameters;        // Parameters to pass to the task's main function
+    UBaseType_t priority;      // Priority of the task in the RTOS scheduler
+    StaticTask_t* task_tcb;    // Task control block
+    uint32_t watchdog_timeout; // How frequently the task should check in with the watchdog (in milliseconds)
+    uint32_t last_checkin;     // Last time the task checked in with the watchdog
+    bool has_registered;       // Whether the task is being monitored by the watchdog (initialized to NULL)
+} pvdx_task_t;
+
+/* ---------- BUILD CONSTANTS ---------- */
 
 // Defines for printing out the build version
 #if defined(DEVBUILD)

@@ -1,8 +1,6 @@
 #include "task_manager_task.h"
 #include "logging.h"
 
-// General functions to interact with the global task list
-
 // Initializes the task at index i in the task list
 void init_task(size_t i) {
     lock_mutex(task_list_mutex);
@@ -18,9 +16,9 @@ void init_task(size_t i) {
     );
 
     if (task_list[i].handle == NULL) {
-        fatal("%s task creation failed!\n", task_list[i].name);
+        fatal("failed to create %s task!\n", task_list[i].name);
     } else {
-        info("%s task created!\n", task_list[i].name);
+        debug("created %s task\n", task_list[i].name);
     }
 
     if (task_list[i].enabled) {
@@ -37,22 +35,7 @@ void init_task(size_t i) {
     unlock_mutex(task_list_mutex);
 }
 
-// Returns the pvdx_task_t struct associated with a FreeRTOS task handle
-// WARNING: This function is not thread-safe and should only be called from within a critical section
-pvdx_task_t* get_task(TaskHandle_t handle) {
-    pvdx_task_t* p_task = task_list;
-
-    while (p_task->name != NULL) {
-        if (p_task->handle == handle) {
-            return p_task;
-        }
-        p_task++;
-    }
-    
-    return p_task;
-}
-
-// Initializes the task manager task (it should be the first task in the global task list)
+// Initializes the task manager task
 void init_task_manager(void) {
     task_manager_command_queue_handle = xQueueCreateStatic(TASK_MANAGER_TASK_STACK_SIZE, COMMAND_QUEUE_ITEM_SIZE, task_manager_command_queue_buffer, &task_manager_mem.task_manager_task_queue);
 

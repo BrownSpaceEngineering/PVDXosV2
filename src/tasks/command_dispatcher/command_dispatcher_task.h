@@ -2,14 +2,10 @@
 #define COMMAND_DISPATCHER_H
 
 // Includes
-#include "FreeRTOS.h"
-#include "display_task.h"
 #include "globals.h"
 #include "logging.h"
 #include "queue.h"
-#include "stdbool.h"
-#include "task.h"
-#include "task_manager_task.h"
+#include "task_list.h"
 
 // Constants
 #define COMMAND_DISPATCHER_TASK_STACK_SIZE 128      // Size of the stack in words (multiply by 4 to get bytes)

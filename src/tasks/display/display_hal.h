@@ -2,7 +2,6 @@
 #define DISPLAY_HAL_H
 
 // Includes
-#include "FreeRTOS.h"
 #include "atmel_start.h"
 #include "globals.h"
 #include "image_buffer_BrownLogo.h"

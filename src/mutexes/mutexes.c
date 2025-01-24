@@ -1,4 +1,3 @@
-#include "globals.h"
 #include "mutexes.h"
 
 // How long to wait before trying to lock a mutex again (in ms)
@@ -7,6 +6,7 @@
 // Maximum number of tries before returning a timeout error
 #define MAX_TRIES 1000u
 
+// Polls a mutex until it is available, then locks it
 void lock_mutex(SemaphoreHandle_t mutex) {
     uint16_t num_tries = 0;
     // Check whether we have the green light to proceed
@@ -15,11 +15,13 @@ void lock_mutex(SemaphoreHandle_t mutex) {
         vTaskDelay(pdMS_TO_TICKS(POLLING_DELAY_MS));
         num_tries++;
         if (num_tries > MAX_TRIES) {
-            fatal("Failed to lock mutex after %d tries\n", MAX_TRIES);
+            pvdx_task_t* calling_task = get_task(xTaskGetCurrentTaskHandle());
+            fatal("%s task failed to lock mutex after %d tries\n", calling_task->name, MAX_TRIES);
         }
     }
 }
 
+// Unlocks a mutex
 void unlock_mutex(SemaphoreHandle_t mutex) {
     bool success = xSemaphoreGive(mutex);
     // Unlock the mutex after data has been modified
