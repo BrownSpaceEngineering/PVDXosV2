@@ -72,6 +72,4 @@ void dispatch_command(command_t cmd) {
             fatal("command-dispatcher: Invalid target task!\n");
             break;
     }
-
-    // all subtask exec functions should only ever be called from the command dispatcher
 }

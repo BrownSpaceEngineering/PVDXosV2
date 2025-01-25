@@ -27,7 +27,6 @@ typedef struct {
 
 extern watchdog_task_memory_t watchdog_mem;
 extern volatile Wdt *const p_watchdog;
-extern bool watchdog_enabled;
 extern QueueHandle_t watchdog_command_queue_handle;
 extern uint8_t watchdog_command_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
 

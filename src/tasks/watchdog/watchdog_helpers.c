@@ -38,14 +38,13 @@ void init_watchdog(void) {
 
     // Enable the watchdog
     watchdog_enable(p_watchdog);
-    watchdog_enabled = true;
 
     // Configure the watchdog early warning interrupt
     NVIC_SetPriority(WDT_IRQn, 3); // Set the interrupt priority
     NVIC_EnableIRQ(WDT_IRQn); // Enable the WDT_IRQn interrupt
     NVIC_SetVector(WDT_IRQn, (uint32_t)(&WDT_Handler)); // When the WDT_IRQn interrupt is triggered, call the WDT_Handler function
 
-    info("Watchdog Initialized\n");
+    info("Hardware Watchdog Initialized\n");
 }
 
 /* Temporarily commented out (so that specific_handlers.c works)
@@ -109,7 +108,6 @@ void watchdog_checkin(TaskHandle_t handle) {
     task->last_checkin = xTaskGetTickCount();
 
     unlock_mutex(task_list_mutex);
-
     debug("watchdog: %s task checked in\n", task->name);
 }
 
@@ -133,7 +131,6 @@ void register_task_with_watchdog(TaskHandle_t handle) {
     // initialize running times and require the task to check in
     task->last_checkin = xTaskGetTickCount();
     task->has_registered = true;
-
     debug("%s task registered with watchdog\n", task->name);
 }
 
@@ -156,7 +153,6 @@ void unregister_task_with_watchdog(TaskHandle_t handle) {
 
     task->last_checkin = 0xDEADBEEF; // 0xDEADBEEF is a special value that indicates that the task is not running
     task->has_registered = false;
-
     debug("%s task unregistered with watchdog\n", task->name);
 }
 
