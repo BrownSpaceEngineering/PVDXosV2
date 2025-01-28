@@ -20,12 +20,11 @@ void main_watchdog(void *pvParameters) {
 
     // Cache the watchdog checkin command to avoid creating it every iteration
     command_t cmd_checkin = get_watchdog_checkin_command();
-
+    // Varible to hold commands popped off the queue
     command_t cmd;
-    BaseType_t xStatus;
 
     while (true) {
-        debug("\n---------- Watchdog Task Loop ----------\n");
+        debug_impl("\n---------- Watchdog Task Loop ----------\n");
 
         // Iterate through the running times and check if any tasks have not checked in within the allowed time
         uint32_t current_time = xTaskGetTickCount();
@@ -51,7 +50,7 @@ void main_watchdog(void *pvParameters) {
         unlock_mutex(task_list_mutex);
 
         // Pop all commands off of the watchdog command queue
-        while ((xStatus = xQueueReceive(watchdog_command_queue_handle, &cmd, 0)) == pdPASS) {
+        while (xQueueReceive(watchdog_command_queue_handle, &cmd, 0) == pdPASS) {
             debug("watchdog: Command popped off queue.\n");
             exec_command_watchdog(cmd);
         }
@@ -61,6 +60,7 @@ void main_watchdog(void *pvParameters) {
         pet_watchdog();
         // Watchdog checks in with itself
         enqueue_command(&cmd_checkin);
+        debug("watchdog: Enqueued watchdog checkin command\n");
         // Wait for 1 second before monitoring task checkins again
         vTaskDelay(pdMS_TO_TICKS(WATCHDOG_MS_DELAY)); 
     }

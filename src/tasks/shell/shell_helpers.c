@@ -25,6 +25,7 @@ size_t get_line_from_terminal(uint8_t *p_linebuffer) {
     while (true) {
         // This is really the loop that we expect the program to spend most of its time in, so pet the watchdog here
         enqueue_command(&cmd_checkin);
+        debug("shell: Enqueued watchdog checkin command\n");
 
         int character_read = SEGGER_RTT_GetKey();
         if (character_read < 0 || character_read > 255) {

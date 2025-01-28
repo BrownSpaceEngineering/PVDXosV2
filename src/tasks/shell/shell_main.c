@@ -28,7 +28,7 @@ void main_shell(void *pvParameters) {
     terminal_printf("%s", SHELL_ASCII_ART);
 
     while (true) {
-        debug("\n---------- Shell Task Loop ----------\n");
+        debug_impl("\n---------- Shell Task Loop ----------\n");
         // Print the shell prompt
         terminal_printf(SHELL_PROMPT);
 

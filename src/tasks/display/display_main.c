@@ -19,13 +19,12 @@ void main_display(void *pvParameters) {
 
     // Cache the watchdog checkin command to avoid creating it every iteration
     command_t cmd_checkin = get_watchdog_checkin_command();
-
     // Initialize the display
     init_display();
 
     // TODO: Receive commands from the command dispatcher task to update the display
     while (true) {
-        debug("\n---------- Display Task Loop ----------\n");
+        debug_impl("\n---------- Display Task Loop ----------\n");
 
         // Set the display buffer to the first image
         display_set_buffer(IMAGE_BUFFER_PVDX);
@@ -43,5 +42,6 @@ void main_display(void *pvParameters) {
 
         // Check in with the watchdog task
         enqueue_command(&cmd_checkin);
+        debug("display: Enqueued watchdog checkin command\n");
     }
 }

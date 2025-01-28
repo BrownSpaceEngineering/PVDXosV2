@@ -19,7 +19,7 @@
 void lock_mutex(SemaphoreHandle_t mutex) {
     uint16_t num_tries = 0;
 
-    while (xSemaphoreTake(mutex, (TickType_t)0) == pdFALSE) {
+    while (xSemaphoreTake(mutex, (TickType_t)0) != pdTRUE) {
         // Mutex is not available yet. Delay and try again.
         vTaskDelay(pdMS_TO_TICKS(POLLING_DELAY_MS));
 

@@ -23,18 +23,18 @@ void main_task_manager(void *pvParameters) {
     // Enqueue a command to initialize all subtasks
     command_t command_task_manager_init_subtasks = {TASK_MANAGER, OPERATION_INIT_SUBTASKS, NULL, 0, NULL, NULL};
     enqueue_command(&command_task_manager_init_subtasks);
+    debug("task_manager: Enqueued command to initialize all subtasks\n");
 
     // Cache the watchdog checkin command to avoid creating it every iteration
     command_t cmd_checkin = get_watchdog_checkin_command();
-
+    // Varible to hold commands popped off the queue
     command_t cmd;
-    BaseType_t xStatus;
 
     while (true) {
-        debug("\n---------- Task Manager Task Loop ----------\n");
+        debug_impl("\n---------- Task Manager Task Loop ----------\n");
 
         // Dispatch all commands contained in the queue
-        while ((xStatus = xQueueReceive(task_manager_command_queue_handle, &cmd, 0)) == pdPASS) {
+        while (xQueueReceive(task_manager_command_queue_handle, &cmd, 0) == pdPASS) {
             debug("task_manager: Command popped off queue. Target: %d, Operation: %d\n", cmd.target, cmd.operation);
             exec_command_task_manager(cmd);
         }
@@ -42,6 +42,7 @@ void main_task_manager(void *pvParameters) {
         
         // Check in with the watchdog task
         enqueue_command(&cmd_checkin);
+        debug("task_manager: Enqueued watchdog checkin command\n");
         // Wait 1 second before attempting to run the loop again
         vTaskDelay(pdMS_TO_TICKS(1000));
     }

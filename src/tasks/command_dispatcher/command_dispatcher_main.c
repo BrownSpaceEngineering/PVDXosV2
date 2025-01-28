@@ -21,15 +21,14 @@ void main_command_dispatcher(void *pvParameters) {
 
     // Cache the watchdog checkin command to avoid creating it every iteration
     command_t cmd_checkin = get_watchdog_checkin_command();
-
+    // Varible to hold commands popped off the queue
     command_t cmd;
-    BaseType_t xStatus;
 
     while (true) {
-        debug("\n---------- Command Dispatcher Task Loop ----------\n");
+        debug_impl("\n---------- Command Dispatcher Task Loop ----------\n");
 
         // Dispatch all commands contained in the queue
-        while ((xStatus = xQueueReceive(command_dispatcher_command_queue_handle, &cmd, 0)) == pdPASS) {
+        while (xQueueReceive(command_dispatcher_command_queue_handle, &cmd, 0) == pdPASS) {
             debug("command_dispatcher: Command popped off queue. Target: %d, Operation: %d\n", cmd.target, cmd.operation);
             dispatch_command(cmd);
         }
@@ -37,6 +36,7 @@ void main_command_dispatcher(void *pvParameters) {
 
         // Check in with the watchdog task
         enqueue_command(&cmd_checkin);
+        debug("command_dispatcher: Enqueued watchdog checkin command\n");
         // Wait 1 second before attempting to run the loop again
         vTaskDelay(pdMS_TO_TICKS(1000));
     }

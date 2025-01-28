@@ -27,7 +27,7 @@ void main_heartbeat(void *pvParameters) {
     #endif
 
     while (true) {
-        debug("\n---------- Heartbeat Task Loop ----------\n");
+        debug_impl("\n---------- Heartbeat Task Loop ----------\n");
 
         // Print the current time
         uint32_t current_time = xTaskGetTickCount();
@@ -71,5 +71,6 @@ void main_heartbeat(void *pvParameters) {
 
         // Check in with the watchdog task
         enqueue_command(&cmd_checkin);
+        debug("heartbeat: Enqueued watchdog checkin command\n");
     }
 }

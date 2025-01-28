@@ -30,10 +30,8 @@ void init_command_dispatcher(void) {
 }
 
 // Enqueue a command to be executed by the command dispatcher
-void enqueue_command(command_t *p_cmd) {
-    BaseType_t xStatus = xQueueSendToBack(command_dispatcher_command_queue_handle, p_cmd, 0);
-    
-    if (xStatus != pdPASS) {
+void enqueue_command(command_t *p_cmd) {    
+    if (xQueueSendToBack(command_dispatcher_command_queue_handle, p_cmd, 0) != pdTRUE) {
         pvdx_task_t* calling_task = get_task(xTaskGetCurrentTaskHandle());
         fatal("%s task failed to enqueue command onto Command Dispatcher queue!\n", calling_task->name);
     }
@@ -41,33 +39,25 @@ void enqueue_command(command_t *p_cmd) {
 
 // Forward a dequeued command to the appropriate task for execution
 void dispatch_command(command_t cmd) {
-    BaseType_t xStatus;
-
     switch (cmd.target) {
         case TASK_MANAGER:
-            debug("command-dispatcher: popped task manager command\n");
-            xStatus = xQueueSendToBack(task_manager_command_queue_handle, &cmd, 0);
-
-            if (xStatus != pdPASS) {
+            if (xQueueSendToBack(task_manager_command_queue_handle, &cmd, 0) != pdTRUE) {
                 fatal("command-dispatcher: Failed to forward command to task manager task!\n");
             }
 
+            debug("command-dispatcher: Forwarded a command to task manager task\n");
             break;
         case TASK_WATCHDOG:
-            debug("command-dispatcher: popped watchdog command\n");
-            xStatus = xQueueSendToBack(watchdog_command_queue_handle, &cmd, 0);
-
-            if (xStatus != pdPASS) {
+            if (xQueueSendToBack(watchdog_command_queue_handle, &cmd, 0) != pdTRUE) {
                 fatal("command-dispatcher: Failed to forward command to watchdog task!\n");
-            } else {
-                debug("command_dispatcher: Successfully enqueued a command to watchdog command queue\n");
             }
-
+            
+            debug("command_dispatcher: Forwarded a command to watchdog task\n");
             break;
         case TASK_SHELL:
             break;
         case TASK_HEARTBEAT:
-            warning("command-dispatcher: Heartbeat task does not accept commands!\n");
+            fatal("command-dispatcher: Heartbeat task does not accept commands!\n");
             break;
         case TASK_MAGNETOMETER:
             fatal("command-dispatcher: Failed; Magnetometer queue does not exist\n");
@@ -79,13 +69,11 @@ void dispatch_command(command_t cmd) {
             fatal("command-dispatcher: Failed; 9Axis queue does not exist\n");
             break;
         case TASK_DISPLAY:
-            debug("command-dispatcher: popped display command\n");
-            xStatus = xQueueSendToBack(display_command_queue_handle, &cmd, 0);
-
-            if (xStatus != pdPASS) {
+            if (xQueueSendToBack(display_command_queue_handle, &cmd, 0) != pdTRUE) {
                 fatal("command-dispatcher: Failed to forward command to display task!\n");
             }
 
+            debug("command-dispatcher: Forwarded a command to display task\n");
             break;
         default:
             fatal("command-dispatcher: Invalid target task!\n");

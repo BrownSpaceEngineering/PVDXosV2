@@ -122,8 +122,11 @@ void kick_watchdog(void) {
 
 // Returns a command to check-in with the watchdog task. The calling task's handle is automatically filled in.
 command_t get_watchdog_checkin_command(void) {
-    TaskHandle_t handle = xTaskGetCurrentTaskHandle();
-    command_t cmd = {TASK_WATCHDOG, OPERATION_CHECKIN, &handle, sizeof(TaskHandle_t*), NULL, NULL};
+    // NOTE: `handle` is local to this function (automatic lifetime) and will be destroyed when the function returns.
+    // Therefore, we must use the address of the task handle within the global task list (static lifetime) to ensure 
+    // that `*p_data` is still valid when the command is received.
+    pvdx_task_t *task = get_task(xTaskGetCurrentTaskHandle());
+    command_t cmd = {TASK_WATCHDOG, OPERATION_CHECKIN, &task->handle, sizeof(TaskHandle_t*), NULL, NULL};
     return cmd;
 }
 
@@ -180,7 +183,10 @@ void exec_command_watchdog(command_t cmd) {
     
     switch (cmd.operation) {
         case OPERATION_CHECKIN:
-            watchdog_checkin(*((TaskHandle_t*)cmd.p_data));
+            debug("watchdog: Checkin command received\n");
+            debug("watchdog: Checkin command contains pointer to handle %p\n", cmd.p_data);
+            debug("watchdog: Checkin command contains handle %p\n", *(TaskHandle_t*)cmd.p_data);
+            watchdog_checkin(*(TaskHandle_t*)cmd.p_data);
             break;
         default:
             fatal("watchdog: Invalid operation! target: %d operation: %d\n", cmd.target, cmd.operation);
