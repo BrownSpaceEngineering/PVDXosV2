@@ -1,3 +1,15 @@
+/**
+ * command_dispatcher_main.c
+ * 
+ * Main loop of the Command Dispatcher task. This task is responsible for receiving commands 
+ * from other tasks and forwarding them to the appropriate task for execution. All major 
+ * commands MUST be sent through the Command Dispatcher task to enable consistent logging and 
+ * adhere to the PVDXos hub-and-spoke architecture.
+ * 
+ * Created: October 13, 2024
+ * Authors: Tanish Makadia, Yi Liu
+ */
+
 #include "command_dispatcher_task.h"
 
 command_dispatcher_task_memory_t command_dispatcher_mem;
@@ -7,35 +19,25 @@ QueueHandle_t command_dispatcher_command_queue_handle;
 void main_command_dispatcher(void *pvParameters) {
     info("command_dispatcher: Task Started!\n");
 
-    // Initialize the command queue
-    init_command_dispatcher();
+    // Cache the watchdog checkin command to avoid creating it every iteration
+    command_t cmd_checkin = get_watchdog_checkin_command();
 
     command_t cmd;
     BaseType_t xStatus;
-    TaskHandle_t handle = xTaskGetCurrentTaskHandle();
-    command_t command_checkin = {TASK_WATCHDOG, OPERATION_CHECKIN, &handle, sizeof(TaskHandle_t*), NULL, NULL};
 
     while (true) {
-        debug("command_dispatcher: Started main loop\n");
-        // Check if there is a command to dispatch
-        // ---------------------------------------
-        // When xQueueReceive() is called with a non-zero timeout and the queue is empty, it will block the calling
-        // task until either an item is received or the timeout period expires. If an item arrives during the timeout
-        // period, the task will unblock immediately, retrieve the item, and proceed with processing. This way, the
-        // command dispatcher task will not consume CPU cycles when there are no commands to execute.
-        xStatus = xQueueReceive(command_dispatcher_command_queue_handle, &cmd, 0);
+        debug("\n---------- Command Dispatcher Task Loop ----------\n");
 
-        if (xStatus == pdPASS) {
-            // Command received, so dispatch it
+        // Dispatch all commands contained in the queue
+        while ((xStatus = xQueueReceive(command_dispatcher_command_queue_handle, &cmd, 0)) == pdPASS) {
             debug("command_dispatcher: Command popped off queue. Target: %d, Operation: %d\n", cmd.target, cmd.operation);
             dispatch_command(cmd);
-        } else {
-            // No command received, so continue
-            debug("command_dispatcher: No commands queued.\n");
         }
+        debug("command_dispatcher: No more commands queued.\n");
 
-        // Check in with the watchdog
-        enqueue_command(&command_checkin);
+        // Check in with the watchdog task
+        enqueue_command(&cmd_checkin);
+        // Wait 1 second before attempting to run the loop again
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }

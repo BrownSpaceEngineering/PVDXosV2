@@ -1,3 +1,13 @@
+/**
+ * task_list.c
+ * 
+ * Global list of all tasks running on PVDXos. This list is used to initialize all tasks in the system
+ * and to provide a way to access task information given a FreeRTOS task handle.
+ * 
+ * Created: January 24, 2025
+ * Authors: Oren Kohavi, Tanish Makadia, Yi Liu
+ */
+
 #include "task_list.h"
 
 // Global list of all tasks running on PVDXos (see `pvdx_task_t` definition in globals.h)

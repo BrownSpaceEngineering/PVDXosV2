@@ -1,8 +1,36 @@
+/**
+ * watchdog_helpers.c
+ * 
+ * Helper functions for the watchdog task. This task is responsible for monitoring the check-ins of other tasks
+ * and resetting the system if a task fails to check in within the allowed time.
+ * 
+ * Created: January 28, 2024
+ * Authors: Oren Kohavi, Tanish Makadia
+ */
+
 #include "watchdog_task.h"
 
-// If the difference between the current time and the time in the running_times array is greater than the allowed time,
-// then the task has not checked in and the watchdog should reset the system. Refer to "globals.h" to see the order in which
-// tasks are registered
+/* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
+
+// Updates the last checkin time of the given task to prove that it is still running
+void watchdog_checkin(TaskHandle_t handle) {
+    lock_mutex(task_list_mutex);
+    
+    pvdx_task_t *task = get_task(handle);
+
+    if (!task->has_registered) {
+        // something went wrong because a task that is checking in should have 'has_registered' set to true
+        fatal("watchdog: %s task tried to check in without registering\n", task->name);
+    }
+
+    // update the last checkin time
+    task->last_checkin = xTaskGetTickCount();
+
+    unlock_mutex(task_list_mutex);
+    debug("watchdog: %s task checked in\n", task->name);
+}
+
+/* ---------- NON-DISPATCHABLE FUNCTIONS (do not go through the command dispatcher) ---------- */
 
 void init_watchdog(void) {
     // Choose the period of the hardware watchdog timer
@@ -79,39 +107,27 @@ void early_warning_callback_watchdog(void) {
     vTaskDelay(pdMS_TO_TICKS(300));;
 }
 
+// Pets the watchdog to prevent it from resetting the system by setting the clear key correctly
 void pet_watchdog(void) {
     debug("hardware-watchdog: Petted\n");
     watchdog_feed(p_watchdog);
 }
 
+// Kicks the watchdog to reset the system by setting the clear key incorrectly
 void kick_watchdog(void) {
     debug("hardware-watchdog: Kicked\n");
     watchdog_set_clear_register(p_watchdog, 0x12); // set intentionally wrong clear key, so the watchdog will reset the system
     // this function should never return because the system should reset
 }
 
-// TODO: This function should be sent through the command dispatcher as a
-// high-priority command with xQueueSendToFront
-// TODO: Should registration on init pass through the command dispatcher?
-// TODO: Enable task needs to register and disable task needs to unregister
-void watchdog_checkin(TaskHandle_t handle) {
-    lock_mutex(task_list_mutex);
-    
-    pvdx_task_t *task = get_task(handle);
-
-    if (!task->has_registered) {
-        // something went wrong because a task that is checking in should have 'has_registered' set to true
-        fatal("watchdog: %s task tried to check in without registering\n", task->name);
-    }
-
-    // update the last checkin time
-    task->last_checkin = xTaskGetTickCount();
-
-    unlock_mutex(task_list_mutex);
-    debug("watchdog: %s task checked in\n", task->name);
+// Returns a command to check-in with the watchdog task. The calling task's handle is automatically filled in.
+command_t get_watchdog_checkin_command(void) {
+    TaskHandle_t handle = xTaskGetCurrentTaskHandle();
+    command_t cmd = {TASK_WATCHDOG, OPERATION_CHECKIN, &handle, sizeof(TaskHandle_t*), NULL, NULL};
+    return cmd;
 }
 
-// This function is a helper and does not get sent through the command dispatcher.
+// Registers a task with the watchdog so that checkins are monitored.
 // WARNING: This function is not thread-safe and should only be called from within a critical section
 void register_task_with_watchdog(TaskHandle_t handle) {
     if (handle == NULL) {
@@ -134,7 +150,7 @@ void register_task_with_watchdog(TaskHandle_t handle) {
     debug("%s task registered with watchdog\n", task->name);
 }
 
-// This function is a helper and does not get sent through the command dispatcher
+// Unregisters a task with the watchdog so that checkins are no longer monitored.
 // WARNING: This function is not thread-safe and should only be called from within a critical section
 void unregister_task_with_watchdog(TaskHandle_t handle) {
     if (handle == NULL) {
@@ -156,6 +172,7 @@ void unregister_task_with_watchdog(TaskHandle_t handle) {
     debug("%s task unregistered with watchdog\n", task->name);
 }
 
+// Executes a command received by the watchdog task
 void exec_command_watchdog(command_t cmd) {
     if (cmd.target != TASK_WATCHDOG) {
         fatal("watchdog: command target is not watchdog! target: %d operation: %d\n", cmd.target, cmd.operation);

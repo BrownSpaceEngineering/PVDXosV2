@@ -1,3 +1,13 @@
+/**
+ * logging.c
+ * 
+ * Logging functions for PVDXos. These functions allow for different log levels to be printed to the terminal
+ * which can be filtered out based on the desired verbosity of the output.
+ * 
+ * Created: February 25, 2024
+ * Authors: Oren Kohavi, Guo Ma
+ */
+
 #include "logging.h"
 
 #include <stdarg.h>
@@ -22,12 +32,10 @@ void fatal_impl(const char *string, ...) {
     warning_impl("FATAL ERROR OCCURRED! RESTARTING SYSTEM...\n");
     warning_impl("FATAL ERROR OCCURRED! RESTARTING SYSTEM...\n");
 
-    // REMOVE THIS LATER:
-    vTaskDelay(pdMS_TO_TICKS(1000));
-
-    // TODO: Gracefully shut down the system and then kick the watchdog.
+    // TODO: Gracefully shut down the system before kicking the watchdog
     kick_watchdog();
 
+    // This line should never be reached, but we include it to adhere to the va_list contract
     va_end(args);
 }
 

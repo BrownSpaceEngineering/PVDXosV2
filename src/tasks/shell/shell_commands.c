@@ -1,3 +1,12 @@
+/**
+ * shell_commands.c
+ * 
+ * Implementations of the shell commands available to a user using PVDX's terminal interface.
+ * 
+ * Created: April 11, 2024
+ * Author: Oren Kohavi
+ */
+
 #include "shell_commands.h"
 
 #include <atmel_start.h>
@@ -12,7 +21,7 @@ shell_command_t shell_commands[] = {
     {"reboot", shell_reboot, help_reboot}, {NULL, NULL, NULL} // Null-terminated array
 };
 
-// ----- HELP COMMAND -----
+/* ---------- HELP COMMAND ---------- */
 
 // This function is a utility that will only exist on the ground station
 void shell_help(char **args, int arg_count) {
@@ -43,7 +52,7 @@ void help_help() {
     terminal_printf("\tDisplays the help message for the specified command\n");
 }
 
-// ----- ECHO COMMAND -----
+/* ---------- ECHO COMMAND ---------- */
 
 void shell_echo(char **args, int arg_count) {
     if (arg_count < 2) {
@@ -66,7 +75,7 @@ void help_echo() {
     terminal_printf("\tEchoes the provided message back to the terminal\n");
 }
 
-// ----- CLEAR COMMAND -----
+/* ---------- CLEAR COMMAND ---------- */
 
 void shell_clear(char **args, int arg_count) {
     if (arg_count != 1) {
@@ -81,7 +90,7 @@ void help_clear() {
     terminal_printf("\tClears the terminal screen\n");
 }
 
-// ----- LOGLEVEL COMMAND -----
+/* ---------- LOGLEVEL COMMAND ---------- */
 
 char *log_level_string_mappings[] = {"DEBUG", "INFO", "EVENT", "WARNING"};
 
@@ -115,7 +124,7 @@ void help_loglevel() {
     terminal_printf("\t[3] (warning level) ==> Only errors and critical events are displayed\n");
 }
 
-// ----- REBOOT COMMAND -----
+/* ---------- REBOOT COMMAND ---------- */
 
 void shell_reboot(char **args, int arg_count) {
     if (arg_count != 1) {

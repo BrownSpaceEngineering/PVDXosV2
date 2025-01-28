@@ -1,3 +1,14 @@
+/**
+ * main.c
+ * 
+ * The main entry point for PVDXos. This file initializes the hardware, verifies that the bootloader executed
+ * successfully, creates the high-level OS integrity tasks along with the Cosmic Monkey task, and finally starts
+ * the FreeRTOS scheduler.
+ * 
+ * Created: November 20, 2023
+ * Authors: Oren Kohavi, Siddharta Laloux, Tanish Makadia, Yi Liu, Defne Doken, Aidan Wang, Ignacio Blancas Rodriguez
+ */
+
 #include "main.h"
 
 cosmic_monkey_task_arguments_t cm_args = {0};

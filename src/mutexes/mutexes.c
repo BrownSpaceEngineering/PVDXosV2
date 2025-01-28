@@ -1,3 +1,12 @@
+/**
+ * mutexes.c
+ * 
+ * Helper functions for locking and unlocking FreeRTOS mutexes by repeatedly polling them.
+ * 
+ * Created: September 29, 2024
+ * Author: Tanish Makadia
+ */
+
 #include "mutexes.h"
 
 // How long to wait before trying to lock a mutex again (in ms)
@@ -9,10 +18,11 @@
 // Polls a mutex until it is available, then locks it
 void lock_mutex(SemaphoreHandle_t mutex) {
     uint16_t num_tries = 0;
-    // Check whether we have the green light to proceed
+
     while (xSemaphoreTake(mutex, (TickType_t)0) == pdFALSE) {
-        // Mutex is not available yet. Delay to avoid busy-waiting.
+        // Mutex is not available yet. Delay and try again.
         vTaskDelay(pdMS_TO_TICKS(POLLING_DELAY_MS));
+
         num_tries++;
         if (num_tries > MAX_TRIES) {
             pvdx_task_t* calling_task = get_task(xTaskGetCurrentTaskHandle());
@@ -21,12 +31,10 @@ void lock_mutex(SemaphoreHandle_t mutex) {
     }
 }
 
-// Unlocks a mutex
+// Unlocks a mutex that was previously locked
 void unlock_mutex(SemaphoreHandle_t mutex) {
-    bool success = xSemaphoreGive(mutex);
-    // Unlock the mutex after data has been modified
-
-    if (!success) {
-        fatal("Failed to unlock a mutex\n");
+    if (xSemaphoreGive(mutex) != pdTRUE) {
+        pvdx_task_t* calling_task = get_task(xTaskGetCurrentTaskHandle());
+        fatal("%s task failed to unlock mutex\n", calling_task->name);
     }
 }

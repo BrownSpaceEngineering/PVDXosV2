@@ -1,3 +1,12 @@
+/**
+ * rtos_stack_overflow.c
+ * 
+ * A handler for detected stack overflows in FreeRTOS tasks.
+ * 
+ * Created: February 15, 2024
+ * Author: Oren Kohavi
+ */
+
 #include "FreeRTOS.h"
 #include "logging.h"
 #include "task.h"

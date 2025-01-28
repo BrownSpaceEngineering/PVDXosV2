@@ -2,10 +2,13 @@
 #define DISPLAY_TASK_H
 
 // Includes
+#include "atmel_start.h"
+#include "globals.h"
 #include "watchdog_task.h"
-#include <atmel_start.h>
-#include <globals.h>
 #include "display_hal.h"
+#include "image_buffer_BrownLogo.h"
+#include "image_buffer_PVDX.h"
+#include "logging.h"
 
 // FreeRTOS Task structs
 // Memory for the display task
@@ -28,5 +31,10 @@ extern QueueHandle_t display_command_queue_handle;
 
 void init_display_task(void);
 void main_display(void *pvParameters);
+status_t init_display(void);
+status_t display_update(void);
+status_t display_set_buffer(const color_t* p_buffer);
+status_t spi_write_command(void);
+status_t spi_write_data(void);
 
 #endif // DISPLAY_TASK_H

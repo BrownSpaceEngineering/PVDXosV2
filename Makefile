@@ -26,7 +26,6 @@ export OBJS := \
 ../src/tasks/cosmic_monkey/cosmic_monkey_helpers.o \
 ../src/tasks/display/display_main.o \
 ../src/tasks/display/display_helpers.o \
-../src/tasks/display/display_hal.o \
 ../src/tasks/display/image_buffers/image_buffer_BrownLogo.o \
 ../src/tasks/display/image_buffers/image_buffer_PVDX.o \
 ../src/tasks/task_manager/task_manager_main.o \

@@ -1,4 +1,23 @@
+/**
+ * command_dispatcher_helpers.c
+ * 
+ * Helper functions for the Command Dispatcher task. This task is responsible for receiving
+ * commands from other tasks and forwarding them to the appropriate task for execution. All major
+ * commands MUST be sent through the Command Dispatcher task to enable consistent logging and adhere
+ * to the PVDXos hub-and-spoke architecture.
+ * 
+ * Created: October 13, 2024
+ * Authors: Tanish Makadia, Yi Liu
+ */
+
 #include "command_dispatcher_task.h"
+
+/* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
+
+// NOTE: No dispatchable functions for the command dispatcher task. Its sole purpose is to
+// forward commands to other tasks. Essentially, it's a glorified queue.
+
+/* ---------- NON-DISPATCHABLE FUNCTIONS (do not go through the command dispatcher) ---------- */
 
 // Initialize the command queue, which stores pointers to command structs
 void init_command_dispatcher(void) {

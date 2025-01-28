@@ -1,3 +1,14 @@
+/**
+ * cosmic_monkey_main.c
+ * 
+ * Main loop of the Cosmic Monkey task. This is an antagonist task loosely inspired by
+ * Netflix's Chaos Monkey. It randomly flips bits in memory to create an environment akin to low-earth 
+ * orbit in order to test the robustness of OS logic to cosmic radiation.
+ * 
+ * Created: October 6, 2024
+ * Authors: Oren Kohavi, Ignacio Blancas Rodriguez
+ */
+
 #include "cosmic_monkey_task.h"
 
 cosmic_monkey_task_memory_t cosmic_monkey_mem;
@@ -14,7 +25,7 @@ void main_cosmic_monkey(void *pvParameters) {
     }
 
     info("Cosmic monkey started with frequency: %d Hz\n", args.frequency);
-    while (1) {
+    while (true) {
         if (perform_flip() != SUCCESS) {
             warning("Internal error occured\n");
         }

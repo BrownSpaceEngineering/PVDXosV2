@@ -1,15 +1,6 @@
 #ifndef DISPLAY_HAL_H
 #define DISPLAY_HAL_H
 
-// Includes
-#include "atmel_start.h"
-#include "globals.h"
-#include "image_buffer_BrownLogo.h"
-#include "image_buffer_PVDX.h"
-#include "logging.h"
-
-// Driver for the SSD1362 OLED controller within a Midas Displays MDOB256064D1Y-YS display.
-
 // SSD1362 commands
 #define SSD1362_WIDTH 256
 #define SSD1362_HEIGHT 64
@@ -78,10 +69,5 @@ typedef uint8_t color_t;  // 4 bits per pixel (16 greyscale levels)
 
 // Variables
 extern color_t display_buffer[(SSD1362_WIDTH / 2) * SSD1362_HEIGHT]; // pixels are 4 bits, so 2 consecutive pixels per byte
-
-// Functions
-status_t init_display(void);
-status_t display_update(void);
-status_t display_set_buffer(const color_t* p_buffer);
 
 #endif // DISPLAY_HAL_H

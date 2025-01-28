@@ -1,3 +1,15 @@
+/**
+ * specific_handlers.c
+ * 
+ * This file provides implementations for various interrupt handlers 
+ * for the Cortex-M4 core and peripheral modules. Each handler either 
+ * invokes the default handler (`PVDX_default_handler`) or provides 
+ * a placeholder for future customization of specific interrupt logic.
+ * 
+ * Created: April 5, 2024
+ * Author: Oren Kohavi
+ */
+
 #include "default_handler.h"
 #include "logging.h"
 

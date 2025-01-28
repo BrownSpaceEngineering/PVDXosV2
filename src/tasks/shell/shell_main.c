@@ -1,3 +1,14 @@
+/**
+ * shell_main.c
+ * 
+ * Main loop of the shell task, which is responsible for receiving commands from the user through the
+ * terminal over RTT and executing them.
+ * 
+ * Created: April 11, 2024
+ * Author: Oren Kohavi
+ */
+
+
 #include "shell_commands.h"
 #include "shell_helpers.h"
 #include "shell_task.h"
@@ -8,14 +19,16 @@ uint8_t SHELL_INPUT_BUFFER[SHELL_INPUT_BUFFER_SIZE] = {
     0}; // This is a layer ontop of the RTT internal buffer, which is of length 16 (BUFFER_SIZE_DOWN)
 
 void main_shell(void *pvParameters) {
-    info("shell: Started main loop\n");
+    info("shell: Task Started!\n");
+
+    // Clear the RTT input buffer and print the shell header
     clear_RTT_input_buffer();
     terminal_printf(RTT_CTRL_TEXT_BRIGHT_YELLOW "\n\n\n\n\n\n\n\nPVDX Shell Initialized! [%s (%s:%s), Built %s]\n" RTT_CTRL_RESET,
                     BUILD_TYPE, GIT_BRANCH_NAME, GIT_COMMIT_HASH, BUILD_DATE " at " BUILD_TIME);
-
     terminal_printf("%s", SHELL_ASCII_ART);
 
-    while (1) {
+    while (true) {
+        debug("\n---------- Shell Task Loop ----------\n");
         // Print the shell prompt
         terminal_printf(SHELL_PROMPT);
 
