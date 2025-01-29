@@ -40,5 +40,6 @@ status_t perform_flip() {
 
     *addr = *addr ^ byte_flip_mask; // Apply the byte_mask with an XOR to the selected byte
 
+    warning("cosmic_monkey: Flipped bit at address 0x%08x\n", p_memory_addr);
     return SUCCESS;
 }

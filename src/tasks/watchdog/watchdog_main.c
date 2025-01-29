@@ -24,6 +24,10 @@ void main_watchdog(void *pvParameters) {
     command_t cmd;
 
     while (true) {
+        vTaskSuspendAll();
+
+        /* ---------- ENTER CRITICAL SECTION ---------- */
+
         debug_impl("\n---------- Watchdog Task Loop ----------\n");
 
         // Iterate through the running times and check if any tasks have not checked in within the allowed time
@@ -49,9 +53,9 @@ void main_watchdog(void *pvParameters) {
 
         unlock_mutex(task_list_mutex);
 
-        // Pop all commands off of the watchdog command queue
+        // Execute all commands contained in the queue
         while (xQueueReceive(watchdog_command_queue_handle, &cmd, 0) == pdPASS) {
-            debug("watchdog: Command popped off queue.\n");
+            debug("watchdog: Command popped off queue. Target: %d, Operation: %d\n", cmd.target, cmd.operation);
             exec_command_watchdog(cmd);
         }
         debug("watchdog: No more commands queued.\n");
@@ -61,6 +65,11 @@ void main_watchdog(void *pvParameters) {
         // Watchdog checks in with itself
         enqueue_command(&cmd_checkin);
         debug("watchdog: Enqueued watchdog checkin command\n");
+
+        /* ---------- EXIT CRITICAL SECTION ---------- */
+
+        xTaskResumeAll();
+
         // Wait for 1 second before monitoring task checkins again
         vTaskDelay(pdMS_TO_TICKS(WATCHDOG_MS_DELAY)); 
     }

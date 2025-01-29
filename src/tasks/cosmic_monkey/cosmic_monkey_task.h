@@ -9,7 +9,7 @@
 #include "logging.h"
 
 // Constants
-#define COSMIC_MONKEY_TASK_STACK_SIZE 128
+#define COSMIC_MONKEY_TASK_STACK_SIZE 1024
 
 typedef struct {
     StackType_t overflow_buffer[TASK_STACK_OVERFLOW_PADDING];

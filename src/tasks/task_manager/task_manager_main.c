@@ -31,9 +31,13 @@ void main_task_manager(void *pvParameters) {
     command_t cmd;
 
     while (true) {
+        vTaskSuspendAll();
+
+        /* ---------- ENTER CRITICAL SECTION ---------- */
+
         debug_impl("\n---------- Task Manager Task Loop ----------\n");
 
-        // Dispatch all commands contained in the queue
+        // Execute all commands contained in the queue
         while (xQueueReceive(task_manager_command_queue_handle, &cmd, 0) == pdPASS) {
             debug("task_manager: Command popped off queue. Target: %d, Operation: %d\n", cmd.target, cmd.operation);
             exec_command_task_manager(cmd);
@@ -43,6 +47,11 @@ void main_task_manager(void *pvParameters) {
         // Check in with the watchdog task
         enqueue_command(&cmd_checkin);
         debug("task_manager: Enqueued watchdog checkin command\n");
+
+        /* ---------- EXIT CRITICAL SECTION ---------- */
+
+        xTaskResumeAll();
+
         // Wait 1 second before attempting to run the loop again
         vTaskDelay(pdMS_TO_TICKS(1000));
     }

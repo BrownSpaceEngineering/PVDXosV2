@@ -24,7 +24,7 @@
 #define SHELL_RTT_CHANNEL 0 /* CHANGE THIS WITH CAUTION! GetKey AND PutKey ARE NOT GUARANTEED TO WORK ON CHANNELS OTHER THAN ZERO */
 
 // Memory for the shell task
-#define SHELL_TASK_STACK_SIZE 128 // Size of the stack in words (multiply by 4 to get bytes)
+#define SHELL_TASK_STACK_SIZE 1024 // Size of the stack in words (multiply by 4 to get bytes)
 
 // Placed in a struct to ensure that the TCB is placed higher than the stack in memory
 //^ This ensures that stack overflows do not corrupt the TCB (since the stack grows downwards)

@@ -183,9 +183,6 @@ void exec_command_watchdog(command_t cmd) {
     
     switch (cmd.operation) {
         case OPERATION_CHECKIN:
-            debug("watchdog: Checkin command received\n");
-            debug("watchdog: Checkin command contains pointer to handle %p\n", cmd.p_data);
-            debug("watchdog: Checkin command contains handle %p\n", *(TaskHandle_t*)cmd.p_data);
             watchdog_checkin(*(TaskHandle_t*)cmd.p_data);
             break;
         default:
