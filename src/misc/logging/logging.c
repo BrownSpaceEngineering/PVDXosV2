@@ -31,6 +31,7 @@ void fatal_impl(const char *string, ...) {
     warning_impl("FATAL ERROR OCCURRED! RESTARTING SYSTEM...\n");
     warning_impl("FATAL ERROR OCCURRED! RESTARTING SYSTEM...\n");
     warning_impl("FATAL ERROR OCCURRED! RESTARTING SYSTEM...\n");
+    vTaskDelay(pdMS_TO_TICKS(1000)); // Wait for the message to be printed
 
     // TODO: Gracefully shut down the system before kicking the watchdog
     kick_watchdog();

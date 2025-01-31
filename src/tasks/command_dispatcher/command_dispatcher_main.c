@@ -25,10 +25,6 @@ void main_command_dispatcher(void *pvParameters) {
     command_t cmd;
 
     while (true) {
-        vTaskSuspendAll();
-
-        /* ---------- ENTER CRITICAL SECTION ---------- */
-
         debug_impl("\n---------- Command Dispatcher Task Loop ----------\n");
 
         // Dispatch all commands contained in the queue
@@ -41,10 +37,6 @@ void main_command_dispatcher(void *pvParameters) {
         // Check in with the watchdog task
         enqueue_command(&cmd_checkin);
         debug("command_dispatcher: Enqueued watchdog checkin command\n");
-
-        /* ---------- EXIT CRITICAL SECTION ---------- */
-
-        xTaskResumeAll();
         
         // Wait 1 second before attempting to run the loop again
         vTaskDelay(pdMS_TO_TICKS(1000));
