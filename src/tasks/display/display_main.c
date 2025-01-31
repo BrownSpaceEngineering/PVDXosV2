@@ -1,8 +1,8 @@
 /**
  * display_main.c
- * 
+ *
  * Main loop of the Display task which controls the OLED display on PVDX.
- * 
+ *
  * Created: February 29, 2024
  * Authors: Tanish Makadia, Ignacio Blancas Rodriguez
  */

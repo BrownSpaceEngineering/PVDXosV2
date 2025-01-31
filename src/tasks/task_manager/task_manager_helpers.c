@@ -1,11 +1,11 @@
 /**
  * task_manager_helpers.c
- * 
+ *
  * Helper functions for the task manager task. This task is responsible for initializing and enabling/disabling
  * all other tasks in the system based on PVDX's state diagram.
- * 
+ *
  * Created: April 14, 2024
- * Authors: Oren Kohavi, Ignacio Blancas Rodriguez, Tanish Makadia, Yi Liu, Aidan Wang, Simon Juknelis, Defne Doken, 
+ * Authors: Oren Kohavi, Ignacio Blancas Rodriguez, Tanish Makadia, Yi Liu, Aidan Wang, Simon Juknelis, Defne Doken,
  * Aidan Wang, Jai Garg, Alex Khosrowshahi
  */
 
@@ -35,7 +35,7 @@ void task_manager_enable_task(pvdx_task_t* task) {
     if (task->enabled) {
         fatal("task_manager: Tried to enable a task that has already been enabled");
     }
-    
+
     vTaskResume(task->handle);
     task->enabled = true;
 
@@ -74,7 +74,7 @@ void task_manager_disable_task(pvdx_task_t* task) {
 
 // Initializes the task manager task
 void init_task_manager(void) {
-    task_manager_command_queue_handle = xQueueCreateStatic(TASK_MANAGER_TASK_STACK_SIZE, COMMAND_QUEUE_ITEM_SIZE, task_manager_command_queue_buffer, &task_manager_mem.task_manager_task_queue);
+    task_manager_command_queue_handle = xQueueCreateStatic(COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE, task_manager_command_queue_buffer, &task_manager_mem.task_manager_task_queue);
 
     if (task_manager_command_queue_handle == NULL) {
         fatal("Failed to create task manager queue!\n");
@@ -84,7 +84,7 @@ void init_task_manager(void) {
 // Initializes the task at index i in the task list
 void init_task(size_t i) {
     lock_mutex(task_list_mutex);
-    
+
     task_list[i].handle = xTaskCreateStatic(
         task_list[i].function,
         task_list[i].name,
@@ -105,8 +105,8 @@ void init_task(size_t i) {
         // Register the task with the watchdog allowing it to be monitored
         register_task_with_watchdog(task_list[i].handle);
     } else {
-        // There may be tasks that are disabled on startup; if so, then they MUST have task_list[i].enabled 
-        // set to false. In this case, we still allocate memory and create the task, but immediately suspend 
+        // There may be tasks that are disabled on startup; if so, then they MUST have task_list[i].enabled
+        // set to false. In this case, we still allocate memory and create the task, but immediately suspend
         // it so that vTaskStartScheduler() doesn't run the task.
         vTaskSuspend(task_list[i].handle);
         info("%s task is disabled on startup.\n", task_list[i].name);

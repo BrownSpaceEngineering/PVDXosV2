@@ -1,9 +1,9 @@
 /**
  * heartbeat_main.c
- * 
+ *
  * Main loop of the Heartbeat task, which simply blinks an LED at a fixed rate to indicate that the
  * system is still running.
- * 
+ *
  * Created: November 20, 2023
  * Authors: Oren Kohavi, Tanish Makadia
  */

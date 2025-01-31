@@ -1,9 +1,9 @@
 /**
  * task_manager_helpers.c
- * 
+ *
  * Helper functions for the task manager task. This task is responsible for initializing and enabling/disabling
  * all other tasks in the system based on PVDX's state diagram.
- * 
+ *
  * Created: April 14, 2024
  * Authors: Oren Kohavi, Ignacio Blancas Rodriguez, Tanish Makadia, Yi Liu, Siddharta Laloux, Aidan Wang, Simon Juknelis,
  * Defne Doken, Aidan Wang, Jai Garg, Alex Khosrowshahi
@@ -39,7 +39,7 @@ void main_task_manager(void *pvParameters) {
             exec_command_task_manager(cmd);
         }
         debug("task_manager: No more commands queued.\n");
-        
+
         // Check in with the watchdog task
         enqueue_command(&cmd_checkin);
         debug("task_manager: Enqueued watchdog checkin command\n");

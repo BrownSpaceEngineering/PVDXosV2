@@ -1,11 +1,11 @@
 /**
  * command_dispatcher_main.c
- * 
- * Main loop of the Command Dispatcher task. This task is responsible for receiving commands 
- * from other tasks and forwarding them to the appropriate task for execution. All major 
- * commands MUST be sent through the Command Dispatcher task to enable consistent logging and 
+ *
+ * Main loop of the Command Dispatcher task. This task is responsible for receiving commands
+ * from other tasks and forwarding them to the appropriate task for execution. All major
+ * commands MUST be sent through the Command Dispatcher task to enable consistent logging and
  * adhere to the PVDXos hub-and-spoke architecture.
- * 
+ *
  * Created: October 13, 2024
  * Authors: Tanish Makadia, Yi Liu
  */
@@ -37,7 +37,7 @@ void main_command_dispatcher(void *pvParameters) {
         // Check in with the watchdog task
         enqueue_command(&cmd_checkin);
         debug("command_dispatcher: Enqueued watchdog checkin command\n");
-        
+
         // Wait 1 second before attempting to run the loop again
         vTaskDelay(pdMS_TO_TICKS(1000));
     }

@@ -1,10 +1,10 @@
 /**
  * main.c
- * 
+ *
  * The main entry point for PVDXos. This file initializes the hardware, verifies that the bootloader executed
  * successfully, creates the high-level OS integrity tasks along with the Cosmic Monkey task, and finally starts
  * the FreeRTOS scheduler.
- * 
+ *
  * Created: November 20, 2023
  * Authors: Oren Kohavi, Siddharta Laloux, Tanish Makadia, Yi Liu, Defne Doken, Aidan Wang, Ignacio Blancas Rodriguez
  */
@@ -51,7 +51,7 @@ int main(void) {
 
     // Initialize a mutex wrapping the shared PVDX task list struct
     task_list_mutex = xSemaphoreCreateMutexStatic(&task_list_mutex_buffer);
-    
+
     if (task_list_mutex == NULL){
         fatal("Failed to create PVDX task list mutex");
     }
@@ -64,7 +64,7 @@ int main(void) {
     void (*init_functions[SUBTASK_START_INDEX])(void) = {
         init_watchdog,
         init_command_dispatcher,
-        init_task_manager,  
+        init_task_manager,
     };
     const char *task_names[SUBTASK_START_INDEX] = {"Watchdog Task", "Command Dispatcher Task", "Task Manager Task"};
 
@@ -87,7 +87,7 @@ int main(void) {
         cm_args.frequency = 10;
         #endif
         #if defined(DEVBUILD)
-        cm_args.frequency = 1;
+        cm_args.frequency = 0;
         #endif
 
         TaskHandle_t cosmic_monkey_task_handle =

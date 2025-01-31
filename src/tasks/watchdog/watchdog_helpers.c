@@ -1,9 +1,9 @@
 /**
  * watchdog_helpers.c
- * 
+ *
  * Helper functions for the watchdog task. This task is responsible for monitoring the check-ins of other tasks
  * and resetting the system if a task fails to check in within the allowed time.
- * 
+ *
  * Created: January 28, 2024
  * Authors: Oren Kohavi, Tanish Makadia
  */
@@ -15,7 +15,7 @@
 // Updates the last checkin time of the given task to prove that it is still running
 void watchdog_checkin(TaskHandle_t handle) {
     lock_mutex(task_list_mutex);
-    
+
     pvdx_task_t *task = get_task(handle);
 
     if (!task->has_registered) {
@@ -37,7 +37,7 @@ void init_watchdog(void) {
     uint8_t watchdog_period = WDT_CONFIG_PER_CYC16384;
 
     // Create watchdog command queue
-    watchdog_command_queue_handle = xQueueCreateStatic(WATCHDOG_TASK_STACK_SIZE, COMMAND_QUEUE_ITEM_SIZE,
+    watchdog_command_queue_handle = xQueueCreateStatic(COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE,
         watchdog_command_queue_buffer, &watchdog_mem.watchdog_task_queue);
 
     if (watchdog_command_queue_handle == NULL) {
@@ -123,7 +123,7 @@ void kick_watchdog(void) {
 // Returns a command to check-in with the watchdog task. The calling task's handle is automatically filled in.
 command_t get_watchdog_checkin_command(void) {
     // NOTE: `handle` is local to this function (automatic lifetime) and will be destroyed when the function returns.
-    // Therefore, we must use the address of the task handle within the global task list (static lifetime) to ensure 
+    // Therefore, we must use the address of the task handle within the global task list (static lifetime) to ensure
     // that `*p_data` is still valid when the command is received.
     pvdx_task_t *task = get_task(xTaskGetCurrentTaskHandle());
     command_t cmd = {TASK_WATCHDOG, OPERATION_CHECKIN, &task->handle, sizeof(TaskHandle_t*), NULL, NULL};
@@ -159,7 +159,7 @@ void unregister_task_with_watchdog(TaskHandle_t handle) {
     if (handle == NULL) {
         fatal("Tried to unregister a NULL task handle with watchdog\n");
     }
-    
+
     pvdx_task_t *task = get_task(handle);
 
     if (task->handle != handle) {
@@ -180,7 +180,7 @@ void exec_command_watchdog(command_t cmd) {
     if (cmd.target != TASK_WATCHDOG) {
         fatal("watchdog: command target is not watchdog! target: %d operation: %d\n", cmd.target, cmd.operation);
     }
-    
+
     switch (cmd.operation) {
         case OPERATION_CHECKIN:
             watchdog_checkin(*(TaskHandle_t*)cmd.p_data);

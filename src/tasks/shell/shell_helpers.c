@@ -1,9 +1,9 @@
 /**
  * shell_helpers.c
- * 
+ *
  * Helper functions for the shell task. This task is responsible for receiving commands from the terminal
  * over RTT and executing them.
- * 
+ *
  * Created: April 11, 2024
  * Author: Oren Kohavi
  */
