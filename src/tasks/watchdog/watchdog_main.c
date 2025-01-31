@@ -1,9 +1,9 @@
 /**
  * watchdog_helpers.c
- * 
+ *
  * Helper functions for the watchdog task. This task is responsible for monitoring the check-ins of other tasks
  * and resetting the system if a task fails to check in within the allowed time.
- * 
+ *
  * Created: January 28, 2024
  * Authors: Oren Kohavi, Tanish Makadia
  */
@@ -46,6 +46,8 @@ void main_watchdog(void *pvParameters) {
                 debug("watchdog: Task %d has not registered, skipping it ...\n", i);
             }
         }
+
+        unlock_mutex(task_list_mutex);
 
         // Execute all commands contained in the queue
         while (xQueueReceive(watchdog_command_queue_handle, &cmd, 0) == pdPASS) {
