@@ -14,6 +14,8 @@
 #define NULL_TASK ((pvdx_task_t){NULL, false, NULL, NULL, 0, NULL, NULL, 0, NULL, 0, 0, false})
 
 extern pvdx_task_t task_list[];
+
 pvdx_task_t *get_task(TaskHandle_t id);
+TickType_t get_command_queue_block_time_ticks(pvdx_task_t *task);
 
 #endif // TASK_LIST_H

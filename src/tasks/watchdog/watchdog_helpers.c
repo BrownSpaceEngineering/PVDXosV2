@@ -24,7 +24,7 @@ void watchdog_checkin(TaskHandle_t handle) {
     }
 
     // update the last checkin time
-    task->last_checkin_ticks = xTaskGetTickCount();
+    task->last_checkin_time_ticks = xTaskGetTickCount();
 
     unlock_mutex(task_list_mutex);
     debug("watchdog: %s task checked in\n", task->name);
@@ -44,10 +44,10 @@ void init_watchdog(void) {
         fatal("Failed to create watchdog queue!\n");
     }
 
-    // Initialize the 'last_checkin_ticks' field of each task
+    // Initialize the 'last_checkin_time_ticks' field of each task
     // Iterate using the 'name' field rather than the handle field, since not all tasks will have a handle at this point
     for (size_t i = 0; task_list[i].name != NULL; i++) {
-        task_list[i].last_checkin_ticks = 0; // 0 Is a special value that indicates that the task has not checked in yet (or is not running)
+        task_list[i].last_checkin_time_ticks = 0; // 0 Is a special value that indicates that the task has not checked in yet (or is not running)
     }
 
     for (size_t i = 0; task_list[i].name != NULL; i++) {
@@ -120,12 +120,10 @@ void kick_watchdog(void) {
     // this function should never return because the system should reset
 }
 
-// Returns a command to check-in with the watchdog task. The calling task's handle is automatically filled in.
-command_t get_watchdog_checkin_command(void) {
-    // NOTE: `handle` is local to this function (automatic lifetime) and will be destroyed when the function returns.
-    // Therefore, we must use the address of the task handle within the global task list (static lifetime) to ensure
+// Given a pointer to a `pvdx_task_t` struct, returns a command to check-in with the watchdog task.
+command_t get_watchdog_checkin_command(pvdx_task_t *task) {
+    // NOTE: Be sure to use the address of the task handle within the global task list (static lifetime) to ensure
     // that `*p_data` is still valid when the command is received.
-    pvdx_task_t *task = get_task(xTaskGetCurrentTaskHandle());
     command_t cmd = {TASK_WATCHDOG, OPERATION_CHECKIN, &task->handle, sizeof(TaskHandle_t*), NULL, NULL};
     return cmd;
 }
@@ -148,7 +146,7 @@ void register_task_with_watchdog(TaskHandle_t handle) {
     }
 
     // initialize running times and require the task to check in
-    task->last_checkin_ticks = xTaskGetTickCount();
+    task->last_checkin_time_ticks = xTaskGetTickCount();
     task->has_registered = true;
     debug("%s task registered with watchdog\n", task->name);
 }
@@ -170,7 +168,7 @@ void unregister_task_with_watchdog(TaskHandle_t handle) {
         fatal("%s task tried to unregister a second time with watchdog\n", task->name);
     }
 
-    task->last_checkin_ticks = 0xDEADBEEF; // 0xDEADBEEF is a special value that indicates that the task is not running
+    task->last_checkin_time_ticks = 0xDEADBEEF; // 0xDEADBEEF is a special value that indicates that the task is not running
     task->has_registered = false;
     debug("%s task unregistered with watchdog\n", task->name);
 }

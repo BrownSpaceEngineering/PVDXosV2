@@ -110,7 +110,7 @@ typedef struct {
     UBaseType_t priority;               // Priority of the task in the RTOS scheduler
     StaticTask_t *const task_tcb;       // Task control block
     const uint32_t watchdog_timeout_ms; // How frequently the task should check in with the watchdog (in milliseconds)
-    uint32_t last_checkin_ticks;        // Last time the task checked in with the watchdog
+    uint32_t last_checkin_time_ticks;   // Last time the task checked in with the watchdog
     bool has_registered;                // Whether the task is being monitored by the watchdog (initialized to NULL)
 } pvdx_task_t;
 

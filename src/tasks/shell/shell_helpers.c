@@ -20,7 +20,7 @@ size_t get_line_from_terminal(uint8_t *p_linebuffer) {
     size_t linebuffer_idx = 0;
 
     // Cache the watchdog checkin command to avoid creating it every iteration
-    command_t cmd_checkin = get_watchdog_checkin_command();
+    const command_t cmd_checkin = get_watchdog_checkin_command();
 
     while (true) {
         // This is really the loop that we expect the program to spend most of its time in, so pet the watchdog here

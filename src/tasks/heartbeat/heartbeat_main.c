@@ -17,7 +17,7 @@ void main_heartbeat(void *pvParameters) {
     info("heartbeat: Task Started!\n");
 
     // Cache the watchdog checkin command to avoid creating it every iteration
-    command_t cmd_checkin = get_watchdog_checkin_command();
+    const command_t cmd_checkin = get_watchdog_checkin_command();
 
     // NOTE: false is on for some reason on the orange LEDs
     // In release build, make sure orange LEDs are off

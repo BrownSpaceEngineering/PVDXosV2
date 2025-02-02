@@ -56,3 +56,9 @@ pvdx_task_t* get_task(TaskHandle_t handle) {
     fatal("get_task: Task not found for handle %p\n", handle);
     return p_task;
 }
+
+// Given a pointer to a `pvdx_task_t` struct, returns the maximum block time in ticks when attempting to dequeue
+// a command from the task's command queue.
+TickType_t get_command_queue_block_time_ticks(pvdx_task_t *task) {
+    return pdMS_TO_TICKS(task->watchdog_timeout_ms / 2);
+}

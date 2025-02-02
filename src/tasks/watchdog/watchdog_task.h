@@ -36,7 +36,7 @@ void main_watchdog(void *pvParameters);
 void early_warning_callback_watchdog(void);
 void pet_watchdog(void);
 void kick_watchdog(void);
-command_t get_watchdog_checkin_command(void);
+command_t get_watchdog_checkin_command(pvdx_task_t *task);
 void register_task_with_watchdog(TaskHandle_t handle);
 void unregister_task_with_watchdog(TaskHandle_t handle);
 void exec_command_watchdog(command_t cmd);

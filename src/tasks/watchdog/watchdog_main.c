@@ -18,8 +18,12 @@ volatile Wdt *const p_watchdog = WDT;
 void main_watchdog(void *pvParameters) {
     info("watchdog: Task Started!\n");
 
+    // Obtain a pointer to the current task within the global task list
+    pvdx_task_t *const current_task = get_task(xTaskGetCurrentTaskHandle());
     // Cache the watchdog checkin command to avoid creating it every iteration
-    command_t cmd_checkin = get_watchdog_checkin_command();
+    const command_t cmd_checkin = get_watchdog_checkin_command(current_task);
+    // Calculate the maximum time the task should block (and thus be unable to check in with the watchdog)
+    const TickType_t queue_block_time_ticks = get_command_queue_block_time_ticks(current_task);
     // Varible to hold commands popped off the queue
     command_t cmd;
 
@@ -33,7 +37,7 @@ void main_watchdog(void *pvParameters) {
 
         for (size_t i = 0; task_list[i].name != NULL; i++) {
             if (task_list[i].has_registered) {
-                uint32_t ticks_since_last_checkin = current_time_ticks - task_list[i].last_checkin_ticks;
+                uint32_t ticks_since_last_checkin = current_time_ticks - task_list[i].last_checkin_time_ticks;
 
                 if (ticks_since_last_checkin > pdMS_TO_TICKS(task_list[i].watchdog_timeout_ms)) {
                     // The task has not checked in within the allowed time, so we should reset the system
@@ -50,9 +54,11 @@ void main_watchdog(void *pvParameters) {
         unlock_mutex(task_list_mutex);
 
         // Execute all commands contained in the queue
-        while (xQueueReceive(watchdog_command_queue_handle, &cmd, 0) == pdPASS) {
-            debug("watchdog: Command popped off queue. Target: %d, Operation: %d\n", cmd.target, cmd.operation);
-            exec_command_watchdog(cmd);
+        if (xQueueReceive(watchdog_command_queue_handle, &cmd, queue_block_time_ticks) == pdPASS) {
+            do {
+                debug("watchdog: Command popped off queue. Target: %d, Operation: %d\n", cmd.target, cmd.operation);
+                exec_command_watchdog(cmd);
+            } while (xQueueReceive(watchdog_command_queue_handle, &cmd, 0) == pdPASS);
         }
         debug("watchdog: No more commands queued.\n");
 

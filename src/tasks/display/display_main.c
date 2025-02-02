@@ -18,7 +18,7 @@ void main_display(void *pvParameters) {
     info("display: Task Started!\n");
 
     // Cache the watchdog checkin command to avoid creating it every iteration
-    command_t cmd_checkin = get_watchdog_checkin_command();
+    const command_t cmd_checkin = get_watchdog_checkin_command();
     // Initialize the display
     init_display();
 
