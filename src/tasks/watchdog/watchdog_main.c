@@ -21,7 +21,7 @@ void main_watchdog(void *pvParameters) {
     // Obtain a pointer to the current task within the global task list
     pvdx_task_t *const current_task = get_task(xTaskGetCurrentTaskHandle());
     // Cache the watchdog checkin command to avoid creating it every iteration
-    const command_t cmd_checkin = get_watchdog_checkin_command(current_task);
+    command_t cmd_checkin = get_watchdog_checkin_command(current_task);
     // Calculate the maximum time the task should block (and thus be unable to check in with the watchdog)
     const TickType_t queue_block_time_ticks = get_command_queue_block_time_ticks(current_task);
     // Varible to hold commands popped off the queue
@@ -31,13 +31,13 @@ void main_watchdog(void *pvParameters) {
         debug_impl("\n---------- Watchdog Task Loop ----------\n");
 
         // Iterate through the running times and check if any tasks have not checked in within the allowed time
-        uint32_t current_time_ticks = xTaskGetTickCount();
+        const uint32_t current_time_ticks = xTaskGetTickCount();
 
         lock_mutex(task_list_mutex);
 
         for (size_t i = 0; task_list[i].name != NULL; i++) {
             if (task_list[i].has_registered) {
-                uint32_t ticks_since_last_checkin = current_time_ticks - task_list[i].last_checkin_time_ticks;
+                const uint32_t ticks_since_last_checkin = current_time_ticks - task_list[i].last_checkin_time_ticks;
 
                 if (ticks_since_last_checkin > pdMS_TO_TICKS(task_list[i].watchdog_timeout_ms)) {
                     // The task has not checked in within the allowed time, so we should reset the system

@@ -18,13 +18,13 @@ QueueHandle_t command_dispatcher_command_queue_handle;
 
 void main_command_dispatcher(void *pvParameters) {
     info("command_dispatcher: Task Started!\n");
-    
+
     // Obtain a pointer to the current task within the global task list
     pvdx_task_t *const current_task = get_task(xTaskGetCurrentTaskHandle());
     // Cache the watchdog checkin command to avoid creating it every iteration
-    const command_t cmd_checkin = get_watchdog_checkin_command(current_task);
+    command_t cmd_checkin = get_watchdog_checkin_command(current_task);
     // Calculate the maximum time the command dispatcher should block (and thus be unable to check in with the watchdog)
-    const TickType_t queue_block_ticks = get_command_queue_block_time_ticks(current_task);
+    const TickType_t queue_block_time_ticks = get_command_queue_block_time_ticks(current_task);
     // Varible to hold commands popped off the queue
     command_t cmd;
 
@@ -32,7 +32,7 @@ void main_command_dispatcher(void *pvParameters) {
         debug_impl("\n---------- Command Dispatcher Task Loop ----------\n");
 
         // Block waiting for at least one command to appear in the command queue
-        if (xQueueReceive(command_dispatcher_command_queue_handle, &cmd, queue_block_ticks) == pdPASS) {
+        if (xQueueReceive(command_dispatcher_command_queue_handle, &cmd, queue_block_time_ticks) == pdPASS) {
             // Once there is at least one command in the queue, empty the entire queue
             do {
                 debug("command_dispatcher: Command popped off queue. Target: %d, Operation: %d\n", cmd.target, cmd.operation);

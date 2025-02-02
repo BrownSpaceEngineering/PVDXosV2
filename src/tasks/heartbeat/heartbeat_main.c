@@ -16,8 +16,10 @@ heartbeat_task_memory_t heartbeat_mem;
 void main_heartbeat(void *pvParameters) {
     info("heartbeat: Task Started!\n");
 
+    // Obtain a pointer to the current task within the global task list
+    pvdx_task_t *const current_task = get_task(xTaskGetCurrentTaskHandle());
     // Cache the watchdog checkin command to avoid creating it every iteration
-    const command_t cmd_checkin = get_watchdog_checkin_command();
+    command_t cmd_checkin = get_watchdog_checkin_command(current_task);
 
     // NOTE: false is on for some reason on the orange LEDs
     // In release build, make sure orange LEDs are off

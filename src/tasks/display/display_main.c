@@ -17,8 +17,10 @@ QueueHandle_t display_command_queue_handle;
 void main_display(void *pvParameters) {
     info("display: Task Started!\n");
 
+    // Obtain a pointer to the current task within the global task list
+    pvdx_task_t *const current_task = get_task(xTaskGetCurrentTaskHandle());
     // Cache the watchdog checkin command to avoid creating it every iteration
-    const command_t cmd_checkin = get_watchdog_checkin_command();
+    command_t cmd_checkin = get_watchdog_checkin_command(current_task);
     // Initialize the display
     init_display();
 
