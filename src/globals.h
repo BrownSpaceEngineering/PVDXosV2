@@ -100,18 +100,18 @@ typedef struct {
 
 // A struct defining a task's lifecycle in the PVDXos RTOS
 typedef struct {
-    char* name;                // Name of the task
-    bool enabled;              // Whether the task is enabled
-    TaskHandle_t handle;       // FreeRTOS handle to the task
-    TaskFunction_t function;   // Main entry point for the task
-    uint32_t stack_size;       // Size of the stack in words (multiply by 4 to get bytes)
-    StackType_t* stack_buffer; // Buffer for the stack
-    void* pvParameters;        // Parameters to pass to the task's main function
-    UBaseType_t priority;      // Priority of the task in the RTOS scheduler
-    StaticTask_t* task_tcb;    // Task control block
-    uint32_t watchdog_timeout; // How frequently the task should check in with the watchdog (in milliseconds)
-    uint32_t last_checkin;     // Last time the task checked in with the watchdog
-    bool has_registered;       // Whether the task is being monitored by the watchdog (initialized to NULL)
+    const char *const name;             // Name of the task
+    bool enabled;                       // Whether the task is enabled
+    TaskHandle_t handle;                // FreeRTOS handle to the task
+    const TaskFunction_t function;      // Main entry point for the task
+    const uint32_t stack_size;          // Size of the stack in words (multiply by 4 to get bytes)
+    StackType_t *const stack_buffer;    // Buffer for the stack
+    void* pvParameters;                 // Parameters to pass to the task's main function
+    UBaseType_t priority;               // Priority of the task in the RTOS scheduler
+    StaticTask_t *const task_tcb;       // Task control block
+    const uint32_t watchdog_timeout_ms; // How frequently the task should check in with the watchdog (in milliseconds)
+    uint32_t last_checkin_ticks;        // Last time the task checked in with the watchdog
+    bool has_registered;                // Whether the task is being monitored by the watchdog (initialized to NULL)
 } pvdx_task_t;
 
 /* ---------- BUILD CONSTANTS ---------- */

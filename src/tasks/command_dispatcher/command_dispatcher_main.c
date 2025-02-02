@@ -27,10 +27,13 @@ void main_command_dispatcher(void *pvParameters) {
     while (true) {
         debug_impl("\n---------- Command Dispatcher Task Loop ----------\n");
 
-        // Dispatch all commands contained in the queue
-        while (xQueueReceive(command_dispatcher_command_queue_handle, &cmd, 0) == pdPASS) {
-            debug("command_dispatcher: Command popped off queue. Target: %d, Operation: %d\n", cmd.target, cmd.operation);
-            dispatch_command(cmd);
+        // Block waiting for at least one command to appear in the command queue
+        if (xQueueReceive(command_dispatcher_command_queue_handle, &cmd, pdMS_TO_TICKS(1000)) == pdPASS) {
+            // Once there is at least one command in the queue, empty the entire queue
+            do {
+                debug("command_dispatcher: Command popped off queue. Target: %d, Operation: %d\n", cmd.target, cmd.operation);
+                dispatch_command(cmd);
+            } while (xQueueReceive(command_dispatcher_command_queue_handle, &cmd, 0) == pdPASS);
         }
         debug("command_dispatcher: No more commands queued.\n");
 
