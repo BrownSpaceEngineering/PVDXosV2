@@ -87,7 +87,7 @@ int main(void) {
         cm_args.frequency = 10;
         #endif
         #if defined(DEVBUILD)
-        cm_args.frequency = 0;
+        cm_args.frequency = 10;
         #endif
 
         TaskHandle_t cosmic_monkey_task_handle =
