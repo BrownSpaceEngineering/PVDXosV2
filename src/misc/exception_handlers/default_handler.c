@@ -1,3 +1,15 @@
+/**
+ * default_handler.c
+ * 
+ * This file contains the implementation of the default interrupt handler 
+ * for handling unexpected or unconfigured interrupts in the system. It
+ * provides detailed diagnostics by decoding and logging fault-related
+ * CPU register values and resets the system if necessary.
+ * 
+ * Created: April 5, 2024
+ * Author: Oren Kohavi
+ */
+
 #include "default_handler.h"
 
 #include "globals.h"

@@ -1,20 +1,16 @@
 #ifndef MAIN_H
 #define MAIN_H
 
-#include "SEGGER_RTT.h"
-#include "cosmicmonkey_task.h"
-#include "globals.h"
-#include "heartbeat_task.h"
-#include "logging.h"
-#include "rtos_start.h"
-#include "shell_task.h"
-#include "watchdog_task.h"
-#include "task_manager.h"
-
 #include <atmel_start.h>
 #include <driver_init.h>
 #include <hal_adc_sync.h>
-#include <string.h>
+
+#include "SEGGER_RTT.h"
+#include "cosmic_monkey_task.h"
+#include "globals.h"
+#include "logging.h"
+#include "rtos_start.h"
+#include "task_list.h"
 
 /*
 Standard definitions for main.c

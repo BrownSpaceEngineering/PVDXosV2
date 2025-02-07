@@ -1,28 +1,63 @@
+/**
+ * watchdog_helpers.c
+ *
+ * Helper functions for the watchdog task. This task is responsible for monitoring the check-ins of other tasks
+ * and resetting the system if a task fails to check in within the allowed time.
+ *
+ * Created: January 28, 2024
+ * Authors: Oren Kohavi, Tanish Makadia
+ */
+
 #include "watchdog_task.h"
 
-// If the difference between the current time and the time in the running_times array is greater than the allowed time,
-// then the task has not checked in and the watchdog should reset the system. Refer to "globals.h" to see the order in which
-// tasks are registered.
+/* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
 
-volatile Wdt *const p_watchdog = WDT;
-uint32_t running_times[NUM_TASKS];
-bool should_checkin[NUM_TASKS];
-bool watchdog_enabled = false;
+// Updates the last checkin time of the given task to prove that it is still running
+void watchdog_checkin(TaskHandle_t handle) {
+    lock_mutex(task_list_mutex);
 
-void watchdog_init(uint8_t watchdog_period, bool always_on) {
-    // Initialize the running times
-    for (int i = 0; i < NUM_TASKS; i++) {
-        running_times[i] = 0; // 0 Is a special value that indicates that the task has not checked in yet (or is not running)
+    pvdx_task_t *task = get_task(handle);
+
+    if (!task->has_registered) {
+        // something went wrong because a task that is checking in should have 'has_registered' set to true
+        fatal("watchdog: %s task tried to check in without registering\n", task->name);
     }
 
-    for (int i = 0; i < NUM_TASKS; i++) {
-        should_checkin[i] = false;
+    // update the last checkin time
+    task->last_checkin_time_ticks = xTaskGetTickCount();
+
+    unlock_mutex(task_list_mutex);
+    debug("watchdog: %s task checked in\n", task->name);
+}
+
+/* ---------- NON-DISPATCHABLE FUNCTIONS (do not go through the command dispatcher) ---------- */
+
+void init_watchdog(void) {
+    // Choose the period of the hardware watchdog timer
+    uint8_t watchdog_period = WDT_CONFIG_PER_CYC16384;
+
+    // Create watchdog command queue
+    watchdog_command_queue_handle = xQueueCreateStatic(COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE,
+        watchdog_command_queue_buffer, &watchdog_mem.watchdog_task_queue);
+
+    if (watchdog_command_queue_handle == NULL) {
+        fatal("Failed to create watchdog queue!\n");
+    }
+
+    // Initialize the 'last_checkin_time_ticks' field of each task
+    // Iterate using the 'name' field rather than the handle field, since not all tasks will have a handle at this point
+    for (size_t i = 0; task_list[i].name != NULL; i++) {
+        task_list[i].last_checkin_time_ticks = 0; // 0 Is a special value that indicates that the task has not checked in yet (or is not running)
+    }
+
+    for (size_t i = 0; task_list[i].name != NULL; i++) {
+        task_list[i].has_registered = false;
     }
 
     // Disable the watchdog before configuring
     watchdog_disable(p_watchdog);
 
-    // Configure the watchdog (casting to (Wdt *) bypasses volatile qualifier warning)
+    // Configure the watchdog
     uint8_t watchdog_earlywarning_period = watchdog_period - 1; // Each increment of 1 doubles the period (see ASF/samd51a/include/component/wdt.h)
     watchdog_set_early_warning_offset(p_watchdog, watchdog_earlywarning_period); // Early warning will trigger halfway through the watchdog period
     watchdog_enable_early_warning(p_watchdog); // Enable early warning interrupt
@@ -31,14 +66,13 @@ void watchdog_init(uint8_t watchdog_period, bool always_on) {
 
     // Enable the watchdog
     watchdog_enable(p_watchdog);
-    watchdog_enabled = true;
 
     // Configure the watchdog early warning interrupt
     NVIC_SetPriority(WDT_IRQn, 3); // Set the interrupt priority
     NVIC_EnableIRQ(WDT_IRQn); // Enable the WDT_IRQn interrupt
     NVIC_SetVector(WDT_IRQn, (uint32_t)(&WDT_Handler)); // When the WDT_IRQn interrupt is triggered, call the WDT_Handler function
 
-    info("watchdog: Initialized\n");
+    info("Hardware Watchdog Initialized\n");
 }
 
 /* Temporarily commented out (so that specific_handlers.c works)
@@ -54,8 +88,8 @@ void WDT_Handler(void) {
 }
 */
 
-void watchdog_early_warning_callback(void) {
-    warning("watchdog: Early warning callback executed\n");
+void early_warning_callback_watchdog(void) {
+    warning("Early warning callback executed\n");
     // This function gets called when the watchdog is almost out of time
     // TODO: Test if this works
     // This is also fine to leave blank
@@ -73,65 +107,84 @@ void watchdog_early_warning_callback(void) {
     vTaskDelay(pdMS_TO_TICKS(300));;
 }
 
-void watchdog_pet(void) {
-    debug("watchdog: Petted\n");
+// Pets the watchdog to prevent it from resetting the system by setting the clear key correctly
+void pet_watchdog(void) {
+    debug("hardware-watchdog: Petted\n");
     watchdog_feed(p_watchdog);
 }
 
-void watchdog_kick(void) {
-    debug("watchdog: Kicked\n");
+// Kicks the watchdog to reset the system by setting the clear key incorrectly
+void kick_watchdog(void) {
+    debug("hardware-watchdog: Kicked\n");
     watchdog_set_clear_register(p_watchdog, 0x12); // set intentionally wrong clear key, so the watchdog will reset the system
     // this function should never return because the system should reset
 }
 
-// If I am a battery task, I call this function: `watchdog_checkin(BATTERY_TASK)`
-int watchdog_checkin(task_type_t task_index) {
-    // sanity checks
-    if (task_index >= NUM_TASKS) {
-        return -1;
-    }
-
-    if (!should_checkin[task_index]) {
-        return -1;
-    }
-
-    // add the current time to the running times array
-    running_times[task_index] = xTaskGetTickCount();
-    debug("watchdog: Task %d checked in\n", task_index);
-    return 0;
+// Given a pointer to a `pvdx_task_t` struct, returns a command to check-in with the watchdog task.
+command_t get_watchdog_checkin_command(pvdx_task_t *task) {
+    // NOTE: Be sure to use the address of the task handle within the global task list (static lifetime) to ensure
+    // that `*p_data` is still valid when the command is received.
+    command_t cmd = {TASK_WATCHDOG, OPERATION_CHECKIN, &task->handle, sizeof(TaskHandle_t*), NULL, NULL};
+    return cmd;
 }
 
-int watchdog_register_task(task_type_t task_index) {
-    // sanity checks
-    if (task_index >= NUM_TASKS) {
-        return -1;
+// Registers a task with the watchdog so that checkins are monitored.
+// WARNING: This function is not thread-safe and should only be called from within a critical section
+void register_task_with_watchdog(TaskHandle_t handle) {
+    if (handle == NULL) {
+        fatal("Tried to register a NULL task handle with watchdog\n");
     }
 
-    if (should_checkin[task_index]) {
-        // something went wrong because we define unregistered tasks to have 'should_checkin' set to false
-        watchdog_kick();
+    pvdx_task_t *task = get_task(handle);
+
+    if (task->handle != handle) {
+        fatal("Task Manager handle does not match current task handle!\n");
+    }
+
+    if (task->has_registered) {
+        fatal("%s task tried to register a second time with watchdog\n", task->name);
     }
 
     // initialize running times and require the task to check in
-    running_times[task_index] = xTaskGetTickCount();
-    should_checkin[task_index] = true;
-    debug("watchdog: Task %d registered\n", task_index);
-    return 0;
+    task->last_checkin_time_ticks = xTaskGetTickCount();
+    task->has_registered = true;
+    debug("%s task registered with watchdog\n", task->name);
 }
 
-int watchdog_unregister_task(task_type_t task_index) {
-    if (task_index >= NUM_TASKS) {
-        return -1;
+// Unregisters a task with the watchdog so that checkins are no longer monitored.
+// WARNING: This function is not thread-safe and should only be called from within a critical section
+void unregister_task_with_watchdog(TaskHandle_t handle) {
+    if (handle == NULL) {
+        fatal("Tried to unregister a NULL task handle with watchdog\n");
     }
 
-    if (!should_checkin[task_index]) {
-        // something went wrong because we define unregistered tasks to have 'should_checkin' set to false
-        // and an unregistered task should not be able to unregister itself again
-        watchdog_kick();
+    pvdx_task_t *task = get_task(handle);
+
+    if (task->handle != handle) {
+        fatal("Task Manager handle does not match current task handle!\n");
     }
 
-    running_times[task_index] = 0xDEADBEEF; // 0xDEADBEEF is a special value that indicates that the task is not running
-    should_checkin[task_index] = false;
-    debug("watchdog: Task %d unregistered\n", task_index);
-    return 0;
+    if (!task->has_registered) {
+        fatal("%s task tried to unregister a second time with watchdog\n", task->name);
+    }
+
+    task->last_checkin_time_ticks = 0xDEADBEEF; // 0xDEADBEEF is a special value that indicates that the task is not running
+    task->has_registered = false;
+    debug("%s task unregistered with watchdog\n", task->name);
+}
+
+// Executes a command received by the watchdog task
+void exec_command_watchdog(command_t cmd) {
+    if (cmd.target != TASK_WATCHDOG) {
+        fatal("watchdog: command target is not watchdog! target: %d operation: %d\n", cmd.target, cmd.operation);
+    }
+
+    switch (cmd.operation) {
+        case OPERATION_CHECKIN:
+            watchdog_checkin(*(TaskHandle_t*)cmd.p_data);
+            break;
+        default:
+            fatal("watchdog: Invalid operation! target: %d operation: %d\n", cmd.target, cmd.operation);
+            break;
+    }
 }

@@ -1,72 +1,38 @@
-#include "display_ssd1362.h"
+/**
+ * display_helpers.c
+ * 
+ * Driver for the SSD1362 OLED controller within a Midas Displays MDOB256064D1Y-YS display.
+ * 
+ * Created: February 29, 2024
+ * Authors: Tanish Makadia, Ignacio Blancas Rodriguez
+ */
 
-#include "image_buffer_BrownLogo.h"
-#include "image_buffer_PVDX.h"
-#include "logging.h"
+#include "display_task.h"
 
 // Functions for setting the reset, data/command, and chip-select pins on the display to high or low voltage
-#define RST_LOW()                   gpio_set_pin_level(Display_RST, 0)
-#define RST_HIGH()                  gpio_set_pin_level(Display_RST, 1)
-#define DC_LOW()                    gpio_set_pin_level(Display_DC, 0)
-#define DC_HIGH()                   gpio_set_pin_level(Display_DC, 1)
-#define CS_LOW()                    gpio_set_pin_level(Display_CS, 0)
-#define CS_HIGH()                   gpio_set_pin_level(Display_CS, 1)
+#define RST_LOW() gpio_set_pin_level(Display_RST, 0)
+#define RST_HIGH() gpio_set_pin_level(Display_RST, 1)
+#define DC_LOW() gpio_set_pin_level(Display_DC, 0)
+#define DC_HIGH() gpio_set_pin_level(Display_DC, 1)
+#define CS_LOW() gpio_set_pin_level(Display_CS, 0)
+#define CS_HIGH() gpio_set_pin_level(Display_CS, 1)
 
 // Duration to wait between display initialization steps
-#define RESET_WAIT_INTERVAL         100
+#define RESET_WAIT_INTERVAL 100
 
 // Maximum number of bytes that can be sent to the display in a single SPI transaction
 #define DISPLAY_SPI_BUFFER_CAPACITY (SSD1362_WIDTH / 2) * SSD1362_HEIGHT
 
-// Display Task memory structures
-struct displayMainTaskMemory displayMainMem;
-
 // Buffer for SPI transactions
 uint8_t spi_rx_buffer[DISPLAY_SPI_BUFFER_CAPACITY] = {0x00};
 uint8_t spi_tx_buffer[DISPLAY_SPI_BUFFER_CAPACITY] = {0x00};
-struct spi_xfer xfer = {
-    .rxbuf = spi_rx_buffer,
-    .txbuf = spi_tx_buffer,
-    .size = 0
-};
+struct spi_xfer xfer = {.rxbuf = spi_rx_buffer, .txbuf = spi_tx_buffer, .size = 0};
 
 // Buffer for the display
-COLOR display_buffer[(SSD1362_WIDTH / 2) * SSD1362_HEIGHT] = {0x00};
+color_t display_buffer[(SSD1362_WIDTH / 2) * SSD1362_HEIGHT] = {0x00};
 
-// Write the contents of spi_tx_buffer to the display as a command
-status_t spi_write_command() {
-    DC_LOW(); // set D/C# pin low to indicate that sent bytes are commands (not data)
-    CS_LOW(); // select the display for SPI communication
+/* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
 
-    int32_t response = spi_m_sync_transfer(&SPI_0, &xfer);
-    if (response != (int32_t)xfer.size) {
-        return ERROR_IO;
-    }
-
-    CS_HIGH(); // deselect the display for SPI communication
-    return SUCCESS;
-}
-
-// Write the contents of spi_tx_buffer to the display as data
-status_t spi_write_data() {
-    DC_HIGH(); // set D/C# pin high to indicate that sent bytes are data (not commands)
-    CS_LOW();  // select the display for SPI communication
-
-    TickType_t start = xTaskGetTickCount();
-    int32_t response = spi_m_sync_transfer(&SPI_0, &xfer);
-    if (response != (int32_t)xfer.size) {
-        return ERROR_IO;
-    }
-    TickType_t end = xTaskGetTickCount();
-    TickType_t duration = end - start;
-    int duration_ms = duration * portTICK_RATE_MS;
-    debug("Duration to send: %d ms\n", duration_ms);
-
-    CS_HIGH(); // deselect the display for SPI communication
-    return SUCCESS;
-}
-
-// TODO: change to vTaskDelay
 // Trigger a complete reset of the display
 void display_reset(void) {
     RST_HIGH();
@@ -77,7 +43,6 @@ void display_reset(void) {
     vTaskDelay(pdMS_TO_TICKS(RESET_WAIT_INTERVAL));
 }
 
-// TODO: Add error checking
 // Set the display window to cover the entire screen
 status_t display_set_window() {
     xfer.size = 3;
@@ -95,8 +60,8 @@ status_t display_set_window() {
     return SUCCESS;
 }
 
-// Set a specific pixel in the display buffer to a given color. To actually update the display, call display_update()
-status_t display_set_buffer_pixel(POINT x, POINT y, COLOR color) {
+// Set a specific pixel in the display buffer to a given color_t. To actually update the display, call display_update()
+status_t display_set_buffer_pixel(point_t x, point_t y, color_t color) {
     // bounds checking
     if (x >= SSD1362_WIDTH || y >= SSD1362_HEIGHT) {
         return ERROR_INTERNAL;
@@ -115,7 +80,7 @@ status_t display_set_buffer_pixel(POINT x, POINT y, COLOR color) {
 }
 
 // Set the entire display buffer to the contents of the input buffer. To actually update the display, call display_update()
-status_t display_set_buffer(const COLOR* p_buffer) {
+status_t display_set_buffer(const color_t* p_buffer) {
     for (uint16_t i = 0; i < (SSD1362_WIDTH / 2) * SSD1362_HEIGHT; i++) {
         display_buffer[i] = p_buffer[i];
     }
@@ -124,7 +89,7 @@ status_t display_set_buffer(const COLOR* p_buffer) {
 }
 
 // Clear the display buffer. To actually update the display, call display_update()
-status_t display_clear_buffer() {
+status_t display_clear_buffer(void) {
     for (uint16_t i = 0; i < (SSD1362_WIDTH / 2) * SSD1362_HEIGHT; i++) {
         display_buffer[i] = 0x00;
     }
@@ -132,9 +97,8 @@ status_t display_clear_buffer() {
     return SUCCESS;
 }
 
-// TODO: Add error checking
 // Update the display with the contents of the display buffer
-status_t display_update() {
+status_t display_update(void) {
     // set the display window to the entire display
     display_set_window();
 
@@ -149,9 +113,50 @@ status_t display_update() {
     return SUCCESS;
 }
 
-// TODO: Add error checking
+/* ---------- NON-DISPATCHABLE FUNCTIONS (do not go through the command dispatcher) ---------- */
+
+// Write the contents of spi_tx_buffer to the display as a command
+status_t spi_write_command(void) {
+    DC_LOW(); // set D/C# pin low to indicate that sent bytes are commands (not data)
+    CS_LOW(); // select the display for SPI communication
+
+    int32_t response = spi_m_sync_transfer(&SPI_0, &xfer);
+    if (response != (int32_t)xfer.size) {
+        return ERROR_IO;
+    }
+
+    CS_HIGH(); // deselect the display for SPI communication
+    return SUCCESS;
+}
+
+// Write the contents of spi_tx_buffer to the display as data
+status_t spi_write_data(void) {
+    DC_HIGH(); // set D/C# pin high to indicate that sent bytes are data (not commands)
+    CS_LOW();  // select the display for SPI communication
+
+    TickType_t start = xTaskGetTickCount();
+    int32_t response = spi_m_sync_transfer(&SPI_0, &xfer);
+    if (response != (int32_t)xfer.size) {
+        return ERROR_IO;
+    }
+    TickType_t end = xTaskGetTickCount();
+    TickType_t duration = end - start;
+    int duration_ms = duration * portTICK_RATE_MS;
+    debug("display: Duration to send data to display buffer: %d ms\n", duration_ms);
+
+    CS_HIGH(); // deselect the display for SPI communication
+    return SUCCESS;
+}
+
 // Initialize the display
-status_t display_init() {
+status_t init_display(void) {
+    display_command_queue_handle =
+        xQueueCreateStatic(COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE, display_command_queue_buffer, &display_mem.display_task_queue);
+
+    if (display_command_queue_handle == NULL) {
+        fatal("Failed to create display queue!\n");
+    }
+
     spi_m_sync_enable(&SPI_0); // if you forget this line, this function returns -20
 
     display_reset(); // setting reset pin low triggers a reset of the display
@@ -269,21 +274,4 @@ status_t display_init() {
     display_update();
 
     return SUCCESS;
-}
-
-void display_main(void *pvParameters) {
-    while (1) {
-        display_set_buffer(IMAGE_BUFFER_PVDX);
-        debug("First buffer set\n");
-        display_update();
-        debug("First image completed\n");
-        vTaskDelay(pdMS_TO_TICKS(500));
-
-        display_set_buffer(IMAGE_BUFFER_BROWNLOGO);
-        debug("Second image buffer set\n");
-        display_update();
-        debug("Second image completed\n");
-        vTaskDelay(pdMS_TO_TICKS(500));
-        watchdog_checkin(DISPLAY_TASK);
-    }
 }
