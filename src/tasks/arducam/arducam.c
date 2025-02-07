@@ -5,6 +5,8 @@
  * By: Alexander Thaep
 */
 
+// Essential resource: https://github.com/ArduCAM/Arduino
+
 #include "arducam.h"
 #include "string.h"
 #include "logging.h"
