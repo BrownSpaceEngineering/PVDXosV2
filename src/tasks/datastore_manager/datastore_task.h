@@ -1,7 +1,6 @@
 #ifndef DATASTORE_TASK_H
 #define DATASTORE_TASK_H
 
-#include "display_ssd1362.h"
 #include "globals.h"
 #include "rtos_start.h"
 #include "watchdog_task.h"
