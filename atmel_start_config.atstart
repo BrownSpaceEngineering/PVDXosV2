@@ -1144,7 +1144,7 @@ drivers:
       spi_master_arch_dord: MSB first
       spi_master_arch_ibon: In data stream
       spi_master_arch_runstdby: false
-      spi_master_baud_rate: 6000000
+      spi_master_baud_rate: 4000000
       spi_master_character_size: 8 bits
       spi_master_dummybyte: 511
       spi_master_rx_enable: true

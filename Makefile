@@ -116,7 +116,6 @@ CFLAGS_DEV := -DDEVBUILD
 CFLAGS_UNITTEST := -DUNITTEST
 CFLAGS_RELEASE := -DRELEASE
 
-
 ### All these variables are exported to the child makefile, and affect its behavior ###
 export SUB_DIRS := $(shell for dir in $(EXTRA_VPATH); do echo $$dir | $(SED) 's|\.\./||g'; done)
 

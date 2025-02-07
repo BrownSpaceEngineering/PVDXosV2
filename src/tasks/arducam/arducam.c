@@ -13,18 +13,23 @@
 
 struct arducamTaskMemory arducamMem;
 
-struct io_descriptor *arducam_io;
+struct io_descriptor *arducam_i2c_io;
+struct io_descriptor *arducam_spi_io;
 
 static Format cformat;
 
 void init_arducam()
 {
     i2c_m_sync_set_baudrate(&I2C_0, 0, 115200);
-    i2c_m_sync_get_io_descriptor(&I2C_0, &arducam_io);
+    i2c_m_sync_get_io_descriptor(&I2C_0, &arducam_i2c_io);
     i2c_m_sync_enable(&I2C_0);
     i2c_m_sync_set_slaveaddr(&I2C_0, ARDUCAMAddress >> 1, I2C_M_SEVEN);
 
     watchdog_checkin(ARDUCAM_TASK);
+
+    spi_m_sync_set_baudrate(&SPI_0, 4000000);
+    spi_m_sync_get_io_descriptor(&SPI_0, &arducam_spi_io);
+    spi_m_sync_enable(&SPI_0);
 
     cformat = JPEG;
 
@@ -65,7 +70,7 @@ uint32_t ARDUCAMI2CWrite(uint8_t addr, uint8_t *data, uint16_t size)
     writeBuf[0] = addr;
     memcpy(&(writeBuf[1]), data, size);
     int32_t rv;
-    if ((rv = io_write(arducam_io, writeBuf, size + 1)) < 0){
+    if ((rv = io_write(arducam_spi_io, writeBuf, size + 1)) < 0){
         warning("Error in Arducam Write");
     }
 	return rv;
@@ -75,10 +80,10 @@ int32_t ARDUCAMI2CRead(uint8_t addr, uint8_t *readBuf, uint16_t size)
 {
     uint8_t writeBuf[1] = { addr };
     int32_t rv;
-    if ((rv = io_write(arducam_io, writeBuf, 1)) < 0){
+    if ((rv = io_write(arducam_spi_io, writeBuf, 1)) < 0){
         warning("Error in Arducam Write");
     }
-    if ((rv = io_read(arducam_io, readBuf, size)) < 0) {
+    if ((rv = io_read(arducam_spi_io, readBuf, size)) < 0) {
         warning("Error in Arducam Read");
     }
     return rv;
