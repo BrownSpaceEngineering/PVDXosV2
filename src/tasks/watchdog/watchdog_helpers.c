@@ -174,17 +174,17 @@ void unregister_task_with_watchdog(TaskHandle_t handle) {
 }
 
 // Executes a command received by the watchdog task
-void exec_command_watchdog(command_t cmd) {
-    if (cmd.target != TASK_WATCHDOG) {
-        fatal("watchdog: command target is not watchdog! target: %d operation: %d\n", cmd.target, cmd.operation);
+void exec_command_watchdog(const command_t *p_cmd) {
+    if (p_cmd->target != TASK_WATCHDOG) {
+        fatal("watchdog: command target is not watchdog! target: %d operation: %d\n", p_cmd->target, p_cmd->operation);
     }
 
-    switch (cmd.operation) {
+    switch (p_cmd->operation) {
         case OPERATION_CHECKIN:
-            watchdog_checkin(*(TaskHandle_t*)cmd.p_data);
+            watchdog_checkin(*(TaskHandle_t*)p_cmd->p_data);
             break;
         default:
-            fatal("watchdog: Invalid operation! target: %d operation: %d\n", cmd.target, cmd.operation);
+            fatal("watchdog: Invalid operation! target: %d operation: %d\n", p_cmd->target, p_cmd->operation);
             break;
     }
 }

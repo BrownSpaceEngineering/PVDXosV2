@@ -40,7 +40,7 @@ void main_task_manager(void *pvParameters) {
         if (xQueueReceive(task_manager_command_queue_handle, &cmd, queue_block_time_ticks) == pdPASS) {
             do {
                 debug("task_manager: Command popped off queue. Target: %d, Operation: %d\n", cmd.target, cmd.operation);
-                exec_command_task_manager(cmd);
+                exec_command_task_manager(&cmd);
             } while (xQueueReceive(task_manager_command_queue_handle, &cmd, 0) == pdPASS);
         }
         debug("task_manager: No more commands queued.\n");

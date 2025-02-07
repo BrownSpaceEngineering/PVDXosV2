@@ -32,7 +32,7 @@ void main_heartbeat(void *pvParameters) {
         debug_impl("\n---------- Heartbeat Task Loop ----------\n");
 
         // Print the current time
-        uint32_t current_time = xTaskGetTickCount();
+        const uint32_t current_time = xTaskGetTickCount();
         debug("heartbeat: Current time is %d\n", current_time);
 
         // Devbuild heartbeat pattern (Smoothly turning on and off LEDs in a line)

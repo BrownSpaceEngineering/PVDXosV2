@@ -92,9 +92,9 @@ typedef enum {
 typedef struct {
     task_t target;                        // The target task for the command
     operation_t operation;                // The operation to perform
-    void* p_data;                         // Pointer to data needed for the operation
+    void *p_data;                         // Pointer to data needed for the operation
     size_t len;                           // Length of the data
-    status_t* p_result;                   // Pointer to the result of the operation
+    status_t *p_result;                   // Pointer to the result of the operation
     void (*callback)(status_t* p_result); // Callback function to call after the operation is complete
 } command_t;
 

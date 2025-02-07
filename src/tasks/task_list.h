@@ -6,6 +6,7 @@
 #include "watchdog_task.h"
 #include "command_dispatcher_task.h"
 #include "task_manager_task.h"
+#include "magnetometer_task.h"
 #include "shell_task.h"
 #include "display_task.h"
 #include "heartbeat_task.h"

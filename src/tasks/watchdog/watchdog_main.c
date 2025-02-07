@@ -57,7 +57,7 @@ void main_watchdog(void *pvParameters) {
         if (xQueueReceive(watchdog_command_queue_handle, &cmd, queue_block_time_ticks) == pdPASS) {
             do {
                 debug("watchdog: Command popped off queue. Target: %d, Operation: %d\n", cmd.target, cmd.operation);
-                exec_command_watchdog(cmd);
+                exec_command_watchdog(&cmd);
             } while (xQueueReceive(watchdog_command_queue_handle, &cmd, 0) == pdPASS);
         }
         debug("watchdog: No more commands queued.\n");

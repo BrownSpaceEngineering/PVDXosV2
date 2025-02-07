@@ -26,15 +26,18 @@ pvdx_task_t task_list[] = {
     {
         "TaskManager", true, NULL, main_task_manager, TASK_MANAGER_TASK_STACK_SIZE, task_manager_mem.task_manager_task_stack, NULL, 2, &task_manager_mem.task_manager_task_tcb, 10000, 0xDEADBEEF, false
     },
-    // {
-    //     "Shell", true, NULL, main_shell, SHELL_TASK_STACK_SIZE, shell_mem.shell_task_stack, NULL, 2, &shell_mem.shell_task_tcb, 10000, 0xDEADBEEF, false
-    // },
-    // {
-    //     "Display", true, NULL, main_display, DISPLAY_TASK_STACK_SIZE, display_mem.display_task_stack, NULL, 2, &display_mem.display_task_tcb, 10000, 0xDEADBEEF, false
-    // },
-    // {
-    //     "Heartbeat", true, NULL, main_heartbeat, HEARTBEAT_TASK_STACK_SIZE, heartbeat_mem.heartbeat_task_stack, NULL, 1, &heartbeat_mem.heartbeat_task_tcb, 10000, 0xDEADBEEF, false
-    // },
+    {
+        "Magnetometer", true, NULL, main_magnetometer, MAGNETOMETER_TASK_STACK_SIZE, magnetometer_mem.magnetometer_task_stack, NULL, 2, &magnetometer_mem.magnetometer_task_tcb, 10000, 0xDEADBEEF, false
+    },
+    {
+        "Shell", true, NULL, main_shell, SHELL_TASK_STACK_SIZE, shell_mem.shell_task_stack, NULL, 2, &shell_mem.shell_task_tcb, 10000, 0xDEADBEEF, false
+    },
+    {
+        "Display", true, NULL, main_display, DISPLAY_TASK_STACK_SIZE, display_mem.display_task_stack, NULL, 2, &display_mem.display_task_tcb, 10000, 0xDEADBEEF, false
+    },
+    {
+        "Heartbeat", true, NULL, main_heartbeat, HEARTBEAT_TASK_STACK_SIZE, heartbeat_mem.heartbeat_task_stack, NULL, 1, &heartbeat_mem.heartbeat_task_tcb, 10000, 0xDEADBEEF, false
+    },
 
     // Null terminator for the array (since size is unspecified)
     NULL_TASK

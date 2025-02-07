@@ -30,7 +30,7 @@ void init_command_dispatcher(void) {
 }
 
 // Enqueue a command to be executed by the command dispatcher
-void enqueue_command(command_t *p_cmd) {    
+void enqueue_command(const command_t *p_cmd) {    
     if (xQueueSendToBack(command_dispatcher_command_queue_handle, p_cmd, 0) != pdTRUE) {
         pvdx_task_t* calling_task = get_task(xTaskGetCurrentTaskHandle());
         fatal("%s task failed to enqueue command onto Command Dispatcher queue!\n", calling_task->name);
@@ -38,17 +38,17 @@ void enqueue_command(command_t *p_cmd) {
 }
 
 // Forward a dequeued command to the appropriate task for execution
-void dispatch_command(command_t cmd) {
-    switch (cmd.target) {
+void dispatch_command(const command_t *p_cmd) {
+    switch (p_cmd->target) {
         case TASK_MANAGER:
-            if (xQueueSendToBack(task_manager_command_queue_handle, &cmd, 0) != pdTRUE) {
+            if (xQueueSendToBack(task_manager_command_queue_handle, p_cmd, 0) != pdTRUE) {
                 fatal("command-dispatcher: Failed to forward command to task manager task!\n");
             }
 
             debug("command-dispatcher: Forwarded a command to task manager task\n");
             break;
         case TASK_WATCHDOG:
-            if (xQueueSendToBack(watchdog_command_queue_handle, &cmd, 0) != pdTRUE) {
+            if (xQueueSendToBack(watchdog_command_queue_handle, p_cmd, 0) != pdTRUE) {
                 fatal("command-dispatcher: Failed to forward command to watchdog task!\n");
             }
             
@@ -69,7 +69,7 @@ void dispatch_command(command_t cmd) {
             fatal("command-dispatcher: Failed; 9Axis queue does not exist\n");
             break;
         case TASK_DISPLAY:
-            if (xQueueSendToBack(display_command_queue_handle, &cmd, 0) != pdTRUE) {
+            if (xQueueSendToBack(display_command_queue_handle, p_cmd, 0) != pdTRUE) {
                 fatal("command-dispatcher: Failed to forward command to display task!\n");
             }
 

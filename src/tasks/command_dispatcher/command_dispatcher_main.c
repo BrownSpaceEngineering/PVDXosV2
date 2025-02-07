@@ -36,7 +36,7 @@ void main_command_dispatcher(void *pvParameters) {
             // Once there is at least one command in the queue, empty the entire queue
             do {
                 debug("command_dispatcher: Command popped off queue. Target: %d, Operation: %d\n", cmd.target, cmd.operation);
-                dispatch_command(cmd);
+                dispatch_command(&cmd);
             } while (xQueueReceive(command_dispatcher_command_queue_handle, &cmd, 0) == pdPASS);
         }
         debug("command_dispatcher: No more commands queued.\n");

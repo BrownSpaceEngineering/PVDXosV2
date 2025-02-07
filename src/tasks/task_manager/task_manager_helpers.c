@@ -115,19 +115,19 @@ void init_task(size_t i) {
     unlock_mutex(task_list_mutex);
 }
 
-void exec_command_task_manager(command_t cmd) {
-    if (cmd.target != TASK_MANAGER) {
-        fatal("task manager: command target is not task manager! target: %d operation: %d\n", cmd.target, cmd.operation);
+void exec_command_task_manager(const command_t *p_cmd) {
+    if (p_cmd->target != TASK_MANAGER) {
+        fatal("task manager: command target is not task manager! target: %d operation: %d\n", p_cmd->target, p_cmd->operation);
     }
-    switch (cmd.operation) {
+    switch (p_cmd->operation) {
         case OPERATION_INIT_SUBTASKS:
             task_manager_init_subtasks();
             break;
         case OPERATION_ENABLE_SUBTASK:
-            task_manager_enable_task(get_task((TaskHandle_t)cmd.p_data)); // Turn this into an index
+            task_manager_enable_task(get_task((TaskHandle_t)p_cmd->p_data)); // Turn this into an index
             break;
         case OPERATION_DISABLE_SUBTASK:
-            task_manager_disable_task(get_task((TaskHandle_t)cmd.p_data)); // Turn this into an index
+            task_manager_disable_task(get_task((TaskHandle_t)p_cmd->p_data)); // Turn this into an index
             break;
         default:
             fatal("task-manager: Invalid operation!\n");
