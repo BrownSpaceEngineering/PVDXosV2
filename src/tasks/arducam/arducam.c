@@ -72,7 +72,7 @@ uint32_t ARDUCAMI2CWrite(uint8_t addr, uint8_t *data, uint16_t size)
     writeBuf[0] = addr;
     memcpy(&(writeBuf[1]), data, size);
     int32_t rv;
-    if ((rv = io_write(arducam_spi_io, writeBuf, size + 1)) < 0){
+    if ((rv = io_write(arducam_i2c_io, writeBuf, size + 1)) < 0){
         warning("Error in Arducam Write");
     }
 	return rv;
@@ -82,10 +82,10 @@ int32_t ARDUCAMI2CRead(uint8_t addr, uint8_t *readBuf, uint16_t size)
 {
     uint8_t writeBuf[1] = { addr };
     int32_t rv;
-    if ((rv = io_write(arducam_spi_io, writeBuf, 1)) < 0){
+    if ((rv = io_write(arducam_i2c_io, writeBuf, 1)) < 0){
         warning("Error in Arducam Write");
     }
-    if ((rv = io_read(arducam_spi_io, readBuf, size)) < 0) {
+    if ((rv = io_read(arducam_i2c_io, readBuf, size)) < 0) {
         warning("Error in Arducam Read");
     }
     return rv;
