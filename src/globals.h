@@ -52,6 +52,7 @@ typedef enum {
     TASK_MANAGER,
     TASK_DISPLAY,
     TASK_WATCHDOG,
+    TASK_DATASTORE,
     // Anything beyond this point is a subtask
     TASK_SHELL,
     TASK_HEARTBEAT,
