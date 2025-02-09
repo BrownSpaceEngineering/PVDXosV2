@@ -324,35 +324,21 @@ void init_arducam()
         info("pid: %d", vidpid[1]);
     }
 
-    /*
-        void ArduCAM::flush_fifo(void)
-        {
-            write_reg(ARDUCHIP_FIFO, FIFO_CLEAR_MASK);
-        }
-
-        void ArduCAM::start_capture(void)
-        {
-            write_reg(ARDUCHIP_FIFO, FIFO_START_MASK);
-        }
-
-        void ArduCAM::clear_fifo_flag(void )
-        {
-            write_reg(ARDUCHIP_FIFO, FIFO_CLEAR_MASK);
-        }    
-    */
-
-    status_t spi_write_command(void) {
-        DC_LOW(); // set D/C# pin low to indicate that sent bytes are commands (not data)
-        CS_LOW(); // select the display for SPI communication
-
-        int32_t response = spi_m_sync_transfer(&SPI_0, &xfer);
-        if (response != (int32_t)xfer.size) {
-            return ERROR_IO;
-        }
-
-        CS_HIGH(); // deselect the display for SPI communication
-        return SUCCESS;
+    
+    void ArduCAM::flush_fifo(void)
+    {
+        write_reg(ARDUCHIP_FIFO, FIFO_CLEAR_MASK);
     }
+
+    void ArduCAM::start_capture(void)
+    {
+        write_reg(ARDUCHIP_FIFO, FIFO_START_MASK);
+    }
+
+    void ArduCAM::clear_fifo_flag(void )
+    {
+        write_reg(ARDUCHIP_FIFO, FIFO_CLEAR_MASK);
+    }    
 
     watchdog_checkin(ARDUCAM_TASK);
 

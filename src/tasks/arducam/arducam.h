@@ -18,6 +18,8 @@
 #define FIFO_CLEAR_MASK    		0x01
 #define FIFO_START_MASK    		0x02
 
+#define ARDUCAM_SPI_BUFFER_CAPACITY 64
+
 struct sensor_reg {
 	uint8_t reg;
 	uint8_t val;
