@@ -9,10 +9,14 @@
 
 #define ARDUCAM_TASK_STACK_SIZE 256
 
-#define ARDUCAMAddress 0x60
+#define ARDUCAMAddress          0x60
 
-#define OV2640_CHIPID_HIGH 	0x0A
-#define OV2640_CHIPID_LOW 	0x0B
+#define OV2640_CHIPID_HIGH 	    0x0A
+#define OV2640_CHIPID_LOW 	    0x0B
+
+#define ARDUCHIP_FIFO           0x04
+#define FIFO_CLEAR_MASK    		0x01
+#define FIFO_START_MASK    		0x02
 
 struct sensor_reg {
 	uint8_t reg;

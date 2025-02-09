@@ -324,6 +324,23 @@ void init_arducam()
         info("pid: %d", vidpid[1]);
     }
 
+    /*
+        void ArduCAM::flush_fifo(void)
+        {
+            write_reg(ARDUCHIP_FIFO, FIFO_CLEAR_MASK);
+        }
+
+        void ArduCAM::start_capture(void)
+        {
+            write_reg(ARDUCHIP_FIFO, FIFO_START_MASK);
+        }
+
+        void ArduCAM::clear_fifo_flag(void )
+        {
+            write_reg(ARDUCHIP_FIFO, FIFO_CLEAR_MASK);
+        }    
+    */
+
     watchdog_checkin(ARDUCAM_TASK);
 
     return;
