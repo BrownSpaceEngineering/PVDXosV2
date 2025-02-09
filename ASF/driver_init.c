@@ -20,8 +20,6 @@ struct adc_sync_descriptor ADC_0;
 
 struct adc_sync_descriptor ADC_1;
 
-struct usart_sync_descriptor USART_0;
-
 struct i2c_m_sync_desc I2C_0;
 
 struct rand_sync_desc RAND_0;
@@ -62,33 +60,10 @@ void ADC_1_init(void)
 	adc_sync_init(&ADC_1, ADC1, (void *)NULL);
 }
 
-void USART_0_PORT_init(void)
-{
-
-	gpio_set_pin_function(PA04, PINMUX_PA04D_SERCOM0_PAD0);
-
-	gpio_set_pin_function(PA05, PINMUX_PA05D_SERCOM0_PAD1);
-}
-
-void USART_0_CLOCK_init(void)
-{
-	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM0_GCLK_ID_CORE, CONF_GCLK_SERCOM0_CORE_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
-	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM0_GCLK_ID_SLOW, CONF_GCLK_SERCOM0_SLOW_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
-
-	hri_mclk_set_APBAMASK_SERCOM0_bit(MCLK);
-}
-
-void USART_0_init(void)
-{
-	USART_0_CLOCK_init();
-	usart_sync_init(&USART_0, SERCOM0, (void *)NULL);
-	USART_0_PORT_init();
-}
-
 void I2C_0_PORT_init(void)
 {
 
-	gpio_set_pin_pull_mode(PA16,
+	gpio_set_pin_pull_mode(Shared_SDA,
 	                       // <y> Pull configuration
 	                       // <id> pad_pull_config
 	                       // <GPIO_PULL_OFF"> Off
@@ -96,9 +71,9 @@ void I2C_0_PORT_init(void)
 	                       // <GPIO_PULL_DOWN"> Pull-down
 	                       GPIO_PULL_OFF);
 
-	gpio_set_pin_function(PA16, PINMUX_PA16C_SERCOM1_PAD0);
+	gpio_set_pin_function(Shared_SDA, PINMUX_PA16C_SERCOM1_PAD0);
 
-	gpio_set_pin_pull_mode(PA17,
+	gpio_set_pin_pull_mode(Shared_SCL,
 	                       // <y> Pull configuration
 	                       // <id> pad_pull_config
 	                       // <GPIO_PULL_OFF"> Off
@@ -106,7 +81,7 @@ void I2C_0_PORT_init(void)
 	                       // <GPIO_PULL_DOWN"> Pull-down
 	                       GPIO_PULL_OFF);
 
-	gpio_set_pin_function(PA17, PINMUX_PA17C_SERCOM1_PAD1);
+	gpio_set_pin_function(Shared_SCL, PINMUX_PA17C_SERCOM1_PAD1);
 }
 
 void I2C_0_CLOCK_init(void)
@@ -127,7 +102,7 @@ void I2C_0_init(void)
 void SPI_0_PORT_init(void)
 {
 
-	gpio_set_pin_level(PC23,
+	gpio_set_pin_level(Shared_MOSI,
 	                   // <y> Initial level
 	                   // <id> pad_initial_level
 	                   // <false"> Low
@@ -135,11 +110,11 @@ void SPI_0_PORT_init(void)
 	                   false);
 
 	// Set pin direction to output
-	gpio_set_pin_direction(PC23, GPIO_DIRECTION_OUT);
+	gpio_set_pin_direction(Shared_MOSI, GPIO_DIRECTION_OUT);
 
-	gpio_set_pin_function(PC23, PINMUX_PC23D_SERCOM3_PAD0);
+	gpio_set_pin_function(Shared_MOSI, PINMUX_PC23D_SERCOM3_PAD0);
 
-	gpio_set_pin_level(PC22,
+	gpio_set_pin_level(Shared_SCK,
 	                   // <y> Initial level
 	                   // <id> pad_initial_level
 	                   // <false"> Low
@@ -147,14 +122,14 @@ void SPI_0_PORT_init(void)
 	                   false);
 
 	// Set pin direction to output
-	gpio_set_pin_direction(PC22, GPIO_DIRECTION_OUT);
+	gpio_set_pin_direction(Shared_SCK, GPIO_DIRECTION_OUT);
 
-	gpio_set_pin_function(PC22, PINMUX_PC22D_SERCOM3_PAD1);
+	gpio_set_pin_function(Shared_SCK, PINMUX_PC22D_SERCOM3_PAD1);
 
 	// Set pin direction to input
-	gpio_set_pin_direction(PA18, GPIO_DIRECTION_IN);
+	gpio_set_pin_direction(Shared_MISO, GPIO_DIRECTION_IN);
 
-	gpio_set_pin_pull_mode(PA18,
+	gpio_set_pin_pull_mode(Shared_MISO,
 	                       // <y> Pull configuration
 	                       // <id> pad_pull_config
 	                       // <GPIO_PULL_OFF"> Off
@@ -162,7 +137,7 @@ void SPI_0_PORT_init(void)
 	                       // <GPIO_PULL_DOWN"> Pull-down
 	                       GPIO_PULL_OFF);
 
-	gpio_set_pin_function(PA18, PINMUX_PA18D_SERCOM3_PAD2);
+	gpio_set_pin_function(Shared_MISO, PINMUX_PA18D_SERCOM3_PAD2);
 }
 
 void SPI_0_CLOCK_init(void)
@@ -295,11 +270,24 @@ void system_init(void)
 
 	gpio_set_pin_function(LED_Orange2, GPIO_PIN_FUNCTION_OFF);
 
+	// GPIO on PD21
+
+	// Set pin direction to input
+	gpio_set_pin_direction(Magnetometer_DRDY, GPIO_DIRECTION_IN);
+
+	gpio_set_pin_pull_mode(Magnetometer_DRDY,
+	                       // <y> Pull configuration
+	                       // <id> pad_pull_config
+	                       // <GPIO_PULL_OFF"> Off
+	                       // <GPIO_PULL_UP"> Pull-up
+	                       // <GPIO_PULL_DOWN"> Pull-down
+	                       GPIO_PULL_DOWN);
+
+	gpio_set_pin_function(Magnetometer_DRDY, GPIO_PIN_FUNCTION_OFF);
+
 	ADC_0_init();
 
 	ADC_1_init();
-
-	USART_0_init();
 
 	I2C_0_init();
 
