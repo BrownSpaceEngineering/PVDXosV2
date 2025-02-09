@@ -25,10 +25,9 @@ extern "C" {
 
 #include <hal_adc_sync.h>
 
-#include <hal_usart_sync.h>
-#include <hal_spi_m_sync.h>
-
 #include <hal_i2c_m_sync.h>
+#include <hal_spi_m_sync.h>
+#include <hal_spi_m_sync.h>
 
 #include <hal_delay.h>
 
@@ -40,10 +39,9 @@ extern struct adc_sync_descriptor ADC_0;
 
 extern struct adc_sync_descriptor ADC_1;
 
-extern struct usart_sync_descriptor USART_0;
+extern struct i2c_m_sync_desc       I2C_0;
+extern struct spi_m_sync_descriptor SPI_1;
 extern struct spi_m_sync_descriptor SPI_0;
-
-extern struct i2c_m_sync_desc I2C_0;
 
 extern struct rand_sync_desc RAND_0;
 
@@ -57,17 +55,17 @@ void ADC_1_PORT_init(void);
 void ADC_1_CLOCK_init(void);
 void ADC_1_init(void);
 
-void USART_0_PORT_init(void);
-void USART_0_CLOCK_init(void);
-void USART_0_init(void);
+void I2C_0_CLOCK_init(void);
+void I2C_0_init(void);
+void I2C_0_PORT_init(void);
+
+void SPI_1_PORT_init(void);
+void SPI_1_CLOCK_init(void);
+void SPI_1_init(void);
 
 void SPI_0_PORT_init(void);
 void SPI_0_CLOCK_init(void);
 void SPI_0_init(void);
-
-void I2C_0_CLOCK_init(void);
-void I2C_0_init(void);
-void I2C_0_PORT_init(void);
 
 void delay_driver_init(void);
 

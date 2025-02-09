@@ -38,16 +38,28 @@ void ADC_1_example(void)
 	}
 }
 
+void I2C_0_example(void)
+{
+	struct io_descriptor *I2C_0_io;
+
+	i2c_m_sync_get_io_descriptor(&I2C_0, &I2C_0_io);
+	i2c_m_sync_enable(&I2C_0);
+	i2c_m_sync_set_slaveaddr(&I2C_0, 0x12, I2C_M_SEVEN);
+	io_write(I2C_0_io, (uint8_t *)"Hello World!", 12);
+}
+
 /**
- * Example of using USART_0 to write "Hello World" using the IO abstraction.
+ * Example of using SPI_1 to write "Hello World" using the IO abstraction.
  */
-void USART_0_example(void)
+static uint8_t example_SPI_1[12] = "Hello World!";
+
+void SPI_1_example(void)
 {
 	struct io_descriptor *io;
-	usart_sync_get_io_descriptor(&USART_0, &io);
-	usart_sync_enable(&USART_0);
+	spi_m_sync_get_io_descriptor(&SPI_1, &io);
 
-	io_write(io, (uint8_t *)"Hello World!", 12);
+	spi_m_sync_enable(&SPI_1);
+	io_write(io, example_SPI_1, 12);
 }
 
 /**
@@ -62,16 +74,6 @@ void SPI_0_example(void)
 
 	spi_m_sync_enable(&SPI_0);
 	io_write(io, example_SPI_0, 12);
-}
-
-void I2C_0_example(void)
-{
-	struct io_descriptor *I2C_0_io;
-
-	i2c_m_sync_get_io_descriptor(&I2C_0, &I2C_0_io);
-	i2c_m_sync_enable(&I2C_0);
-	i2c_m_sync_set_slaveaddr(&I2C_0, 0x12, I2C_M_SEVEN);
-	io_write(I2C_0_io, (uint8_t *)"Hello World!", 12);
 }
 
 void delay_example(void)

@@ -27,19 +27,20 @@
 #define GPIO_PIN_FUNCTION_M 12
 #define GPIO_PIN_FUNCTION_N 13
 
-#define PA04 GPIO(GPIO_PORTA, 4)
-#define PA05 GPIO(GPIO_PORTA, 5)
-#define PA18 GPIO(GPIO_PORTA, 18)
+#define Camera_SCK GPIO(GPIO_PORTA, 8)
+#define Camera_MOSI GPIO(GPIO_PORTA, 9)
+#define Camera_MISO GPIO(GPIO_PORTA, 10)
+#define Shared_SDA GPIO(GPIO_PORTA, 16)
+#define Shared_SCL GPIO(GPIO_PORTA, 17)
+#define Display_MISO_unused GPIO(GPIO_PORTA, 18)
 #define LED_Red GPIO(GPIO_PORTB, 1)
 #define Display_RST GPIO(GPIO_PORTB, 12)
 #define Display_DC GPIO(GPIO_PORTB, 13)
 #define Display_CS GPIO(GPIO_PORTB, 20)
-#define PC22 GPIO(GPIO_PORTC, 22)
-#define PC23 GPIO(GPIO_PORTC, 23)
+#define Display_SCK GPIO(GPIO_PORTC, 22)
+#define Display_MOSI GPIO(GPIO_PORTC, 23)
 #define LED_Orange1 GPIO(GPIO_PORTC, 30)
 #define LED_Orange2 GPIO(GPIO_PORTC, 31)
-#define PD08 GPIO(GPIO_PORTD, 8)
-#define PD09 GPIO(GPIO_PORTD, 9)
-#define DRDY_PIN GPIO(GPIO_PORTD, 21)
+#define Magnetometer_DRDY GPIO(GPIO_PORTD, 21)
 
 #endif // ATMEL_START_PINS_H_INCLUDED
