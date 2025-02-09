@@ -341,6 +341,19 @@ void init_arducam()
         }    
     */
 
+    status_t spi_write_command(void) {
+        DC_LOW(); // set D/C# pin low to indicate that sent bytes are commands (not data)
+        CS_LOW(); // select the display for SPI communication
+
+        int32_t response = spi_m_sync_transfer(&SPI_0, &xfer);
+        if (response != (int32_t)xfer.size) {
+            return ERROR_IO;
+        }
+
+        CS_HIGH(); // deselect the display for SPI communication
+        return SUCCESS;
+    }
+
     watchdog_checkin(ARDUCAM_TASK);
 
     return;
