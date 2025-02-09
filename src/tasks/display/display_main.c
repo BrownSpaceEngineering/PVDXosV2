@@ -24,7 +24,6 @@ void main_display(void *pvParameters) {
     // Initialize the display
     init_display();
 
-    // TODO: Receive commands from the command dispatcher task to update the display
     while (true) {
         debug_impl("\n---------- Display Task Loop ----------\n");
 

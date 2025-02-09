@@ -1122,6 +1122,50 @@ drivers:
         configuration:
           core_gclk_selection: Generic clock generator 0
           slow_gclk_selection: Generic clock generator 3
+  SPI_1:
+    user_label: SPI_1
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::SERCOM2::driver_config_definition::SPI.Master::HAL:Driver:SPI.Master.Sync
+    functionality: SPI
+    api: HAL:Driver:SPI_Master_Sync
+    configuration:
+      spi_master_advanced: false
+      spi_master_arch_cpha: Sample input on leading edge
+      spi_master_arch_cpol: SCK is low when idle
+      spi_master_arch_dbgstop: Keep running
+      spi_master_arch_dord: MSB first
+      spi_master_arch_ibon: In data stream
+      spi_master_arch_runstdby: false
+      spi_master_baud_rate: 6000000
+      spi_master_character_size: 8 bits
+      spi_master_dummybyte: 511
+      spi_master_rx_enable: true
+    optional_signals: []
+    variant:
+      specification: TXPO=0, RXPO=2
+      required_signals:
+      - name: SERCOM2/PAD/0
+        pad: PA09
+        label: MOSI
+      - name: SERCOM2/PAD/1
+        pad: PA08
+        label: SCK
+      - name: SERCOM2/PAD/2
+        pad: PA10
+        label: MISO
+    clocks:
+      domain_group:
+        nodes:
+        - name: Core
+          input: Generic clock generator 0
+          external: false
+          external_frequency: 0
+        - name: Slow
+          input: Generic clock generator 3
+          external: false
+          external_frequency: 0
+        configuration:
+          core_gclk_selection: Generic clock generator 0
+          slow_gclk_selection: Generic clock generator 3
   SPI_0:
     user_label: SPI_0
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::SERCOM3::driver_config_definition::SPI.Master::HAL:Driver:SPI.Master.Sync
@@ -1203,6 +1247,24 @@ drivers:
     clocks:
       domain_group: null
 pads:
+  Camera_SCK:
+    name: PA08
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA08
+    mode: Digital output
+    user_label: Camera_SCK
+    configuration: null
+  Camera_MOSI:
+    name: PA09
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA09
+    mode: Digital output
+    user_label: Camera_MOSI
+    configuration: null
+  Camera_MISO:
+    name: PA10
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA10
+    mode: Digital input
+    user_label: Camera_MISO
+    configuration: null
   Display_RST:
     name: PB12
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB12
@@ -1228,23 +1290,23 @@ pads:
     user_label: Shared_SCL
     configuration:
       pad_pull_config: 'Off'
-  Shared_MISO:
+  Display_MISO_unused:
     name: PA18
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA18
     mode: Digital input
-    user_label: Shared_MISO
+    user_label: Display_MISO_unused
     configuration: null
-  Shared_SCK:
+  Display_SCK:
     name: PC22
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC22
     mode: Digital output
-    user_label: Shared_SCK
+    user_label: Display_SCK
     configuration: null
-  Shared_MOSI:
+  Display_MOSI:
     name: PC23
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC23
     mode: Digital output
-    user_label: Shared_MOSI
+    user_label: Display_MOSI
     configuration: null
   Magnetometer_DRDY:
     name: PD21
