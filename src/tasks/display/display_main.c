@@ -21,22 +21,52 @@ void main_display(void *pvParameters) {
     pvdx_task_t *const current_task = get_task(xTaskGetCurrentTaskHandle());
     // Cache the watchdog checkin command to avoid creating it every iteration
     command_t cmd_checkin = get_watchdog_checkin_command(current_task);
+    // Calculate the maximum time the command dispatcher should block (and thus be unable to check in with the watchdog)
+    const TickType_t queue_block_time_ticks = get_command_queue_block_time_ticks(current_task);
+    // Varible to hold commands popped off the queue
+    command_t cmd;
     // Initialize the display
     init_display();
 
     while (true) {
         debug_impl("\n---------- Display Task Loop ----------\n");
 
-        // Set the display buffer to the first image
-        display_image(IMAGE_BUFFER_PVDX);
-        vTaskDelay(pdMS_TO_TICKS(500));
+        // Execute all commands contained in the queue
+        if (xQueueReceive(display_command_queue_handle, &cmd, queue_block_time_ticks) == pdPASS) {
+            do {
+                debug("display: Command popped off queue. Target: %d, Operation: %d\n", cmd.target, cmd.operation);
+                exec_command_display(&cmd);
+            } while (xQueueReceive(display_command_queue_handle, &cmd, 0) == pdPASS);
+        }
+        debug("display: No more commands queued.\n");
 
-        // Set the display buffer to the second image
-        display_image(IMAGE_BUFFER_BROWNLOGO);
-        vTaskDelay(pdMS_TO_TICKS(500));
+        // Set the display buffer to the first image
+        status_t result = SUCCESS; // TODO: Don't initialize result to SUCCESS and block until it is set by the display_image command
+
+        {
+            // TODO: Add logic for blocking on the result of the display_image command
+            command_t display_image_command = get_display_image_command(IMAGE_BUFFER_PVDX, &result);
+            enqueue_command(&display_image_command);
+        }
+        
+        if (result != SUCCESS) {
+            warning("display: Failed to display image. Error code: %d\n", result);
+        }
+        
+        {
+            // Set the display buffer to the second image
+            // TODO: Add logic for blocking on the result of the display_image command
+            command_t display_image_command = get_display_image_command(IMAGE_BUFFER_BROWNLOGO, &result);
+            enqueue_command(&display_image_command);
+        }
+
+        if (result != SUCCESS) {
+            warning("display: Failed to display image. Error code: %d\n", result);
+        }
 
         // Check in with the watchdog task
         enqueue_command(&cmd_checkin);
         debug("display: Enqueued watchdog checkin command\n");
+        vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }

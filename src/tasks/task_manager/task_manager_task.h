@@ -30,12 +30,12 @@ extern QueueHandle_t task_manager_command_queue_handle;
 extern SemaphoreHandle_t task_list_mutex;
 extern StaticSemaphore_t task_list_mutex_buffer;
 
-void init_task(size_t i);
+void init_task(const size_t i);
 void init_task_manager(void);
 void main_task_manager(void *pvParameters);
-void exec_command_task_manager(const command_t *p_cmd);
+void exec_command_task_manager(command_t *const p_cmd);
 void task_manager_init_subtasks(void);
-void task_manager_enable_task(pvdx_task_t* task);
-void task_manager_disable_task(pvdx_task_t* task);
+void task_manager_enable_task(pvdx_task_t *const task);
+void task_manager_disable_task(pvdx_task_t *const task);
 
 #endif // TASK_MANAGER_TASK_H

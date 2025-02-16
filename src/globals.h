@@ -60,22 +60,20 @@ typedef enum {
     TASK_9AXIS
 } task_t;
 
-// An enum to represent the different operations that the command dispatcher can perform
+// An enum to represent the different operations that tasks can perform (contained within a command_t)
 // NOTE: The same operation can have different meanings depending on the target task
 typedef enum {
     // General operations (can be overloaded by any task)
-    OPERATION_SET_BUFFER = 0,
-    OPERATION_UPDATE,
-    OPERATION_POWER_OFF,
+    OPERATION_POWER_OFF = 0,
     // Watchdog specific operations
-    OPERATION_CHECKIN,
-    // Shell-specific operations
-    OPERATION_SET_LOG_LEVEL,
+    OPERATION_CHECKIN,                  // p_data: TaskHandle_t *handle
     // Task-Manager specific operations
-    OPERATION_INIT_SUBTASKS,
-    // Anything beyond this point is a high-priority operation
-    OPERATION_ENABLE_SUBTASK,
-    OPERATION_DISABLE_SUBTASK
+    OPERATION_INIT_SUBTASKS,            // p_data: NULL
+    OPERATION_ENABLE_SUBTASK,           // p_data: TaskHandle_t *handle
+    OPERATION_DISABLE_SUBTASK,          // p_data: TaskHandle_t *handle
+    // Display specific operations
+    OPERATION_DISPLAY_IMAGE,            // p_data: const color_t *p_buffer
+    OPERATION_CLEAR_IMAGE               // p_data: NULL
 } operation_t;
 
 // An enum to represent the different log levels that functions can use
@@ -90,10 +88,10 @@ typedef enum {
 
 // A struct to represent a command that OS tasks can execute
 typedef struct {
-    task_t target;                        // The target task for the command
-    operation_t operation;                // The operation to perform
-    void *p_data;                         // Pointer to data needed for the operation
-    size_t len;                           // Length of the data
+    const task_t target;                  // The target task for the command
+    const operation_t operation;          // The operation to perform
+    const void *const p_data;             // Pointer to data needed for the operation
+    const size_t len;                     // Length of the data
     status_t *p_result;                   // Pointer to the result of the operation
     void (*callback)(status_t* p_result); // Callback function to call after the operation is complete
 } command_t;

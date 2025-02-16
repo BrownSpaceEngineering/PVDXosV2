@@ -23,7 +23,7 @@ void task_manager_init_subtasks(void) {
 }
 
 // Enables a task so that it can be run by the RTOS scheduler. Automatically registers the task with the watchdog.
-void task_manager_enable_task(pvdx_task_t* task) {
+void task_manager_enable_task(pvdx_task_t *const task) {
     lock_mutex(task_list_mutex);
 
     // If given an unintialized task, something went wrong
@@ -47,7 +47,7 @@ void task_manager_enable_task(pvdx_task_t* task) {
 }
 
 // Disables a task so that it can not be run by the RTOS scheduler. Automatically unregisters the task with the watchdog.
-void task_manager_disable_task(pvdx_task_t* task) {
+void task_manager_disable_task(pvdx_task_t *const task) {
     lock_mutex(task_list_mutex);
 
     // If given an unintialized task, something went wrong
@@ -82,7 +82,7 @@ void init_task_manager(void) {
 }
 
 // Initializes the task at index i in the task list
-void init_task(size_t i) {
+void init_task(const size_t i) {
     lock_mutex(task_list_mutex);
 
     task_list[i].handle = xTaskCreateStatic(
@@ -115,19 +115,20 @@ void init_task(size_t i) {
     unlock_mutex(task_list_mutex);
 }
 
-void exec_command_task_manager(const command_t *p_cmd) {
+void exec_command_task_manager(command_t *const p_cmd) {
     if (p_cmd->target != TASK_MANAGER) {
         fatal("task manager: command target is not task manager! target: %d operation: %d\n", p_cmd->target, p_cmd->operation);
     }
+
     switch (p_cmd->operation) {
         case OPERATION_INIT_SUBTASKS:
             task_manager_init_subtasks();
             break;
         case OPERATION_ENABLE_SUBTASK:
-            task_manager_enable_task(get_task((TaskHandle_t)p_cmd->p_data)); // Turn this into an index
+            task_manager_enable_task(get_task(*(TaskHandle_t*)p_cmd->p_data)); // Turn this into an index
             break;
         case OPERATION_DISABLE_SUBTASK:
-            task_manager_disable_task(get_task((TaskHandle_t)p_cmd->p_data)); // Turn this into an index
+            task_manager_disable_task(get_task(*(TaskHandle_t*)p_cmd->p_data)); // Turn this into an index
             break;
         default:
             fatal("task-manager: Invalid operation!\n");

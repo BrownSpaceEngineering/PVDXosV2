@@ -13,7 +13,7 @@
 /* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
 
 // Updates the last checkin time of the given task to prove that it is still running
-void watchdog_checkin(TaskHandle_t handle) {
+void watchdog_checkin(const TaskHandle_t handle) {
     lock_mutex(task_list_mutex);
 
     pvdx_task_t *task = get_task(handle);
@@ -121,7 +121,7 @@ void kick_watchdog(void) {
 }
 
 // Given a pointer to a `pvdx_task_t` struct, returns a command to check-in with the watchdog task.
-command_t get_watchdog_checkin_command(pvdx_task_t *task) {
+command_t get_watchdog_checkin_command(pvdx_task_t *const task) {
     // NOTE: Be sure to use the address of the task handle within the global task list (static lifetime) to ensure
     // that `*p_data` is still valid when the command is received.
     command_t cmd = {TASK_WATCHDOG, OPERATION_CHECKIN, &task->handle, sizeof(TaskHandle_t*), NULL, NULL};
@@ -130,7 +130,7 @@ command_t get_watchdog_checkin_command(pvdx_task_t *task) {
 
 // Registers a task with the watchdog so that checkins are monitored.
 // WARNING: This function is not thread-safe and should only be called from within a critical section
-void register_task_with_watchdog(TaskHandle_t handle) {
+void register_task_with_watchdog(const TaskHandle_t handle) {
     if (handle == NULL) {
         fatal("Tried to register a NULL task handle with watchdog\n");
     }
@@ -153,7 +153,7 @@ void register_task_with_watchdog(TaskHandle_t handle) {
 
 // Unregisters a task with the watchdog so that checkins are no longer monitored.
 // WARNING: This function is not thread-safe and should only be called from within a critical section
-void unregister_task_with_watchdog(TaskHandle_t handle) {
+void unregister_task_with_watchdog(const TaskHandle_t handle) {
     if (handle == NULL) {
         fatal("Tried to unregister a NULL task handle with watchdog\n");
     }
@@ -174,7 +174,7 @@ void unregister_task_with_watchdog(TaskHandle_t handle) {
 }
 
 // Executes a command received by the watchdog task
-void exec_command_watchdog(const command_t *p_cmd) {
+void exec_command_watchdog(command_t *const p_cmd) {
     if (p_cmd->target != TASK_WATCHDOG) {
         fatal("watchdog: command target is not watchdog! target: %d operation: %d\n", p_cmd->target, p_cmd->operation);
     }

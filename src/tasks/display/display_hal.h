@@ -64,7 +64,7 @@
 #define SSD1362_DESELECT_VOLTAGE_RATIO 0x07  // TODO: what is this
 
 // Data types
-typedef uint16_t point_t;// 16 bits per coordinate (larger than 8-bit for overflow checking)
+typedef uint16_t point_t; // 16 bits per coordinate (larger than 8-bit for overflow checking)
 typedef uint8_t color_t;  // 4 bits per pixel (16 greyscale levels)
 
 // Variables

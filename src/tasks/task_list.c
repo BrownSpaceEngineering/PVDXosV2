@@ -46,7 +46,7 @@ pvdx_task_t task_list[] = {
 // Returns the pvdx_task_t struct associated with a FreeRTOS task handle.
 // WARNING: This function is not thread-safe and should only be called from within a critical section
 // if accessing mutable fields of task structs.
-pvdx_task_t* get_task(TaskHandle_t handle) {
+pvdx_task_t *get_task(TaskHandle_t handle) {
     pvdx_task_t* p_task = task_list;
 
     while (p_task->name != NULL) {
@@ -62,6 +62,6 @@ pvdx_task_t* get_task(TaskHandle_t handle) {
 
 // Given a pointer to a `pvdx_task_t` struct, returns the maximum block time in ticks when attempting to dequeue
 // a command from the task's command queue.
-TickType_t get_command_queue_block_time_ticks(pvdx_task_t *task) {
+TickType_t get_command_queue_block_time_ticks(pvdx_task_t *const task) {
     return pdMS_TO_TICKS(task->watchdog_timeout_ms / 2);
 }

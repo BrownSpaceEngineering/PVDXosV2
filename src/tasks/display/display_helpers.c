@@ -34,7 +34,8 @@ color_t display_buffer[(SSD1362_WIDTH / 2) * SSD1362_HEIGHT] = {0x00};
 /* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
 
 // Overwrites the display buffer with the inputted bytes and triggers an update of the display
-status_t display_image(const color_t* p_buffer) {
+status_t display_image(const color_t *const p_buffer) {
+    debug("display: Displaying new image\n");
     status_t status;
 
     display_set_buffer(p_buffer);
@@ -45,6 +46,7 @@ status_t display_image(const color_t* p_buffer) {
 
 // Clears the display buffer and triggers an update of the display
 status_t clear_image(void) {
+    debug("display: Clearing currently displayed image\n");
     status_t status;
 
     display_clear_buffer();
@@ -108,7 +110,7 @@ status_t display_set_buffer_pixel(point_t x, point_t y, color_t color) {
 }
 
 // Set the entire display buffer to the contents of the input buffer. To actually update the display, call display_update()
-void display_set_buffer(const color_t* p_buffer) {
+void display_set_buffer(const color_t *const p_buffer) {
     for (uint16_t i = 0; i < (SSD1362_WIDTH / 2) * SSD1362_HEIGHT; i++) {
         display_buffer[i] = p_buffer[i];
     }
@@ -272,4 +274,29 @@ status_t init_display(void) {
     // Clear the display buffer
     if ((status = clear_image()) != SUCCESS) return status;
     return SUCCESS;
+}
+
+command_t get_display_image_command(const color_t *const p_buffer, status_t *const p_result) {
+    // NOTE: Be sure to use a pointer to a static lifetime variable to ensure
+    // that `*p_data` is still valid when the command is received.
+    command_t cmd = {TASK_DISPLAY, OPERATION_DISPLAY_IMAGE, p_buffer, sizeof(color_t*), p_result, NULL};
+    return cmd;
+}
+
+void exec_command_display(command_t *const p_cmd) {
+    if (p_cmd->target != TASK_DISPLAY) {
+        fatal("display: command target is not display! target: %d operation: %d\n", p_cmd->target, p_cmd->operation);
+    }
+
+    switch (p_cmd->operation) {
+        case OPERATION_DISPLAY_IMAGE:
+            *p_cmd->p_result = display_image((const color_t*)p_cmd->p_data);
+            break;
+        case OPERATION_CLEAR_IMAGE:
+            *p_cmd->p_result = clear_image();
+            break;
+        default:
+            fatal("display: Invalid operation! target: %d operation: %d\n", p_cmd->target, p_cmd->operation);
+            break;
+    }
 }

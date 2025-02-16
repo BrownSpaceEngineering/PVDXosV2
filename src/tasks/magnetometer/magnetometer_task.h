@@ -30,7 +30,7 @@ extern uint8_t magnetometer_command_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * CO
 // Queue for commands to be executed by the magnetometer task
 extern QueueHandle_t magnetometer_command_queue_handle;
 
-void exec_command_magnetometer(const command_t *p_cmd);
+void exec_command_magnetometer(command_t *const p_cmd);
 void main_magnetometer(void *pvParameters);
 
 #endif // MAGNETOMETER_TASK_H
