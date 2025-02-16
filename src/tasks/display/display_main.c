@@ -28,17 +28,11 @@ void main_display(void *pvParameters) {
         debug_impl("\n---------- Display Task Loop ----------\n");
 
         // Set the display buffer to the first image
-        display_set_buffer(IMAGE_BUFFER_PVDX);
-        debug("display: First buffer set\n");
-        display_update();
-        debug("display: First image completed\n");
+        display_image(IMAGE_BUFFER_PVDX);
         vTaskDelay(pdMS_TO_TICKS(500));
 
         // Set the display buffer to the second image
-        display_set_buffer(IMAGE_BUFFER_BROWNLOGO);
-        debug("display: Second image buffer set\n");
-        display_update();
-        debug("display: Second image completed\n");
+        display_image(IMAGE_BUFFER_BROWNLOGO);
         vTaskDelay(pdMS_TO_TICKS(500));
 
         // Check in with the watchdog task

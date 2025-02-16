@@ -4,7 +4,7 @@
  * Driver for the SSD1362 OLED controller within a Midas Displays MDOB256064D1Y-YS display.
  * 
  * Created: February 29, 2024
- * Authors: Tanish Makadia, Ignacio Blancas Rodriguez
+ * Authors: Tanish Makadia, Ignacio Blancas Rodriguez, Aidan Wang
  */
 
 #include "display_task.h"
@@ -33,29 +33,57 @@ color_t display_buffer[(SSD1362_WIDTH / 2) * SSD1362_HEIGHT] = {0x00};
 
 /* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
 
-// Trigger a complete reset of the display
-void display_reset(void) {
-    RST_HIGH();
-    vTaskDelay(pdMS_TO_TICKS(RESET_WAIT_INTERVAL));
-    RST_LOW();
-    vTaskDelay(pdMS_TO_TICKS(RESET_WAIT_INTERVAL));
-    RST_HIGH();
-    vTaskDelay(pdMS_TO_TICKS(RESET_WAIT_INTERVAL));
+// Overwrites the display buffer with the inputted bytes and triggers an update of the display
+status_t display_image(const color_t* p_buffer) {
+    status_t status;
+
+    display_set_buffer(p_buffer);
+    if ((status = display_update()) != SUCCESS) return status;
+
+    return SUCCESS;
+}
+
+// Clears the display buffer and triggers an update of the display
+status_t clear_image(void) {
+    status_t status;
+
+    display_clear_buffer();
+    if ((status = display_update()) != SUCCESS) return status;
+
+    return SUCCESS;
+}
+
+/* ---------- NON-DISPATCHABLE FUNCTIONS (do not go through the command dispatcher) ---------- */
+
+// Write the contents of spi_tx_buffer to the display
+status_t spi_transfer(void) {
+    DC_LOW(); // set D/C# pin low to indicate that sent bytes are commands (not data)
+    CS_LOW(); // select the display for SPI communication
+
+    int32_t response = spi_m_sync_transfer(&SPI_0, &xfer);
+    if (response != (int32_t)xfer.size) {
+        return ERROR_IO;
+    }
+
+    CS_HIGH(); // deselect the display for SPI communication
+    return SUCCESS;
 }
 
 // Set the display window to cover the entire screen
 status_t display_set_window() {
+    status_t status;
+
     xfer.size = 3;
     spi_tx_buffer[0] = SSD1362_CMD_3B_SETCOLUMN;
     spi_tx_buffer[1] = SSD_1362_COL_START;
     spi_tx_buffer[2] = SSD_1362_COL_END;
-    spi_write_command();
+    if ((status = spi_transfer()) != SUCCESS) return status;
 
     xfer.size = 3;
     spi_tx_buffer[0] = SSD1362_CMD_3B_SETROW;
     spi_tx_buffer[1] = SSD_1362_ROW_START;
     spi_tx_buffer[2] = SSD_1362_ROW_END;
-    spi_write_command();
+    if ((status = spi_transfer()) != SUCCESS) return status;
 
     return SUCCESS;
 }
@@ -80,27 +108,25 @@ status_t display_set_buffer_pixel(point_t x, point_t y, color_t color) {
 }
 
 // Set the entire display buffer to the contents of the input buffer. To actually update the display, call display_update()
-status_t display_set_buffer(const color_t* p_buffer) {
+void display_set_buffer(const color_t* p_buffer) {
     for (uint16_t i = 0; i < (SSD1362_WIDTH / 2) * SSD1362_HEIGHT; i++) {
         display_buffer[i] = p_buffer[i];
     }
-
-    return SUCCESS;
 }
 
 // Clear the display buffer. To actually update the display, call display_update()
-status_t display_clear_buffer(void) {
+void display_clear_buffer(void) {
     for (uint16_t i = 0; i < (SSD1362_WIDTH / 2) * SSD1362_HEIGHT; i++) {
         display_buffer[i] = 0x00;
     }
-
-    return SUCCESS;
 }
 
 // Update the display with the contents of the display buffer
 status_t display_update(void) {
+    status_t status;
+
     // set the display window to the entire display
-    display_set_window();
+    if ((status = display_set_window()) != SUCCESS) return status;
 
     // write the display buffer to the display
     xfer.size = (SSD1362_WIDTH / 2) * SSD1362_HEIGHT;
@@ -109,42 +135,8 @@ status_t display_update(void) {
         spi_tx_buffer[i] = display_buffer[i];
     }
 
-    spi_write_data();
-    return SUCCESS;
-}
+    if ((status = spi_transfer()) != SUCCESS) return status;
 
-/* ---------- NON-DISPATCHABLE FUNCTIONS (do not go through the command dispatcher) ---------- */
-
-// Write the contents of spi_tx_buffer to the display as a command
-status_t spi_write_command(void) {
-    DC_LOW(); // set D/C# pin low to indicate that sent bytes are commands (not data)
-    CS_LOW(); // select the display for SPI communication
-
-    int32_t response = spi_m_sync_transfer(&SPI_0, &xfer);
-    if (response != (int32_t)xfer.size) {
-        return ERROR_IO;
-    }
-
-    CS_HIGH(); // deselect the display for SPI communication
-    return SUCCESS;
-}
-
-// Write the contents of spi_tx_buffer to the display as data
-status_t spi_write_data(void) {
-    DC_HIGH(); // set D/C# pin high to indicate that sent bytes are data (not commands)
-    CS_LOW();  // select the display for SPI communication
-
-    TickType_t start = xTaskGetTickCount();
-    int32_t response = spi_m_sync_transfer(&SPI_0, &xfer);
-    if (response != (int32_t)xfer.size) {
-        return ERROR_IO;
-    }
-    TickType_t end = xTaskGetTickCount();
-    TickType_t duration = end - start;
-    int duration_ms = duration * portTICK_RATE_MS;
-    debug("display: Duration to send data to display buffer: %d ms\n", duration_ms);
-
-    CS_HIGH(); // deselect the display for SPI communication
     return SUCCESS;
 }
 
@@ -159,119 +151,125 @@ status_t init_display(void) {
 
     spi_m_sync_enable(&SPI_0); // if you forget this line, this function returns -20
 
-    display_reset(); // setting reset pin low triggers a reset of the display
+    // Reset the display by setting RST to low (it should be high during normal operation)
+    RST_HIGH();
+    vTaskDelay(pdMS_TO_TICKS(RESET_WAIT_INTERVAL));
+    RST_LOW();
+    vTaskDelay(pdMS_TO_TICKS(RESET_WAIT_INTERVAL));
+    RST_HIGH();
+    vTaskDelay(pdMS_TO_TICKS(RESET_WAIT_INTERVAL));
 
     // Unlock command lock (just in case)
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_COMMANDLOCK;
     spi_tx_buffer[1] = SSD_1362_ARG_COMMANDLOCK_UNLOCK;
-    spi_write_command();
+
+    status_t status;
+    if ((status = spi_transfer()) != SUCCESS) return status;
 
     // Put display to sleep
     xfer.size = 1;
     spi_tx_buffer[0] = SSD1362_CMD_1B_DISPLAYOFF;
-    spi_write_command();
+    if ((status = spi_transfer()) != SUCCESS) return status;
 
     // Set active display window to the entire display
-    display_set_window();
+    if ((status = display_set_window() != SUCCESS)) return status;
 
     // Set contrast
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_CONTRASTMASTER;
     spi_tx_buffer[1] = SSD1362_CONTRAST_STEP;
-    spi_write_command();
+    if ((status = spi_transfer()) != SUCCESS) return status;
 
     // Set remap
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_SETREMAP;
     spi_tx_buffer[1] = SSD1362_REMAP_VALUE;
-    spi_write_command();
+    if ((status = spi_transfer()) != SUCCESS) return status;
 
     // Set display start line
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_STARTLINE;
     spi_tx_buffer[1] = 0x00;
-    spi_write_command();
+    if ((status = spi_transfer()) != SUCCESS) return status;
 
     // Set display offset
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_DISPLAYOFFSET;
     spi_tx_buffer[1] = 0x00;
-    spi_write_command();
+    if ((status = spi_transfer()) != SUCCESS) return status;
 
     // Set display mode
     xfer.size = 1;
     spi_tx_buffer[0] = SSD1362_CMD_1B_NORMALDISPLAY;
     // spi_tx_buffer[0] = SSD1362_CMD_ALLPIXELON; // sets all pixels to max brightness (use for debugging)
-    spi_write_command();
+    if ((status = spi_transfer()) != SUCCESS) return status;
 
     // Set multiplex ratio
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_MULTIPLEX_RATIO;
     spi_tx_buffer[1] = SSD1362_MUX_RATIO;
-    spi_write_command();
+    if ((status = spi_transfer()) != SUCCESS) return status;
 
     // Set VDD
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_SET_VDD;
     spi_tx_buffer[1] = SSD_1362_ARG_VDD_ON;
-    spi_write_command();
+    if ((status = spi_transfer()) != SUCCESS) return status;
 
     // Set IREF
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_IREF_SELECTION;
     spi_tx_buffer[1] = SSD_1362_ARG_IREF_INTERNAL;
-    spi_write_command();
+    if ((status = spi_transfer()) != SUCCESS) return status;
 
     // Set phase length
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_PHASE_LENGTH;
     spi_tx_buffer[1] = SSD_1362_PHASE_1_2_LENGTHS;
-    spi_write_command();
+    if ((status = spi_transfer()) != SUCCESS) return status;
 
     // Set display clock divider
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_CLOCKDIV;
     spi_tx_buffer[1] = SSD1362_CLOCK_DIVIDER_VALUE;
-    spi_write_command();
+    if ((status = spi_transfer()) != SUCCESS) return status;
 
     // Set pre-charge 2 period
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_PRECHARGE2;
     spi_tx_buffer[1] = SSD1362_PRECHARGE_2_TIME;
-    spi_write_command();
+    if ((status = spi_transfer()) != SUCCESS) return status;
 
     // Set linear LUT
     xfer.size = 1;
     spi_tx_buffer[0] = SSD1362_CMD_1B_USELINEARLUT;
-    spi_write_command();
+    if ((status = spi_transfer()) != SUCCESS) return status;
 
     // Set pre-charge voltage level to 0.5 * Vcc
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_PRECHARGELEVEL;
     spi_tx_buffer[1] = SSD1362_PRECHARGE_VOLTAGE_RATIO;
-    spi_write_command();
+    if ((status = spi_transfer()) != SUCCESS) return status;
 
     // Set pre-charge capacitor
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_PRECHARGE_CAPACITOR;
     spi_tx_buffer[1] = SSD1362_PRECHARGE_CAPACITOR;
-    spi_write_command();
+    if ((status = spi_transfer()) != SUCCESS) return status;
 
     // Set COM deselect voltage
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_COM_DESELECT_VOLTAGE;
     spi_tx_buffer[1] = SSD1362_DESELECT_VOLTAGE_RATIO;
-    spi_write_command();
+    if ((status = spi_transfer()) != SUCCESS) return status;
 
     // Turn the display on!
     xfer.size = 1;
     spi_tx_buffer[0] = SSD1362_CMD_1B_DISPLAYON;
-    spi_write_command();
+    if ((status = spi_transfer()) != SUCCESS) return status;
 
-    // Display an initial image
-    display_set_buffer(IMAGE_BUFFER_PVDX);
-    display_update();
-
+    // Clear the display buffer
+    if ((status = clear_image()) != SUCCESS) return status;
     return SUCCESS;
 }
