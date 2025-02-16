@@ -67,8 +67,5 @@ void main_watchdog(void *pvParameters) {
         // Watchdog checks in with itself
         enqueue_command(&cmd_checkin);
         debug("watchdog: Enqueued watchdog checkin command\n");
-
-        // Wait for 1 second before monitoring task checkins again
-        vTaskDelay(pdMS_TO_TICKS(WATCHDOG_MS_DELAY));
     }
 }

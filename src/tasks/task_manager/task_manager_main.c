@@ -48,8 +48,5 @@ void main_task_manager(void *pvParameters) {
         // Check in with the watchdog task
         enqueue_command(&cmd_checkin);
         debug("task_manager: Enqueued watchdog checkin command\n");
-
-        // Wait 1 second before attempting to run the loop again
-        vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }

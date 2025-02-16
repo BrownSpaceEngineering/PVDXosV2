@@ -16,6 +16,13 @@ void main_magnetometer(void *pvParameters) {
     const TickType_t queue_block_time_ticks = get_command_queue_block_time_ticks(current_task);
     // Varible to hold commands popped off the queue
     command_t cmd;
+
+    // Initialize the magnetometer command queue
+    magnetometer_command_queue_handle =
+        xQueueCreateStatic(COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE, magnetometer_command_queue_buffer, &magnetometer_mem.magnetometer_task_queue);
+    if (magnetometer_command_queue_handle == NULL) {
+        fatal("Failed to create magnetometer queue!\n");
+    }
     
     while (true) {
         debug_impl("\n---------- Magnetometer Task Loop ----------\n");

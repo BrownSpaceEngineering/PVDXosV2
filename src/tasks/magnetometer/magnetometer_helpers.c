@@ -18,6 +18,12 @@ static int8_t mSamples[9];
 static float mXYZ[3];
 static float mGain;
 
+/* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
+
+// TODO: Implement a read function that reads the data from the RM3100
+
+/* ---------- NON-DISPATCHABLE FUNCTIONS (do not go through the command dispatcher) ---------- */
+
 int32_t RM3100ReadReg(uint8_t addr, uint8_t *val, uint16_t size);
 uint8_t RM3100ByteReadReg(uint8_t addr);
 int32_t RM3100WriteReg(uint8_t addr, uint8_t *data, uint16_t size);
@@ -235,4 +241,4 @@ void exec_command_magnetometer(command_t *const p_cmd) {
     // TODO
 }
 
-/* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
+

@@ -25,8 +25,20 @@ void main_display(void *pvParameters) {
     const TickType_t queue_block_time_ticks = get_command_queue_block_time_ticks(current_task);
     // Varible to hold commands popped off the queue
     command_t cmd;
-    // Initialize the display
-    init_display();
+
+    // Initialize the display command queue
+    display_command_queue_handle =
+        xQueueCreateStatic(COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE, display_command_queue_buffer, &display_mem.display_task_queue);
+    if (display_command_queue_handle == NULL) {
+        fatal("Failed to create display queue!\n");
+    }
+
+    // Initialize the display hardware
+    status_t status = init_display();
+
+    if (status != SUCCESS) {
+        fatal("Failed to initialize display hardware!\n");
+    }
 
     while (true) {
         debug_impl("\n---------- Display Task Loop ----------\n");
