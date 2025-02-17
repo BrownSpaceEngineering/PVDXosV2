@@ -36,6 +36,8 @@ export OBJS := \
 ../src/tasks/shell/shell_helpers.o \
 ../src/tasks/shell/shell_commands.o \
 ../src/tasks/task_list.o \
+../src/tasks/datastore/datastore_main.o \
+../src/tasks/datastore/datastore_helpers.o
 
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###
 ### THESE ARE WRITTEN RELATIVE TO THE ./ASF/gcc/Makefile FILE ###
@@ -57,6 +59,7 @@ export EXTRA_VPATH := \
 ../../src/tasks/command_dispatcher \
 ../../src/tasks/shell \
 ../../src/mutexes \
+../../src/tasks/datastore 
 
 ###################################################################
 ###   Compiler Flags and Build-Specific Configuration Options   ###

@@ -68,6 +68,7 @@ typedef enum {
     OPERATION_SET_BUFFER = 0,
     OPERATION_UPDATE,
     OPERATION_POWER_OFF,
+    OPERATION_SENSOR_READ,
     // Watchdog specific operations
     OPERATION_CHECKIN,
     // Shell-specific operations
@@ -86,6 +87,13 @@ typedef enum {
     EVENT,
     WARNING,
 } log_level_t;
+
+typedef enum {
+    NULL_TASK = 0,
+    OS,
+    SENSOR,
+    ACTUATOR,
+} task_type_t;
 
 /* ---------- STRUCTS ---------- */
 
@@ -112,6 +120,9 @@ typedef struct {
     StaticTask_t* const task_tcb;       // Task control block
     const uint32_t watchdog_timeout_ms; // How frequently the task should check in with the watchdog (in milliseconds)
     uint32_t last_checkin_time_ticks;   // Last time the task checked in with the watchdog
+    const task_type_t task_type;        // OS-integrity, sensor or actuator?
+    const uint8_t num_readings;         // If a sensor, how many past readings to store
+    const size_t reading_size;          // If a sensor, number of bytes in a reading
     bool has_registered;                // Whether the task is being monitored by the watchdog (initialized to NULL)
 } pvdx_task_t;
 
