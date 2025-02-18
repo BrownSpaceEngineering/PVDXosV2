@@ -37,8 +37,8 @@ void init_watchdog(void) {
     uint8_t watchdog_period = WDT_CONFIG_PER_CYC16384;
 
     // Create watchdog command queue
-    watchdog_command_queue_handle = xQueueCreateStatic(COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE,
-        watchdog_command_queue_buffer, &watchdog_mem.watchdog_task_queue);
+    watchdog_command_queue_handle = xQueueCreateStatic(COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE, watchdog_command_queue_buffer,
+                                                       &watchdog_mem.watchdog_task_queue);
 
     if (watchdog_command_queue_handle == NULL) {
         fatal("Failed to create watchdog queue!\n");
@@ -46,30 +46,33 @@ void init_watchdog(void) {
 
     // Initialize the 'last_checkin_time_ticks' field of each task
     // Iterate using the 'name' field rather than the handle field, since not all tasks will have a handle at this point
-    for (size_t i = 0; task_list[i].name != NULL; i++) {
-        task_list[i].last_checkin_time_ticks = 0; // 0 Is a special value that indicates that the task has not checked in yet (or is not running)
+    for (size_t i = 0; task_list[i] != NULL; i++) {
+        task_list[i]->last_checkin_time_ticks =
+            0; // 0 Is a special value that indicates that the task has not checked in yet (or is not running)
     }
 
-    for (size_t i = 0; task_list[i].name != NULL; i++) {
-        task_list[i].has_registered = false;
+    for (size_t i = 0; task_list[i] != NULL; i++) {
+        task_list[i]->has_registered = false;
     }
 
     // Disable the watchdog before configuring
     watchdog_disable(p_watchdog);
 
     // Configure the watchdog
-    uint8_t watchdog_earlywarning_period = watchdog_period - 1; // Each increment of 1 doubles the period (see ASF/samd51a/include/component/wdt.h)
-    watchdog_set_early_warning_offset(p_watchdog, watchdog_earlywarning_period); // Early warning will trigger halfway through the watchdog period
-    watchdog_enable_early_warning(p_watchdog); // Enable early warning interrupt
-    watchdog_set_period(p_watchdog, watchdog_period); // Set the watchdog period
+    uint8_t watchdog_earlywarning_period =
+        watchdog_period - 1; // Each increment of 1 doubles the period (see ASF/samd51a/include/component/wdt.h)
+    watchdog_set_early_warning_offset(p_watchdog,
+                                      watchdog_earlywarning_period); // Early warning will trigger halfway through the watchdog period
+    watchdog_enable_early_warning(p_watchdog);                       // Enable early warning interrupt
+    watchdog_set_period(p_watchdog, watchdog_period);                // Set the watchdog period
     watchdog_wait_for_register_sync(p_watchdog, WDT_SYNCBUSY_ENABLE | WDT_SYNCBUSY_WEN); // Wait for register synchronization
 
     // Enable the watchdog
     watchdog_enable(p_watchdog);
 
     // Configure the watchdog early warning interrupt
-    NVIC_SetPriority(WDT_IRQn, 3); // Set the interrupt priority
-    NVIC_EnableIRQ(WDT_IRQn); // Enable the WDT_IRQn interrupt
+    NVIC_SetPriority(WDT_IRQn, 3);                      // Set the interrupt priority
+    NVIC_EnableIRQ(WDT_IRQn);                           // Enable the WDT_IRQn interrupt
     NVIC_SetVector(WDT_IRQn, (uint32_t)(&WDT_Handler)); // When the WDT_IRQn interrupt is triggered, call the WDT_Handler function
 
     info("Hardware Watchdog Initialized\n");
@@ -104,7 +107,8 @@ void early_warning_callback_watchdog(void) {
     gpio_set_pin_level(LED_Orange2, true);
     vTaskDelay(pdMS_TO_TICKS(33));
     gpio_set_pin_level(LED_Red, false);
-    vTaskDelay(pdMS_TO_TICKS(300));;
+    vTaskDelay(pdMS_TO_TICKS(300));
+    ;
 }
 
 // Pets the watchdog to prevent it from resetting the system by setting the clear key correctly
@@ -124,7 +128,7 @@ void kick_watchdog(void) {
 command_t get_watchdog_checkin_command(pvdx_task_t *const task) {
     // NOTE: Be sure to use the address of the task handle within the global task list (static lifetime) to ensure
     // that `*p_data` is still valid when the command is received.
-    command_t cmd = {TASK_WATCHDOG, OPERATION_CHECKIN, &task->handle, sizeof(TaskHandle_t*), NULL, NULL};
+    command_t cmd = {TASK_WATCHDOG, OPERATION_CHECKIN, &task->handle, sizeof(TaskHandle_t *), NULL, NULL};
     return cmd;
 }
 
@@ -181,7 +185,7 @@ void exec_command_watchdog(command_t *const p_cmd) {
 
     switch (p_cmd->operation) {
         case OPERATION_CHECKIN:
-            watchdog_checkin(*(TaskHandle_t*)p_cmd->p_data);
+            watchdog_checkin(*(TaskHandle_t *)p_cmd->p_data);
             break;
         default:
             fatal("watchdog: Invalid operation! target: %d operation: %d\n", p_cmd->target, p_cmd->operation);

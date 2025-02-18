@@ -35,16 +35,15 @@ void main_watchdog(void *pvParameters) {
 
         lock_mutex(task_list_mutex);
 
-        for (size_t i = 0; task_list[i].name != NULL; i++) {
-            if (task_list[i].has_registered) {
-                const uint32_t ticks_since_last_checkin = current_time_ticks - task_list[i].last_checkin_time_ticks;
+        for (size_t i = 0; task_list[i] != NULL; i++) {
+            if (task_list[i]->has_registered) {
+                const uint32_t ticks_since_last_checkin = current_time_ticks - task_list[i]->last_checkin_time_ticks;
 
-                if (ticks_since_last_checkin > pdMS_TO_TICKS(task_list[i].watchdog_timeout_ms)) {
+                if (ticks_since_last_checkin > pdMS_TO_TICKS(task_list[i]->watchdog_timeout_ms)) {
                     // The task has not checked in within the allowed time, so we should reset the system
                     fatal(
                         "watchdog: %s task has not checked in within the allowed time! (time since last checkin: %d, allowed time: %d).\n",
-                        task_list[i].name, ticks_since_last_checkin, task_list[i].watchdog_timeout_ms
-                    );
+                        task_list[i]->name, ticks_since_last_checkin, task_list[i]->watchdog_timeout_ms);
                 }
             } else {
                 debug("watchdog: Task %d has not registered, skipping it ...\n", i);

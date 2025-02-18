@@ -2,8 +2,8 @@
 #define GLOBALS_H
 
 #include <FreeRTOS.h>
-#include <task.h>
 #include <stdbool.h>
+#include <task.h>
 
 /* ---------- LOGGING CONSTANTS ---------- */
 
@@ -66,14 +66,14 @@ typedef enum {
     // General operations (can be overloaded by any task)
     OPERATION_POWER_OFF = 0,
     // Watchdog specific operations
-    OPERATION_CHECKIN,                  // p_data: TaskHandle_t *handle
+    OPERATION_CHECKIN, // p_data: TaskHandle_t *handle
     // Task-Manager specific operations
-    OPERATION_INIT_SUBTASKS,            // p_data: NULL
-    OPERATION_ENABLE_SUBTASK,           // p_data: TaskHandle_t *handle
-    OPERATION_DISABLE_SUBTASK,          // p_data: TaskHandle_t *handle
+    OPERATION_INIT_SUBTASKS,   // p_data: NULL
+    OPERATION_ENABLE_SUBTASK,  // p_data: TaskHandle_t *handle
+    OPERATION_DISABLE_SUBTASK, // p_data: TaskHandle_t *handle
     // Display specific operations
-    OPERATION_DISPLAY_IMAGE,            // p_data: const color_t *p_buffer
-    OPERATION_CLEAR_IMAGE               // p_data: NULL
+    OPERATION_DISPLAY_IMAGE, // p_data: const color_t *p_buffer
+    OPERATION_CLEAR_IMAGE    // p_data: NULL
 } operation_t;
 
 // An enum to represent the different log levels that functions can use
@@ -84,6 +84,13 @@ typedef enum {
     WARNING,
 } log_level_t;
 
+typedef enum {
+    NULL_TASK = 0, // TODO: do we need this? keep for compatibility w/ old null task
+    OS,
+    SENSOR,
+    ACTUATOR,
+} task_type_t;
+
 /* ---------- STRUCTS ---------- */
 
 // A struct to represent a command that OS tasks can execute
@@ -93,7 +100,7 @@ typedef struct {
     const void *const p_data;             // Pointer to data needed for the operation
     const size_t len;                     // Length of the data
     status_t *p_result;                   // Pointer to the result of the operation
-    void (*callback)(status_t* p_result); // Callback function to call after the operation is complete
+    void (*callback)(status_t *p_result); // Callback function to call after the operation is complete
 } command_t;
 
 // A struct defining a task's lifecycle in the PVDXos RTOS
@@ -104,11 +111,12 @@ typedef struct {
     const TaskFunction_t function;      // Main entry point for the task
     const uint32_t stack_size;          // Size of the stack in words (multiply by 4 to get bytes)
     StackType_t *const stack_buffer;    // Buffer for the stack
-    void* pvParameters;                 // Parameters to pass to the task's main function
+    void *pvParameters;                 // Parameters to pass to the task's main function
     UBaseType_t priority;               // Priority of the task in the RTOS scheduler
     StaticTask_t *const task_tcb;       // Task control block
     const uint32_t watchdog_timeout_ms; // How frequently the task should check in with the watchdog (in milliseconds)
     uint32_t last_checkin_time_ticks;   // Last time the task checked in with the watchdog
+    const task_type_t task_type;        // Whether the task is OS-integrity, a sensor, or an actuator
     bool has_registered;                // Whether the task is being monitored by the watchdog (initialized to NULL)
 } pvdx_task_t;
 

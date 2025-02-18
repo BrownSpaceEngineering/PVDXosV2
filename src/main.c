@@ -52,7 +52,7 @@ int main(void) {
     // Initialize a mutex wrapping the shared PVDX task list struct
     task_list_mutex = xSemaphoreCreateMutexStatic(&task_list_mutex_buffer);
 
-    if (task_list_mutex == NULL){
+    if (task_list_mutex == NULL) {
         fatal("Failed to create PVDX task list mutex");
     }
 
@@ -71,7 +71,7 @@ int main(void) {
     for (int16_t i = 0; i < SUBTASK_START_INDEX; i++) {
         init_functions[i]();
 
-        if (task_list[i].function == main_functions[i]) {
+        if (task_list[i]->function == main_functions[i]) {
             init_task(i);
         } else {
             fatal("%s not found at index %d of task list!\n", task_names[i], i);
@@ -82,23 +82,23 @@ int main(void) {
 
     /* ---------- COSMIC MONKEY TASK ---------- */
 
-    #if defined(UNITTEST) || defined(DEVBUILD)
-        #if defined(UNITTEST)
-        cm_args.frequency = 10;
-        #endif
-        #if defined(DEVBUILD)
-        cm_args.frequency = 0;
-        #endif
+#if defined(UNITTEST) || defined(DEVBUILD)
+    #if defined(UNITTEST)
+    cm_args.frequency = 10;
+    #endif
+    #if defined(DEVBUILD)
+    cm_args.frequency = 0;
+    #endif
 
-        TaskHandle_t cosmic_monkey_task_handle =
-            xTaskCreateStatic(main_cosmic_monkey, "CosmicMonkey", COSMIC_MONKEY_TASK_STACK_SIZE, (void *)&cm_args, 1,
-                            cosmic_monkey_mem.cosmic_monkey_task_stack, &cosmic_monkey_mem.cosmic_monkey_task_tcb);
-        if (cosmic_monkey_task_handle == NULL) {
-            warning("Cosmic Monkey Task Creation Failed!\n");
-        } else {
-            info("Cosmic Monkey Task initialized\n");
-        }
-    #endif // Cosmic Monkey
+    TaskHandle_t cosmic_monkey_task_handle =
+        xTaskCreateStatic(main_cosmic_monkey, "CosmicMonkey", COSMIC_MONKEY_TASK_STACK_SIZE, (void *)&cm_args, 1,
+                          cosmic_monkey_mem.cosmic_monkey_task_stack, &cosmic_monkey_mem.cosmic_monkey_task_tcb);
+    if (cosmic_monkey_task_handle == NULL) {
+        warning("Cosmic Monkey Task Creation Failed!\n");
+    } else {
+        info("Cosmic Monkey Task initialized\n");
+    }
+#endif // Cosmic Monkey
 
     /* ---------- START FREERTOS SCHEDULER ---------- */
 
