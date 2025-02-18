@@ -9,14 +9,14 @@
  * Aidan Wang, Jai Garg, Alex Khosrowshahi
  */
 
-#include "task_manager_task.h"
 #include "logging.h"
+#include "task_manager_task.h"
 
 /* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
 
 // Initialize all peripheral device driver tasks running on PVDXos
 void task_manager_init_subtasks(void) {
-    for(size_t i = SUBTASK_START_INDEX; task_list[i].name != NULL; i++) {
+    for (size_t i = SUBTASK_START_INDEX; task_list[i] != NULL; i++) {
         init_task(i);
     }
     debug("task_manager: All subtasks initialized\n");
@@ -74,7 +74,8 @@ void task_manager_disable_task(pvdx_task_t *const task) {
 
 // Initializes the task manager task
 void init_task_manager(void) {
-    task_manager_command_queue_handle = xQueueCreateStatic(COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE, task_manager_command_queue_buffer, &task_manager_mem.task_manager_task_queue);
+    task_manager_command_queue_handle = xQueueCreateStatic(COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE,
+                                                           task_manager_command_queue_buffer, &task_manager_mem.task_manager_task_queue);
 
     if (task_manager_command_queue_handle == NULL) {
         fatal("Failed to create task manager queue!\n");
@@ -85,31 +86,25 @@ void init_task_manager(void) {
 void init_task(const size_t i) {
     lock_mutex(task_list_mutex);
 
-    task_list[i].handle = xTaskCreateStatic(
-        task_list[i].function,
-        task_list[i].name,
-        task_list[i].stack_size,
-        task_list[i].pvParameters,
-        task_list[i].priority,
-        task_list[i].stack_buffer,
-        task_list[i].task_tcb
-    );
+    task_list[i]->handle =
+        xTaskCreateStatic(task_list[i]->function, task_list[i]->name, task_list[i]->stack_size, task_list[i]->pvParameters,
+                          task_list[i]->priority, task_list[i]->stack_buffer, task_list[i]->task_tcb);
 
-    if (task_list[i].handle == NULL) {
-        fatal("failed to create %s task!\n", task_list[i].name);
+    if (task_list[i]->handle == NULL) {
+        fatal("failed to create %s task!\n", task_list[i]->name);
     } else {
-        debug("created %s task\n", task_list[i].name);
+        debug("created %s task\n", task_list[i]->name);
     }
 
-    if (task_list[i].enabled) {
+    if (task_list[i]->enabled) {
         // Register the task with the watchdog allowing it to be monitored
-        register_task_with_watchdog(task_list[i].handle);
+        register_task_with_watchdog(task_list[i]->handle);
     } else {
         // There may be tasks that are disabled on startup; if so, then they MUST have task_list[i].enabled
         // set to false. In this case, we still allocate memory and create the task, but immediately suspend
         // it so that vTaskStartScheduler() doesn't run the task.
-        vTaskSuspend(task_list[i].handle);
-        info("%s task is disabled on startup.\n", task_list[i].name);
+        vTaskSuspend(task_list[i]->handle);
+        info("%s task is disabled on startup.\n", task_list[i]->name);
     }
 
     unlock_mutex(task_list_mutex);
@@ -125,10 +120,10 @@ void exec_command_task_manager(command_t *const p_cmd) {
             task_manager_init_subtasks();
             break;
         case OPERATION_ENABLE_SUBTASK:
-            task_manager_enable_task(get_task(*(TaskHandle_t*)p_cmd->p_data)); // Turn this into an index
+            task_manager_enable_task(get_task(*(TaskHandle_t *)p_cmd->p_data)); // Turn this into an index
             break;
         case OPERATION_DISABLE_SUBTASK:
-            task_manager_disable_task(get_task(*(TaskHandle_t*)p_cmd->p_data)); // Turn this into an index
+            task_manager_disable_task(get_task(*(TaskHandle_t *)p_cmd->p_data)); // Turn this into an index
             break;
         default:
             fatal("task-manager: Invalid operation!\n");

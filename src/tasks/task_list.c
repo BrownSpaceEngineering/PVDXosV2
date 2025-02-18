@@ -23,6 +23,7 @@ pvdx_task_t watchdog_task = {"Watchdog",
                              &watchdog_mem.watchdog_task_tcb,
                              10000,
                              0xDEADBEEF,
+                             OS,
                              false};
 pvdx_task_t command_dispatcher_task = {"CommandDispatcher",
                                        true,
@@ -35,6 +36,7 @@ pvdx_task_t command_dispatcher_task = {"CommandDispatcher",
                                        &command_dispatcher_mem.command_dispatcher_task_tcb,
                                        10000,
                                        0xDEADBEEF,
+                                       OS,
                                        false};
 pvdx_task_t task_manager_task = {"TaskManager",
                                  true,
@@ -47,6 +49,7 @@ pvdx_task_t task_manager_task = {"TaskManager",
                                  &task_manager_mem.task_manager_task_tcb,
                                  10000,
                                  0xDEADBEEF,
+                                 OS,
                                  false};
 pvdx_task_t magnetometer_task = {"Magnetometer",
                                  true,
@@ -59,10 +62,11 @@ pvdx_task_t magnetometer_task = {"Magnetometer",
                                  &magnetometer_mem.magnetometer_task_tcb,
                                  10000,
                                  0xDEADBEEF,
+                                 SENSOR,
                                  false};
 pvdx_task_t shell_task = {
-    "Shell", true,       NULL, main_shell, SHELL_TASK_STACK_SIZE, shell_mem.shell_task_stack, NULL, 2, &shell_mem.shell_task_tcb,
-    10000,   0xDEADBEEF, false};
+    "Shell", true,       NULL,   main_shell, SHELL_TASK_STACK_SIZE, shell_mem.shell_task_stack, NULL, 2, &shell_mem.shell_task_tcb,
+    10000,   0xDEADBEEF, SENSOR, false};
 pvdx_task_t display_task = {"Display",
                             true,
                             NULL,
@@ -74,6 +78,7 @@ pvdx_task_t display_task = {"Display",
                             &display_mem.display_task_tcb,
                             10000,
                             0xDEADBEEF,
+                            ACTUATOR,
                             false};
 pvdx_task_t heartbeat_task = {"Heartbeat",
                               true,
@@ -86,16 +91,17 @@ pvdx_task_t heartbeat_task = {"Heartbeat",
                               &heartbeat_mem.heartbeat_task_tcb,
                               10000,
                               0xDEADBEEF,
+                              ACTUATOR,
                               false};
 
 // and define their constant pointers
-pvdx_task_t *const watchdog_task_ptr = &watchdog_task;
-pvdx_task_t *const command_dispatcher_task_ptr = &command_dispatcher_task;
-pvdx_task_t *const task_manager_task_ptr = &task_manager_task;
-pvdx_task_t *const magnetometer_task_ptr = &magnetometer_task;
-pvdx_task_t *const shell_task_ptr = &shell_task;
-pvdx_task_t *const display_task_ptr = &display_task;
-pvdx_task_t *const heartbeat_task_ptr = &heartbeat_task;
+pvdx_task_t *const p_watchdog_task = &watchdog_task;
+pvdx_task_t *const p_command_dispatcher_task = &command_dispatcher_task;
+pvdx_task_t *const p_task_manager_task = &task_manager_task;
+pvdx_task_t *const p_magnetometer_task = &magnetometer_task;
+pvdx_task_t *const p_shell_task = &shell_task;
+pvdx_task_t *const p_display_task = &display_task;
+pvdx_task_t *const p_heartbeat_task = &heartbeat_task;
 pvdx_task_t *const task_list_null_terminator = NULL;
 
 // Global list of all tasks running on PVDXos (see `pvdx_task_t` definition in globals.h)
@@ -105,8 +111,8 @@ pvdx_task_t *const task_list_null_terminator = NULL;
 // NOTE: Watchdog task must be first in the list, Command Dispatcher second, and Task Manager third.
 // If you change the order of any of these, make sure that main.c reflects the change and update this comment.
 pvdx_task_t *task_list[] = {
-    watchdog_task_ptr, command_dispatcher_task_ptr, task_manager_task_ptr,     magnetometer_task_ptr, shell_task_ptr,
-    display_task_ptr,  heartbeat_task_ptr,          task_list_null_terminator,
+    p_watchdog_task, p_command_dispatcher_task, p_task_manager_task,       p_magnetometer_task, p_shell_task,
+    p_display_task,  p_heartbeat_task,          task_list_null_terminator,
 };
 
 // pvdx_task_t task_list[] = {
