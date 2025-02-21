@@ -2,10 +2,12 @@
  * Code for the RM3100 Magnetometer Sensor
  *
  * Created: Dec 7, 2023 2:22 AM
- * By: Nathan Kim, Alexander Thaep, Siddharta Laloux
+ * Authors: Nathan Kim, Alexander Thaep, Siddharta Laloux
  **/
 
 #include "magnetometer_task.h"
+
+extern magnetometer_task_memory_t magnetometer_mem;
 
 // IO descriptor for the RM3100
 #define I2C_SERCOM
@@ -241,4 +243,15 @@ void exec_command_magnetometer(command_t *const p_cmd) {
     // TODO
 }
 
-void init_magnetometre(void *idk) {}
+QueueHandle_t init_magnetometer(void) {
+    // TODO: call hardware init from here
+
+    // Initialize the magnetometer command queue
+    QueueHandle_t magnetometer_command_queue_handle = xQueueCreateStatic(
+        COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE, magnetometer_command_queue_buffer, &magnetometer_mem.magnetometer_task_queue);
+    if (magnetometer_command_queue_handle == NULL) {
+        fatal("Failed to create magnetometer queue!\n");
+    }
+
+    return magnetometer_command_queue_handle;
+}

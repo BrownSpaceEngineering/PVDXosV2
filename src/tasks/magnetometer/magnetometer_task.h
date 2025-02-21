@@ -21,16 +21,14 @@
 typedef struct {
     StackType_t overflow_buffer[TASK_STACK_OVERFLOW_PADDING];
     StackType_t magnetometer_task_stack[MAGNETOMETER_TASK_STACK_SIZE];
+    uint8_t magnetometer_command_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
     StaticQueue_t magnetometer_task_queue;
     StaticTask_t magnetometer_task_tcb;
 } magnetometer_task_memory_t;
 
 extern magnetometer_task_memory_t magnetometer_mem;
-extern uint8_t magnetometer_command_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
 
-// Queue for commands to be executed by the magnetometer task
-extern QueueHandle_t magnetometer_command_queue_handle;
-
+QueueHandle_t init_magnetometer(void);
 void exec_command_magnetometer(command_t *const p_cmd);
 void main_magnetometer(void *pvParameters);
 
