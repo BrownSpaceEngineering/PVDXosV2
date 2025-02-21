@@ -298,13 +298,13 @@ status_t init_display_hardware(void) {
 command_t get_display_image_command(const color_t *const p_buffer, status_t *const p_result) {
     // NOTE: Be sure to use a pointer to a static lifetime variable to ensure
     // that `*p_data` is still valid when the command is received.
-    command_t cmd = {TASK_DISPLAY, OPERATION_DISPLAY_IMAGE, p_buffer, sizeof(color_t *), p_result, NULL};
+    command_t cmd = {p_display_task, OPERATION_DISPLAY_IMAGE, p_buffer, sizeof(color_t *), p_result, NULL};
     return cmd;
 }
 
 void exec_command_display(command_t *const p_cmd) {
-    if (p_cmd->target != TASK_DISPLAY) {
-        fatal("display: command target is not display! target: %d operation: %d\n", p_cmd->target, p_cmd->operation);
+    if (p_cmd->target != p_display_task) {
+        fatal("display: command target is not display! target: %s operation: %d\n", p_cmd->target->name, p_cmd->operation);
     }
 
     switch (p_cmd->operation) {

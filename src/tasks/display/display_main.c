@@ -11,8 +11,6 @@
 
 // Display Task memory structures
 display_task_memory_t display_mem;
-// uint8_t display_command_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
-QueueHandle_t display_command_queue_handle;
 
 void main_display(void *pvParameters) {
     info("display: Task Started!\n");
@@ -26,22 +24,15 @@ void main_display(void *pvParameters) {
     // Varible to hold commands popped off the queue
     command_t cmd;
 
-    // Initialize the display hardware
-    status_t status = init_display();
-
-    if (status != SUCCESS) {
-        fatal("Failed to initialize display hardware!\n");
-    }
-
     while (true) {
         debug_impl("\n---------- Display Task Loop ----------\n");
 
         // Execute all commands contained in the queue
-        if (xQueueReceive(display_command_queue_handle, &cmd, queue_block_time_ticks) == pdPASS) {
+        if (xQueueReceive(p_display_task->command_queue, &cmd, queue_block_time_ticks) == pdPASS) {
             do {
                 debug("display: Command popped off queue. Target: %d, Operation: %d\n", cmd.target, cmd.operation);
                 exec_command_display(&cmd);
-            } while (xQueueReceive(display_command_queue_handle, &cmd, 0) == pdPASS);
+            } while (xQueueReceive(p_display_task->command_queue, &cmd, 0) == pdPASS);
         }
         debug("display: No more commands queued.\n");
 

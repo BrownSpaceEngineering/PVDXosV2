@@ -101,7 +101,8 @@ void init_task_pointer(pvdx_task_t *const p_task) {
     lock_mutex(task_list_mutex);
 
     // some functions don't have queues to initialise. init is NULL in such cases
-    if ((init_function task_init = p_task->init)) {
+    init_function task_init = p_task->init;
+    if (task_init) {
         QueueHandle_t queue_handle = task_init();
         p_task->command_queue = queue_handle;
     }
@@ -178,7 +179,7 @@ void init_task_handle(TaskHandle_t handle) {
 }
 
 void exec_command_task_manager(command_t *const p_cmd) {
-    if (p_cmd->target != TASK_MANAGER) {
+    if (p_cmd->target != p_task_manager_task) {
         fatal("task manager: command target is not task manager! target: %d operation: %d\n", p_cmd->target, p_cmd->operation);
     }
 

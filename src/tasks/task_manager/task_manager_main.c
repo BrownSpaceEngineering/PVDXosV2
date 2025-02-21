@@ -12,8 +12,6 @@
 #include "task_manager_task.h"
 
 task_manager_task_memory_t task_manager_mem;
-// uint8_t task_manager_command_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
-// QueueHandle_t task_manager_command_queue_handle;
 SemaphoreHandle_t task_list_mutex = NULL;
 StaticSemaphore_t task_list_mutex_buffer;
 
@@ -21,7 +19,7 @@ void main_task_manager(void *pvParameters) {
     info("task-manager: Task Started!\n");
 
     // Enqueue a command to initialize all subtasks
-    command_t command_task_manager_init_subtasks = {TASK_MANAGER, OPERATION_INIT_SUBTASKS, NULL, 0, NULL, NULL};
+    command_t command_task_manager_init_subtasks = {p_task_manager_task, OPERATION_INIT_SUBTASKS, NULL, 0, NULL, NULL};
     enqueue_command(&command_task_manager_init_subtasks);
     debug("task_manager: Enqueued command to initialize all subtasks\n");
     // Obtain a pointer to the current task within the global task list

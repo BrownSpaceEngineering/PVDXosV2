@@ -25,16 +25,11 @@ typedef struct {
 } display_task_memory_t;
 
 extern display_task_memory_t display_mem;
-// extern uint8_t display_command_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
 
-// Queue for commands to be executed by the display task
-// extern QueueHandle_t display_command_queue_handle;
-
-QueueHandle_t init_display(void);
 void main_display(void *pvParameters);
 status_t display_image(const color_t *const p_buffer);
 status_t clear_image(void);
-status_t init_display(void);
+QueueHandle_t init_display(void);
 status_t display_update(void);
 void display_set_buffer(const color_t *const p_buffer);
 void display_clear_buffer(void);

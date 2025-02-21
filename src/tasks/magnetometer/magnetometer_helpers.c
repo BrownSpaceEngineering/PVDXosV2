@@ -247,8 +247,9 @@ QueueHandle_t init_magnetometer(void) {
     // TODO: call hardware init from here
 
     // Initialize the magnetometer command queue
-    QueueHandle_t magnetometer_command_queue_handle = xQueueCreateStatic(
-        COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE, magnetometer_command_queue_buffer, &magnetometer_mem.magnetometer_task_queue);
+    QueueHandle_t magnetometer_command_queue_handle =
+        xQueueCreateStatic(COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE, magnetometer_mem.magnetometer_command_queue_buffer,
+                           &magnetometer_mem.magnetometer_task_queue);
     if (magnetometer_command_queue_handle == NULL) {
         fatal("Failed to create magnetometer queue!\n");
     }
