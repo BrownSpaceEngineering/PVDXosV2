@@ -68,17 +68,28 @@ int main(void) {
     };
     const char *task_names[SUBTASK_START_INDEX] = {"Watchdog Task", "Command Dispatcher Task", "Task Manager Task"};
 
-    for (int16_t i = 0; i < SUBTASK_START_INDEX; i++) {
-        init_functions[i]();
+    // Initialise all OS integrity tasks
+    pvdx_task_t *curr_task = *task_list;
 
-        if (task_list[i]->function == main_functions[i]) {
-            init_task(i);
-        } else {
-            fatal("%s not found at index %d of task list!\n", task_names[i], i);
+    while (curr_task != NULL) {
+        if (curr_task->task_type == OS) {
+            (curr_task->init)();
+            init_task_pointer(curr_task);
+            info("%s initialized\n", curr_task->name);
         }
-
-        info("%s initialized\n", task_names[i]);
     }
+
+    // for (int16_t i = 0; i < SUBTASK_START_INDEX; i++) {
+    //     init_functions[i]();
+
+    //     if (task_list[i]->function == main_functions[i]) {
+    //         init_task_index(i);
+    //     } else {
+    //         fatal("%s not found at index %d of task list!\n", task_names[i], i);
+    //     }
+
+    //     info("%s initialized\n", task_names[i]);
+    // }
 
     /* ---------- COSMIC MONKEY TASK ---------- */
 

@@ -241,4 +241,4 @@ void exec_command_magnetometer(command_t *const p_cmd) {
     // TODO
 }
 
-
+void init_magnetometre(void *idk) {}

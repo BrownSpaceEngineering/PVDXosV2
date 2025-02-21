@@ -5,7 +5,7 @@
  * and resetting the system if a task fails to check in within the allowed time.
  *
  * Created: January 28, 2024
- * Authors: Oren Kohavi, Tanish Makadia
+ * Authors: Oren Kohavi, Tanish Makadia, Siddharta Laloux
  */
 
 #include "watchdog_task.h"
@@ -36,25 +36,6 @@ void init_watchdog(void) {
     // Choose the period of the hardware watchdog timer
     uint8_t watchdog_period = WDT_CONFIG_PER_CYC16384;
 
-    // Create watchdog command queue
-    watchdog_command_queue_handle = xQueueCreateStatic(COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE, watchdog_command_queue_buffer,
-                                                       &watchdog_mem.watchdog_task_queue);
-
-    if (watchdog_command_queue_handle == NULL) {
-        fatal("Failed to create watchdog queue!\n");
-    }
-
-    // Initialize the 'last_checkin_time_ticks' field of each task
-    // Iterate using the 'name' field rather than the handle field, since not all tasks will have a handle at this point
-    for (size_t i = 0; task_list[i] != NULL; i++) {
-        task_list[i]->last_checkin_time_ticks =
-            0; // 0 Is a special value that indicates that the task has not checked in yet (or is not running)
-    }
-
-    for (size_t i = 0; task_list[i] != NULL; i++) {
-        task_list[i]->has_registered = false;
-    }
-
     // Disable the watchdog before configuring
     watchdog_disable(p_watchdog);
 
@@ -76,6 +57,25 @@ void init_watchdog(void) {
     NVIC_SetVector(WDT_IRQn, (uint32_t)(&WDT_Handler)); // When the WDT_IRQn interrupt is triggered, call the WDT_Handler function
 
     info("Hardware Watchdog Initialized\n");
+
+    // Create watchdog command queue
+    watchdog_command_queue_handle = xQueueCreateStatic(COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE, watchdog_command_queue_buffer,
+                                                       &watchdog_mem.watchdog_task_queue);
+
+    if (watchdog_command_queue_handle == NULL) {
+        fatal("Failed to create watchdog queue!\n");
+    }
+
+    // Initialize the 'last_checkin_time_ticks' field of each task
+    // Iterate using the 'name' field rather than the handle field, since not all tasks will have a handle at this point
+    for (size_t i = 0; task_list[i] != NULL; i++) {
+        task_list[i]->last_checkin_time_ticks =
+            0; // 0 Is a special value that indicates that the task has not checked in yet (or is not running)
+    }
+
+    for (size_t i = 0; task_list[i] != NULL; i++) {
+        task_list[i]->has_registered = false;
+    }
 }
 
 /* Temporarily commented out (so that specific_handlers.c works)

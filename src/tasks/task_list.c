@@ -10,11 +10,11 @@
 
 #include "task_list.h"
 
-// Define task structs; tasks are mutable so left here as constant
-// TODO: define tasks and constant pointers here or in task_list.h?
+// Define task structs; tasks are mutable so not constant
 pvdx_task_t watchdog_task = {"Watchdog",
                              true,
                              NULL,
+                             init_watchdog,
                              main_watchdog,
                              WATCHDOG_TASK_STACK_SIZE,
                              watchdog_mem.watchdog_task_stack,
@@ -28,6 +28,7 @@ pvdx_task_t watchdog_task = {"Watchdog",
 pvdx_task_t command_dispatcher_task = {"CommandDispatcher",
                                        true,
                                        NULL,
+                                       init_command_dispatcher,
                                        main_command_dispatcher,
                                        COMMAND_DISPATCHER_TASK_STACK_SIZE,
                                        command_dispatcher_mem.command_dispatcher_task_stack,
@@ -41,6 +42,7 @@ pvdx_task_t command_dispatcher_task = {"CommandDispatcher",
 pvdx_task_t task_manager_task = {"TaskManager",
                                  true,
                                  NULL,
+                                 init_task_manager,
                                  main_task_manager,
                                  TASK_MANAGER_TASK_STACK_SIZE,
                                  task_manager_mem.task_manager_task_stack,
@@ -54,6 +56,7 @@ pvdx_task_t task_manager_task = {"TaskManager",
 pvdx_task_t magnetometer_task = {"Magnetometer",
                                  true,
                                  NULL,
+
                                  main_magnetometer,
                                  MAGNETOMETER_TASK_STACK_SIZE,
                                  magnetometer_mem.magnetometer_task_stack,
@@ -65,8 +68,8 @@ pvdx_task_t magnetometer_task = {"Magnetometer",
                                  SENSOR,
                                  false};
 pvdx_task_t shell_task = {
-    "Shell", true,       NULL,   main_shell, SHELL_TASK_STACK_SIZE, shell_mem.shell_task_stack, NULL, 2, &shell_mem.shell_task_tcb,
-    10000,   0xDEADBEEF, SENSOR, false};
+    "Shell", true,       NULL,    main_shell, SHELL_TASK_STACK_SIZE, shell_mem.shell_task_stack, NULL, 2, &shell_mem.shell_task_tcb,
+    10000,   0xDEADBEEF, TESTING, false};
 pvdx_task_t display_task = {"Display",
                             true,
                             NULL,

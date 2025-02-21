@@ -89,7 +89,12 @@ typedef enum {
     OS,
     SENSOR,
     ACTUATOR,
+    TESTING,
 } task_type_t;
+
+/* ---------- MISCELLANEOUS TASK TYPES ---------- */
+
+typedef void (*init_function)(void);
 
 /* ---------- STRUCTS ---------- */
 
@@ -105,9 +110,11 @@ typedef struct {
 
 // A struct defining a task's lifecycle in the PVDXos RTOS
 typedef struct {
-    const char *const name;             // Name of the task
-    bool enabled;                       // Whether the task is enabled
-    TaskHandle_t handle;                // FreeRTOS handle to the task
+    const char *const name; // Name of the task
+    bool enabled;           // Whether the task is enabled
+    TaskHandle_t handle;    // FreeRTOS handle to the task
+    QueueHandle_t command_queue;
+    const init_function init;           // Initialisation function to call before task entry point
     const TaskFunction_t function;      // Main entry point for the task
     const uint32_t stack_size;          // Size of the stack in words (multiply by 4 to get bytes)
     StackType_t *const stack_buffer;    // Buffer for the stack
@@ -116,8 +123,8 @@ typedef struct {
     StaticTask_t *const task_tcb;       // Task control block
     const uint32_t watchdog_timeout_ms; // How frequently the task should check in with the watchdog (in milliseconds)
     uint32_t last_checkin_time_ticks;   // Last time the task checked in with the watchdog
-    const task_type_t task_type;        // Whether the task is OS-integrity, a sensor, or an actuator
     bool has_registered;                // Whether the task is being monitored by the watchdog (initialized to NULL)
+    const task_type_t task_type;        // Whether the task is OS-integrity, a sensor, or an actuator
 } pvdx_task_t;
 
 /* ---------- BUILD CONSTANTS ---------- */

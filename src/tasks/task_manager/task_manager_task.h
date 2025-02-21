@@ -4,13 +4,14 @@
 // Includes
 #include <atmel_start.h>
 #include <driver_init.h>
+
 #include "globals.h"
 #include "logging.h"
 #include "mutexes.h"
 
 // Constants
-#define TASK_MANAGER_TASK_STACK_SIZE 1024              // Size of the stack in words (multiply by 4 to get bytes)
-#define TASK_MANAGER_QUEUE_WAIT_MS 1000                // Wait time for sending/receiving a command to/from the queue (in ms)
+#define TASK_MANAGER_TASK_STACK_SIZE 1024 // Size of the stack in words (multiply by 4 to get bytes)
+#define TASK_MANAGER_QUEUE_WAIT_MS 1000   // Wait time for sending/receiving a command to/from the queue (in ms)
 
 // Placed in a struct to ensure that the TCB is placed higher than the stack in memory
 //^ This ensures that stack overflows do not corrupt the TCB (since the stack grows downwards)
@@ -30,7 +31,9 @@ extern QueueHandle_t task_manager_command_queue_handle;
 extern SemaphoreHandle_t task_list_mutex;
 extern StaticSemaphore_t task_list_mutex_buffer;
 
-void init_task(const size_t i);
+void init_task_index(const size_t i);
+void init_task_pointer(pvdx_task_t *const p_task);
+void init_task_handle(TaskHandle_t handle);
 void init_task_manager(void);
 void main_task_manager(void *pvParameters);
 void exec_command_task_manager(command_t *const p_cmd);

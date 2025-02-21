@@ -14,6 +14,8 @@
 // Represents the end of a pvdx_task_t array, contains all null parameters
 // #define NULL_TASK ((pvdx_task_t){NULL, false, NULL, NULL, 0, NULL, NULL, 0, NULL, 0, 0, false})
 
+// TODO add extern defs of task pointers here?
+
 extern pvdx_task_t *task_list[];
 
 pvdx_task_t *get_task(const TaskHandle_t id);

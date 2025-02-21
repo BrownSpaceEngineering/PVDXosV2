@@ -6,7 +6,7 @@
  *
  * Created: April 14, 2024
  * Authors: Oren Kohavi, Ignacio Blancas Rodriguez, Tanish Makadia, Yi Liu, Aidan Wang, Simon Juknelis, Defne Doken,
- * Aidan Wang, Jai Garg, Alex Khosrowshahi
+ * Aidan Wang, Jai Garg, Alex Khosrowshahi, Siddharta Laloux
  */
 
 #include "logging.h"
@@ -17,7 +17,7 @@
 // Initialize all peripheral device driver tasks running on PVDXos
 void task_manager_init_subtasks(void) {
     for (size_t i = SUBTASK_START_INDEX; task_list[i] != NULL; i++) {
-        init_task(i);
+        init_task_index(i);
     }
     debug("task_manager: All subtasks initialized\n");
 }
@@ -83,7 +83,7 @@ void init_task_manager(void) {
 }
 
 // Initializes the task at index i in the task list
-void init_task(const size_t i) {
+void init_task_index(const size_t i) {
     lock_mutex(task_list_mutex);
 
     task_list[i]->handle =
@@ -108,6 +108,64 @@ void init_task(const size_t i) {
     }
 
     unlock_mutex(task_list_mutex);
+}
+
+/**
+ * init_task_pointer(pvdx_task_t *const p_task)
+ *
+ * Initialises the task given by the pointer.
+ *
+ * Parametre:
+ *      p_task: a pointer to a pvdx_task_t
+ *
+ * Returns: N/A
+ *
+ * Warning: Modifies the task list
+ */
+void init_task_pointer(pvdx_task_t *const p_task) {
+    lock_mutex(task_list_mutex);
+
+    p_task->command_queue = xQueueCreateStatic();
+
+    p_task->handle = xTaskCreateStatic(p_task->function, p_task->name, p_task->stack_size, p_task->pvParameters, p_task->priority,
+                                       p_task->stack_buffer, p_task->task_tcb);
+
+    if (p_task->handle == NULL) {
+        fatal("failed to create %s task!\n", p_task->name);
+    } else {
+        debug("created %s task\n", p_task->name);
+    }
+
+    if (p_task->enabled) {
+        // Register the task with the watchdog allowing it to be monitored
+        register_task_with_watchdog(p_task->handle);
+    } else {
+        // There may be tasks that are disabled on startup; if so, then they MUST have task_list[i].enabled
+        // set to false. In this case, we still allocate memory and create the task, but immediately suspend
+        // it so that vTaskStartScheduler() doesn't run the task.
+        vTaskSuspend(p_task->handle);
+        info("%s task is disabled on startup.\n", p_task->name);
+    }
+
+    unlock_mutex(task_list_mutex);
+}
+
+/**
+ * init_task_pointer(pvdx_task_t *const handler)
+ *
+ * Initialises the task given by the task
+ *
+ * Parametre:
+ *      p_task: a pointer to a pvdx_task_t
+ *
+ * Returns: N/A
+ *
+ * Warning: Modifies the task list
+ */
+void init_task_handle(TaskHandle_t handle) {
+    pvdx_task_t *p_task = get_task(handle);
+
+    init_task_pointer(p_task);
 }
 
 void exec_command_task_manager(command_t *const p_cmd) {
