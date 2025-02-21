@@ -1,19 +1,18 @@
 /**
  * shell_main.c
- * 
+ *
  * Main loop of the shell task, which is responsible for receiving commands from the user through the
  * terminal over RTT and executing them.
- * 
+ *
  * Created: April 11, 2024
- * Author: Oren Kohavi
+ * Author: Oren Kohavi, Siddharta Laloux
  */
-
 
 #include "shell_commands.h"
 #include "shell_helpers.h"
 #include "shell_task.h"
 
-shell_task_memory_t shell_mem = {0};
+shell_task_memory_t shell_mem;
 
 uint8_t SHELL_INPUT_BUFFER[SHELL_INPUT_BUFFER_SIZE] = {
     0}; // This is a layer ontop of the RTT internal buffer, which is of length 16 (BUFFER_SIZE_DOWN)

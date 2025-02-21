@@ -14,8 +14,8 @@
     " ______     ________  __\n"                                                                                                           \
     "|  _ \\ \\   / /  _ \\ \\/ /___  ___  \n"                                                                                             \
     "| |_) \\ \\ / /| | | \\  // _ \\/ __| \n"                                                                                             \
-    "|  __/ \\ V / | |_| /  \\ (_) \\__ \\ \n"                                                                                             \
-    "|_|     \\_/  |____/_/\\_\\___/|___/  \n"
+    "|  __/ \\ V /  | |_| /  \\ (_) \\__ \\ \n"                                                                                            \
+    "|_|     \\_/   |____/_/\\_\\___/|___/  \n"
 
 #define SHELL_INPUT_POLLING_INTERVAL 200 // Check for new commands through RTT this often (in ms)
 #define SHELL_INPUT_BUFFER_SIZE 128

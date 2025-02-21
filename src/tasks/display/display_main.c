@@ -4,14 +4,14 @@
  * Main loop of the Display task which controls the OLED display on PVDX.
  *
  * Created: February 29, 2024
- * Authors: Tanish Makadia, Ignacio Blancas Rodriguez
+ * Authors: Tanish Makadia, Ignacio Blancas Rodriguez, Siddharta Laloux
  */
 
 #include "display_task.h"
 
 // Display Task memory structures
 display_task_memory_t display_mem;
-uint8_t display_command_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
+// uint8_t display_command_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
 QueueHandle_t display_command_queue_handle;
 
 void main_display(void *pvParameters) {
@@ -25,13 +25,6 @@ void main_display(void *pvParameters) {
     const TickType_t queue_block_time_ticks = get_command_queue_block_time_ticks(current_task);
     // Varible to hold commands popped off the queue
     command_t cmd;
-
-    // Initialize the display command queue
-    display_command_queue_handle =
-        xQueueCreateStatic(COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE, display_command_queue_buffer, &display_mem.display_task_queue);
-    if (display_command_queue_handle == NULL) {
-        fatal("Failed to create display queue!\n");
-    }
 
     // Initialize the display hardware
     status_t status = init_display();
@@ -60,11 +53,11 @@ void main_display(void *pvParameters) {
             command_t display_image_command = get_display_image_command(IMAGE_BUFFER_PVDX, &result);
             enqueue_command(&display_image_command);
         }
-        
+
         if (result != SUCCESS) {
             warning("display: Failed to display image. Error code: %d\n", result);
         }
-        
+
         {
             // Set the display buffer to the second image
             // TODO: Add logic for blocking on the result of the display_image command

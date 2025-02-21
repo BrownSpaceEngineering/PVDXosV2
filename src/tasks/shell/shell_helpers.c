@@ -5,7 +5,7 @@
  * over RTT and executing them.
  *
  * Created: April 11, 2024
- * Author: Oren Kohavi
+ * Author: Oren Kohavi, Siddharta Laloux
  */
 
 #include "shell_helpers.h"

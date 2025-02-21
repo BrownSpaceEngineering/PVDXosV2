@@ -149,7 +149,7 @@ status_t display_update(void) {
 }
 
 // Initialize the display
-status_t init_display(void) {
+status_t init_display_hardware(void) {
     spi_m_sync_enable(&SPI_0); // if you forget this line, this function returns -20
 
     // Reset the display by setting RST to low (it should be high during normal operation)
@@ -318,4 +318,22 @@ void exec_command_display(command_t *const p_cmd) {
             fatal("display: Invalid operation! target: %d operation: %d\n", p_cmd->target, p_cmd->operation);
             break;
     }
+}
+
+QueueHandle_t init_display(void) {
+    // Initialize the display hardware
+    status_t status = init_display_hardware();
+
+    if (status != SUCCESS) {
+        fatal("Failed to initialize display hardware!\n");
+    }
+
+    // Initialize the display command queue
+    QueueHandle_t display_command_queue_handle = xQueueCreateStatic(
+        COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE, display_mem.display_command_queue_buffer, &display_mem.display_task_queue);
+    if (display_command_queue_handle == NULL) {
+        fatal("Failed to create display queue!\n");
+    }
+
+    return display_command_queue_handle;
 }
