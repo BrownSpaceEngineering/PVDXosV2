@@ -27,11 +27,11 @@ struct io_descriptor *arducam_i2c_io;
 struct io_descriptor *arducam_spi_io;
 
 // Buffer for SPI transactions
-uint8_t spi_rx_buffer[256] = {0x00};
-uint8_t spi_tx_buffer[64] = {0x00};
-struct spi_xfer xfer = {
-    .rxbuf = spi_rx_buffer,
-    .txbuf = spi_tx_buffer,
+uint8_t ardu_spi_rx_buffer[256] = {0x00};
+uint8_t ardu_spi_tx_buffer[64] = {0x00};
+struct spi_xfer ardu_xfer = {
+    .rxbuf = ardu_spi_rx_buffer,
+    .txbuf = ardu_spi_tx_buffer,
     .size = 0
 };
 
@@ -311,9 +311,9 @@ void init_arducam()
 
     watchdog_checkin(ARDUCAM_TASK);
 
-    spi_m_sync_set_baudrate(&SPI_0, 4000000);
-    spi_m_sync_get_io_descriptor(&SPI_0, &arducam_spi_io);
-    spi_m_sync_enable(&SPI_0);
+    spi_m_sync_set_baudrate(&SPI_1, 4000000);
+    spi_m_sync_get_io_descriptor(&SPI_1, &arducam_spi_io);
+    spi_m_sync_enable(&SPI_1);
 
     uint8_t vidpid[2] = { 0, 0 };
     uint8_t data[2] = { 0x00, 0x01 };
@@ -331,34 +331,16 @@ void init_arducam()
 
     wrSensorRegs8_8(OV2640_320x240_JPEG);
 
-    xfer.size = 2;
-    spi_tx_buffer[0] = ARDUCHIP_FIFO;
-    spi_tx_buffer[1] = FIFO_CLEAR_MASK;
-    spi_write_command();
+    ardu_xfer.size = 2;
+    ardu_spi_tx_buffer[0] = ARDUCHIP_FIFO;
+    ardu_spi_tx_buffer[1] = FIFO_CLEAR_MASK;
+    arducam_spi_write_command();
 
-    
-
-    if ((vidpid[0] != 0x26 ) && (( vidpid[1] != 0x41 ) || ( vidpid[1] != 0x42 )))
+    if ((vidpid[0] == 0x26 ))
     {
         info("vid: %d", vidpid[0]);
         info("pid: %d", vidpid[1]);
     }
-
-    
-    void ArduCAM::flush_fifo(void)
-    {
-        write_reg(ARDUCHIP_FIFO, FIFO_CLEAR_MASK);
-    }
-
-    void ArduCAM::start_capture(void)
-    {
-        write_reg(ARDUCHIP_FIFO, FIFO_START_MASK);
-    }
-
-    void ArduCAM::clear_fifo_flag(void )
-    {
-        write_reg(ARDUCHIP_FIFO, FIFO_CLEAR_MASK);
-    }    
 
     watchdog_checkin(ARDUCAM_TASK);
 
@@ -380,12 +362,12 @@ void arducam_main(void *pvParameters) {
 }
 
 // Write the contents of spi_tx_buffer to the display as a command
-int32_t spi_write_command() {
+int32_t arducam_spi_write_command() {
     DC_LOW(); // set D/C# pin low to indicate that sent bytes are commands (not data)
     CS_LOW(); // select the display for SPI communication
 
-    int32_t response = spi_m_sync_transfer(&SPI_0, &xfer);
-    if (response != (int32_t)xfer.size) {
+    int32_t response = spi_m_sync_transfer(&SPI_0, &ardu_xfer);
+    if (response != (int32_t)ardu_xfer.size) {
         return -1;
     }
 

@@ -39,5 +39,6 @@ void init_arducam();
 uint32_t ARDUCAMI2CWrite(uint8_t addr, uint8_t *data, uint16_t size);
 uint32_t ARDUCAMI2CRead(uint8_t addr, uint8_t *readBuf, uint16_t size);
 uint32_t wrSensorRegs8_8(const struct sensor_reg reglist[]);
+int32_t arducam_spi_write_command();
 
 #endif // arducam_h_
