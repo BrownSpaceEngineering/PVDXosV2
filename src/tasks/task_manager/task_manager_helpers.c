@@ -115,7 +115,7 @@ void init_task(const size_t i) {
     unlock_mutex(task_list_mutex);
 }
 
-void exec_command_task_manager(command_t *const p_cmd) {
+void exec_command_task_manager(const command_t *const p_cmd) {
     if (p_cmd->target != TASK_MANAGER) {
         fatal("task manager: command target is not task manager! target: %d operation: %d\n", p_cmd->target, p_cmd->operation);
     }

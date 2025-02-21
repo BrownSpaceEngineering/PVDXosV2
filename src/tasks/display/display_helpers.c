@@ -1,8 +1,8 @@
 /**
  * display_helpers.c
- * 
+ *
  * Driver for the SSD1362 OLED controller within a Midas Displays MDOB256064D1Y-YS display.
- * 
+ *
  * Created: February 29, 2024
  * Authors: Tanish Makadia, Ignacio Blancas Rodriguez, Aidan Wang
  */
@@ -272,7 +272,7 @@ status_t init_display(void) {
 command_t get_display_image_command(const color_t *const p_buffer, status_t *const p_result) {
     // NOTE: Be sure to use a pointer to a static lifetime variable to ensure
     // that `*p_data` is still valid when the command is received.
-    command_t cmd = {TASK_DISPLAY, OPERATION_DISPLAY_IMAGE, p_buffer, sizeof(color_t*), p_result, NULL};
+    const command_t cmd = {TASK_DISPLAY, OPERATION_DISPLAY_IMAGE, p_buffer, sizeof(color_t*), p_result, NULL};
     return cmd;
 }
 

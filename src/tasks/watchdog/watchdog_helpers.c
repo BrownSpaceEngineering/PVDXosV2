@@ -124,7 +124,7 @@ void kick_watchdog(void) {
 command_t get_watchdog_checkin_command(pvdx_task_t *const task) {
     // NOTE: Be sure to use the address of the task handle within the global task list (static lifetime) to ensure
     // that `*p_data` is still valid when the command is received.
-    command_t cmd = {TASK_WATCHDOG, OPERATION_CHECKIN, &task->handle, sizeof(TaskHandle_t*), NULL, NULL};
+    const command_t cmd = {TASK_WATCHDOG, OPERATION_CHECKIN, &task->handle, sizeof(TaskHandle_t*), NULL, NULL};
     return cmd;
 }
 
@@ -174,7 +174,7 @@ void unregister_task_with_watchdog(const TaskHandle_t handle) {
 }
 
 // Executes a command received by the watchdog task
-void exec_command_watchdog(command_t *const p_cmd) {
+void exec_command_watchdog(const command_t *const p_cmd) {
     if (p_cmd->target != TASK_WATCHDOG) {
         fatal("watchdog: command target is not watchdog! target: %d operation: %d\n", p_cmd->target, p_cmd->operation);
     }

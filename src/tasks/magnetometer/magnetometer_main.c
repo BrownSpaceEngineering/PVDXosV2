@@ -11,7 +11,7 @@ void main_magnetometer(void *pvParameters) {
     // Obtain a pointer to the current task within the global task list
     pvdx_task_t *const current_task = get_task(xTaskGetCurrentTaskHandle());
     // Cache the watchdog checkin command to avoid creating it every iteration
-    command_t cmd_checkin = get_watchdog_checkin_command(current_task);
+    const command_t cmd_checkin = get_watchdog_checkin_command(current_task);
     // Calculate the maximum time the command dispatcher should block (and thus be unable to check in with the watchdog)
     const TickType_t queue_block_time_ticks = get_command_queue_block_time_ticks(current_task);
     // Varible to hold commands popped off the queue
@@ -23,7 +23,7 @@ void main_magnetometer(void *pvParameters) {
     if (magnetometer_command_queue_handle == NULL) {
         fatal("Failed to create magnetometer queue!\n");
     }
-    
+
     while (true) {
         debug_impl("\n---------- Magnetometer Task Loop ----------\n");
 

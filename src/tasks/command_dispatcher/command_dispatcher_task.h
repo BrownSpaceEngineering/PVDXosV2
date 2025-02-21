@@ -27,7 +27,7 @@ extern QueueHandle_t command_dispatcher_command_queue_handle;
 
 void init_command_dispatcher(void);
 void main_command_dispatcher(void* pvParameters);
-void dispatch_command(command_t *const p_cmd);
-void enqueue_command(command_t *const p_cmd);
+void dispatch_command(const command_t *const p_cmd);
+void enqueue_command(const command_t *const p_cmd);
 
 #endif // COMMAND_DISPATCHER_H

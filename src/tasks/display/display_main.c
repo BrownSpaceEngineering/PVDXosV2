@@ -20,7 +20,7 @@ void main_display(void *pvParameters) {
     // Obtain a pointer to the current task within the global task list
     pvdx_task_t *const current_task = get_task(xTaskGetCurrentTaskHandle());
     // Cache the watchdog checkin command to avoid creating it every iteration
-    command_t cmd_checkin = get_watchdog_checkin_command(current_task);
+    const command_t cmd_checkin = get_watchdog_checkin_command(current_task);
     // Calculate the maximum time the command dispatcher should block (and thus be unable to check in with the watchdog)
     const TickType_t queue_block_time_ticks = get_command_queue_block_time_ticks(current_task);
     // Varible to hold commands popped off the queue
@@ -57,18 +57,18 @@ void main_display(void *pvParameters) {
 
         {
             // TODO: Add logic for blocking on the result of the display_image command
-            command_t display_image_command = get_display_image_command(IMAGE_BUFFER_PVDX, &result);
+            const command_t display_image_command = get_display_image_command(IMAGE_BUFFER_PVDX, &result);
             enqueue_command(&display_image_command);
         }
-        
+
         if (result != SUCCESS) {
             warning("display: Failed to display image. Error code: %d\n", result);
         }
-        
+
         {
             // Set the display buffer to the second image
             // TODO: Add logic for blocking on the result of the display_image command
-            command_t display_image_command = get_display_image_command(IMAGE_BUFFER_BROWNLOGO, &result);
+            const command_t display_image_command = get_display_image_command(IMAGE_BUFFER_BROWNLOGO, &result);
             enqueue_command(&display_image_command);
         }
 

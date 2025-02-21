@@ -92,8 +92,8 @@ typedef struct {
     const operation_t operation;          // The operation to perform
     const void *const p_data;             // Pointer to data needed for the operation
     const size_t len;                     // Length of the data
-    status_t *p_result;                   // Pointer to the result of the operation
-    void (*callback)(status_t* p_result); // Callback function to call after the operation is complete
+    status_t *const p_result;                   // Pointer to the result of the operation
+    void (*const callback)(status_t* p_result); // Callback function to call after the operation is complete
 } command_t;
 
 // A struct defining a task's lifecycle in the PVDXos RTOS
