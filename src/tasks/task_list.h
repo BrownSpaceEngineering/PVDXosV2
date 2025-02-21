@@ -15,6 +15,13 @@
 // #define NULL_TASK ((pvdx_task_t){NULL, false, NULL, NULL, 0, NULL, NULL, 0, NULL, 0, 0, false})
 
 // TODO add extern defs of task pointers here?
+extern pvdx_task_t *const p_watchdog_task;
+extern pvdx_task_t *const p_command_dispatcher_task;
+extern pvdx_task_t *const p_task_manager_task;
+extern pvdx_task_t *const p_magnetometer_task;
+extern pvdx_task_t *const p_shell_task;
+extern pvdx_task_t *const p_display_task;
+extern pvdx_task_t *const p_heartbeat_task;
 
 extern pvdx_task_t *task_list[];
 

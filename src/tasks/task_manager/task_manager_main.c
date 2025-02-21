@@ -12,8 +12,8 @@
 #include "task_manager_task.h"
 
 task_manager_task_memory_t task_manager_mem;
-uint8_t task_manager_command_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
-QueueHandle_t task_manager_command_queue_handle;
+// uint8_t task_manager_command_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
+// QueueHandle_t task_manager_command_queue_handle;
 SemaphoreHandle_t task_list_mutex = NULL;
 StaticSemaphore_t task_list_mutex_buffer;
 
@@ -37,11 +37,11 @@ void main_task_manager(void *pvParameters) {
         debug_impl("\n---------- Task Manager Task Loop ----------\n");
 
         // Execute all commands contained in the queue
-        if (xQueueReceive(task_manager_command_queue_handle, &cmd, queue_block_time_ticks) == pdPASS) {
+        if (xQueueReceive(p_task_manager_task->command_queue, &cmd, queue_block_time_ticks) == pdPASS) {
             do {
                 debug("task_manager: Command popped off queue. Target: %d, Operation: %d\n", cmd.target, cmd.operation);
                 exec_command_task_manager(&cmd);
-            } while (xQueueReceive(task_manager_command_queue_handle, &cmd, 0) == pdPASS);
+            } while (xQueueReceive(p_task_manager_task->command_queue, &cmd, 0) == pdPASS);
         }
         debug("task_manager: No more commands queued.\n");
 

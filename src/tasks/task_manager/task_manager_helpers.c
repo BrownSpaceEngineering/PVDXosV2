@@ -73,13 +73,16 @@ void task_manager_disable_task(pvdx_task_t *const task) {
 /* ---------- NON-DISPATCHABLE FUNCTIONS (do not go through the command dispatcher) ---------- */
 
 // Initializes the task manager task
-void init_task_manager(void) {
-    task_manager_command_queue_handle = xQueueCreateStatic(COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE,
-                                                           task_manager_command_queue_buffer, &task_manager_mem.task_manager_task_queue);
+QueueHandle_t init_task_manager(void) {
+    QueueHandle_t task_manager_command_queue_handle =
+        xQueueCreateStatic(COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE, task_manager_mem.task_manager_command_queue_buffer,
+                           &task_manager_mem.task_manager_task_queue);
 
     if (task_manager_command_queue_handle == NULL) {
         fatal("Failed to create task manager queue!\n");
     }
+
+    return task_manager_command_queue_handle;
 }
 
 // Initializes the task at index i in the task list

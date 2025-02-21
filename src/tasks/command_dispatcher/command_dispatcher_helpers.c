@@ -1,13 +1,13 @@
 /**
  * command_dispatcher_helpers.c
- * 
+ *
  * Helper functions for the Command Dispatcher task. This task is responsible for receiving
  * commands from other tasks and forwarding them to the appropriate task for execution. All major
  * commands MUST be sent through the Command Dispatcher task to enable consistent logging and adhere
  * to the PVDXos hub-and-spoke architecture.
- * 
+ *
  * Created: October 13, 2024
- * Authors: Tanish Makadia, Yi Liu
+ * Authors: Tanish Makadia, Yi Liu, Siddharta Laloux
  */
 
 #include "command_dispatcher_task.h"
@@ -20,19 +20,22 @@
 /* ---------- NON-DISPATCHABLE FUNCTIONS (do not go through the command dispatcher) ---------- */
 
 // Initialize the command queue, which stores pointers to command structs
-void init_command_dispatcher(void) {
-    command_dispatcher_command_queue_handle = xQueueCreateStatic(COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE, command_dispatcher_command_queue_buffer,
-                                                    &command_dispatcher_mem.command_dispatcher_task_queue);
+QueueHandle_t init_command_dispatcher(void) {
+    command_dispatcher_command_queue_handle = xQueueCreateStatic(COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE,
+                                                                 command_dispatcher_mem.command_dispatcher_command_queue_buffer,
+                                                                 &command_dispatcher_mem.command_dispatcher_task_queue);
 
     if (command_dispatcher_command_queue_handle == NULL) {
         fatal("Failed to create command queue!\n");
     }
+
+    return command_dispatcher_command_queue_handle;
 }
 
 // Enqueue a command to be executed by the command dispatcher
-void enqueue_command(command_t *const p_cmd) {    
+void enqueue_command(command_t *const p_cmd) {
     if (xQueueSendToBack(command_dispatcher_command_queue_handle, p_cmd, 0) != pdTRUE) {
-        pvdx_task_t* calling_task = get_task(xTaskGetCurrentTaskHandle());
+        pvdx_task_t *calling_task = get_task(xTaskGetCurrentTaskHandle());
         fatal("%s task failed to enqueue command onto Command Dispatcher queue!\n", calling_task->name);
     }
 }
@@ -51,7 +54,7 @@ void dispatch_command(command_t *const p_cmd) {
             if (xQueueSendToBack(watchdog_command_queue_handle, p_cmd, 0) != pdTRUE) {
                 fatal("command-dispatcher: Failed to forward command to watchdog task!\n");
             }
-            
+
             debug("command_dispatcher: Forwarded a command to watchdog task\n");
             break;
         case TASK_SHELL:
