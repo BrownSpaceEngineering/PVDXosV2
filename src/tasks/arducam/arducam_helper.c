@@ -46,3 +46,22 @@ void ARDUCAMwReg(uint8_t addr, uint8_t data) {
     return SUCCESS;
 }
 
+uint8_t ARDUCAMrReg(uint8_t addr) {
+    CS_LOW();
+    
+    uint8_t value; // Init val 
+    xfer.size = 1;
+    spi_tx_buffer[0] = addr | 0x80; // 0x80 sends read bit to camera
+    
+    int32_t response = spi_m_sync_transfer(&SPI_0, &xfer);
+    if(response != (int32_t)xfer.size) {
+        return ERROR_IO;
+    }
+    
+    // Value is stored in rx buffer after read
+    value = spi_rx_buffer[0];
+
+    CS_HIGH();
+    return value;
+
+}
