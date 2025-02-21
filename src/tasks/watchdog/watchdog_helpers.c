@@ -121,11 +121,17 @@ void kick_watchdog(void) {
 }
 
 // Given a pointer to a `pvdx_task_t` struct, returns a command to check-in with the watchdog task.
-command_t get_watchdog_checkin_command(pvdx_task_t *const task) {
+inline command_t get_watchdog_checkin_command(pvdx_task_t *const task) {
     // NOTE: Be sure to use the address of the task handle within the global task list (static lifetime) to ensure
     // that `*p_data` is still valid when the command is received.
-    const command_t cmd = {TASK_WATCHDOG, OPERATION_CHECKIN, &task->handle, sizeof(TaskHandle_t*), NULL, NULL};
-    return cmd;
+    return (command_t) {
+        .target = TASK_WATCHDOG,
+        .operation = OPERATION_CHECKIN,
+        .p_data = &task->handle,
+        .len = sizeof(TaskHandle_t*),
+        .p_result = NULL,
+        .callback = NULL
+    };
 }
 
 // Registers a task with the watchdog so that checkins are monitored.

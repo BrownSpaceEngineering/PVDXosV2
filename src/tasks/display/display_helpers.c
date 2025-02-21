@@ -269,11 +269,17 @@ status_t init_display(void) {
     return SUCCESS;
 }
 
-command_t get_display_image_command(const color_t *const p_buffer, status_t *const p_result) {
+inline command_t get_display_image_command(const color_t *const p_buffer, status_t *const p_result) {
     // NOTE: Be sure to use a pointer to a static lifetime variable to ensure
     // that `*p_data` is still valid when the command is received.
-    const command_t cmd = {TASK_DISPLAY, OPERATION_DISPLAY_IMAGE, p_buffer, sizeof(color_t*), p_result, NULL};
-    return cmd;
+    return (command_t) {
+        .target = TASK_DISPLAY,
+        .operation = OPERATION_DISPLAY_IMAGE,
+        .p_data = p_buffer,
+        .len = sizeof(color_t*),
+        .p_result = p_result,
+        .callback = NULL
+    };
 }
 
 void exec_command_display(command_t *const p_cmd) {
