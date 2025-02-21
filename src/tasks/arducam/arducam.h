@@ -22,10 +22,23 @@
 
 #define ARDUCAM_SPI_BUFFER_CAPACITY 64
 
+// Functions for setting the reset, data/command, and chip-select pins on the display to high or low voltage
+#define RST_LOW() gpio_set_pin_level(Display_RST, 0)
+#define RST_HIGH() gpio_set_pin_level(Display_RST, 1)
+#define DC_LOW() gpio_set_pin_level(Display_DC, 0)
+#define DC_HIGH() gpio_set_pin_level(Display_DC, 1)
+#define CS_LOW() gpio_set_pin_level(Display_CS, 0)
+#define CS_HIGH() gpio_set_pin_level(Display_CS, 1)
+
 struct sensor_reg {
 	uint8_t reg;
 	uint8_t val;
 };
+
+// Buffer for SPI transactions
+uint8_t ardu_spi_rx_buffer[ARDUCAM_SPI_BUFFER_CAPACITY];
+uint8_t ardu_spi_tx_buffer[ARDUCAM_SPI_BUFFER_CAPACITY];
+struct spi_xfer ardu_xfer;
 
 struct arducamTaskMemory {
     StackType_t OverflowBuffer[TASK_STACK_OVERFLOW_PADDING];
@@ -42,5 +55,7 @@ uint32_t ARDUCAMI2CWrite(uint8_t addr, uint8_t *data, uint16_t size);
 uint32_t ARDUCAMI2CRead(uint8_t addr, uint8_t *readBuf, uint16_t size);
 uint32_t wrSensorRegs8_8(const struct sensor_reg reglist[]);
 int32_t arducam_spi_write_command();
+int32_t ARDUCAMwReg(uint8_t, uint8_t);
+int8_t ARDUCAMrReg(uint8_t);
 
 #endif // arducam_h_

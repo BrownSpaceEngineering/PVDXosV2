@@ -13,27 +13,10 @@
 
 #define I2C_SERCOM       SERCOM6
 
-// Functions for setting the reset, data/command, and chip-select pins on the display to high or low voltage
-#define RST_LOW()                   gpio_set_pin_level(Display_RST, 0)
-#define RST_HIGH()                  gpio_set_pin_level(Display_RST, 1)
-#define DC_LOW()                    gpio_set_pin_level(Display_DC, 0)
-#define DC_HIGH()                   gpio_set_pin_level(Display_DC, 1)
-#define CS_LOW()                    gpio_set_pin_level(Display_CS, 0)
-#define CS_HIGH()                   gpio_set_pin_level(Display_CS, 1)
-
 struct arducamTaskMemory arducamMem;
 
 struct io_descriptor *arducam_i2c_io;
 struct io_descriptor *arducam_spi_io;
-
-// Buffer for SPI transactions
-uint8_t ardu_spi_rx_buffer[256] = {0x00};
-uint8_t ardu_spi_tx_buffer[64] = {0x00};
-struct spi_xfer ardu_xfer = {
-    .rxbuf = ardu_spi_rx_buffer,
-    .txbuf = ardu_spi_tx_buffer,
-    .size = 0
-};
 
 const struct sensor_reg OV2640_JPEG_INIT[] =
 {
@@ -320,13 +303,10 @@ void init_arducam()
 
     // ADD TEST CODE HERE
     ARDUCAMwReg(ARDUCHIP_TEST1, 0x55);
-    temp = ARDUCAMrReg(ARDUCHIP_TEST1);
+    int temp = ARDUCAMrReg(ARDUCHIP_TEST1);
     if (temp != 0x55){
-        Serial.println("SPI1 interface Error!");
         while(1);
     }
-
-    
 
     ARDUCAMI2CWrite( 0xFF, data + 1, 1 );
     ARDUCAMI2CRead( OV2640_CHIPID_HIGH, vidpid, 1 );

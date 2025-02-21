@@ -36,6 +36,7 @@ export OBJS := \
 ../src/tasks/shell/shell_commands.o \
 ../src/tasks/rm3100/rm3100.o \
 ../src/tasks/arducam/arducam.o \
+../src/tasks/arducam/arducam_helper.o \
 
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###
 ### THESE ARE WRITTEN RELATIVE TO THE ./ASF/gcc/Makefile FILE ###
