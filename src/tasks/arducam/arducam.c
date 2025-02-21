@@ -318,6 +318,16 @@ void init_arducam()
     uint8_t vidpid[2] = { 0, 0 };
     uint8_t data[2] = { 0x00, 0x01 };
 
+    // ADD TEST CODE HERE
+    ARDUCAMwReg(ARDUCHIP_TEST1, 0x55);
+    temp = ARDUCAMrReg(ARDUCHIP_TEST1);
+    if (temp != 0x55){
+        Serial.println("SPI1 interface Error!");
+        while(1);
+    }
+
+    
+
     ARDUCAMI2CWrite( 0xFF, data + 1, 1 );
     ARDUCAMI2CRead( OV2640_CHIPID_HIGH, vidpid, 1 );
     ARDUCAMI2CRead( OV2640_CHIPID_LOW, vidpid + 1, 1 );
