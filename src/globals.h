@@ -108,16 +108,6 @@ typedef QueueHandle_t (*init_function)(void);
 
 /* ---------- STRUCTS ---------- */
 
-// A struct to represent a command that OS tasks can execute
-typedef struct {
-    const pvdx_task_t *const target;      // The target task for the command
-    const operation_t operation;          // The operation to perform
-    const void *const p_data;             // Pointer to data needed for the operation
-    const size_t len;                     // Length of the data
-    status_t *p_result;                   // Pointer to the result of the operation
-    void (*callback)(status_t *p_result); // Callback function to call after the operation is complete
-} command_t;
-
 // A struct defining a task's lifecycle in the PVDXos RTOS
 typedef struct {
     const char *const name;             // Name of the task
@@ -136,6 +126,16 @@ typedef struct {
     bool has_registered;                // Whether the task is being monitored by the watchdog (initialized to NULL)
     const task_type_t task_type;        // Whether the task is OS-integrity, a sensor, or an actuator
 } pvdx_task_t;
+
+// A struct to represent a command that OS tasks can execute
+typedef struct {
+    const pvdx_task_t *const target;      // The target task for the command
+    const operation_t operation;          // The operation to perform
+    const void *const p_data;             // Pointer to data needed for the operation
+    const size_t len;                     // Length of the data
+    status_t *p_result;                   // Pointer to the result of the operation
+    void (*callback)(status_t *p_result); // Callback function to call after the operation is complete
+} command_t;
 
 /* ---------- BUILD CONSTANTS ---------- */
 
