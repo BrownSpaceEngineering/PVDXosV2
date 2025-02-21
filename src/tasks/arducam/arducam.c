@@ -336,6 +336,8 @@ void init_arducam()
     spi_tx_buffer[1] = FIFO_CLEAR_MASK;
     spi_write_command();
 
+    
+
     if ((vidpid[0] != 0x26 ) && (( vidpid[1] != 0x41 ) || ( vidpid[1] != 0x42 )))
     {
         info("vid: %d", vidpid[0]);
@@ -378,17 +380,17 @@ void arducam_main(void *pvParameters) {
 }
 
 // Write the contents of spi_tx_buffer to the display as a command
-status_t spi_write_command() {
+int32_t spi_write_command() {
     DC_LOW(); // set D/C# pin low to indicate that sent bytes are commands (not data)
     CS_LOW(); // select the display for SPI communication
 
     int32_t response = spi_m_sync_transfer(&SPI_0, &xfer);
     if (response != (int32_t)xfer.size) {
-        return ERROR_IO;
+        return -1;
     }
 
     CS_HIGH(); // deselect the display for SPI communication
-    return SUCCESS;
+    return response;
 }
 
 uint32_t ARDUCAMI2CWrite(uint8_t addr, uint8_t *data, uint16_t size)
