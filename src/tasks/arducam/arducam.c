@@ -13,12 +13,27 @@
 
 #define I2C_SERCOM       SERCOM6
 
+// Functions for setting the reset, data/command, and chip-select pins on the display to high or low voltage
+#define RST_LOW()                   gpio_set_pin_level(Display_RST, 0)
+#define RST_HIGH()                  gpio_set_pin_level(Display_RST, 1)
+#define DC_LOW()                    gpio_set_pin_level(Display_DC, 0)
+#define DC_HIGH()                   gpio_set_pin_level(Display_DC, 1)
+#define CS_LOW()                    gpio_set_pin_level(Display_CS, 0)
+#define CS_HIGH()                   gpio_set_pin_level(Display_CS, 1)
+
 struct arducamTaskMemory arducamMem;
 
 struct io_descriptor *arducam_i2c_io;
 struct io_descriptor *arducam_spi_io;
 
-static Format cformat;
+// Buffer for SPI transactions
+uint8_t spi_rx_buffer[256] = {0x00};
+uint8_t spi_tx_buffer[64] = {0x00};
+struct spi_xfer xfer = {
+    .rxbuf = spi_rx_buffer,
+    .txbuf = spi_tx_buffer,
+    .size = 0
+};
 
 const struct sensor_reg OV2640_JPEG_INIT[] =
 {
@@ -300,8 +315,6 @@ void init_arducam()
     spi_m_sync_get_io_descriptor(&SPI_0, &arducam_spi_io);
     spi_m_sync_enable(&SPI_0);
 
-    cformat = JPEG;
-
     uint8_t vidpid[2] = { 0, 0 };
     uint8_t data[2] = { 0x00, 0x01 };
 
@@ -317,6 +330,11 @@ void init_arducam()
     ARDUCAMI2CWrite( 0x15, data, 1);
 
     wrSensorRegs8_8(OV2640_320x240_JPEG);
+
+    xfer.size = 2;
+    spi_tx_buffer[0] = ARDUCHIP_FIFO;
+    spi_tx_buffer[1] = FIFO_CLEAR_MASK;
+    spi_write_command();
 
     if ((vidpid[0] != 0x26 ) && (( vidpid[1] != 0x41 ) || ( vidpid[1] != 0x42 )))
     {
@@ -357,6 +375,20 @@ void arducam_main(void *pvParameters) {
     }
 
     return;
+}
+
+// Write the contents of spi_tx_buffer to the display as a command
+status_t spi_write_command() {
+    DC_LOW(); // set D/C# pin low to indicate that sent bytes are commands (not data)
+    CS_LOW(); // select the display for SPI communication
+
+    int32_t response = spi_m_sync_transfer(&SPI_0, &xfer);
+    if (response != (int32_t)xfer.size) {
+        return ERROR_IO;
+    }
+
+    CS_HIGH(); // deselect the display for SPI communication
+    return SUCCESS;
 }
 
 uint32_t ARDUCAMI2CWrite(uint8_t addr, uint8_t *data, uint16_t size)

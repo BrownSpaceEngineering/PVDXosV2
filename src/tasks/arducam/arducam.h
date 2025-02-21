@@ -33,11 +33,6 @@ struct arducamTaskMemory {
 
 extern struct arducamTaskMemory arducamMem;
 
-typedef enum
-{
-    JPEG
-} Format;
-
 void arducam_main(void *pvParameters);
 void init_arducam();
 
