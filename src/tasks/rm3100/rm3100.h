@@ -15,8 +15,6 @@ struct rm3100TaskMemory {
     StaticTask_t rm3100TaskTCB;
 };
 
-#define DRDY_PIN 7
-
 //Need to put the holy grail of values here
 #define RM3100Address 0x20 // Hexadecimal slave address for RM3100 with Pin 2 and Pin 4 set to LOW
 
