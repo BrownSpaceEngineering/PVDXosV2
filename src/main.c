@@ -73,10 +73,10 @@ int main(void) {
 
     while (curr_task != NULL) {
         if (curr_task->task_type == OS) {
-            (curr_task->init)();
             init_task_pointer(curr_task);
             info("%s initialized\n", curr_task->name);
         }
+        curr_task++;
     }
 
     // for (int16_t i = 0; i < SUBTASK_START_INDEX; i++) {
