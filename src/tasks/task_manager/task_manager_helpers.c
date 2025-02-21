@@ -125,7 +125,8 @@ void init_task_index(const size_t i) {
 void init_task_pointer(pvdx_task_t *const p_task) {
     lock_mutex(task_list_mutex);
 
-    p_task->command_queue = xQueueCreateStatic();
+    QueueHandle_t queue_handle = (p_task->init)();
+    p_task->command_queue = queue_handle;
 
     p_task->handle = xTaskCreateStatic(p_task->function, p_task->name, p_task->stack_size, p_task->pvParameters, p_task->priority,
                                        p_task->stack_buffer, p_task->task_tcb);

@@ -1,19 +1,20 @@
 #ifndef MAGNETOMETER_TASK_H
 #define MAGNETOMETER_TASK_H
 
-#include "magnetometer_hal.h"
 #include <atmel_start.h>
 #include <driver_init.h>
+
 #include "globals.h"
-#include "rtos_start.h"
-#include "watchdog_task.h"
-#include "string.h"
 #include "logging.h"
+#include "magnetometer_hal.h"
+#include "rtos_start.h"
 #include "stdbool.h"
+#include "string.h"
+#include "watchdog_task.h"
 
 // FreeRTOS Task structs
 // Memory for the magnetometer task
-#define MAGNETOMETER_TASK_STACK_SIZE         1024 // Size of the stack in words (multiply by 4 to get bytes)
+#define MAGNETOMETER_TASK_STACK_SIZE 1024 // Size of the stack in words (multiply by 4 to get bytes)
 
 // Placed in a struct to ensure that the TCB is placed higher than the stack in memory
 // ^ This ensures that stack overflows do not corrupt the TCB (since the stack grows downwards)

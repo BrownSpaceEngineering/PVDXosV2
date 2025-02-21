@@ -56,7 +56,6 @@ pvdx_task_t task_manager_task = {"TaskManager",
 pvdx_task_t magnetometer_task = {"Magnetometer",
                                  true,
                                  NULL,
-
                                  main_magnetometer,
                                  MAGNETOMETER_TASK_STACK_SIZE,
                                  magnetometer_mem.magnetometer_task_stack,

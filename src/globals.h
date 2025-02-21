@@ -1,7 +1,17 @@
+/**
+ * globals.h
+ *
+ * Defines global datatypes, structures and headers.
+ *
+ * Created:
+ * Authors: Siddharta Laloux,
+ */
+
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
 #include <FreeRTOS.h>
+#include <queue.h>
 #include <stdbool.h>
 #include <task.h>
 
@@ -94,7 +104,7 @@ typedef enum {
 
 /* ---------- MISCELLANEOUS TASK TYPES ---------- */
 
-typedef void (*init_function)(void);
+typedef QueueHandle_t (*init_function)(void);
 
 /* ---------- STRUCTS ---------- */
 
@@ -110,10 +120,10 @@ typedef struct {
 
 // A struct defining a task's lifecycle in the PVDXos RTOS
 typedef struct {
-    const char *const name; // Name of the task
-    bool enabled;           // Whether the task is enabled
-    TaskHandle_t handle;    // FreeRTOS handle to the task
-    QueueHandle_t command_queue;
+    const char *const name;             // Name of the task
+    bool enabled;                       // Whether the task is enabled
+    TaskHandle_t handle;                // FreeRTOS handle to the task
+    QueueHandle_t command_queue;        // Command queue associated with the task
     const init_function init;           // Initialisation function to call before task entry point
     const TaskFunction_t function;      // Main entry point for the task
     const uint32_t stack_size;          // Size of the stack in words (multiply by 4 to get bytes)

@@ -5,14 +5,14 @@
  * and resetting the system if a task fails to check in within the allowed time.
  *
  * Created: January 28, 2024
- * Authors: Oren Kohavi, Tanish Makadia
+ * Authors: Oren Kohavi, Tanish Makadia, Siddharta Laloux
  */
 
 #include "watchdog_task.h"
 
 watchdog_task_memory_t watchdog_mem;
 QueueHandle_t watchdog_command_queue_handle;
-uint8_t watchdog_command_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
+// uint8_t watchdog_command_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
 volatile Wdt *const p_watchdog = WDT;
 
 void main_watchdog(void *pvParameters) {

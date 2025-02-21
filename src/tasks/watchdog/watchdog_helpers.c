@@ -32,7 +32,7 @@ void watchdog_checkin(const TaskHandle_t handle) {
 
 /* ---------- NON-DISPATCHABLE FUNCTIONS (do not go through the command dispatcher) ---------- */
 
-void init_watchdog(void) {
+QueueHandle_t init_watchdog(void) {
     // Choose the period of the hardware watchdog timer
     uint8_t watchdog_period = WDT_CONFIG_PER_CYC16384;
 
@@ -59,8 +59,8 @@ void init_watchdog(void) {
     info("Hardware Watchdog Initialized\n");
 
     // Create watchdog command queue
-    watchdog_command_queue_handle = xQueueCreateStatic(COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE, watchdog_command_queue_buffer,
-                                                       &watchdog_mem.watchdog_task_queue);
+    watchdog_command_queue_handle = xQueueCreateStatic(COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE,
+                                                       watchdog_mem.watchdog_command_queue_buffer, &watchdog_mem.watchdog_task_queue);
 
     if (watchdog_command_queue_handle == NULL) {
         fatal("Failed to create watchdog queue!\n");
@@ -76,6 +76,8 @@ void init_watchdog(void) {
     for (size_t i = 0; task_list[i] != NULL; i++) {
         task_list[i]->has_registered = false;
     }
+
+    return watchdog_command_queue_handle;
 }
 
 /* Temporarily commented out (so that specific_handlers.c works)

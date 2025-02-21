@@ -2,7 +2,7 @@
  * Code for the RM3100 Magnetometer Sensor
  *
  * Created: Dec 7, 2023 2:22 AM
- * By: Nathan Kim, Alexander Thaep
+ * By: Nathan Kim, Alexander Thaep, Siddharta Laloux
  **/
 
 #include "magnetometer_task.h"

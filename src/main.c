@@ -56,17 +56,17 @@ int main(void) {
         fatal("Failed to create PVDX task list mutex");
     }
 
-    void (*main_functions[SUBTASK_START_INDEX])(void *pvParameters) = {
-        main_watchdog,
-        main_command_dispatcher,
-        main_task_manager,
-    };
-    void (*init_functions[SUBTASK_START_INDEX])(void) = {
-        init_watchdog,
-        init_command_dispatcher,
-        init_task_manager,
-    };
-    const char *task_names[SUBTASK_START_INDEX] = {"Watchdog Task", "Command Dispatcher Task", "Task Manager Task"};
+    // void (*main_functions[SUBTASK_START_INDEX])(void *pvParameters) = {
+    //     main_watchdog,
+    //     main_command_dispatcher,
+    //     main_task_manager,
+    // };
+    // void (*init_functions[SUBTASK_START_INDEX])(void) = {
+    //     init_watchdog,
+    //     init_command_dispatcher,
+    //     init_task_manager,
+    // };
+    // const char *task_names[SUBTASK_START_INDEX] = {"Watchdog Task", "Command Dispatcher Task", "Task Manager Task"};
 
     // Initialise all OS integrity tasks
     pvdx_task_t *curr_task = *task_list;
