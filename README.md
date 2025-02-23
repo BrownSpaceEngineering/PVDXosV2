@@ -1,3 +1,9 @@
+# PVDXos
+
+The real-time operating system for Brown Space Engineering's second satellite, Perovskite Visuals and Degredation eXperiment (PVDX).
+
+![PVDXos Diagram](pvdxos.png)
+
 # Project Setup and Toolchain Installation Guide
 
 ## Building and Running:
@@ -17,7 +23,7 @@
 
 3. **Flash the Bootloader:**
 
-   - If you're using a brand-new devboard, you *must* flash the bootloader. This is done by running `make flash_bootloader`. Once GDB starts up successfully, you can exit gdb.
+   - If you're using a brand-new devboard, you _must_ flash the bootloader. This is done by running `make flash_bootloader`. Once GDB starts up successfully, you can exit gdb.
    - If you're using a devboard that has already been set up, you can usually skip this step, but it never hurts!
    - If/When the bootloader gets an update, you can update it by running `make flash_bootloader` again.
 
@@ -50,6 +56,7 @@
    - `sudo apt install gcc-arm-none-eabi`
 
 4. Install GDB Multiarch and other build tools:
+
    - `sudo apt install gdb-multiarch`
    - `sudo apt install build-essential`
    - `sudo apt install clang-format`
@@ -102,6 +109,7 @@
    - IMPORTANT: Remember to replace `<VersionNumber>` with the version number of the toolchain you downloaded. It should be something like '13.2.Rel1'
 
 8. Install other build tools:
+
    - `brew install gnu-sed` (if on mac)
    - `brew install clang-format`
 
