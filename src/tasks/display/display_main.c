@@ -35,7 +35,6 @@ void main_display(void *pvParameters) {
 
     // Initialize the display hardware
     status_t status = init_display();
-
     if (status != SUCCESS) {
         fatal("Failed to initialize display hardware!\n");
     }
@@ -43,8 +42,9 @@ void main_display(void *pvParameters) {
     while (true) {
         debug_impl("\n---------- Display Task Loop ----------\n");
 
+        (void)queue_block_time_ticks;
         // Execute all commands contained in the queue
-        if (xQueueReceive(display_command_queue_handle, &cmd, queue_block_time_ticks) == pdPASS) {
+        if (xQueueReceive(display_command_queue_handle, &cmd, 0) == pdPASS) {
             do {
                 debug("display: Command popped off queue. Target: %d, Operation: %d\n", cmd.target, cmd.operation);
                 exec_command_display(&cmd);
