@@ -47,27 +47,27 @@ void task_manager_enable_task(pvdx_task_t *const p_task) {
 }
 
 // Disables a task so that it can not be run by the RTOS scheduler. Automatically unregisters the task with the watchdog.
-void task_manager_disable_task(pvdx_task_t *const task) {
+void task_manager_disable_task(pvdx_task_t *const p_task) {
     lock_mutex(task_list_mutex);
 
     // If given an unintialized task, something went wrong
-    if (task->handle == NULL) {
+    if (p_task->handle == NULL) {
         fatal("task_manager: Trying to disable task that was never initialized");
     }
 
     // If given an already disabled task, something went wrong
-    if (!task->enabled) {
+    if (!p_task->enabled) {
         fatal("task_manager: Tried to disable a task that has already been disabled");
     }
 
-    vTaskSuspend(task->handle);
-    task->enabled = false;
+    vTaskSuspend(p_task->handle);
+    p_task->enabled = false;
 
     // Unregister the task with the watchdog so it is no longer monitored
-    unregister_task_with_watchdog(task->handle);
+    unregister_task_with_watchdog(p_task->handle);
 
     unlock_mutex(task_list_mutex);
-    debug("task_manager: %s task disabled\n", task->name);
+    debug("task_manager: %s task disabled\n", p_task->name);
 }
 
 /* ---------- NON-DISPATCHABLE FUNCTIONS (do not go through the command dispatcher) ---------- */
@@ -88,14 +88,13 @@ QueueHandle_t init_task_manager(void) {
 /**
  * init_task_pointer(pvdx_task_t *const p_task)
  *
- * Initialises the task given by the pointer.
+ * \brief Initialises the task given by the pointer.
  *
- * Parametre:
- *      p_task: a pointer to a pvdx_task_t
+ * \param p_task: a pointer to a `pvdx_task_t`
  *
- * Returns: N/A
+ * \return N/A
  *
- * Warning: Modifies the task list
+ * \warning Modifies the task list
  */
 void init_task_pointer(pvdx_task_t *const p_task) {
     lock_mutex(task_list_mutex);
@@ -135,48 +134,23 @@ void init_task_pointer(pvdx_task_t *const p_task) {
 }
 
 // Initializes the task at index i in the task list
-void init_task_index(const size_t i) {
+inline void init_task_index(const size_t i) {
     init_task_pointer(task_list[i]);
-
-    // lock_mutex(task_list_mutex);
-
-    // task_list[i]->handle =
-    //     xTaskCreateStatic(task_list[i]->function, task_list[i]->name, task_list[i]->stack_size, task_list[i]->pvParameters,
-    //                       task_list[i]->priority, task_list[i]->stack_buffer, task_list[i]->task_tcb);
-
-    // if (task_list[i]->handle == NULL) {
-    //     fatal("failed to create %s task!\n", task_list[i]->name);
-    // } else {
-    //     debug("created %s task\n", task_list[i]->name);
-    // }
-
-    // if (task_list[i]->enabled) {
-    //     // Register the task with the watchdog allowing it to be monitored
-    //     register_task_with_watchdog(task_list[i]->handle);
-    // } else {
-    //     // There may be tasks that are disabled on startup; if so, then they MUST have task_list[i].enabled
-    //     // set to false. In this case, we still allocate memory and create the task, but immediately suspend
-    //     // it so that vTaskStartScheduler() doesn't run the task.
-    //     vTaskSuspend(task_list[i]->handle);
-    //     info("%s task is disabled on startup.\n", task_list[i]->name);
-    // }
-
-    // unlock_mutex(task_list_mutex);
 }
 
 /**
- * init_task_pointer(pvdx_task_t *const handler)
+ * \brief  Initialises the task given by the task
  *
- * Initialises the task given by the task
+ * \param p_task: a pointer to a pvdx_task_t
  *
- * Parametre:
- *      p_task: a pointer to a pvdx_task_t
+ * \return N/A
  *
- * Returns: N/A
+ * \warning Modifies the task list
  *
- * Warning: Modifies the task list
+ * \todo: TODO Do we still need this?
  */
 void init_task_handle(TaskHandle_t handle) {
+    // Necessary because we do initialise outside the context of the task.
     pvdx_task_t *p_task = get_task(handle);
 
     init_task_pointer(p_task);
@@ -192,10 +166,10 @@ void exec_command_task_manager(command_t *const p_cmd) {
             task_manager_init_subtasks();
             break;
         case OPERATION_ENABLE_SUBTASK:
-            task_manager_enable_task(get_task(*(TaskHandle_t *)p_cmd->p_data)); // Turn this into an index
+            task_manager_enable_task((pvdx_task_t *)p_cmd->p_data); // Turn this into an index
             break;
         case OPERATION_DISABLE_SUBTASK:
-            task_manager_disable_task(get_task(*(TaskHandle_t *)p_cmd->p_data)); // Turn this into an index
+            task_manager_disable_task((pvdx_task_t *)p_cmd->p_data); // Turn this into an index
             break;
         default:
             fatal("task-manager: Invalid operation!\n");
