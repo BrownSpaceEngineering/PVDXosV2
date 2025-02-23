@@ -136,25 +136,19 @@ command_t get_watchdog_checkin_command(pvdx_task_t *const task) {
 
 // Registers a task with the watchdog so that checkins are monitored.
 // WARNING: This function is not thread-safe and should only be called from within a critical section
-void register_task_with_watchdog(const TaskHandle_t handle) {
-    if (handle == NULL) {
+void register_task_with_watchdog(pvdx_task_t *const p_task) {
+    if (p_task == NULL) {
         fatal("Tried to register a NULL task handle with watchdog\n");
     }
 
-    pvdx_task_t *task = get_task(handle);
-
-    if (task->handle != handle) {
-        fatal("Task Manager handle does not match current task handle!\n");
-    }
-
-    if (task->has_registered) {
-        fatal("%s task tried to register a second time with watchdog\n", task->name);
+    if (p_task->has_registered) {
+        fatal("%s task tried to register a second time with watchdog\n", p_task->name);
     }
 
     // initialize running times and require the task to check in
-    task->last_checkin_time_ticks = xTaskGetTickCount();
-    task->has_registered = true;
-    debug("%s task registered with watchdog\n", task->name);
+    p_task->last_checkin_time_ticks = xTaskGetTickCount();
+    p_task->has_registered = true;
+    debug("%s task registered with watchdog\n", p_task->name);
 }
 
 // Unregisters a task with the watchdog so that checkins are no longer monitored.

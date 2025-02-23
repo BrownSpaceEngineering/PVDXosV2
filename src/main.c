@@ -68,15 +68,16 @@ int main(void) {
     // };
     // const char *task_names[SUBTASK_START_INDEX] = {"Watchdog Task", "Command Dispatcher Task", "Task Manager Task"};
 
-    // Initialise all OS integrity tasks
-    pvdx_task_t *curr_task = *task_list;
+    if (task_list[0] != p_watchdog_task) {
+        fatal("Watchdog is not first in task_list!");
+    }
 
-    while (curr_task != NULL) {
-        if (curr_task->task_type == OS) {
-            init_task_pointer(curr_task);
-            info("%s initialized\n", curr_task->name);
+    // Initialize all OS integrity tasks
+    for (pvdx_task_t **curr_task = task_list; *curr_task != NULL; curr_task++) {
+        if ((*curr_task)->task_type == OS) {
+            init_task_pointer(*curr_task);
+            info("%s initialized\n", (*curr_task)->name);
         }
-        curr_task++;
     }
 
     // for (int16_t i = 0; i < SUBTASK_START_INDEX; i++) {

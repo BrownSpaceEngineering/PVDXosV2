@@ -183,17 +183,17 @@ pvdx_task_t *task_list[] = {
  *      NOT thread-safe; see warning above.
  */
 pvdx_task_t *get_task(TaskHandle_t handle) {
-    pvdx_task_t *p_task = *task_list;
+    pvdx_task_t **p_task = task_list;
 
-    while (p_task->name != NULL) {
-        if (p_task->handle == handle) {
-            return p_task;
+    while (*p_task != NULL) {
+        if ((*p_task)->handle == handle) {
+            return *p_task;
         }
         p_task++;
     }
 
     fatal("get_task: Task not found for handle %p\n", handle);
-    return p_task;
+    return *p_task;
 }
 
 // Given a pointer to a `pvdx_task_t` struct, returns the maximum block time in ticks when attempting to dequeue

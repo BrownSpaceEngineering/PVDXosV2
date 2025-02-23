@@ -23,27 +23,27 @@ void task_manager_init_subtasks(void) {
 }
 
 // Enables a task so that it can be run by the RTOS scheduler. Automatically registers the task with the watchdog.
-void task_manager_enable_task(pvdx_task_t *const task) {
+void task_manager_enable_task(pvdx_task_t *const p_task) {
     lock_mutex(task_list_mutex);
 
     // If given an unintialized task, something went wrong
-    if (task->handle == NULL) {
+    if (p_task->handle == NULL) {
         fatal("task_manager: Attempted to enable uninitialized task");
     }
 
     // If given an already enabled task, something went wrong
-    if (task->enabled) {
+    if (p_task->enabled) {
         fatal("task_manager: Tried to enable a task that has already been enabled");
     }
 
-    vTaskResume(task->handle);
-    task->enabled = true;
+    vTaskResume(p_task->handle);
+    p_task->enabled = true;
 
     // Register the task with the watchdog allowing it to be monitored
-    register_task_with_watchdog(task->handle);
+    register_task_with_watchdog(p_task);
 
     unlock_mutex(task_list_mutex);
-    debug("task_manager: %s task enabled\n", task->name);
+    debug("task_manager: %s task enabled\n", p_task->name);
 }
 
 // Disables a task so that it can not be run by the RTOS scheduler. Automatically unregisters the task with the watchdog.
@@ -118,7 +118,7 @@ void init_task_pointer(pvdx_task_t *const p_task) {
 
     if (p_task->enabled) {
         // Register the task with the watchdog allowing it to be monitored
-        register_task_with_watchdog(p_task->handle);
+        register_task_with_watchdog(p_task);
     } else {
         // There may be tasks that are disabled on startup; if so, then they MUST have task_list[i].enabled
         // set to false. In this case, we still allocate memory and create the task, but immediately suspend
