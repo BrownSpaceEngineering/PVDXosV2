@@ -31,9 +31,7 @@ extern task_manager_task_memory_t task_manager_mem;
 extern SemaphoreHandle_t task_list_mutex;
 extern StaticSemaphore_t task_list_mutex_buffer;
 
-void init_task_index(const size_t i);
 void init_task_pointer(pvdx_task_t *const p_task);
-void init_task_handle(TaskHandle_t handle);
 QueueHandle_t init_task_manager(void);
 void main_task_manager(void *pvParameters);
 void exec_command_task_manager(command_t *const p_cmd);

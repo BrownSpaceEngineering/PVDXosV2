@@ -138,73 +138,12 @@ pvdx_task_t *task_list[] = {
     p_display_task,  p_heartbeat_task,          task_list_null_terminator,
 };
 
-// pvdx_task_t task_list[] = {
-//     {"Watchdog", true, NULL, main_watchdog, WATCHDOG_TASK_STACK_SIZE, watchdog_mem.watchdog_task_stack, NULL, 3,
-//      &watchdog_mem.watchdog_task_tcb, 10000, 0xDEADBEEF, false},
-//     {"CommandDispatcher", true, NULL, main_command_dispatcher, COMMAND_DISPATCHER_TASK_STACK_SIZE,
-//      command_dispatcher_mem.command_dispatcher_task_stack, NULL, 2, &command_dispatcher_mem.command_dispatcher_task_tcb, 10000,
-//      0xDEADBEEF, false},
-//     {"TaskManager", true, NULL, main_task_manager, TASK_MANAGER_TASK_STACK_SIZE, task_manager_mem.task_manager_task_stack, NULL, 2,
-//      &task_manager_mem.task_manager_task_tcb, 10000, 0xDEADBEEF, false},
-//     {"Magnetometer", true, NULL, main_magnetometer, MAGNETOMETER_TASK_STACK_SIZE, magnetometer_mem.magnetometer_task_stack, NULL, 2,
-//      &magnetometer_mem.magnetometer_task_tcb, 10000, 0xDEADBEEF, false},
-//     {"Shell", true, NULL, main_shell, SHELL_TASK_STACK_SIZE, shell_mem.shell_task_stack, NULL, 2, &shell_mem.shell_task_tcb, 10000,
-//      0xDEADBEEF, false},
-//     {"Display", true, NULL, main_display, DISPLAY_TASK_STACK_SIZE, display_mem.display_task_stack, NULL, 2,
-//     &display_mem.display_task_tcb,
-//      10000, 0xDEADBEEF, false},
-//     {"Heartbeat", true, NULL, main_heartbeat, HEARTBEAT_TASK_STACK_SIZE, heartbeat_mem.heartbeat_task_stack, NULL, 1,
-//      &heartbeat_mem.heartbeat_task_tcb, 10000, 0xDEADBEEF, false},
-
-//     // Null terminator for the array (since size is unspecified)
-//     NULL_TASK};
-
-// Returns the pvdx_task_t struct associated with a FreeRTOS task handle.
-// WARNING: This function is not thread-safe and should only be called from within a critical section
-// if accessing mutable fields of task structs.
-
 /**
- * pvdx_task_t *get_task(TaskHandle_t handle)
+ * \name pvdx_task_t *get_current_task(void)
  *
- * Returns a pointer to the pvdx_task_t struct associated with a FreeRTOS task
- * handle.
+ * \return a pvdx_task_t *, a pointer to the current task struct.
  *
- * WARNING: This function is not thread-safe and should only be called from
- * within a critical section if accessing mutable fields of task structs.
- *
- * Parametres:
- *      handle: TaskHandle_t, the handle for the sought task
- *
- * Returns:
- *      pvdx_task_t *, a pointer to the task struct corresponding to the input
- *                     handle.
- *
- * Safety:
- *      NOT thread-safe; see warning above.
- */
-pvdx_task_t *get_task(TaskHandle_t handle) {
-    pvdx_task_t **p_task = task_list;
-
-    while (*p_task != NULL) {
-        if ((*p_task)->handle == handle) {
-            return *p_task;
-        }
-        p_task++;
-    }
-
-    fatal("get_task: Task not found for handle %p\n", handle);
-    return *p_task;
-}
-
-/**
- * pvdx_task_t *get_current_task(void)
- *
- * Parametres: N/A
- *
- * Returns:
- *      a pvdx_task_t *, a pointer to the current task struct.
- *
- * Safety: TODO: is this thread-safe?
+ * \warning TODO: is this thread-safe?
  */
 inline pvdx_task_t *get_current_task(void) {
     // handle = NULL means current task

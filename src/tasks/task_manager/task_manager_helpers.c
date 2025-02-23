@@ -17,7 +17,7 @@
 // Initialize all peripheral device driver tasks running on PVDXos
 void task_manager_init_subtasks(void) {
     for (size_t i = SUBTASK_START_INDEX; task_list[i] != NULL; i++) {
-        init_task_index(i);
+        init_task_pointer(task_list[i]);
     }
     debug("task_manager: All subtasks initialized\n");
 }
@@ -131,29 +131,6 @@ void init_task_pointer(pvdx_task_t *const p_task) {
     }
 
     unlock_mutex(task_list_mutex);
-}
-
-// Initializes the task at index i in the task list
-inline void init_task_index(const size_t i) {
-    init_task_pointer(task_list[i]);
-}
-
-/**
- * \brief  Initialises the task given by the task
- *
- * \param p_task: a pointer to a pvdx_task_t
- *
- * \return N/A
- *
- * \warning Modifies the task list
- *
- * \todo: TODO Do we still need this?
- */
-void init_task_handle(TaskHandle_t handle) {
-    // Necessary because we do initialise outside the context of the task.
-    pvdx_task_t *p_task = get_task(handle);
-
-    init_task_pointer(p_task);
 }
 
 void exec_command_task_manager(command_t *const p_cmd) {

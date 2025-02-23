@@ -80,18 +80,6 @@ int main(void) {
         }
     }
 
-    // for (int16_t i = 0; i < SUBTASK_START_INDEX; i++) {
-    //     init_functions[i]();
-
-    //     if (task_list[i]->function == main_functions[i]) {
-    //         init_task_index(i);
-    //     } else {
-    //         fatal("%s not found at index %d of task list!\n", task_names[i], i);
-    //     }
-
-    //     info("%s initialized\n", task_names[i]);
-    // }
-
     /* ---------- COSMIC MONKEY TASK ---------- */
 
 #if defined(UNITTEST) || defined(DEVBUILD)

@@ -11,10 +11,7 @@
 #include "task_manager_task.h"
 #include "watchdog_task.h"
 
-// Represents the end of a pvdx_task_t array, contains all null parameters
-// #define NULL_TASK ((pvdx_task_t){NULL, false, NULL, NULL, 0, NULL, NULL, 0, NULL, 0, 0, false})
-
-// TODO add extern defs of task pointers here?
+// add extern defs of task pointers here?
 extern pvdx_task_t *const p_watchdog_task;
 extern pvdx_task_t *const p_command_dispatcher_task;
 extern pvdx_task_t *const p_task_manager_task;
@@ -25,7 +22,6 @@ extern pvdx_task_t *const p_heartbeat_task;
 
 extern pvdx_task_t *task_list[];
 
-pvdx_task_t *get_task(const TaskHandle_t id);
 pvdx_task_t *get_current_task(void);
 TickType_t get_command_queue_block_time_ticks(pvdx_task_t *const task);
 
