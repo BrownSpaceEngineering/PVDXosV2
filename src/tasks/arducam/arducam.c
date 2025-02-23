@@ -15,6 +15,9 @@
 
 struct arducamTaskMemory arducamMem;
 
+uint8_t ardu_spi_rx_buffer[ARDUCAM_SPI_BUFFER_CAPACITY] = { 0x00 };
+uint8_t ardu_spi_tx_buffer[ARDUCAM_SPI_BUFFER_CAPACITY] = { 0x00 };
+
 struct io_descriptor *arducam_i2c_io;
 struct io_descriptor *arducam_spi_io;
 
@@ -294,9 +297,9 @@ void init_arducam()
 
     watchdog_checkin(ARDUCAM_TASK);
 
-    spi_m_sync_set_baudrate(&SPI_1, 4000000);
-    spi_m_sync_get_io_descriptor(&SPI_1, &arducam_spi_io);
-    spi_m_sync_enable(&SPI_1);
+    spi_m_sync_set_baudrate(&SPI_0, 4000000);
+    spi_m_sync_get_io_descriptor(&SPI_0, &arducam_spi_io);
+    spi_m_sync_enable(&SPI_0);
 
     uint8_t vidpid[2] = { 0, 0 };
     uint8_t data[2] = { 0x00, 0x01 };
@@ -353,7 +356,6 @@ void arducam_main(void *pvParameters) {
 
 // Write the contents of spi_tx_buffer to the display as a command
 int32_t arducam_spi_write_command() {
-    DC_LOW(); // set D/C# pin low to indicate that sent bytes are commands (not data)
     CS_LOW(); // select the display for SPI communication
 
     int32_t response = spi_m_sync_transfer(&SPI_0, &ardu_xfer);
@@ -371,7 +373,7 @@ uint32_t ARDUCAMI2CWrite(uint8_t addr, uint8_t *data, uint16_t size)
     writeBuf[0] = addr;
     memcpy(&(writeBuf[1]), data, size);
     int32_t rv;
-    if ((rv = io_write(arducam_spi_io, writeBuf, size + 1)) < 0){
+    if ((rv = io_write(arducam_i2c_io, writeBuf, size + 1)) < 0){
         warning("Error in Arducam Write");
     }
 	return rv;
@@ -396,10 +398,10 @@ uint32_t ARDUCAMI2CRead(uint8_t addr, uint8_t *readBuf, uint16_t size)
 {
     uint8_t writeBuf[1] = { addr };
     int32_t rv;
-    if ((rv = io_write(arducam_spi_io, writeBuf, 1)) < 0){
+    if ((rv = io_write(arducam_i2c_io, writeBuf, 1)) < 0){
         warning("Error in Arducam Write");
     }
-    if ((rv = io_read(arducam_spi_io, readBuf, size)) < 0) {
+    if ((rv = io_read(arducam_i2c_io, readBuf, size)) < 0) {
         warning("Error in Arducam Read");
     }
     return rv;

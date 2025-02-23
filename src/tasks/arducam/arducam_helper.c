@@ -6,8 +6,9 @@ struct spi_xfer ardu_xfer = {.rxbuf = ardu_spi_rx_buffer, .txbuf = ardu_spi_tx_b
 int32_t ARDUCAMwReg(uint8_t addr, uint8_t data) {
     CS_LOW();
 
-    ardu_xfer.size = 1;
-    ardu_spi_tx_buffer[0] = data;
+    ardu_xfer.size = 2;
+    ardu_spi_tx_buffer[0] = addr | 0x80;
+    ardu_spi_tx_buffer[1] = data;
 
     int32_t response = spi_m_sync_transfer(&SPI_0, &ardu_xfer);
     if(response != (int32_t)ardu_xfer.size) {
@@ -22,8 +23,9 @@ int8_t ARDUCAMrReg(uint8_t addr) {
     CS_LOW();
     
     uint8_t value; // Init val 
-    ardu_xfer.size = 1;
-    ardu_spi_tx_buffer[0] = addr | 0x80; // 0x80 sends read bit to camera
+    ardu_xfer.size = 2;
+    ardu_spi_tx_buffer[0] = addr & 0x7F;
+    ardu_spi_tx_buffer[1] = 0x00;
     
     int32_t response = spi_m_sync_transfer(&SPI_0, &ardu_xfer);
     if(response != (int32_t)ardu_xfer.size) {
@@ -35,5 +37,4 @@ int8_t ARDUCAMrReg(uint8_t addr) {
 
     CS_HIGH();
     return value;
-
 }
