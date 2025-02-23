@@ -26,6 +26,7 @@ extern pvdx_task_t *const p_heartbeat_task;
 extern pvdx_task_t *task_list[];
 
 pvdx_task_t *get_task(const TaskHandle_t id);
+pvdx_task_t *get_current_task(void);
 TickType_t get_command_queue_block_time_ticks(pvdx_task_t *const task);
 
 #endif // TASK_LIST_H

@@ -110,6 +110,10 @@ void init_task_pointer(pvdx_task_t *const p_task) {
     p_task->handle = xTaskCreateStatic(p_task->function, p_task->name, p_task->stack_size, p_task->pvParameters, p_task->priority,
                                        p_task->stack_buffer, p_task->task_tcb);
 
+    // set thread-local array at index 0 to be a pointer to be a pointer
+    // to the pvdx_task_t corresponding to the task.
+    vTaskSetThreadLocalStoragePointer(p_task->handle, 0, (void *)p_task);
+
     if (p_task->handle == NULL) {
         fatal("failed to create %s task!\n", p_task->name);
     } else {

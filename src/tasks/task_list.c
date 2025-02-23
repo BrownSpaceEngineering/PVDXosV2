@@ -196,6 +196,12 @@ pvdx_task_t *get_task(TaskHandle_t handle) {
     return *p_task;
 }
 
+inline pvdx_task_t *get_current_task(void) {
+    // handle = NULL means current task
+    pvdx_task_t *p_task = (pvdx_task_t *)pvTaskGetThreadLocalStoragePointer(NULL, 0);
+    return p_task;
+}
+
 // Given a pointer to a `pvdx_task_t` struct, returns the maximum block time in ticks when attempting to dequeue
 // a command from the task's command queue.
 TickType_t get_command_queue_block_time_ticks(pvdx_task_t *const task) {

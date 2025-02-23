@@ -13,7 +13,6 @@
 #include "command_dispatcher_task.h"
 
 command_dispatcher_task_memory_t command_dispatcher_mem;
-// uint8_t command_dispatcher_command_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
 QueueHandle_t command_dispatcher_command_queue_handle;
 
 void main_command_dispatcher(void *pvParameters) {
