@@ -196,6 +196,16 @@ pvdx_task_t *get_task(TaskHandle_t handle) {
     return *p_task;
 }
 
+/**
+ * pvdx_task_t *get_current_task(void)
+ *
+ * Parametres: N/A
+ *
+ * Returns:
+ *      a pvdx_task_t *, a pointer to the current task struct.
+ *
+ * Safety: TODO: is this thread-safe?
+ */
 inline pvdx_task_t *get_current_task(void) {
     // handle = NULL means current task
     return (pvdx_task_t *)pvTaskGetThreadLocalStoragePointer(NULL, 0);
