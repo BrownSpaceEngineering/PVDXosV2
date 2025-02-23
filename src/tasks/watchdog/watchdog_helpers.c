@@ -13,21 +13,23 @@
 /* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
 
 // Updates the last checkin time of the given task to prove that it is still running
-void watchdog_checkin(const TaskHandle_t handle) {
-    lock_mutex(task_list_mutex);
-
-    pvdx_task_t *task = get_task(handle);
-
-    if (!task->has_registered) {
-        // something went wrong because a task that is checking in should have 'has_registered' set to true
-        fatal("watchdog: %s task tried to check in without registering\n", task->name);
+void watchdog_checkin(pvdx_task_t *const p_task) {
+    if (!p_task) {
+        fatal("Attempted to update checkin time of null task!");
     }
 
+    if (!(p_task->has_registered)) {
+        // something went wrong because a task that is checking in should have 'has_registered' set to true
+        fatal("watchdog: %s task tried to check in without registering\n", p_task->name);
+    }
+
+    lock_mutex(task_list_mutex);
+
     // update the last checkin time
-    task->last_checkin_time_ticks = xTaskGetTickCount();
+    p_task->last_checkin_time_ticks = xTaskGetTickCount();
 
     unlock_mutex(task_list_mutex);
-    debug("watchdog: %s task checked in\n", task->name);
+    debug("watchdog: %s task checked in\n", p_task->name);
 }
 
 /* ---------- NON-DISPATCHABLE FUNCTIONS (do not go through the command dispatcher) ---------- */
@@ -137,6 +139,7 @@ command_t get_watchdog_checkin_command(pvdx_task_t *const task) {
 // Registers a task with the watchdog so that checkins are monitored.
 // WARNING: This function is not thread-safe and should only be called from within a critical section
 void register_task_with_watchdog(pvdx_task_t *const p_task) {
+    // TODO: check if we can assert task_list_mutex acquired in current task
     if (p_task == NULL) {
         fatal("Tried to register a NULL task handle with watchdog\n");
     }
@@ -153,24 +156,18 @@ void register_task_with_watchdog(pvdx_task_t *const p_task) {
 
 // Unregisters a task with the watchdog so that checkins are no longer monitored.
 // WARNING: This function is not thread-safe and should only be called from within a critical section
-void unregister_task_with_watchdog(const TaskHandle_t handle) {
-    if (handle == NULL) {
-        fatal("Tried to unregister a NULL task handle with watchdog\n");
+void unregister_task_with_watchdog(pvdx_task_t *const p_task) {
+    if (!p_task) {
+        fatal("Attempted to update checkin time of null task!");
     }
 
-    pvdx_task_t *task = get_task(handle);
-
-    if (task->handle != handle) {
-        fatal("Task Manager handle does not match current task handle!\n");
+    if (!(p_task->has_registered)) {
+        fatal("%s task tried to unregister a second time with watchdog\n", p_task->name);
     }
 
-    if (!task->has_registered) {
-        fatal("%s task tried to unregister a second time with watchdog\n", task->name);
-    }
-
-    task->last_checkin_time_ticks = 0xDEADBEEF; // 0xDEADBEEF is a special value that indicates that the task is not running
-    task->has_registered = false;
-    debug("%s task unregistered with watchdog\n", task->name);
+    p_task->last_checkin_time_ticks = 0xDEADBEEF; // 0xDEADBEEF is a special value that indicates that the task is not running
+    p_task->has_registered = false;
+    debug("%s task unregistered with watchdog\n", p_task->name);
 }
 
 // Executes a command received by the watchdog task
@@ -181,7 +178,7 @@ void exec_command_watchdog(command_t *const p_cmd) {
 
     switch (p_cmd->operation) {
         case OPERATION_CHECKIN:
-            watchdog_checkin(*(TaskHandle_t *)p_cmd->p_data);
+            watchdog_checkin((pvdx_task_t *)p_cmd->p_data);
             break;
         default:
             fatal("watchdog: Invalid operation! target: %d operation: %d\n", p_cmd->target, p_cmd->operation);

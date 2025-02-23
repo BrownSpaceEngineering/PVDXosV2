@@ -31,15 +31,15 @@ extern volatile Wdt *const p_watchdog;
 extern QueueHandle_t watchdog_command_queue_handle;
 // extern uint8_t watchdog_command_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
 
-void watchdog_checkin(const TaskHandle_t handle);
+void watchdog_checkin(pvdx_task_t *const task);
 QueueHandle_t init_watchdog();
 void main_watchdog(void *pvParameters);
 void early_warning_callback_watchdog(void);
 void pet_watchdog(void);
 void kick_watchdog(void);
 command_t get_watchdog_checkin_command(pvdx_task_t *const task);
-void register_task_with_watchdog(pvdx_task_t *p_task);
-void unregister_task_with_watchdog(const TaskHandle_t handle);
+void register_task_with_watchdog(pvdx_task_t *const p_task);
+void unregister_task_with_watchdog(pvdx_task_t *const task);
 void exec_command_watchdog(command_t *const p_cmd);
 
 #endif // WATCHDOG_TASK_H
