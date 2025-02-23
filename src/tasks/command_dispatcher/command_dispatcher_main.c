@@ -19,7 +19,7 @@ void main_command_dispatcher(void *pvParameters) {
     info("command_dispatcher: Task Started!\n");
 
     // Obtain a pointer to the current task within the global task list
-    pvdx_task_t *const current_task = get_task(xTaskGetCurrentTaskHandle());
+    pvdx_task_t *const current_task = get_current_task();
     // Cache the watchdog checkin command to avoid creating it every iteration
     command_t cmd_checkin = get_watchdog_checkin_command(current_task);
     // Calculate the maximum time the command dispatcher should block (and thus be unable to check in with the watchdog)

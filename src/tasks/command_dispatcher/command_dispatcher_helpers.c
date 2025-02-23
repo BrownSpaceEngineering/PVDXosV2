@@ -35,7 +35,7 @@ QueueHandle_t init_command_dispatcher(void) {
 // Enqueue a command to be executed by the command dispatcher
 void enqueue_command(command_t *const p_cmd) {
     if (xQueueSendToBack(p_command_dispatcher_task->command_queue, p_cmd, 0) != pdTRUE) {
-        pvdx_task_t *calling_task = get_task(xTaskGetCurrentTaskHandle());
+        pvdx_task_t *calling_task = get_current_task();
         fatal("%s task failed to enqueue command onto Command Dispatcher queue!\n", calling_task->name);
     }
 }
