@@ -13,7 +13,6 @@
 #include "command_dispatcher_task.h"
 
 command_dispatcher_task_memory_t command_dispatcher_mem;
-QueueHandle_t command_dispatcher_command_queue_handle;
 
 void main_command_dispatcher(void *pvParameters) {
     info("command_dispatcher: Task Started!\n");

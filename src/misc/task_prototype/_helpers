@@ -1,0 +1,28 @@
+/**
+ * [lower]_helpers.c
+ *
+ * Created: [DATE]
+ * Authors:
+ */
+
+#include "[lower]_task.h"
+
+/* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
+
+// NOTE: No dispatchable functions for the command dispatcher task. Its sole purpose is to
+// forward commands to other tasks. Essentially, it's a glorified queue.
+
+/* ---------- NON-DISPATCHABLE FUNCTIONS (do not go through the command dispatcher) ---------- */
+
+// Initialize the command queue, which stores pointers to command structs
+QueueHandle_t init_[lower](void) {
+    QueueHandle_t [lower]_command_queue_handle = xQueueCreateStatic(
+        COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE, [lower]_mem.[lower]_command_queue_buffer,
+        &[lower]_mem.[lower]_task_queue);
+
+    if ([lower]_command_queue_handle == NULL) {
+        fatal("Failed to create command queue!\n");
+    }
+
+    return [lower]_command_queue_handle;
+}

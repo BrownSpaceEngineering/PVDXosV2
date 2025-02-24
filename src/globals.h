@@ -56,20 +56,6 @@ typedef enum {
     ERROR_BITFLIP, // Specifically if we detect a bitflip, so we can increment counters.
 } status_t;
 
-// // An enum to represent the various tasks/daemons that the command dispatcher can interact with
-// typedef enum {
-//     TASK_COMMAND_DISPATCHER = 0,
-//     TASK_MANAGER,
-//     TASK_DISPLAY,
-//     TASK_WATCHDOG,
-//     // Anything beyond this point is a subtask
-//     TASK_SHELL,
-//     TASK_HEARTBEAT,
-//     TASK_MAGNETOMETER,
-//     TASK_CAMERA,
-//     TASK_9AXIS
-// } task_t;
-
 // An enum to represent the different operations that tasks can perform (contained within a command_t)
 // NOTE: The same operation can have different meanings depending on the target task
 typedef enum {
@@ -94,9 +80,9 @@ typedef enum {
     WARNING,
 } log_level_t;
 
+// Enum to represent type of task for state diagram.
 typedef enum {
-    NULL_TASK = 0, // TODO: do we need this? keep for compatibility w/ old null task
-    OS,
+    OS = 0,
     SENSOR,
     ACTUATOR,
     TESTING,
@@ -104,6 +90,7 @@ typedef enum {
 
 /* ---------- MISCELLANEOUS TASK TYPES ---------- */
 
+// A task-initialisation function; takes in nothing and returns a queue handle.
 typedef QueueHandle_t (*init_function)(void);
 
 /* ---------- STRUCTS ---------- */
