@@ -63,13 +63,13 @@ void watchdog_early_warning_callback(void) {
     vTaskDelay(pdMS_TO_TICKS(100));
     gpio_set_pin_level(LED_Orange2, false);
     vTaskDelay(pdMS_TO_TICKS(100));
-    gpio_set_pin_level(LED_Red, true);
+    gpio_set_pin_level(LED_RED, true);
     vTaskDelay(pdMS_TO_TICKS(400));
     gpio_set_pin_level(LED_Orange1, true);
     vTaskDelay(pdMS_TO_TICKS(33));
     gpio_set_pin_level(LED_Orange2, true);
     vTaskDelay(pdMS_TO_TICKS(33));
-    gpio_set_pin_level(LED_Red, false);
+    gpio_set_pin_level(LED_RED, false);
     vTaskDelay(pdMS_TO_TICKS(300));;
 }
 

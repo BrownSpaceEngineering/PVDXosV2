@@ -9,7 +9,7 @@
 
 #define ARDUCAM_TASK_STACK_SIZE 256
 
-#define ARDUCAMAddress          0x60
+#define ARDUCAM_ADDR            0x60
 
 #define OV2640_CHIPID_HIGH 	    0x0A
 #define OV2640_CHIPID_LOW 	    0x0B
@@ -48,10 +48,9 @@ void arducam_main(void *pvParameters);
 void init_arducam();
 
 uint32_t ARDUCAMI2CWrite(uint8_t addr, uint8_t *data, uint16_t size);
+uint32_t ARDUCAMI2CMultiWrite(const struct sensor_reg reglist[]);
 uint32_t ARDUCAMI2CRead(uint8_t addr, uint8_t *readBuf, uint16_t size);
-uint32_t wrSensorRegs8_8(const struct sensor_reg reglist[]);
-int32_t arducam_spi_write_command();
-int32_t ARDUCAMwReg(uint8_t, uint8_t);
-int8_t ARDUCAMrReg(uint8_t);
+int32_t ARDUCAMSPIWrite(uint8_t, uint8_t);
+int8_t ARDUCAMSPIRead(uint8_t);
 
 #endif // arducam_h_

@@ -3,11 +3,11 @@
 
 struct spi_xfer ardu_xfer = {.rxbuf = ardu_spi_rx_buffer, .txbuf = ardu_spi_tx_buffer, .size = 0};
 
-int32_t ARDUCAMwReg(uint8_t addr, uint8_t data) {
+int32_t ARDUCAMSPIWrite(uint8_t addr, uint8_t data) {
     CS_LOW();
 
     ardu_xfer.size = 2;
-    ardu_spi_tx_buffer[0] = addr | 0x80;
+    ardu_spi_tx_buffer[0] = addr;
     ardu_spi_tx_buffer[1] = data;
 
     int32_t response = spi_m_sync_transfer(&SPI_0, &ardu_xfer);
@@ -19,7 +19,7 @@ int32_t ARDUCAMwReg(uint8_t addr, uint8_t data) {
     return response;
 }
 
-int8_t ARDUCAMrReg(uint8_t addr) {
+int8_t ARDUCAMSPIRead(uint8_t addr) {
     CS_LOW();
     
     uint8_t value; // Init val 

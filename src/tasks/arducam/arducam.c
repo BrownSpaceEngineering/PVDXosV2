@@ -293,7 +293,7 @@ void init_arducam()
     i2c_m_sync_set_baudrate(&I2C_0, 0, 115200);
     i2c_m_sync_get_io_descriptor(&I2C_0, &arducam_i2c_io);
     i2c_m_sync_enable(&I2C_0);
-    i2c_m_sync_set_slaveaddr(&I2C_0, ARDUCAMAddress >> 1, I2C_M_SEVEN);
+    i2c_m_sync_set_slaveaddr(&I2C_0, ARDUCAM_ADDR >> 1, I2C_M_SEVEN);
 
     watchdog_checkin(ARDUCAM_TASK);
 
@@ -304,30 +304,24 @@ void init_arducam()
     uint8_t vidpid[2] = { 0, 0 };
     uint8_t data[2] = { 0x00, 0x01 };
 
-    // ADD TEST CODE HERE
-    ARDUCAMwReg(ARDUCHIP_TEST1, 0x55);
-    int temp = ARDUCAMrReg(ARDUCHIP_TEST1);
+    ARDUCAMSPIWrite(ARDUCHIP_TEST1, 0x55);
+    int temp = ARDUCAMSPIRead(ARDUCHIP_TEST1);
     if (temp != 0x55){
-        while(1);
+        info("Bruh");
     }
 
     ARDUCAMI2CWrite( 0xFF, data + 1, 1 );
     ARDUCAMI2CRead( OV2640_CHIPID_HIGH, vidpid, 1 );
     ARDUCAMI2CRead( OV2640_CHIPID_LOW, vidpid + 1, 1 );
 
-    wrSensorRegs8_8(OV2640_JPEG_INIT);
-    wrSensorRegs8_8(OV2640_YUV422);
-    wrSensorRegs8_8(OV2640_JPEG);
+    ARDUCAMI2CMultiWrite(OV2640_JPEG_INIT);
+    ARDUCAMI2CMultiWrite(OV2640_YUV422);
+    ARDUCAMI2CMultiWrite(OV2640_JPEG);
 
     ARDUCAMI2CWrite( 0xFF, data + 1, 1 );
     ARDUCAMI2CWrite( 0x15, data, 1);
 
-    wrSensorRegs8_8(OV2640_320x240_JPEG);
-
-    ardu_xfer.size = 2;
-    ardu_spi_tx_buffer[0] = ARDUCHIP_FIFO;
-    ardu_spi_tx_buffer[1] = FIFO_CLEAR_MASK;
-    arducam_spi_write_command();
+    ARDUCAMI2CMultiWrite(OV2640_320x240_JPEG);
 
     if ((vidpid[0] == 0x26 ))
     {
@@ -354,19 +348,6 @@ void arducam_main(void *pvParameters) {
     return;
 }
 
-// Write the contents of spi_tx_buffer to the display as a command
-int32_t arducam_spi_write_command() {
-    CS_LOW(); // select the display for SPI communication
-
-    int32_t response = spi_m_sync_transfer(&SPI_0, &ardu_xfer);
-    if (response != (int32_t)ardu_xfer.size) {
-        return -1;
-    }
-
-    CS_HIGH(); // deselect the display for SPI communication
-    return response;
-}
-
 uint32_t ARDUCAMI2CWrite(uint8_t addr, uint8_t *data, uint16_t size)
 {
     uint8_t writeBuf[32 + 1];
@@ -379,7 +360,7 @@ uint32_t ARDUCAMI2CWrite(uint8_t addr, uint8_t *data, uint16_t size)
 	return rv;
 }
 
-uint32_t wrSensorRegs8_8(const struct sensor_reg reglist[])
+uint32_t ARDUCAMI2CMultiWrite(const struct sensor_reg reglist[])
 {
     uint8_t reg_addr = 0;
     uint8_t reg_val = 0;
