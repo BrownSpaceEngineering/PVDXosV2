@@ -57,7 +57,9 @@ void main_test_two(void *pvParameters) {
         debug("test_two: No more commands queued.\n");
 
         // Check in with the watchdog task
-        enqueue_command(&cmd_checkin);
+        if (should_checkin(current_task)) {
+            enqueue_command(&cmd_checkin);
+        }
         debug("test_two: Enqueued watchdog checkin command\n");
 
         // Wait 1 second before attempting to run the loop again

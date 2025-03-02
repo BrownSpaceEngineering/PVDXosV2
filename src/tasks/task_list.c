@@ -187,3 +187,7 @@ inline pvdx_task_t *get_current_task(void) {
 inline TickType_t get_command_queue_block_time_ticks(pvdx_task_t *const task) {
     return pdMS_TO_TICKS(task->watchdog_timeout_ms / 2);
 }
+
+inline bool should_checkin(pvdx_task_t *const task) {
+    return xTaskGetTickCount() - task->last_checkin_time_ticks > pdMS_TO_TICKS(task->watchdog_timeout_ms / 3);
+}

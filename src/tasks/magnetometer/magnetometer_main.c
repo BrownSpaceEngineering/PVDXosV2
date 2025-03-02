@@ -34,7 +34,9 @@ void main_magnetometer(void *pvParameters) {
         }
         debug("magnetometer: No more commands queued.\n");
 
-        enqueue_command(&cmd_checkin);
+        ;if (should_checkin(current_task)) {
+            enqueue_command(&cmd_checkin);
+        }
         debug("magnetometer: Enqueued watchdog checkin command\n");
     }
 }
