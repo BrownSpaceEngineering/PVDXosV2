@@ -30,6 +30,7 @@ size_t get_line_from_terminal(uint8_t *p_linebuffer) {
         debug("shell: Enqueued watchdog checkin command\n");
 
         int character_read = SEGGER_RTT_GetKey();
+        warning("character read: %d\n", character_read);
         if (character_read < 0 || character_read > 255) {
             // No character was read, nothing's ready yet.
             // Loop again after a delay

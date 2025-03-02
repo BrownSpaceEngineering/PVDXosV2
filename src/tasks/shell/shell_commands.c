@@ -18,7 +18,7 @@
 shell_command_t shell_commands[] = {
     {"help", shell_help, help_help},       {"echo", shell_echo, help_echo},
     {"clear", shell_clear, help_clear},    {"loglevel", shell_loglevel, help_loglevel},
-    {"reboot", shell_reboot, help_reboot}, {NULL, NULL, NULL} // Null-terminated array
+    {"reboot", shell_reboot, help_reboot}, {"display", shell_display, help_display}, {NULL, NULL, NULL} // Null-terminated array
 };
 
 /* ---------- HELP COMMAND ---------- */
@@ -140,4 +140,24 @@ void shell_reboot(char **args, int arg_count) {
 void help_reboot() {
     terminal_printf("Usage: reboot\n");
     terminal_printf("\tReboots the satellite\n");
+}
+
+/* DISPLAY COMMAND */
+
+void shell_display(char **args, int arg_count) {
+    if (arg_count != 2) {
+        terminal_printf("Invalid usage. Try 'help display'\n");
+        return;
+    }
+
+    status_t result = SUCCESS;
+    const uint8_t* image_buffers[] = {IMAGE_BUFFER_BROWNLOGO, IMAGE_BUFFER_PVDX};
+    const command_t display_image_command = get_display_image_command(image_buffers[args[1][0] - '0'], &result);
+    enqueue_command(&display_image_command);
+    terminal_printf("fr\n");
+}
+
+void help_display() {
+    terminal_printf("Usage: display\n");
+    terminal_printf("\tgjnerergjkn\n");
 }

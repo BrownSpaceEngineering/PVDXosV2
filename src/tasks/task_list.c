@@ -29,9 +29,9 @@ pvdx_task_t task_list[] = {
     {
         "Magnetometer", true, NULL, main_magnetometer, MAGNETOMETER_TASK_STACK_SIZE, magnetometer_mem.magnetometer_task_stack, NULL, 2, &magnetometer_mem.magnetometer_task_tcb, 10000, 0xDEADBEEF, false
     },
-    /*{
+    {
         "Shell", true, NULL, main_shell, SHELL_TASK_STACK_SIZE, shell_mem.shell_task_stack, NULL, 2, &shell_mem.shell_task_tcb, 10000, 0xDEADBEEF, false
-    },*/
+    },
     {
         "Display", true, NULL, main_display, DISPLAY_TASK_STACK_SIZE, display_mem.display_task_stack, NULL, 2, &display_mem.display_task_tcb, 10000, 0xDEADBEEF, false
     },
