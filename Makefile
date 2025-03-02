@@ -38,28 +38,35 @@ export OBJS := \
 ../src/tasks/shell/shell_helpers.o \
 ../src/tasks/shell/shell_commands.o \
 ../src/tasks/task_list.o \
+../src/tasks/test_one/test_one_main.o \
+../src/tasks/test_one/test_one_helpers.o \
+../src/tasks/test_two/test_two_main.o \
+../src/tasks/test_two/test_two_helpers.o
+
 
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###
 ### THESE ARE WRITTEN RELATIVE TO THE ./ASF/gcc/Makefile FILE ###
 export EXTRA_VPATH := \
 ../../src \
-../../src/tasks \
-../../src/tasks/heartbeat \
-../../src/tasks/watchdog \
 ../../src/misc \
 ../../src/misc/printf \
 ../../src/misc/rtos_support \
 ../../src/misc/hardware_watchdog_utils \
-../../src/tasks/cosmic_monkey \
 ../../src/misc/logging \
 ../../src/misc/exception_handlers \
+../../src/tasks \
+../../src/tasks/watchdog \
+../../src/tasks/heartbeat \
+../../src/tasks/cosmic_monkey \
 ../../src/tasks/display \
 ../../src/tasks/display/image_buffers \
 ../../src/tasks/task_manager \
 ../../src/tasks/command_dispatcher \
 ../../src/tasks/magnetometer \
 ../../src/tasks/shell \
-../../src/mutexes \
+../../src/tasks/test_one \
+../../src/tasks/test_two \
+../../src/mutexes 
 
 ###################################################################
 ###   Compiler Flags and Build-Specific Configuration Options   ###
@@ -272,3 +279,9 @@ update_asf:
 	&& find ./ASF -type f -newermt now -exec touch {} + \
 	&& echo "(10) Timestamps in future updated to present" \
 	&& echo " --- Finished Integrating ASF --- "
+
+############################################
+### Target for Creating new Task         ###
+############################################
+
+

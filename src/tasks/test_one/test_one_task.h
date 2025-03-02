@@ -23,6 +23,7 @@ typedef struct {
 extern test_one_task_memory_t test_one_mem;
 
 QueueHandle_t init_test_one(void);
+void handle_cmd_test_one(command_t *p_cmd);
 void main_test_one(void *pvParameters);
 
-#endif // COMMAND_DISPATCHER_H
+#endif // TEST_ONE_H

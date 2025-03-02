@@ -25,4 +25,4 @@ extern [lower]_task_memory_t [lower]_mem;
 QueueHandle_t init_[lower](void);
 void main_[lower](void *pvParameters);
 
-#endif // COMMAND_DISPATCHER_H
+#endif // [UPPER]_H

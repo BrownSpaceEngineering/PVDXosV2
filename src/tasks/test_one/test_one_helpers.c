@@ -12,13 +12,20 @@
 // NOTE: No dispatchable functions for the command dispatcher task. Its sole purpose is to
 // forward commands to other tasks. Essentially, it's a glorified queue.
 
+void handle_cmd_test_one(command_t *p_cmd) {
+    debug("test_one received command \n");
+
+    debug("test_one message received: %s \n", p_cmd->p_data);
+
+    debug("test_one: end message processing\n");
+}
+
 /* ---------- NON-DISPATCHABLE FUNCTIONS (do not go through the command dispatcher) ---------- */
 
 // Initialize the command queue, which stores pointers to command structs
 QueueHandle_t init_test_one(void) {
     QueueHandle_t test_one_command_queue_handle = xQueueCreateStatic(
-        COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE, test_one_mem.test_one_command_queue_buffer,
-        &test_one_mem.test_one_task_queue);
+        COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE, test_one_mem.test_one_command_queue_buffer, &test_one_mem.test_one_task_queue);
 
     if (test_one_command_queue_handle == NULL) {
         fatal("Failed to create command queue!\n");

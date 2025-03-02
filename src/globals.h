@@ -69,7 +69,9 @@ typedef enum {
     OPERATION_DISABLE_SUBTASK, // p_data: TaskHandle_t *handle
     // Display specific operations
     OPERATION_DISPLAY_IMAGE, // p_data: const color_t *p_buffer
-    OPERATION_CLEAR_IMAGE    // p_data: NULL
+    OPERATION_CLEAR_IMAGE,   // p_data: NULL
+    // TESTING
+    TEST_OP, // p_data: char message[]
 } operation_t;
 
 // An enum to represent the different log levels that functions can use

@@ -1,16 +1,28 @@
 /**
- * test_one_main.c
+ * test_two_main.c
  *
  * Created: February 24, 2025
  * Authors:
  */
 
-#include "test_one_task.h"
+#include "test_two_task.h"
 
-test_one_task_memory_t test_one_mem;
+test_two_task_memory_t test_two_mem;
 
-void main_test_one(void *pvParameters) {
-    info("test_one: Task Started!\n");
+char message[20] = "test 2 says hi!";
+status_t result;
+
+command_t test_two_cmd = {
+    .target = p_test_one_task,
+    .operation = TEST_OP,
+    .p_data = message,
+    .len = 20,
+    .p_result = &result,
+    .callback = NULL,
+};
+
+void main_test_two(void *pvParameters) {
+    info("test_two: Task Started!\n");
 
     // Obtain a pointer to the current task within the global task list
     pvdx_task_t *const current_task = get_current_task();
@@ -22,31 +34,31 @@ void main_test_one(void *pvParameters) {
     command_t cmd;
 
     while (true) {
-        debug_impl("\n---------- test_one Task Loop ----------\n");
+        debug_impl("\n---------- test_two Task Loop ----------\n");
 
         // Block waiting for at least one command to appear in the command queue
-        if (xQueueReceive(p_test_one_task->command_queue, &cmd, queue_block_time_ticks) == pdPASS) {
+        if (xQueueReceive(p_test_two_task->command_queue, &cmd, queue_block_time_ticks) == pdPASS) {
             // Once there is at least one command in the queue, empty the entire queue
             do {
-                debug("test_one: Command popped off queue. Target: %d, Operation: %d\n", cmd.target, cmd.operation);
+                debug("test_two: Command popped off queue. Target: %d, Operation: %d\n", cmd.target, cmd.operation);
 
                 switch (cmd.operation) {
                     case TEST_OP:
-                        handle_cmd_test_one(&cmd);
+                        handle_cmd_test_two(&cmd);
                         break;
 
                     default:
-                        fatal("test_one: operation %d not supported", cmd.operation);
+                        fatal("test_two: operation %d not supported", cmd.operation);
                         break;
                 }
 
-            } while (xQueueReceive(p_test_one_task->command_queue, &cmd, 0) == pdPASS);
+            } while (xQueueReceive(p_test_two_task->command_queue, &cmd, 0) == pdPASS);
         }
-        debug("test_one: No more commands queued.\n");
+        debug("test_two: No more commands queued.\n");
 
         // Check in with the watchdog task
         enqueue_command(&cmd_checkin);
-        debug("test_one: Enqueued watchdog checkin command\n");
+        debug("test_two: Enqueued watchdog checkin command\n");
 
         // Wait 1 second before attempting to run the loop again
         vTaskDelay(pdMS_TO_TICKS(1000));

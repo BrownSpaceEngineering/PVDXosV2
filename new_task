@@ -1,21 +1,23 @@
 #!/bin/bash
 
-task_name_lower=${1,,}
-task_name_upper=${1^^}
-task_dir=./src/tasks/$task_name_lower
+for arg in "$@"
+do 
+    task_name_lower=${arg,,}
+    task_name_upper=${arg^^}
+    task_dir=./src/tasks/$task_name_lower
 
-#find and replace "[UPPER]" with upper task name
-sed_upper_arg="s/\[UPPER\]/$task_name_upper/g"
-sed_lower_arg="s/\[lower\]/$task_name_lower/g"
-today=$(date +"%B %d, %Y")
+    #find and replace "[UPPER]" with upper task name
+    sed_upper_arg="s/\[UPPER\]/$task_name_upper/g"
+    sed_lower_arg="s/\[lower\]/$task_name_lower/g"
+    today=$(date +"%B %d, %Y")
 
-echo "creating task $task_name_lower ..."
+    echo "creating task $task_name_lower ..."
 
-mkdir $task_dir
-echo "Created /src/tasks/$task_name_lower"
-echo "Creating source files"
-sed -e $sed_upper_arg -e $sed_lower_arg -e "s/\[DATE\]/$today/g" ./src/misc/task_prototype/_task > ${task_dir}/${task_name_lower}_task.h
-sed -e $sed_upper_arg -e $sed_lower_arg -e "s/\[DATE\]/$today/g" ./src/misc/task_prototype/_main > ${task_dir}/${task_name_lower}_main.c
-sed -e $sed_upper_arg -e $sed_lower_arg -e "s/\[DATE\]/$today/g" ./src/misc/task_prototype/_helpers > ${task_dir}/${task_name_lower}_helpers.c
-echo "$task_name_lower header, main and helper files created"
-
+    mkdir $task_dir
+    echo "Created /src/tasks/$task_name_lower"
+    echo "Creating source files"
+    sed -e $sed_upper_arg -e $sed_lower_arg -e "s/\[DATE\]/$today/g" ./src/misc/task_prototype/_task > ${task_dir}/${task_name_lower}_task.h
+    sed -e $sed_upper_arg -e $sed_lower_arg -e "s/\[DATE\]/$today/g" ./src/misc/task_prototype/_main > ${task_dir}/${task_name_lower}_main.c
+    sed -e $sed_upper_arg -e $sed_lower_arg -e "s/\[DATE\]/$today/g" ./src/misc/task_prototype/_helpers > ${task_dir}/${task_name_lower}_helpers.c
+    echo "$task_name_lower header, main and helper files created"
+done 

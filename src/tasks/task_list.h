@@ -9,6 +9,8 @@
 #include "magnetometer_task.h"
 #include "shell_task.h"
 #include "task_manager_task.h"
+#include "test_one_task.h"
+#include "test_two_task.h"
 #include "watchdog_task.h"
 
 // add extern defs of task pointers here?
@@ -19,7 +21,8 @@ extern pvdx_task_t *const p_magnetometer_task;
 extern pvdx_task_t *const p_shell_task;
 extern pvdx_task_t *const p_display_task;
 extern pvdx_task_t *const p_heartbeat_task;
-
+extern pvdx_task_t *const p_test_one_task;
+extern pvdx_task_t *const p_test_two_task;
 extern pvdx_task_t *task_list[];
 
 pvdx_task_t *get_current_task(void);
