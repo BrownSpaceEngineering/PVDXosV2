@@ -13,13 +13,12 @@
 
 #define I2C_SERCOM       SERCOM6
 
+struct io_descriptor *arducam_i2c_io;
+struct io_descriptor *arducam_spi_io;
 struct arducamTaskMemory arducamMem;
 
 uint8_t ardu_spi_rx_buffer[ARDUCAM_SPI_BUFFER_CAPACITY] = { 0x00 };
 uint8_t ardu_spi_tx_buffer[ARDUCAM_SPI_BUFFER_CAPACITY] = { 0x00 };
-
-struct io_descriptor *arducam_i2c_io;
-struct io_descriptor *arducam_spi_io;
 
 const struct sensor_reg OV2640_JPEG_INIT[] =
 {

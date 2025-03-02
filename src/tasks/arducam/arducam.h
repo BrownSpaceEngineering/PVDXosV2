@@ -26,6 +26,10 @@
 #define CS_LOW() gpio_set_pin_level(Display_CS, 0)
 #define CS_HIGH() gpio_set_pin_level(Display_CS, 1)
 
+extern struct io_descriptor *arducam_i2c_io;
+extern struct io_descriptor *arducam_spi_io;
+extern struct arducamTaskMemory arducamMem;
+
 struct sensor_reg {
 	uint8_t reg;
 	uint8_t val;
@@ -41,8 +45,6 @@ struct arducamTaskMemory {
     StackType_t arducamTaskStack[ARDUCAM_TASK_STACK_SIZE];
     StaticTask_t arducamTaskTCB;
 };
-
-extern struct arducamTaskMemory arducamMem;
 
 void arducam_main(void *pvParameters);
 void init_arducam();

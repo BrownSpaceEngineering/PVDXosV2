@@ -6,12 +6,10 @@ struct spi_xfer ardu_xfer = {.rxbuf = ardu_spi_rx_buffer, .txbuf = ardu_spi_tx_b
 int32_t ARDUCAMSPIWrite(uint8_t addr, uint8_t data) {
     CS_LOW();
 
-    ardu_xfer.size = 2;
-    ardu_spi_tx_buffer[0] = addr;
-    ardu_spi_tx_buffer[1] = data;
+    uint8_t tx[] = { addr, data };
 
-    int32_t response = spi_m_sync_transfer(&SPI_0, &ardu_xfer);
-    if(response != (int32_t)ardu_xfer.size) {
+    int32_t response = io_write(arducam_spi_io, tx, sizeof(tx));
+    if(response != (int32_t) sizeof(tx)) {
         return -1;
     }
 
@@ -23,17 +21,15 @@ int8_t ARDUCAMSPIRead(uint8_t addr) {
     CS_LOW();
     
     uint8_t value; // Init val 
-    ardu_xfer.size = 2;
-    ardu_spi_tx_buffer[0] = addr & 0x7F;
-    ardu_spi_tx_buffer[1] = 0x00;
+    uint8_t rx[] = { 0 };
     
-    int32_t response = spi_m_sync_transfer(&SPI_0, &ardu_xfer);
-    if(response != (int32_t)ardu_xfer.size) {
+    int32_t response = io_read(arducam_spi_io, rx, sizeof(rx));
+    if(response != (int32_t) sizeof(rx)) {
         return -1;
     }
     
     // Value is stored in rx buffer after read
-    value = ardu_spi_rx_buffer[0];
+    value = rx[0];
 
     CS_HIGH();
     return value;

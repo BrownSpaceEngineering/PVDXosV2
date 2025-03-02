@@ -33,7 +33,7 @@
 
 // <i> Select the clock source for ADC.
 #ifndef CONF_GCLK_ADC0_SRC
-#define CONF_GCLK_ADC0_SRC GCLK_PCHCTRL_GEN_GCLK7_Val
+#define CONF_GCLK_ADC0_SRC GCLK_PCHCTRL_GEN_GCLK1_Val
 #endif
 
 /**
@@ -41,7 +41,7 @@
  * \brief ADC0's Clock frequency
  */
 #ifndef CONF_GCLK_ADC0_FREQUENCY
-#define CONF_GCLK_ADC0_FREQUENCY 12000000
+#define CONF_GCLK_ADC0_FREQUENCY 6000000
 #endif
 
 /**
