@@ -37,7 +37,9 @@
 
 // An enum to represent the different statuses that a function can return
 typedef enum {
-    SUCCESS = 0,
+    PROCESSING = 0,
+    NO_STATUS_RETURN,
+    SUCCESS,
 
     // Recoverable or low-significance errors are all less than 128
     ERROR_INTERNAL, // Generic error for when something goes wrong
@@ -120,11 +122,11 @@ typedef struct {
 
 // A struct to represent a command that OS tasks can execute
 typedef struct {
-    const pvdx_task_t *const target;      // The target task for the command
+    pvdx_task_t *const target;            // The target task for the command
     const operation_t operation;          // The operation to perform
     const void *const p_data;             // Pointer to data needed for the operation
     const size_t len;                     // Length of the data
-    status_t *p_result;                   // Pointer to the result of the operation
+    status_t result;                      // Pointer to the result of the operation
     void (*callback)(status_t *p_result); // Callback function to call after the operation is complete
 } command_t;
 

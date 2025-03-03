@@ -33,7 +33,7 @@ QueueHandle_t init_display(void);
 status_t display_update(void);
 void display_set_buffer(const color_t *const p_buffer);
 void display_clear_buffer(void);
-command_t get_display_image_command(const color_t *const p_buffer, status_t *const p_result);
+command_t get_display_image_command(const color_t *const p_buffer);
 void exec_command_display(command_t *const p_cmd);
 
 #endif // DISPLAY_TASK_H

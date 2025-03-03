@@ -9,6 +9,8 @@
 
 test_one_task_memory_t test_one_mem;
 
+char test_one_message[20] = "test 1 says hi!";
+
 void main_test_one(void *pvParameters) {
     info("test_one: Task Started!\n");
 
@@ -20,6 +22,17 @@ void main_test_one(void *pvParameters) {
     const TickType_t queue_block_time_ticks = get_command_queue_block_time_ticks(current_task);
     // Varible to hold commands popped off the queue
     command_t cmd;
+
+    command_t test_one_cmd = {
+        .target = p_test_two_task,
+        .operation = TEST_OP,
+        .p_data = test_one_message,
+        .len = 20,
+        .result = PROCESSING,
+        .callback = NULL,
+    };
+
+    enqueue_command(&test_one_cmd);
 
     while (true) {
         debug_impl("\n---------- test_one Task Loop ----------\n");
@@ -46,7 +59,10 @@ void main_test_one(void *pvParameters) {
 
         // Check in with the watchdog task
         enqueue_command(&cmd_checkin);
-        debug("test_one: Enqueued watchdog checkin command\n");
+        debug("test_two: Enqueued watchdog checkin command\n");
+        if (test_one_cmd.result != SUCCESS) {
+            enqueue_command(&test_one_cmd);
+        }
 
         // Wait 1 second before attempting to run the loop again
         vTaskDelay(pdMS_TO_TICKS(1000));

@@ -54,45 +54,4 @@ status_t dispatch_command(command_t *const p_cmd) {
     debug("command-dispatcher: Forwarded a command to %s task\n", p_cmd->target->name);
 
     return SUCCESS;
-
-    // switch (p_cmd->target) {
-    //     case TASK_MANAGER:
-    //         if (xQueueSendToBack(task_manager_command_queue_handle, p_cmd, 0) != pdTRUE) {
-    //             fatal("command-dispatcher: Failed to forward command to task manager task!\n");
-    //         }
-
-    //         debug("command-dispatcher: Forwarded a command to task manager task\n");
-    //         break;
-    //     case TASK_WATCHDOG:
-    //         if (xQueueSendToBack(watchdog_command_queue_handle, p_cmd, 0) != pdTRUE) {
-    //             fatal("command-dispatcher: Failed to forward command to watchdog task!\n");
-    //         }
-
-    //         debug("command_dispatcher: Forwarded a command to watchdog task\n");
-    //         break;
-    //     case TASK_SHELL:
-    //         break;
-    //     case TASK_HEARTBEAT:
-    //         fatal("command-dispatcher: Heartbeat task does not accept commands!\n");
-    //         break;
-    //     case TASK_MAGNETOMETER:
-    //         fatal("command-dispatcher: Failed; Magnetometer queue does not exist\n");
-    //         break;
-    //     case TASK_CAMERA:
-    //         fatal("command-dispatcher: Failed; Camera queue does not exist\n");
-    //         break;
-    //     case TASK_9AXIS:
-    //         fatal("command-dispatcher: Failed; 9Axis queue does not exist\n");
-    //         break;
-    //     case TASK_DISPLAY:
-    //         if (xQueueSendToBack(display_command_queue_handle, p_cmd, 0) != pdTRUE) {
-    //             fatal("command-dispatcher: Failed to forward command to display task!\n");
-    //         }
-
-    //         debug("command-dispatcher: Forwarded a command to display task\n");
-    //         break;
-    //     default:
-    //         fatal("command-dispatcher: Invalid target task!\n");
-    //         break;
-    // }
 }

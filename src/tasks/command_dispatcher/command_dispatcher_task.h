@@ -24,7 +24,7 @@ extern command_dispatcher_task_memory_t command_dispatcher_mem;
 
 QueueHandle_t init_command_dispatcher(void);
 void main_command_dispatcher(void *pvParameters);
-void dispatch_command(command_t *const p_cmd);
+status_t dispatch_command(command_t *const p_cmd);
 void enqueue_command(command_t *const p_cmd);
 
 #endif // COMMAND_DISPATCHER_H

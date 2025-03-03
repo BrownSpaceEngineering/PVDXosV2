@@ -36,30 +36,28 @@ void main_display(void *pvParameters) {
         }
         debug("display: No more commands queued.\n");
 
+        // TODO: is this a correct modification?
         // Set the display buffer to the first image
         status_t result = SUCCESS; // TODO: Don't initialize result to SUCCESS and block until it is set by the display_image command
-
         {
             // TODO: Add logic for blocking on the result of the display_image command
-            command_t display_image_command = get_display_image_command(IMAGE_BUFFER_PVDX, &result);
+            command_t display_image_command = get_display_image_command(IMAGE_BUFFER_PVDX);
             enqueue_command(&display_image_command);
-        }
 
-        if (result != SUCCESS) {
-            warning("display: Failed to display image. Error code: %d\n", result);
+            if (display_image_command.result != SUCCESS) {
+                warning("display: Failed to display image. Error code: %d\n", result);
+            }
         }
-
         {
             // Set the display buffer to the second image
             // TODO: Add logic for blocking on the result of the display_image command
-            command_t display_image_command = get_display_image_command(IMAGE_BUFFER_BROWNLOGO, &result);
+            command_t display_image_command = get_display_image_command(IMAGE_BUFFER_BROWNLOGO);
             enqueue_command(&display_image_command);
-        }
 
-        if (result != SUCCESS) {
-            warning("display: Failed to display image. Error code: %d\n", result);
+            if (display_image_command.result != SUCCESS) {
+                warning("display: Failed to display image. Error code: %d\n", result);
+            }
         }
-
         // Check in with the watchdog task
         enqueue_command(&cmd_checkin);
         debug("display: Enqueued watchdog checkin command\n");
