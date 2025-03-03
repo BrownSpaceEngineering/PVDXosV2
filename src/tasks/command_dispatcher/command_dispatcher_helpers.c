@@ -42,7 +42,12 @@ void enqueue_command(command_t *const p_cmd) {
 
 // Forward a dequeued command to the appropriate task for execution
 status_t dispatch_command(command_t *const p_cmd) {
-    // First check if the task to dispatch to was disabled
+    // Check if the task is non-NULL
+    if (p_cmd->target == NULL) {
+        return ERROR_BAD_TARGET;
+    }
+
+    // Check if the task to dispatch to was disabled
     if (!p_cmd->target->enabled)
         return ERROR_TASK_DISABLED;
 

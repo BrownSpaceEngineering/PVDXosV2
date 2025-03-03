@@ -26,7 +26,6 @@ void main_watchdog(void *pvParameters) {
     const TickType_t queue_block_time_ticks = get_command_queue_block_time_ticks(current_task);
     // Varible to hold commands popped off the queue
     command_t cmd;
-
     while (true) {
         debug_impl("\n---------- Watchdog Task Loop ----------\n");
 
@@ -64,7 +63,9 @@ void main_watchdog(void *pvParameters) {
         // if we get here, then all tasks have checked in within the allowed time
         pet_watchdog();
         // Watchdog checks in with itself
-        enqueue_command(&cmd_checkin);
+        if (should_checkin(current_task)) {
+            enqueue_command(&cmd_checkin);
+        }
         debug("watchdog: Enqueued watchdog checkin command\n");
     }
 }

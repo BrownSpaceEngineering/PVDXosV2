@@ -54,6 +54,7 @@ typedef enum {
     ERROR_TIMEOUT,
 
     ERROR_TASK_DISABLED,
+    ERROR_BAD_TARGET,
 
     // High significance errors start at 128 (0x80) (in these cases, restart the system)
     ERROR_UNRECOVERABLE = MINIMUM_HIGH_PRIORITY,

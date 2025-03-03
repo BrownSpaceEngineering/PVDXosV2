@@ -59,8 +59,9 @@ void main_display(void *pvParameters) {
             }
         }
         // Check in with the watchdog task
-        enqueue_command(&cmd_checkin);
+        if (should_checkin(current_task)) {
+            enqueue_command(&cmd_checkin);
+        }
         debug("display: Enqueued watchdog checkin command\n");
-        vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }
