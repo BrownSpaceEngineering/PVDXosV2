@@ -16,8 +16,10 @@
 
 // Initialize all peripheral device driver tasks running on PVDXos
 void task_manager_init_subtasks(void) {
-    for (size_t i = SUBTASK_START_INDEX; task_list[i] != NULL; i++) {
-        init_task_pointer(task_list[i]);
+    for (size_t i = 0; task_list[i] != NULL; i++) {
+        if (task_list[i]->task_type != OS) {
+            init_task_pointer(task_list[i]);
+        }
     }
     debug("task_manager: All subtasks initialized\n");
 }
@@ -137,15 +139,19 @@ void exec_command_task_manager(command_t *const p_cmd) {
     switch (p_cmd->operation) {
         case OPERATION_INIT_SUBTASKS:
             task_manager_init_subtasks();
+            p_cmd->result = SUCCESS;
             break;
         case OPERATION_ENABLE_SUBTASK:
             task_manager_enable_task((pvdx_task_t *)p_cmd->p_data); // Turn this into an index
+            p_cmd->result = SUCCESS;
             break;
         case OPERATION_DISABLE_SUBTASK:
             task_manager_disable_task((pvdx_task_t *)p_cmd->p_data); // Turn this into an index
+            p_cmd->result = SUCCESS;
             break;
         default:
             fatal("task-manager: Invalid operation!\n");
+            p_cmd->result = ERROR_INTERNAL; // TODO: appropriate status?
             break;
     }
 }

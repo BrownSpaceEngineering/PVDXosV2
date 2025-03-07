@@ -67,6 +67,17 @@ int main(void) {
         }
     }
 
+    /* ---------- INIT SUBTASKS ---------- */
+
+    command_t subtask_initialiser = {
+        .target = p_task_manager_task,
+        .operation = OPERATION_INIT_SUBTASKS,
+        .p_data = NULL,
+        .len = 0,
+        .result = PROCESSING,
+        .callback = NULL,
+    };
+
     /* ---------- COSMIC MONKEY TASK ---------- */
 
 #if defined(UNITTEST) || defined(DEVBUILD)
