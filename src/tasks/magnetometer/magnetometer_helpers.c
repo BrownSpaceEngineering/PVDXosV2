@@ -22,14 +22,22 @@ static float mGain;
 
 /* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
 
-// TODO: Implement a read function that reads the data from the RM3100
+status_t mag_store() {
+    RM3100_return_t readings = mag_read_data();
+    // TODO: Once the DataStore is fully implemented, store the reading there.
+    
+}
+
+RM3100_return_t mag_read() {
+
+}
 
 /* ---------- NON-DISPATCHABLE FUNCTIONS (do not go through the command dispatcher) ---------- */
 
-int32_t RM3100ReadReg(uint8_t addr, uint8_t *val, uint16_t size);
-uint8_t RM3100ByteReadReg(uint8_t addr);
-int32_t RM3100WriteReg(uint8_t addr, uint8_t *data, uint16_t size);
-void RM3100GatherData(float *storeAddress);
+status_t RM3100ReadReg(int32_t *p_bytes_read, uint8_t addr, uint8_t *val, uint16_t size);
+status_t RM3100ByteReadReg(uint8_t *p_read_buf, uint8_t addr);
+status_t RM3100WriteReg(int32_t *p_bytes_written, uint8_t addr, uint8_t *data, uint16_t size);
+status_t RM3100GatherData(float *storeAddress);
 
 void mag_change_cycle_count(uint16_t newCC);
 SensorPowerMode mag_set_power_mode(SensorPowerMode mode);
@@ -88,38 +96,59 @@ int init_rm3100(void) {
     return SensorOK;
 }
 
-uint8_t RM3100ByteReadReg(uint8_t addr) {
+status_t RM3100ByteReadReg(uint8_t *p_read_buf, uint8_t addr) {
     uint8_t readBuf[1] = {0};
-    RM3100ReadReg(addr, readBuf, 1);
 
-    return readBuf[0];
+    status_t status;
+    int32_t bytes_read;
+    if ((status = RM3100ReadReg(&bytes_read, addr, readBuf, 1)) != SUCCESS)
+        return status;
+    
+    if (bytes_read != 1) {
+        return ERROR_READ_FAILED;
+    }
+
+    *p_read_buf = readBuf[0];
+    return SUCCESS;
 }
 
-int32_t RM3100ReadReg(uint8_t addr, uint8_t *readBuf, uint16_t size) {
+status_t RM3100ReadReg(int32_t *p_bytes_read, uint8_t addr, uint8_t *readBuf, uint16_t size) {
     uint8_t writeBuf[1] = {addr};
     int32_t rv;
 
     if ((rv = io_write(rm3100_io, writeBuf, 1)) < 0) {
         warning("Error in RM3100 Write");
+        return ERROR_WRITE_FAILED;
     }
     if ((rv = io_read(rm3100_io, readBuf, size)) < 0) {
         warning("Error in RM3100 Read");
+        return ERROR_READ_FAILED;
     }
-    return rv;
+    
+    *p_bytes_read = rv;
+    return SUCCESS;
 }
 
-void RM3100GatherData(float *storeAddress) {
+status_t RM3100GatherData(float *storeAddress) {
     uint8_t data[] = {REQUEST};
-    RM3100WriteReg(RM3100_POLL_REG, data, 1);
+
+    status_t status;
+    int32_t bytes_written;
+    if ((status = RM3100WriteReg(&bytes_written, RM3100_POLL_REG, data, 1)) != SUCCESS) 
+        return status;
+
+    if (bytes_written != 1) {
+        return ERROR_WRITE_FAILED;
+    }
 
     storeAddress[0] = mXYZ[0];
     storeAddress[1] = mXYZ[1];
     storeAddress[2] = mXYZ[2];
 
-    return;
+    return SUCCESS;
 }
 
-int32_t RM3100WriteReg(uint8_t addr, uint8_t *data, uint16_t size) {
+status_t RM3100WriteReg(int32_t *p_bytes_written, uint8_t addr, uint8_t *data, uint16_t size) {
     uint8_t writeBuf[MAX_I2C_WRITE + 1];
     int32_t rv;
 
@@ -127,8 +156,11 @@ int32_t RM3100WriteReg(uint8_t addr, uint8_t *data, uint16_t size) {
     memcpy(&(writeBuf[1]), data, size);
     if ((rv = io_write(rm3100_io, writeBuf, size + 1)) < 0) {
         warning("Error in RM3100 Write");
+        return ERROR_WRITE_FAILED;
     }
-    return rv;
+
+    *p_bytes_written = rv;
+    return SUCCESS;
 }
 
 RM3100_return_t mag_read_data() {
@@ -240,11 +272,23 @@ void mag_change_cycle_count(uint16_t newCC) {
 }
 
 void exec_command_magnetometer(command_t *const p_cmd) {
-    // TODO
+    if (p_cmd->target != p_magnetometer_task) {
+        fatal("magnetometer: command target is not watchdog! target: %d operation: %d\n", p_cmd->target->name, p_cmd->operation);
+    }
+
+    switch (p_cmd->operation) {
+        case OPERATION_READ:
+            p_cmd -> result = magnetometer_read();
+            break;
+        default:
+            fatal("magnetometer: Invalid operation! target: %d operation: %d\n", p_cmd->target, p_cmd->operation);
+            break;
+    }
+    
 }
 
 QueueHandle_t init_magnetometer(void) {
-    // TODO: call hardware init from here
+    init_rm3100();
 
     // Initialize the magnetometer command queue
     QueueHandle_t magnetometer_command_queue_handle =

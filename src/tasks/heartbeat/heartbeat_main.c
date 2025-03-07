@@ -55,7 +55,7 @@ void main_heartbeat(void *pvParameters) {
 #if defined(UNITTEST)
         gpio_set_pin_level(LED_Orange1, false);
         gpio_set_pin_level(LED_Orange2, true);
-        ` gpio_set_pin_level(LED_RED, true);
+        gpio_set_pin_level(LED_RED, true);
         vTaskDelay(pdMS_TO_TICKS(500));
         gpio_set_pin_level(LED_Orange1, true);
         gpio_set_pin_level(LED_Orange2, false);

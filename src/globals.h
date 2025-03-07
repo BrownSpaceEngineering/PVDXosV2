@@ -45,6 +45,7 @@ typedef enum {
     ERROR_INTERNAL, // Generic error for when something goes wrong
     ERROR_NO_DATA,
     ERROR_NO_MEMORY,
+    ERROR_READ_FAILED,
     ERROR_WRITE_FAILED,
     ERROR_NOT_YET_IMPLEMENTED,
     ERROR_RESOURCE_IN_USE, // Similar to EAGAIN in Linux (Basically, this WOULD work but busy rn, try again later)
@@ -66,6 +67,7 @@ typedef enum {
 typedef enum {
     // General operations (can be overloaded by any task)
     OPERATION_POWER_OFF = 0,
+    OPERATION_READ,
     // Watchdog specific operations
     OPERATION_CHECKIN, // p_data: TaskHandle_t *handle
     // Task-Manager specific operations
