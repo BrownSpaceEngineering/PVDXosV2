@@ -155,8 +155,6 @@ pvdx_task_t *const p_magnetometer_task = &magnetometer_task;
 pvdx_task_t *const p_shell_task = &shell_task;
 pvdx_task_t *const p_display_task = &display_task;
 pvdx_task_t *const p_heartbeat_task = &heartbeat_task;
-pvdx_task_t *const p_test_one_task = &test_one_task;
-pvdx_task_t *const p_test_two_task = &test_two_task;
 pvdx_task_t *const task_list_null_terminator = NULL;
 
 // Global list of all tasks running on PVDXos (see `pvdx_task_t` definition in globals.h)
@@ -166,8 +164,8 @@ pvdx_task_t *const task_list_null_terminator = NULL;
 // NOTE: Watchdog task must be first in the list, Command Dispatcher second, and Task Manager third.
 // If you change the order of any of these, make sure that main.c reflects the change and update this comment.
 pvdx_task_t *task_list[] = {
-    p_watchdog_task, p_command_dispatcher_task, p_task_manager_task, p_magnetometer_task, p_shell_task,
-    p_display_task,  p_heartbeat_task,          p_test_one_task,     p_test_two_task,     task_list_null_terminator,
+    p_watchdog_task, p_command_dispatcher_task, p_task_manager_task,       p_magnetometer_task, p_shell_task,
+    p_display_task,  p_heartbeat_task,          task_list_null_terminator,
 };
 
 /**
@@ -186,8 +184,4 @@ inline pvdx_task_t *get_current_task(void) {
 // a command from the task's command queue.
 inline TickType_t get_command_queue_block_time_ticks(pvdx_task_t *const task) {
     return pdMS_TO_TICKS(task->watchdog_timeout_ms / 2);
-}
-
-inline bool should_checkin(pvdx_task_t *const task) {
-    return xTaskGetTickCount() - task->last_checkin_time_ticks > pdMS_TO_TICKS(task->watchdog_timeout_ms / 3);
 }
