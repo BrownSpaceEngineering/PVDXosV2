@@ -48,9 +48,10 @@ status_t dispatch_command(command_t *const p_cmd) {
     }
 
     // Check if the task to dispatch to was disabled
-    if (!p_cmd->target->enabled)
+    if (!p_cmd->target->enabled) {
         return ERROR_TASK_DISABLED;
-
+    }
+  
     // TODO: Consider checking whether the given targer pointer actually corresponds to a task
     if (xQueueSendToBack(p_cmd->target->command_queue, p_cmd, 0) != pdTRUE) {
         fatal("command-dispatcher: Failed to forward command to %s task\n", p_cmd->target->name);

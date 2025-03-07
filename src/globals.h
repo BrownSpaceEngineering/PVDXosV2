@@ -30,7 +30,7 @@
 #define TASK_STACK_OVERFLOW_PADDING 16            // Buffer for the stack size so that overflow doesn't corrupt any TCBs
 #define SUBTASK_START_INDEX 3                     // The index of the first subtask in the task list
 #define MINIMUM_HIGH_PRIORITY 128                 // The minimum value for a high-priority operation
-#define COMMAND_QUEUE_MAX_COMMANDS 15             // Maximum number of commands that can be queued at once for any task
+#define COMMAND_QUEUE_MAX_COMMANDS 30             // Maximum number of commands that can be queued at once for any task
 #define COMMAND_QUEUE_ITEM_SIZE sizeof(command_t) // Size of each item in command queues
 
 /* ---------- ENUMS ---------- */

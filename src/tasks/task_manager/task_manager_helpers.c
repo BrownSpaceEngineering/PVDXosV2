@@ -132,6 +132,7 @@ void init_task_pointer(pvdx_task_t *const p_task) {
 }
 
 void exec_command_task_manager(command_t *const p_cmd) {
+  
     if (p_cmd->target != p_task_manager_task) {
         fatal("task manager: command target is not task manager! target: %d operation: %d\n", p_cmd->target, p_cmd->operation);
     }

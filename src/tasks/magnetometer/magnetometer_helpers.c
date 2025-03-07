@@ -239,7 +239,7 @@ void mag_change_cycle_count(uint16_t newCC) {
     RM3100WriteReg(RM3100_CCX1_REG, settings, 6);
 }
 
-void exec_command_magnetometer(command_t *const p_cmd) {
+void exec_command_magnetometer(const command_t *const p_cmd) {
     // TODO
 }
 
@@ -256,3 +256,4 @@ QueueHandle_t init_magnetometer(void) {
 
     return magnetometer_command_queue_handle;
 }
+

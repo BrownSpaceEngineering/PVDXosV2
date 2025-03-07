@@ -34,7 +34,7 @@ extern StaticSemaphore_t task_list_mutex_buffer;
 void init_task_pointer(pvdx_task_t *const p_task);
 QueueHandle_t init_task_manager(void);
 void main_task_manager(void *pvParameters);
-void exec_command_task_manager(command_t *const p_cmd);
+void exec_command_task_manager(const command_t *const p_cmd);
 void task_manager_init_subtasks(void);
 void task_manager_enable_task(pvdx_task_t *const task);
 void task_manager_disable_task(pvdx_task_t *const task);
