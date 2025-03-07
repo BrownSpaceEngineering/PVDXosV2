@@ -57,7 +57,7 @@ pvdx_task_t task_manager_task = {.name = "TaskManager",
                                  .has_registered = false,
                                  .task_type = OS};
 pvdx_task_t magnetometer_task = {.name = "Magnetometer",
-                                 .enabled = true,
+                                 .enabled = false,
                                  .handle = NULL,
                                  .command_queue = NULL,
                                  .init = init_magnetometer,
@@ -72,7 +72,7 @@ pvdx_task_t magnetometer_task = {.name = "Magnetometer",
                                  .has_registered = false,
                                  .task_type = SENSOR};
 pvdx_task_t shell_task = {.name = "Shell",
-                          .enabled = true,
+                          .enabled = false,
                           .handle = NULL,
                           .command_queue = NULL,
                           .init = NULL,
@@ -87,7 +87,7 @@ pvdx_task_t shell_task = {.name = "Shell",
                           .has_registered = false,
                           .task_type = TESTING};
 pvdx_task_t display_task = {.name = "Display",
-                            .enabled = true,
+                            .enabled = false,
                             .handle = NULL,
                             .command_queue = NULL,
                             .init = init_display,
@@ -155,6 +155,8 @@ pvdx_task_t *const p_magnetometer_task = &magnetometer_task;
 pvdx_task_t *const p_shell_task = &shell_task;
 pvdx_task_t *const p_display_task = &display_task;
 pvdx_task_t *const p_heartbeat_task = &heartbeat_task;
+pvdx_task_t *const p_test_one_task = &test_one_task;
+pvdx_task_t *const p_test_two_task = &test_two_task;
 pvdx_task_t *const task_list_null_terminator = NULL;
 
 // Global list of all tasks running on PVDXos (see `pvdx_task_t` definition in globals.h)
@@ -184,4 +186,8 @@ inline pvdx_task_t *get_current_task(void) {
 // a command from the task's command queue.
 inline TickType_t get_command_queue_block_time_ticks(pvdx_task_t *const task) {
     return pdMS_TO_TICKS(task->watchdog_timeout_ms / 2);
+}
+
+inline bool should_checkin(pvdx_task_t *const p_task) {
+    return p_task->enabled;
 }

@@ -27,5 +27,5 @@ extern pvdx_task_t *task_list[];
 
 pvdx_task_t *get_current_task(void);
 TickType_t get_command_queue_block_time_ticks(pvdx_task_t *const task);
-bool should_checkin(pvdx_task_t *const task);
+bool should_checkin(pvdx_task_t *const p_task);
 #endif // TASK_LIST_H

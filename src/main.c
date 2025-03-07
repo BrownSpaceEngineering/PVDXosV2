@@ -78,25 +78,27 @@ int main(void) {
         .callback = NULL,
     };
 
+    enqueue_command(&subtask_initialiser);
+
     /* ---------- COSMIC MONKEY TASK ---------- */
 
-#if defined(UNITTEST) || defined(DEVBUILD)
-    #if defined(UNITTEST)
-    cm_args.frequency = 10;
-    #endif
-    #if defined(DEVBUILD)
-    cm_args.frequency = 0;
-    #endif
+    // #if defined(UNITTEST) || defined(DEVBUILD)
+    //     #if defined(UNITTEST)
+    //     cm_args.frequency = 10;
+    //     #endif
+    //     #if defined(DEVBUILD)
+    //     cm_args.frequency = 0;
+    //     #endif
 
-    TaskHandle_t cosmic_monkey_task_handle =
-        xTaskCreateStatic(main_cosmic_monkey, "CosmicMonkey", COSMIC_MONKEY_TASK_STACK_SIZE, (void *)&cm_args, 1,
-                          cosmic_monkey_mem.cosmic_monkey_task_stack, &cosmic_monkey_mem.cosmic_monkey_task_tcb);
-    if (cosmic_monkey_task_handle == NULL) {
-        warning("Cosmic Monkey Task Creation Failed!\n");
-    } else {
-        info("Cosmic Monkey Task initialized\n");
-    }
-#endif // Cosmic Monkey
+    //     TaskHandle_t cosmic_monkey_task_handle =
+    //         xTaskCreateStatic(main_cosmic_monkey, "CosmicMonkey", COSMIC_MONKEY_TASK_STACK_SIZE, (void *)&cm_args, 1,
+    //                           cosmic_monkey_mem.cosmic_monkey_task_stack, &cosmic_monkey_mem.cosmic_monkey_task_tcb);
+    //     if (cosmic_monkey_task_handle == NULL) {
+    //         warning("Cosmic Monkey Task Creation Failed!\n");
+    //     } else {
+    //         info("Cosmic Monkey Task initialized\n");
+    //     }
+    // #endif // Cosmic Monkey
 
     /* ---------- START FREERTOS SCHEDULER ---------- */
 
