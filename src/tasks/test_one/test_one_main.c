@@ -59,6 +59,7 @@ void main_test_one(void *pvParameters) {
 
         // Check in with the watchdog task
         enqueue_command(&cmd_checkin);
+
         debug("test_two: Enqueued watchdog checkin command\n");
         if (test_one_cmd.result != SUCCESS) {
             enqueue_command(&test_one_cmd);

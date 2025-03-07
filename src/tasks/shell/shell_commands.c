@@ -1,8 +1,8 @@
 /**
  * shell_commands.c
- * 
+ *
  * Implementations of the shell commands available to a user using PVDX's terminal interface.
- * 
+ *
  * Created: April 11, 2024
  * Author: Oren Kohavi
  */
@@ -16,9 +16,13 @@
 #include "watchdog_task.h"
 
 shell_command_t shell_commands[] = {
-    {"help", shell_help, help_help},       {"echo", shell_echo, help_echo},
-    {"clear", shell_clear, help_clear},    {"loglevel", shell_loglevel, help_loglevel},
-    {"reboot", shell_reboot, help_reboot}, {"display", shell_display, help_display}, {NULL, NULL, NULL} // Null-terminated array
+    {"help", shell_help, help_help},
+    {"echo", shell_echo, help_echo},
+    {"clear", shell_clear, help_clear},
+    {"loglevel", shell_loglevel, help_loglevel},
+    {"reboot", shell_reboot, help_reboot},
+    {"display", shell_display, help_display},
+    {NULL, NULL, NULL} // Null-terminated array
 };
 
 /* ---------- HELP COMMAND ---------- */
@@ -150,9 +154,8 @@ void shell_display(char **args, int arg_count) {
         return;
     }
 
-    status_t result = SUCCESS;
-    const uint8_t* image_buffers[] = {IMAGE_BUFFER_BROWNLOGO, IMAGE_BUFFER_PVDX};
-    const command_t display_image_command = get_display_image_command(image_buffers[args[1][0] - '0'], &result);
+    const uint8_t *image_buffers[] = {IMAGE_BUFFER_BROWNLOGO, IMAGE_BUFFER_PVDX};
+    command_t display_image_command = get_display_image_command(image_buffers[args[1][0] - '0']);
     enqueue_command(&display_image_command);
     terminal_printf("fr\n");
 }

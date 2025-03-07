@@ -22,7 +22,7 @@ size_t get_line_from_terminal(uint8_t *p_linebuffer) {
     // Obtain a pointer to the current task within the global task list
     pvdx_task_t *const current_task = get_current_task();
     // Cache the watchdog checkin command to avoid creating it every iteration
-    const command_t cmd_checkin = get_watchdog_checkin_command(current_task);
+    command_t cmd_checkin = get_watchdog_checkin_command(current_task);
 
     while (true) {
         // This is really the loop that we expect the program to spend most of its time in, so pet the watchdog here
