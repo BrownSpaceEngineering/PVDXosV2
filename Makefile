@@ -280,8 +280,3 @@ update_asf:
 	&& echo "(10) Timestamps in future updated to present" \
 	&& echo " --- Finished Integrating ASF --- "
 
-############################################
-### Target for Creating new Task         ###
-############################################
-
-
