@@ -32,6 +32,7 @@ typedef enum {
     // Recoverable or low-significance errors are all less than 128
     ERROR_INTERNAL, // Generic error for when something goes wrong
     ERROR_NO_DATA,
+    ERROR_NOT_ENOUGH_DATA,
     ERROR_NO_MEMORY,
     ERROR_WRITE_FAILED,
     ERROR_NOT_YET_IMPLEMENTED,
