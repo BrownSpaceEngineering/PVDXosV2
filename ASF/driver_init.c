@@ -27,97 +27,22 @@ void ADC_0_PORT_init(void)
 {
 
 	// Disable digital pin circuitry
-	gpio_set_pin_direction(PA02, GPIO_DIRECTION_OFF);
-
-	gpio_set_pin_function(PA02, PINMUX_PA02B_ADC0_AIN0);
-
-	// Disable digital pin circuitry
-	gpio_set_pin_direction(PA03, GPIO_DIRECTION_OFF);
-
-	gpio_set_pin_function(PA03, PINMUX_PA03B_ADC0_AIN1);
-
-	// Disable digital pin circuitry
 	gpio_set_pin_direction(PB08, GPIO_DIRECTION_OFF);
 
-	gpio_set_pin_function(PB08, PINMUX_PB08B_ADC0_AIN2);
-
-	// Disable digital pin circuitry
-	gpio_set_pin_direction(PB09, GPIO_DIRECTION_OFF);
-
-	gpio_set_pin_function(PB09, PINMUX_PB09B_ADC0_AIN3);
-
-	// Disable digital pin circuitry
-	gpio_set_pin_direction(PA04, GPIO_DIRECTION_OFF);
-
-	gpio_set_pin_function(PA04, PINMUX_PA04B_ADC0_AIN4);
-
-	// Disable digital pin circuitry
-	gpio_set_pin_direction(PA05, GPIO_DIRECTION_OFF);
-
-	gpio_set_pin_function(PA05, PINMUX_PA05B_ADC0_AIN5);
-
-	// Disable digital pin circuitry
-	gpio_set_pin_direction(PA06, GPIO_DIRECTION_OFF);
-
-	gpio_set_pin_function(PA06, PINMUX_PA06B_ADC0_AIN6);
-
-	// Disable digital pin circuitry
-	gpio_set_pin_direction(PA07, GPIO_DIRECTION_OFF);
-
-	gpio_set_pin_function(PA07, PINMUX_PA07B_ADC0_AIN7);
-
-	// Disable digital pin circuitry
-	gpio_set_pin_direction(PA08, GPIO_DIRECTION_OFF);
-
-	gpio_set_pin_function(PA08, PINMUX_PA08B_ADC0_AIN8);
-
-	// Disable digital pin circuitry
-	gpio_set_pin_direction(PA09, GPIO_DIRECTION_OFF);
-
-	gpio_set_pin_function(PA09, PINMUX_PA09B_ADC0_AIN9);
-
-	// Disable digital pin circuitry
-	gpio_set_pin_direction(PA10, GPIO_DIRECTION_OFF);
-
-	gpio_set_pin_function(PA10, PINMUX_PA10B_ADC0_AIN10);
-
-	// Disable digital pin circuitry
-	gpio_set_pin_direction(PA11, GPIO_DIRECTION_OFF);
-
-	gpio_set_pin_function(PA11, PINMUX_PA11B_ADC0_AIN11);
-
-	// Disable digital pin circuitry
-	gpio_set_pin_direction(PB00, GPIO_DIRECTION_OFF);
-
-	gpio_set_pin_function(PB00, PINMUX_PB00B_ADC0_AIN12);
-
-	// Disable digital pin circuitry
-	gpio_set_pin_direction(PB01, GPIO_DIRECTION_OFF);
-
-	gpio_set_pin_function(PB01, PINMUX_PB01B_ADC0_AIN13);
-
-	// Disable digital pin circuitry
-	gpio_set_pin_direction(PB02, GPIO_DIRECTION_OFF);
-
-	gpio_set_pin_function(PB02, PINMUX_PB02B_ADC0_AIN14);
-
-	// Disable digital pin circuitry
-	gpio_set_pin_direction(PB03, GPIO_DIRECTION_OFF);
-
-	gpio_set_pin_function(PB03, PINMUX_PB03B_ADC0_AIN15);
+	gpio_set_pin_function(PB08, PINMUX_PB08B_ADC1_AIN0);
 }
 
 void ADC_0_CLOCK_init(void)
 {
-	hri_mclk_set_APBDMASK_ADC0_bit(MCLK);
-	hri_gclk_write_PCHCTRL_reg(GCLK, ADC0_GCLK_ID, CONF_GCLK_ADC0_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+	hri_mclk_set_APBDMASK_ADC1_bit(MCLK);
+	hri_gclk_write_PCHCTRL_reg(GCLK, ADC1_GCLK_ID, CONF_GCLK_ADC1_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
 }
 
 void ADC_0_init(void)
 {
 	ADC_0_CLOCK_init();
 	ADC_0_PORT_init();
-	adc_sync_init(&ADC_0, ADC0, (void *)NULL);
+	adc_sync_init(&ADC_0, ADC1, (void *)NULL);
 }
 
 void I2C_0_PORT_init(void)

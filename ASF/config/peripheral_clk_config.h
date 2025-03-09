@@ -32,16 +32,16 @@
 // <GCLK_PCHCTRL_GEN_GCLK11_Val"> Generic clock generator 11
 
 // <i> Select the clock source for ADC.
-#ifndef CONF_GCLK_ADC0_SRC
-#define CONF_GCLK_ADC0_SRC GCLK_PCHCTRL_GEN_GCLK7_Val
+#ifndef CONF_GCLK_ADC1_SRC
+#define CONF_GCLK_ADC1_SRC GCLK_PCHCTRL_GEN_GCLK1_Val
 #endif
 
 /**
- * \def CONF_GCLK_ADC0_FREQUENCY
- * \brief ADC0's Clock frequency
+ * \def CONF_GCLK_ADC1_FREQUENCY
+ * \brief ADC1's Clock frequency
  */
-#ifndef CONF_GCLK_ADC0_FREQUENCY
-#define CONF_GCLK_ADC0_FREQUENCY 12000000
+#ifndef CONF_GCLK_ADC1_FREQUENCY
+#define CONF_GCLK_ADC1_FREQUENCY 6000000
 #endif
 
 /**
