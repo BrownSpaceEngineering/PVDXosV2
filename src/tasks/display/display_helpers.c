@@ -70,7 +70,7 @@ status_t spi_transfer(bool data) {
 
     int32_t response = spi_m_sync_transfer(&SPI_0, &xfer);
     if (response != (int32_t)xfer.size) {
-        return ERROR_IO;
+        return ERROR_SPI_TRANSFER_FAILED;
     }
 
     CS_HIGH(); // deselect the display for SPI communication

@@ -8,7 +8,7 @@
 // We are on revision 34 (decimal), 0x22 (hex)
 
 // Need to put the holy grail of values here
-#define RM3100Address 		0x20 // Hexadecimal slave address for RM3100 with Pin 2 and Pin 4 set to LOW
+#define RM3100_ADDRESS 		0x20 // Hexadecimal slave address for RM3100 with Pin 2 and Pin 4 set to LOW
 
 // Data reading regs are numbered in the opposite from documentation so we're reading 0-1-2 rather than 2-1-0 cause we hate RM3100
 //internal register values without the R/W bit
@@ -62,30 +62,20 @@
 #define REQUEST 0x70 // 0b 0111 0000
 
 // options
-#define initialCC  200 // Set the cycle count
-#define sampleRate   2 // 2 HZ
-#define singleMode   0 // 0 = use continuous measurement mode; 1 = use single measurement mode
+#define INITIAL_CC  200 // Set the cycle count
+#define SAMPLE_RATE   2 // 2 HZ
+#define SINGLE_MODE   0 // 0 = use continuous measurement mode; 1 = use single measurement mode
 
 typedef struct {
     int32_t x;
     int32_t y;
     int32_t z;
-} RM3100_return_t;
+} rm3100_return_t;
 
 typedef enum {
-	/* Valid Responses */
-	SensorOK,                       /**< @brief Sensor responded with expected data. */
-
-	/* Error Responses */
-	SensorI2CError,                 /**< @brief An unknown error has occurred. */
-	SensorErrorNonExistant,         /**< @brief Unable to communicate with sensor, sensor did not ACK. */
-	SensorErrorUnexpectedDevice,    /**< @brief A different sensor was detected at the address. */
-} SensorStatus;
-
-typedef enum {
-	SensorPowerModeInactive = 0,       
-	SensorPowerModeContinuous = 1,  
-	SensorPowerModeSingle = 2
-} SensorPowerMode;
+	SENSOR_POWER_MODE_INACTIVE = 0,       
+	SENSOR_POWER_MODE_CONTINUOUS = 1,  
+	SENSOR_POWER_MODE_SINGLE = 2
+} rm3100_power_mode_t;
 
 #endif // MAGNETOMETER_HAL_H
