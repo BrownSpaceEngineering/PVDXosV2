@@ -65,12 +65,7 @@
 #define INITIAL_CC  200 // Set the cycle count
 #define SAMPLE_RATE   2 // 2 HZ
 #define SINGLE_MODE   0 // 0 = use continuous measurement mode; 1 = use single measurement mode
-
-typedef struct {
-    int32_t x;
-    int32_t y;
-    int32_t z;
-} rm3100_return_t;
+#define SENSOR_OK     0 // Used in magnetometer initialization
 
 typedef enum {
 	SENSOR_POWER_MODE_INACTIVE = 0,       

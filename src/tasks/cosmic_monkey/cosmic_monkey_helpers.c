@@ -32,7 +32,7 @@ status_t perform_flip() {
         VALID_MEMORY_RANGE_START + (rand_int & EIGHTEEN_BIT_MASK); // Isolate 18 bits of randomness to pick a random memory address
     int bit_position = (rand_int & RAND_THREE_BIT_MASK) >> VALID_MEMORY_RANGE_IN_BYTES; // Pick the next 3 bits as the index
     if (8 <= bit_position) {
-        return ERROR_INTERNAL;
+        return ERROR_SANITY_CHECK_FAILED;
     }
     uint8_t byte_flip_mask = 1 << bit_position; // Generates the a mask of the form 0 ... 010 ... 0
 

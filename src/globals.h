@@ -48,8 +48,7 @@ typedef enum {
     ERROR_BAD_TARGET,
     ERROR_SANITY_CHECK_FAILED,
 
-    // TODO: Fix Magnetometer init and add warnings/fatal everywhere that needs them
-    // TODO: Use SANITY_CHECK_FAILED for display and cosmic monkey instead of ERROR_INTERNAL
+    #error "TODO: Fix Magnetometer init and add warnings/fatal everywhere that needs them"
 } status_t;
 
 // An enum to represent the different operations that tasks can perform (contained within a command_t)
