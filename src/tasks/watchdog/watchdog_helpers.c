@@ -13,6 +13,17 @@
 /* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
 
 // Updates the last checkin time of the given task to prove that it is still running
+/**
+ * \fn watchdog_checkin
+ *
+ * \brief Updates the last checkin time of the given task to prove that it is 
+ *      still running
+ * 
+ * \param p_task a constant task pointer; the task to check-in
+ * 
+ * \warning acquires the task list mutex
+ * \warning modifies a task struct
+ */
 void watchdog_checkin(pvdx_task_t *const p_task) {
     if (!p_task) {
         fatal("Attempted to update checkin time of null task!");

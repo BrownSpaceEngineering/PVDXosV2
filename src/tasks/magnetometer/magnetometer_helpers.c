@@ -24,24 +24,17 @@ status_t mag_store(void) {
     // TODO: Once the DataStore is fully implemented, store the reading there.
 }
 
-rm3100_return_t mag_read(void) {
-
+status_t mag_read(void) {
+    #error "TODO"
 }
 
 /* ---------- NON-DISPATCHABLE FUNCTIONS (do not go through the command dispatcher) ---------- */
 
 status_t rm3100_read_reg(int32_t *p_bytes_read, uint8_t addr, uint8_t *val, uint16_t size);
-status_t rm3100_byte_read_reg(uint8_t *p_read_buf, uint8_t addr);
 status_t rm3100_write_reg(int32_t *p_bytes_written, uint8_t addr, uint8_t *data, uint16_t size);
-
-void mag_change_cycle_count(uint16_t newCC);
+status_t mag_change_cycle_count(uint16_t newCC);
 rm3100_power_mode_t mag_set_power_mode(rm3100_power_mode_t mode);
 uint16_t mag_set_sample_rate(uint16_t sample_rate);
-rm3100_status_t mag_modify_interrupts(uint8_t cmm_value, uint8_t poll_value);
-
-int init_rm3100(void);
-
-status_t mag_read_data(int32_t *raw_readings, float *gain_adj_readings);
 
 // https://www.tri-m.com/products/pni/RM3100-User-Manual.pdf
 // https://github.com/inventorandy/atmel-samd21/blob/master/07_I2CTSYS/07_I2CTSYS/ext_tsys01.h#L15

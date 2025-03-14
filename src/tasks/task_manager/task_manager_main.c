@@ -15,6 +15,14 @@ task_manager_task_memory_t task_manager_mem;
 SemaphoreHandle_t task_list_mutex = NULL;
 StaticSemaphore_t task_list_mutex_buffer;
 
+/**
+ * \fn main_task_manager
+ * 
+ * \param pvParameters a void pointer to the parametres required by the task 
+ *      manager; not currently set by config
+ *
+ * \returns should never return 
+ */
 void main_task_manager(void *pvParameters) {
     info("task-manager: Task Started!\n");
 
