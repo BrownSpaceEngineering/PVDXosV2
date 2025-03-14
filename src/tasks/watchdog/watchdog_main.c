@@ -15,6 +15,14 @@ QueueHandle_t watchdog_command_queue_handle;
 // uint8_t watchdog_command_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
 volatile Wdt *const p_watchdog = WDT;
 
+/**
+ * \fn main_watchdog
+ *
+ * \param pvParameters a void pointer to the parametres required by the 
+ *      watchdog; not currently set by config
+ *
+ * \returns should never return
+ */
 void main_watchdog(void *pvParameters) {
     info("watchdog: Task Started!\n");
 
