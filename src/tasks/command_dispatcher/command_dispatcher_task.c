@@ -20,7 +20,7 @@
 /* ---------- NON-DISPATCHABLE FUNCTIONS (do not go through the command dispatcher) ---------- */
 
 /**
- * \fn init_task_manager
+ * \fn init_commamd_dispatecher
  *
  * \brief Initializes command dispatcher queue, before `init_task_pointer()`.
  *
@@ -44,7 +44,7 @@ QueueHandle_t init_command_dispatcher(void) {
  * \fn enqueue_command
  *
  * \brief Enqueue a command to be forwarded by the command dispatcher
- * 
+ *
  * \param p_cmd a pointer to the command struct to be enqueued
  */
 void enqueue_command(command_t *const p_cmd) {
@@ -60,9 +60,9 @@ void enqueue_command(command_t *const p_cmd) {
  * \brief Forward a dequeued command to the appropriate task for execution
  *
  * \param p_cmd a pointer to the command struct to be dispatched
- * 
+ *
  * \return status_t, whether the forwarding was successful or not
- * 
+ *
  * \warning produces `ERROR_BAD_TARGET` if target null
  * \warning produces `ERROR_TASK_DISABLED` if target disabled
  * \warning `fatal` error if command cannot be forwarded to queue
@@ -77,7 +77,7 @@ status_t dispatch_command(command_t *const p_cmd) {
     if (!p_cmd->target->enabled) {
         return ERROR_TASK_DISABLED;
     }
-  
+
     if (xQueueSendToBack(p_cmd->target->command_queue, p_cmd, 0) != pdTRUE) {
         fatal("command-dispatcher: Failed to forward command to %s task\n", p_cmd->target->name);
     }
