@@ -1,5 +1,5 @@
 /**
- * command_dispatcher_helpers.c
+ * command_dispatcher_task.c
  *
  * Helper functions for the Command Dispatcher task. This task is responsible for receiving
  * commands from other tasks and forwarding them to the appropriate task for execution. All major
@@ -7,7 +7,7 @@
  * to the PVDXos hub-and-spoke architecture.
  *
  * Created: October 13, 2024
- * Authors: Tanish Makadia, Yi Liu, Siddharta Laloux
+ * Authors: Tanish Makadia, Yi Liu, Siddharta Laloux, Ignacio Blancas Rodriguez
  */
 
 #include "command_dispatcher_task.h"

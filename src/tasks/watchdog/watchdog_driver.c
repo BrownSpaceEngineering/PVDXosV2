@@ -1,3 +1,12 @@
+/**
+ * watchdog_driver.c
+ *
+ * Driver for the hardware watchdog timer on an Atmel SAMD51 microcontroller
+ *
+ * Created: January 28, 2024
+ * Authors: Oren Kohavi, Tanish Makadia, Siddharta Laloux
+ */
+
 #include "watchdog_driver.h"
 
 // This file defines slightly modified copies of functions from (ASF/hri/hri_wdt_d51.h) and (ASF/hal/include/hal_wdt.h). 

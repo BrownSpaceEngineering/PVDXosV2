@@ -1,9 +1,10 @@
 /**
- * Code for the RM3100 Magnetometer Sensor task
+ * magnetometer_main.c
+ * 
+ * Main loop of the satellite's RM3100 Magnetometer sensor RTOS task
  *
  * Created: Feb 20, 2025
- * Authors: Nathan Kim, Alexander Thaep, Siddharta Laloux, Defne Doken, 
- *          Aidan Wang, Tanish Makadia
+ * Authors: Nathan Kim, Alexander Thaep, Siddharta Laloux, Defne Doken, Aidan Wang, Tanish Makadia
  **/
 
 #include "magnetometer_task.h"

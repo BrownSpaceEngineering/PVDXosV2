@@ -1,3 +1,12 @@
+/**
+ * magnetometer_driver.c
+ * 
+ * Driver for the RM3100 Magnetometer Sensor from PNICorp
+ *
+ * Created: Dec 7, 2023 2:22 AM
+ * Authors: Nathan Kim, Alexander Thaep, Siddharta Laloux, Tanish Makadia, Defne Doken, Aidan Wang
+ */
+
 // IO descriptor for the RM3100
 #define I2C_SERCOM
 

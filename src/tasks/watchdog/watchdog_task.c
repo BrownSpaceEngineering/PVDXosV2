@@ -1,8 +1,9 @@
 /**
- * watchdog_helpers.c
+ * watchdog_task.c
  *
- * Helper functions for the watchdog task. This task is responsible for monitoring the check-ins of other tasks
- * and resetting the system if a task fails to check in within the allowed time.
+ * RTOS task wrapping the driver for an Atmel SAMD51's hardware watchdog timer. This task is 
+ * responsible for monitoring the check-ins of other tasks and resetting the system if a 
+ * task fails to check in within the allowed time.
  *
  * Created: January 28, 2024
  * Authors: Oren Kohavi, Tanish Makadia, Siddharta Laloux

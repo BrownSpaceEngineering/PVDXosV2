@@ -1,5 +1,5 @@
 /**
- * cosmic_monkey_helpers.c
+ * cosmic_monkey_task.c
  * 
  * Helper functions for the Cosmic Monkey task. This is an antagonist task loosely inspired by
  * Netflix's Chaos Monkey. It randomly flips bits in memory to create an environment akin to low-earth 

@@ -1,5 +1,7 @@
 /**
- * Code for the RM3100 Magnetometer Sensor
+ * magnetometer_task.c
+ * 
+ * RTOS task wrapping the driver for a RM3100 Magnetometer Sensor
  *
  * Created: Dec 7, 2023 2:22 AM
  * Authors: Nathan Kim, Alexander Thaep, Siddharta Laloux, Tanish Makadia, Defne Doken, Aidan Wang

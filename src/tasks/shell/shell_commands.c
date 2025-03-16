@@ -4,7 +4,7 @@
  * Implementations of the shell commands available to a user using PVDX's terminal interface.
  *
  * Created: April 11, 2024
- * Author: Oren Kohavi
+ * Author: Oren Kohavi, Simon Juknelis
  */
 
 #include "shell_commands.h"

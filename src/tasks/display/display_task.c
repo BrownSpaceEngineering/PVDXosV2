@@ -1,7 +1,8 @@
 /**
- * display_helpers.c
+ * display_task.c
  *
- * Driver for the SSD1362 OLED controller within a Midas Displays MDOB256064D1Y-YS display.
+ * RTOS task wrapping the driver for a SSD1362 OLED controller within a Midas Displays 
+ * MDOB256064D1Y-YS display.
  *
  * Created: February 29, 2024
  * Authors: Tanish Makadia, Ignacio Blancas Rodriguez, Aidan Wang, Siddharta Laloux

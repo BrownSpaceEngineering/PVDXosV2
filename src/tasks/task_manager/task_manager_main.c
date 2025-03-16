@@ -1,8 +1,8 @@
 /**
- * task_manager_helpers.c
+ * task_manager_main.c
  *
- * Helper functions for the task manager task. This task is responsible for initializing and enabling/disabling
- * all other tasks in the system based on PVDX's state diagram.
+ * Main loop of the Task Manager RTOS task. This task is responsible for initializing and enabling/disabling
+ * all other tasks in the system based on PVDX's satellite state diagram.
  *
  * Created: April 14, 2024
  * Authors: Oren Kohavi, Ignacio Blancas Rodriguez, Tanish Makadia, Yi Liu, Siddharta Laloux, Aidan Wang, Simon Juknelis,

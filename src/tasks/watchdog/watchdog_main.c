@@ -1,7 +1,7 @@
 /**
- * watchdog_helpers.c
+ * watchdog_main.c
  *
- * Helper functions for the watchdog task. This task is responsible for monitoring the check-ins of other tasks
+ * Main loop of the Watchdog RTOS task. This task is responsible for monitoring the check-ins of other tasks
  * and resetting the system if a task fails to check in within the allowed time.
  *
  * Created: January 28, 2024

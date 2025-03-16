@@ -1,3 +1,12 @@
+/**
+ * display_driver.c
+ *
+ * Driver for the SSD1362 OLED controller within a Midas Displays MDOB256064D1Y-YS display.
+ *
+ * Created: February 29, 2024
+ * Authors: Tanish Makadia, Ignacio Blancas Rodriguez, Aidan Wang, Siddharta Laloux
+ */
+
 #include "display_driver.h"
 
 // Buffer for SPI transactions
