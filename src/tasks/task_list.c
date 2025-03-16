@@ -166,8 +166,10 @@ pvdx_task_t *task_list[] = {
 
 /**
  * \fn get_current_task
+ * 
+ * \brief Returns a pointer to the `pvdx_task_t` struct associated with the calling task
  *
- * \return a pvdx_task_t *, a pointer to the current task struct.
+ * \return `pvdx_task_t*`
  */
 inline pvdx_task_t *get_current_task(void) {
     // handle = NULL means current task
@@ -182,13 +184,21 @@ inline pvdx_task_t *get_current_task(void) {
  * 
  * \param p_task Pointer to the `pvdx_task_t` of the task whose block time is desired
  * 
- * \return `TickType_t` block time in ticks 
+ * \return `TickType_t`
  * 
  */
 inline TickType_t get_command_queue_block_time_ticks(pvdx_task_t *const p_task) {
     return pdMS_TO_TICKS(p_task->watchdog_timeout_ms / 2);
 }
 
+/**
+ * \fn should_checkin
+ * 
+ * \brief Returns `true` if the given task is registered with the watchdog 
+ *        (i.e. whether its checkins are being tracked)
+ * 
+ * \return `bool`
+ */
 inline bool should_checkin(pvdx_task_t *const p_task) {
     return p_task->enabled;
 }
