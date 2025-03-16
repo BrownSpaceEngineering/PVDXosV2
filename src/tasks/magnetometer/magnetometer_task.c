@@ -11,10 +11,6 @@ extern magnetometer_task_memory_t magnetometer_mem;
 
 /* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
 
-status_t magnetometer_store(void) {
-    // TODO: Once the DataStore is fully implemented, store the reading there.
-}
-
 status_t magnetometer_read(int32_t *const raw_readings, float *const gain_adj_readings) {
     debug("magnetometer: Reading x,y,z data");
     return mag_read_data(raw_readings, gain_adj_readings);
@@ -36,8 +32,8 @@ void exec_command_magnetometer(command_t *const p_cmd) {
 
     switch (p_cmd->operation) {
         case OPERATION_READ:
-            magnetometer_read_args_t args = *p_cmd->p_data;
-            p_cmd->result = magnetometer_read(args.raw_readings, args.gain_adj_readings);
+            const magnetometer_read_args_t *const args = p_cmd->p_data;
+            p_cmd->result = magnetometer_read(args->raw_readings, args->gain_adj_readings);
             break;
         default:
             fatal("magnetometer: Invalid operation! target: %d operation: %d\n", p_cmd->target, p_cmd->operation);

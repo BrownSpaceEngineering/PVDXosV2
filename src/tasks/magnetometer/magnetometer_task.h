@@ -27,8 +27,8 @@ typedef struct {
 
 // Arguments to `magnetometer_read` defined in `magnetometer_task.c`
 typedef struct {
-    const int32_t *raw_readings;
-    const float *gain_adj_readings;
+    int32_t *const raw_readings;
+    float *const gain_adj_readings;
 } magnetometer_read_args_t;
 
 extern magnetometer_task_memory_t magnetometer_mem;

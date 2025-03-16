@@ -65,7 +65,7 @@ status_t display_set_window(void) {
  * \fn display_set_buffer_pixel
  *
  * \brief Set a specific pixel in the display buffer to a given `color_t`. To
- * actually update the display, call display_update()
+ *        actually update the display, call display_update()
  *
  * \param x the x-coordinate of the pixel
  * \param y the y-coordinate of the pixel
@@ -95,7 +95,7 @@ status_t display_set_buffer_pixel(point_t x, point_t y, color_t color) {
  * \fn display_set_buffer
  *
  * \brief Set the entire display buffer to the contents of the input buffer. To
- * actually update the display, call display_update()
+ *        actually update the display, call display_update()
  *
  * \param p_buffer the display buffer to be set
  *
@@ -110,7 +110,7 @@ void display_set_buffer(const color_t *const p_buffer) {
  * \fn display_clear_buffer
  *
  * \brief Clear the display buffer. To actually update the display,
- * call display_update()
+ *        call display_update()
  */
 void display_clear_buffer(void) {
     for (uint16_t i = 0; i < (SSD1362_WIDTH / 2) * SSD1362_HEIGHT; i++) {
@@ -285,7 +285,10 @@ status_t init_display_hardware(void) {
     fatal_on_error(spi_transfer(false), "display hardware init: could not turn display on");
 
     // Clear the display buffer
-    fatal_on_error(clear_image(), "display hardware init: could not clear display buffer");
+    display_clear_buffer();
+
+    // Trigger an update so the empty buffer is actually displayed
+    ret_err_status(display_update(), "display: Update failed");
 
     return SUCCESS;
 }

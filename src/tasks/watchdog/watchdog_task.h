@@ -28,8 +28,6 @@ typedef struct {
 
 extern watchdog_task_memory_t watchdog_mem;
 extern QueueHandle_t watchdog_command_queue_handle;
-// Reference to the hardware watchdog timer on the SAMD51 microcontroller
-volatile Wdt *const p_watchdog_timer = WDT;
 
 void watchdog_checkin(pvdx_task_t *const task);
 QueueHandle_t init_watchdog();

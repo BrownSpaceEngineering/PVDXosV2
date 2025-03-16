@@ -10,6 +10,9 @@
 
 #include "watchdog_task.h"
 
+// Reference to the hardware watchdog timer on the SAMD51 microcontroller
+static volatile Wdt *const p_watchdog_timer = WDT;
+
 /* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
 
 /**

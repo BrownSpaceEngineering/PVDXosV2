@@ -67,7 +67,7 @@
 #define SSD1362_PRECHARGE_CAPACITOR 0x01     // TODO: what is this
 #define SSD1362_DESELECT_VOLTAGE_RATIO 0x07  // TODO: what is this
 
-// Functions for setting the reset, data/command, and chip-select pins on the 
+// Functions for setting the reset, data/command, and chip-select pins on the
 // display to high or low voltage
 #define RST_LOW() gpio_set_pin_level(Display_RST, 0)
 #define RST_HIGH() gpio_set_pin_level(Display_RST, 1)

@@ -37,13 +37,13 @@ DEBUG: Detailed information about the system for debugging (e.g. length of array
     #define debug(msg, ...) debug_impl(RTT_CTRL_TEXT_WHITE "[DEBUG|%s:%d]: " msg RTT_CTRL_RESET, __FILENAME__, __LINE__, ##__VA_ARGS__)
     #define fatal_on_error(status, msg) do {    \
         if (status != SUCCESS) {                \
-            fatal(message);                     \
+            fatal(msg);                         \
         }                                       \
     } while (0)
     #define ret_err_status(status, msg) do {            \
         status_t s = status;                            \
         if (s != SUCCESS) { warning(msg); return s; }   \
-    } while (0) // TODO: test 
+    } while (0) 
 #else
     /* Other build types (such as release or unittest) don't need filenames or line numbers */
     #define fatal(msg, ...) fatal_impl(RTT_CTRL_TEXT_BRIGHT_RED "[FATAL]: " msg RTT_CTRL_RESET, ##__VA_ARGS__)
@@ -61,7 +61,5 @@ void debug_impl(const char *string, ...);
 
 void set_log_level(log_level_t level);
 log_level_t get_log_level();
-
-// void fatal_on_error(status_t op_status, const char *const message);
 
 #endif /* LOGGING_H */

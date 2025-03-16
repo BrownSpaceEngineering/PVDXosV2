@@ -14,7 +14,6 @@
 
 /* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
 
-//
 /**
  * \fn task_manager_init_subtasks
  *
@@ -108,11 +107,10 @@ void task_manager_disable_task(pvdx_task_t *const p_task) {
  *
  * \brief Initializes task manager task dependencies
  * 
- * Initialises task manager command queue, before `init_task_pointer()`. 
- * 
  * \returns QueueHandle_t, a handle to the created queue
  * 
- * \see `init_task_pointer()` for usage of functions of the type `init_<TASK>()`
+ * \note Initialises task manager command queue, before `init_task_pointer()`. See`init_task_pointer()` 
+ *       for usage of functions of the type `init_<TASK>()`
  */
 QueueHandle_t init_task_manager(void) {
     QueueHandle_t task_manager_command_queue_handle =
@@ -133,12 +131,10 @@ QueueHandle_t init_task_manager(void) {
  *
  * \param p_task: a pointer to a PVDX task
  *
- * \return N/A
- *
  * \warning acquires the task list mutex
  * \warning modifies a task struct
  * 
- * \see `register_task_with_watchdog()`
+ * \note See `register_task_with_watchdog()`
  */
 void init_task_pointer(pvdx_task_t *const p_task) {
     lock_mutex(task_list_mutex);
@@ -176,19 +172,14 @@ void init_task_pointer(pvdx_task_t *const p_task) {
     unlock_mutex(task_list_mutex);
 }
 
-/** 
- * \fn exec_command_task_manager 
+/**
+ * \fn exec_command_task_manager
  * 
  * \brief Executes function corresponding to the command
  * 
  * \param p_cmd a pointer to a command forwarded to the task manager
- * 
- * \return void
- * 
- * \warning fatal error if target wrong or operation undefined
  */
 void exec_command_task_manager(command_t *const p_cmd) {
-  
     if (p_cmd->target != p_task_manager_task) {
         fatal("task manager: command target is not task manager! target: %d operation: %d\n", p_cmd->target, p_cmd->operation);
     }

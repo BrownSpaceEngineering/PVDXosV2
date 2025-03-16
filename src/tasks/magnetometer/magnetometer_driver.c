@@ -36,9 +36,9 @@ status_t init_rm3100(void) {
     uint8_t cycle_values[2] = {0, 0};
     
     // Read the revision ID and handshake registers
-    fatal_on_error(rm3100_read_reg(NULL, &(init_values[0]), RM3100_REVID_REG, 1), 
+    fatal_on_error(rm3100_read_reg(NULL, RM3100_REVID_REG, &init_values[0], 1), 
         "magnetometer-init: Error reading RM3100 RevID register during initialization");
-    fatal_on_error(rm3100_read_reg(NULL, &(init_values[1]), RM3100_HSHAKE_REG, 1),
+    fatal_on_error(rm3100_read_reg(NULL, RM3100_HSHAKE_REG, &init_values[1], 1),
         "magnetometer-init: Error reading RM3100 handshake register during initialization");
     if (init_values[0] != RM3100_REVID_VALUE) {
         fatal("magnetometer-init: Unexpected RM3100 RevID value during initialization");
@@ -281,7 +281,7 @@ uint16_t mag_set_sample_rate(uint16_t sample_rate) {
     m_sample_rate = supported_rates[i][0];
     i2c_buffer[0] = (uint8_t)supported_rates[i][1];
 
-    ret_on_err(rm3100_write_reg(NULL, RM3100_TMRC_REG, i2c_buffer, 1),
+    ret_err_status(rm3100_write_reg(NULL, RM3100_TMRC_REG, i2c_buffer, 1),
         "magnetometer: Write to TMRC Register failed");
 
     if (m_sensor_mode == SENSOR_POWER_MODE_CONTINUOUS) {

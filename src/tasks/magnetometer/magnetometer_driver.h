@@ -1,10 +1,11 @@
 #ifndef MAGNETOMETER_DRIVER_H
 #define MAGNETOMETER_DRIVER_H
 
-#include <stdint.h>
+#include "stdint.h"
 #include "globals.h"
-#include <atmel_start.h>
+#include "atmel_start.h"
 #include "logging.h"
+#include "string.h"
 
 #define MAX_I2C_WRITE                32
 
