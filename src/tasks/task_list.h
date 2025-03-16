@@ -9,8 +9,6 @@
 #include "magnetometer_task.h"
 #include "shell_task.h"
 #include "task_manager_task.h"
-#include "test_one_task.h"
-#include "test_two_task.h"
 #include "watchdog_task.h"
 
 // add extern defs of task pointers here?
