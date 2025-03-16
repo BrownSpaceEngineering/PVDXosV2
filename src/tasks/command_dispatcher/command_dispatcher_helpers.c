@@ -19,7 +19,15 @@
 
 /* ---------- NON-DISPATCHABLE FUNCTIONS (do not go through the command dispatcher) ---------- */
 
-// Initialize the command queue, which stores pointers to command structs
+/**
+ * \fn init_task_manager
+ *
+ * \brief Initializes command dispatcher queue, before `init_task_pointer()`.
+ *
+ * \returns QueueHandle_t, a handle to the created queue
+ *
+ * \see `init_task_pointer()` for usage of functions of the type `init_<TASK>()`
+ */
 QueueHandle_t init_command_dispatcher(void) {
     QueueHandle_t command_dispatcher_command_queue_handle = xQueueCreateStatic(
         COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE, command_dispatcher_mem.command_dispatcher_command_queue_buffer,
@@ -32,7 +40,13 @@ QueueHandle_t init_command_dispatcher(void) {
     return command_dispatcher_command_queue_handle;
 }
 
-// Enqueue a command to be executed by the command dispatcher
+/**
+ * \fn enqueue_command
+ *
+ * \brief Enqueue a command to be forwarded by the command dispatcher
+ * 
+ * \param p_cmd a pointer to the command struct to be enqueued
+ */
 void enqueue_command(command_t *const p_cmd) {
     if (xQueueSendToBack(p_command_dispatcher_task->command_queue, p_cmd, 0) != pdTRUE) {
         pvdx_task_t *calling_task = get_current_task();
@@ -40,7 +54,19 @@ void enqueue_command(command_t *const p_cmd) {
     }
 }
 
-// Forward a dequeued command to the appropriate task for execution
+/**
+ * \fn dispatch_command
+ *
+ * \brief Forward a dequeued command to the appropriate task for execution
+ *
+ * \param p_cmd a pointer to the command struct to be dispatched
+ * 
+ * \return status_t, whether the forwarding was successful or not
+ * 
+ * \warning produces `ERROR_BAD_TARGET` if target null
+ * \warning produces `ERROR_TASK_DISABLED` if target disabled
+ * \warning `fatal` error if command cannot be forwarded to queue
+ */
 status_t dispatch_command(command_t *const p_cmd) {
     // Check if the task is non-NULL
     if (p_cmd->target == NULL) {

@@ -103,7 +103,6 @@ void task_manager_disable_task(pvdx_task_t *const p_task) {
 
 /* ---------- NON-DISPATCHABLE FUNCTIONS (do not go through the command dispatcher) ---------- */
 
-// Initializes the task manager task
 /**
  * \fn init_task_manager
  *
@@ -139,7 +138,7 @@ QueueHandle_t init_task_manager(void) {
  * \warning acquires the task list mutex
  * \warning modifies a task struct
  * 
- * \note calls `register_task_with_watchdog()`
+ * \see `register_task_with_watchdog()`
  */
 void init_task_pointer(pvdx_task_t *const p_task) {
     lock_mutex(task_list_mutex);

@@ -47,8 +47,6 @@ typedef enum {
     ERROR_TASK_DISABLED,
     ERROR_BAD_TARGET,
     ERROR_SANITY_CHECK_FAILED,
-
-    #error "TODO: Fix Magnetometer init and add warnings/fatal everywhere that needs them"
 } status_t;
 
 // An enum to represent the different operations that tasks can perform (contained within a command_t)
@@ -56,19 +54,21 @@ typedef enum {
 typedef enum {
     // General operations (can be overloaded by any task)
     OPERATION_POWER_OFF = 0,
-    OPERATION_READ,
 
-    // Watchdog specific operations
+    // Watchdog operations
     OPERATION_CHECKIN, // p_data: TaskHandle_t *handle
 
-    // Task-Manager specific operations
+    // Task-Manager operations
     OPERATION_INIT_SUBTASKS,   // p_data: NULL
     OPERATION_ENABLE_SUBTASK,  // p_data: TaskHandle_t *handle
     OPERATION_DISABLE_SUBTASK, // p_data: TaskHandle_t *handle
 
-    // Display specific operations
-    OPERATION_DISPLAY_IMAGE, // p_data: const color_t *const p_buffer
-    OPERATION_CLEAR_IMAGE,   // p_data: NULL
+    // Display operations
+    OPERATION_DISPLAY_IMAGE,   // p_data: color_t *p_buffer
+    OPERATION_CLEAR_IMAGE,     // p_data: NULL
+
+    // Magnetometer operations
+    OPERATION_READ,            // p_data: magnetometer_read_args_t *readings
 
     // TESTING
     TEST_OP, // p_data: char message[]

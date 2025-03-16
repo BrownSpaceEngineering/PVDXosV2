@@ -14,6 +14,14 @@
 
 command_dispatcher_task_memory_t command_dispatcher_mem;
 
+/**
+ * \fn main_command_dispatcher
+ *
+ * \param pvParameters a void pointer to the parametres required by the command
+ *      dispatcher; not currently set by config
+ *
+ * \warning should never return
+ */
 void main_command_dispatcher(void *pvParameters) {
     info("command_dispatcher: Task Started!\n");
 

@@ -12,19 +12,16 @@
 
 /* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
 
-// Updates the last checkin time of the given task to prove that it is still running
 /**
  * \fn watchdog_checkin
  *
- * \brief Updates the last checkin time of the given task to prove that it is
- *      still running
+ * \brief Updates the last checkin time of the given task to prove that it is 
+ *        still running
  *
  * \param p_task a constant task pointer; the task to check-in
  *
- * \return void
- *
- * \warning acquires the task list mutex
- * \warning modifies a task struct
+ * \warning Acquires the task list mutex
+ * \warning Modifies the given task struct
  */
 void watchdog_checkin(pvdx_task_t *const p_task) {
     if (!p_task) {
@@ -47,7 +44,6 @@ void watchdog_checkin(pvdx_task_t *const p_task) {
 
 /* ---------- NON-DISPATCHABLE FUNCTIONS (do not go through the command dispatcher) ---------- */
 
-// Initializes the task manager task
 /**
  * \fn init_watchdog
  *
@@ -62,19 +58,19 @@ QueueHandle_t init_watchdog(void) {
     uint8_t watchdog_period = WDT_CONFIG_PER_CYC16384;
 
     // Disable the watchdog before configuring
-    watchdog_disable(p_watchdog);
+    watchdog_disable(p_watchdog_timer);
 
     // Configure the watchdog
     uint8_t watchdog_earlywarning_period =
         watchdog_period - 1; // Each increment of 1 doubles the period (see ASF/samd51a/include/component/wdt.h)
-    watchdog_set_early_warning_offset(p_watchdog,
+    watchdog_set_early_warning_offset(p_watchdog_timer,
                                       watchdog_earlywarning_period); // Early warning will trigger halfway through the watchdog period
-    watchdog_enable_early_warning(p_watchdog);                       // Enable early warning interrupt
-    watchdog_set_period(p_watchdog, watchdog_period);                // Set the watchdog period
-    watchdog_wait_for_register_sync(p_watchdog, WDT_SYNCBUSY_ENABLE | WDT_SYNCBUSY_WEN); // Wait for register synchronization
+    watchdog_enable_early_warning(p_watchdog_timer);                       // Enable early warning interrupt
+    watchdog_set_period(p_watchdog_timer, watchdog_period);                // Set the watchdog period
+    watchdog_wait_for_register_sync(p_watchdog_timer, WDT_SYNCBUSY_ENABLE | WDT_SYNCBUSY_WEN); // Wait for register synchronization
 
     // Enable the watchdog
-    watchdog_enable(p_watchdog);
+    watchdog_enable(p_watchdog_timer);
 
     // Configure the watchdog early warning interrupt
     NVIC_SetPriority(WDT_IRQn, 3);                      // Set the interrupt priority
@@ -104,19 +100,6 @@ QueueHandle_t init_watchdog(void) {
 
     return watchdog_command_queue_handle;
 }
-
-/* Temporarily commented out (so that specific_handlers.c works)
-void WDT_Handler(void) {
-    debug("watchdog: WDT_Handler executed\n");
-
-    // Check if the early warning interrupt is triggered
-    if (watchdog_get_early_warning_bit(p_watchdog)) {
-        debug("watchdog: Early warning interrupt detected\n");
-        watchdog_clear_early_warning_bit(p_watchdog); // Clear the early warning interrupt flag
-        watchdog_early_warning_callback(); // Call the early warning callback function
-    }
-}
-*/
 
 /**
  * \fn early_warning_callback_watchdog
@@ -148,28 +131,25 @@ void early_warning_callback_watchdog(void) {
 /**
  * \fn pet_watchdog
  *
- * \brief Pets the watchdog to prevent it from resetting the system by setting
- *      the clear key correctly
- *
- * \return void
+ * \brief Writes the correct key in the hardware watchdog's clear register,
+ *        delaying the next timeout
  */
 void pet_watchdog(void) {
     debug("hardware-watchdog: Petted\n");
-    watchdog_feed(p_watchdog);
+    watchdog_feed(p_watchdog_timer);
 }
 
 /**
  * \fn kick_watchdog
  *
- * \brief Kicks the watchdog to reset the system by setting the clear key
- *      incorrectly
- *
- * \return void
+ * \brief Writes the incorrect key in the hardware watchdog's clear register,
+ *        triggering a system-reboot.
+ * 
+ * \warning Satellite will restart execution from the bootloader
  */
 void kick_watchdog(void) {
     debug("hardware-watchdog: Kicked\n");
-    watchdog_set_clear_register(p_watchdog, 0x12); // set intentionally wrong clear key, so the watchdog will reset the system
-    // this function should never return because the system should reset
+    watchdog_kick(p_watchdog_timer);
 }
 
 /**
@@ -187,7 +167,7 @@ inline command_t get_watchdog_checkin_command(pvdx_task_t *const p_task) {
     // that `*p_data` is still valid when the command is received.
     return (command_t){.target = p_watchdog_task,
                        .operation = OPERATION_CHECKIN,
-                       .p_data = task,
+                       .p_data = p_task,
                        .len = sizeof(pvdx_task_t *),
                        .result = NO_STATUS_RETURN,
                        .callback = NULL};
@@ -226,12 +206,12 @@ void register_task_with_watchdog(pvdx_task_t *const p_task) {
  * \fn unregister_task_with_watchdog
  *
  * \brief unregisters a task with the watchdog so that checkins are not longer
- *      monitored.
+ *        monitored.
  *
  * \param p_task a pointer to the task to be unregistered
- *
+ * 
  * \return void
- *
+ * 
  * \warning This function is not thread-safe and should only be called from
  *      within a critical section, with the task list mutex acquired
  * \warning modifies the task list
@@ -250,14 +230,13 @@ void unregister_task_with_watchdog(pvdx_task_t *const p_task) {
     debug("%s task unregistered with watchdog\n", p_task->name);
 }
 
-//
 /**
  * \fn exec_command_task_manager
  *
  * \brief Executes a command received by the watchdog task
  *
  * \param p_cmd a pointer to a command forwarded to the task manager
- *
+ * 
  * \return void
  *
  * \warning fatal error if target wrong or operation undefined

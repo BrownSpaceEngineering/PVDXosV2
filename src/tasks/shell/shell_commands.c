@@ -27,7 +27,16 @@ shell_command_t shell_commands[] = {
 
 /* ---------- HELP COMMAND ---------- */
 
-// This function is a utility that will only exist on the ground station
+/**
+ * \fn shell_help
+ *
+ * \brief This function is a utility that will only exist on the ground station
+ *
+ * \param args the command and arguments the shell command recieves
+ * 
+ * \param arg_count the number of total arguments provided
+ *
+ */
 void shell_help(char **args, int arg_count) {
     if (arg_count == 1) {
         terminal_printf("🚀 Available commands 🚀\n");
@@ -49,6 +58,12 @@ void shell_help(char **args, int arg_count) {
     }
 }
 
+/**
+ * \fn help_help
+ *
+ * \brief This function displays the help for the shell help command
+ *
+ */
 void help_help() {
     terminal_printf("Usage: help\n");
     terminal_printf("\tDisplays the available commands\n");
@@ -58,6 +73,17 @@ void help_help() {
 
 /* ---------- ECHO COMMAND ---------- */
 
+
+/**
+ * \fn shell_echo
+ *
+ * \brief This function echos the command recieved
+ *
+ * \param args the command and arguments the shell command recieves
+ * 
+ * \param arg_count the number of total arguments provided
+ *
+ */
 void shell_echo(char **args, int arg_count) {
     if (arg_count < 2) {
         terminal_printf("Usage: echo <message>\n");
@@ -74,6 +100,12 @@ void shell_echo(char **args, int arg_count) {
     }
 }
 
+/**
+ * \fn help_echo
+ *
+ * \brief The help function for the shell echo command
+ *
+ */
 void help_echo() {
     terminal_printf("Usage: echo <message>\n");
     terminal_printf("\tEchoes the provided message back to the terminal\n");
@@ -81,6 +113,16 @@ void help_echo() {
 
 /* ---------- CLEAR COMMAND ---------- */
 
+/**
+ * \fn shell_clear
+ *
+ * \brief Clears the shell
+ *
+ * \param args the command and arguments the shell command recieves
+ * 
+ * \param arg_count the number of total arguments provided
+ *
+ */
 void shell_clear(char **args, int arg_count) {
     if (arg_count != 1) {
         terminal_printf("Invalid usage. Try 'help clear'\n");
@@ -89,6 +131,12 @@ void shell_clear(char **args, int arg_count) {
     terminal_printf(RTT_CTRL_CLEAR RTT_CTRL_RESET); // Clear the terminal screen
 }
 
+/**
+ * \fn help_clear
+ *
+ * \brief help function for shell clear
+ *
+ */
 void help_clear() {
     terminal_printf("Usage: clear\n");
     terminal_printf("\tClears the terminal screen\n");
@@ -98,6 +146,16 @@ void help_clear() {
 
 char *log_level_string_mappings[] = {"DEBUG", "INFO", "EVENT", "WARNING"};
 
+/**
+ * \fn shell_loglevel
+ *
+ * \brief Sets or displays the log_level of the shell
+ *
+ * \param args the command and arguments the shell command recieves
+ * 
+ * \param arg_count the number of total arguments provided
+ *
+ */
 void shell_loglevel(char **args, int arg_count) {
     if (arg_count == 1) {
         terminal_printf("Current log level: %s(%d)\n", log_level_string_mappings[get_log_level()], get_log_level());
@@ -117,6 +175,12 @@ void shell_loglevel(char **args, int arg_count) {
     }
 }
 
+/**
+ * \fn help_loglevel
+ *
+ * \brief helper for shell_loglevel
+ *
+ */
 void help_loglevel() {
     terminal_printf("Usage: loglevel\n");
     terminal_printf("\tDisplays the current log level\n");
@@ -130,6 +194,16 @@ void help_loglevel() {
 
 /* ---------- REBOOT COMMAND ---------- */
 
+/**
+ * \fn shell_reboot
+ *
+ * \brief reboots the shell
+ *
+ * \param args the command and arguments the shell command recieves
+ * 
+ * \param arg_count the number of total arguments provided
+ *
+ */
 void shell_reboot(char **args, int arg_count) {
     if (arg_count != 1) {
         terminal_printf("Invalid usage. Try 'help reboot'\n");
@@ -138,9 +212,15 @@ void shell_reboot(char **args, int arg_count) {
     warning("Reboot command executed by user\n");
     terminal_printf("Rebooting the satellite...\n");
     delay_ms(1000);  // Give the message time to print
-    kick_watchdog(); // Kick the watchdog to trigger a reboot
+    watchdog_kick(); // Kick the watchdog to trigger a reboot
 }
 
+/**
+ * \fn help_loglevel
+ *
+ * \brief helper for shell_reboot
+ *
+ */
 void help_reboot() {
     terminal_printf("Usage: reboot\n");
     terminal_printf("\tReboots the satellite\n");
@@ -148,6 +228,16 @@ void help_reboot() {
 
 /* DISPLAY COMMAND */
 
+/**
+ * \fn shell_reboot
+ *
+ * \brief displays the image on the display
+ *
+ * \param args the command and arguments the shell command recieves
+ * 
+ * \param arg_count the number of total arguments provided
+ *
+ */
 void shell_display(char **args, int arg_count) {
     if (arg_count != 2) {
         terminal_printf("Invalid usage. Try 'help display'\n");
@@ -160,6 +250,12 @@ void shell_display(char **args, int arg_count) {
     terminal_printf("fr\n");
 }
 
+/**
+ * \fn help_loglevel
+ *
+ * \brief helper for shell_display
+ *
+ */
 void help_display() {
     terminal_printf("Usage: display\n");
     terminal_printf("\tgjnerergjkn\n");

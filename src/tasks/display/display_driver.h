@@ -1,5 +1,9 @@
-#ifndef DISPLAY_HAL_H
-#define DISPLAY_HAL_H
+#ifndef DISPLAY_DRIVER_H
+#define DISPLAY_DRIVER_H
+
+#include "atmel_start.h"
+#include "globals.h"
+#include "logging.h"
 
 // SSD1362 commands
 #define SSD1362_WIDTH 256
@@ -63,6 +67,21 @@
 #define SSD1362_PRECHARGE_CAPACITOR 0x01     // TODO: what is this
 #define SSD1362_DESELECT_VOLTAGE_RATIO 0x07  // TODO: what is this
 
+// Functions for setting the reset, data/command, and chip-select pins on the 
+// display to high or low voltage
+#define RST_LOW() gpio_set_pin_level(Display_RST, 0)
+#define RST_HIGH() gpio_set_pin_level(Display_RST, 1)
+#define DC_LOW() gpio_set_pin_level(Display_DC, 0)
+#define DC_HIGH() gpio_set_pin_level(Display_DC, 1)
+#define CS_LOW() gpio_set_pin_level(Display_CS, 0)
+#define CS_HIGH() gpio_set_pin_level(Display_CS, 1)
+
+// Duration to wait between display initialization steps
+#define RESET_WAIT_INTERVAL 100
+
+// Maximum number of bytes that can be sent to the display in a single SPI transaction
+#define DISPLAY_SPI_BUFFER_CAPACITY (SSD1362_WIDTH / 2) * SSD1362_HEIGHT
+
 // Data types
 typedef uint16_t point_t; // 16 bits per coordinate (larger than 8-bit for overflow checking)
 typedef uint8_t color_t;  // 4 bits per pixel (16 greyscale levels)
@@ -70,4 +89,9 @@ typedef uint8_t color_t;  // 4 bits per pixel (16 greyscale levels)
 // Variables
 extern color_t display_buffer[(SSD1362_WIDTH / 2) * SSD1362_HEIGHT]; // pixels are 4 bits, so 2 consecutive pixels per byte
 
-#endif // DISPLAY_HAL_H
+void display_set_buffer(const color_t *const p_buffer); 
+void display_clear_buffer(void); 
+status_t display_update(void); 
+status_t init_display_hardware(void);
+
+#endif // DISPLAY_DRIVER_H

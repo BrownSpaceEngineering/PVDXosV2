@@ -90,21 +90,19 @@ log_level_t get_log_level() {
     return LOG_LEVEL;
 }
 
-/**
- * \name void fatal_on_error(status_t op_status, const char *const message)
- * 
- * \brief Given a return status and an error message, calls `fatal(message)`
- *        given error message if `op_status` is not SUCCESS
- * 
- * \param op_status the status enum resulting from an operation
- * \param message a constant string pointer to the error message
- * 
- * \return void
- *
- * \note Compiled as an inline function.
- */
-inline void fatal_on_error(status_t op_status, const char *const message) {
-    if (op_status != SUCCESS) {
-        fatal(message);
-    }
-}
+// /**
+//  * \name void fatal_on_error(status_t op_status, const char *const message)
+//  * 
+//  * \brief Given a return status and an error message, calls `fatal(message)`
+//  *        given error message if `op_status` is not SUCCESS
+//  * 
+//  * \param op_status the status enum resulting from an operation
+//  * \param message a constant string pointer to the error message
+//  *
+//  * \note Compiled as an inline function.
+//  */
+// inline void fatal_on_error(status_t op_status, const char *const message) {
+//     if (op_status != SUCCESS) {
+//         fatal(message);
+//     }
+// }

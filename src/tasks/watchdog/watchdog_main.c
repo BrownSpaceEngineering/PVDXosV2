@@ -12,8 +12,6 @@
 
 watchdog_task_memory_t watchdog_mem;
 QueueHandle_t watchdog_command_queue_handle;
-// uint8_t watchdog_command_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
-volatile Wdt *const p_watchdog = WDT;
 
 /**
  * \fn main_watchdog

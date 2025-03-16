@@ -1,7 +1,10 @@
-#ifndef MAGNETOMETER_HAL_H
-#define MAGNETOMETER_HAL_H
+#ifndef MAGNETOMETER_DRIVER_H
+#define MAGNETOMETER_DRIVER_H
 
 #include <stdint.h>
+#include "globals.h"
+#include <atmel_start.h>
+#include "logging.h"
 
 #define MAX_I2C_WRITE                32
 
@@ -73,4 +76,13 @@ typedef enum {
 	SENSOR_POWER_MODE_SINGLE = 2
 } rm3100_power_mode_t;
 
-#endif // MAGNETOMETER_HAL_H
+status_t init_rm3100(void);
+status_t rm3100_read_reg(int32_t *p_bytes_read, uint8_t addr, uint8_t *read_buf, uint16_t size);
+status_t rm3100_write_reg(int32_t *p_bytes_written, uint8_t addr, uint8_t *data, uint16_t size);
+status_t mag_read_data(int32_t *raw_readings, float *gain_adj_readings);
+status_t mag_modify_interrupts(uint8_t cmm_value, uint8_t poll_value);
+rm3100_power_mode_t mag_set_power_mode(rm3100_power_mode_t mode);
+uint16_t mag_set_sample_rate(uint16_t sample_rate);
+status_t mag_change_cycle_count(uint16_t newCC);
+
+#endif // MAGNETOMETER_DRIVER_H

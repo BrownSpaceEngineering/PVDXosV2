@@ -12,6 +12,14 @@
 // Display Task memory structures
 display_task_memory_t display_mem;
 
+/**
+ * \fn main_display
+ *
+ * \param pvParameters a void pointer to the parametres required by the display; 
+ *      not currently set by config
+ *
+ * \warning should never return
+ */
 void main_display(void *pvParameters) {
     info("display: Task Started!\n");
 

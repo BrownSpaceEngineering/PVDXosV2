@@ -25,6 +25,13 @@ static const int VALID_MEMORY_RANGE_IN_BYTES = 18;
 static const int RAND_THREE_BIT_MASK = 0x1c0000;
 static const int EIGHTEEN_BIT_MASK = 0x3FFFF;
 
+/**
+ * \fn perform_flip()
+ * 
+ * \brief randomly selects a bit in memory and flips it
+ * 
+ * \warning only used for testing; this function should never be called!
+ */
 status_t perform_flip() {
     /* Generate random number */
     uint32_t rand_int = rand_sync_read32(&RAND_0); // Mask the first 21 bits
