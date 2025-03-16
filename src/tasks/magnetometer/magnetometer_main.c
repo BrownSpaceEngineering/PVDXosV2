@@ -1,7 +1,7 @@
 /**
  * Code for the RM3100 Magnetometer Sensor task
  *
- * Created: ?
+ * Created: Feb 20, 2025
  * Authors: Nathan Kim, Alexander Thaep, Siddharta Laloux, Defne Doken, 
  *          Aidan Wang, Tanish Makadia
  **/
