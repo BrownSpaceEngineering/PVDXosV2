@@ -14,7 +14,11 @@
 
 /* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
 
-// Initialize all peripheral device driver tasks running on PVDXos
+/**
+ * \fn task_manager_init_subtasks
+ *
+ * \brief Initialise all subtasks (peripheral drivers, datastore, et al) tasks
+ */
 void task_manager_init_subtasks(void) {
     for (size_t i = 0; task_list[i] != NULL; i++) {
         if (task_list[i]->task_type != OS) {
@@ -24,7 +28,19 @@ void task_manager_init_subtasks(void) {
     debug("task_manager: All subtasks initialized\n");
 }
 
-// Enables a task so that it can be run by the RTOS scheduler. Automatically registers the task with the watchdog.
+/**
+ * \fn task_manager_enable_task
+ *
+ * \brief Enables a task so that it can be run by the RTOS scheduler.
+ *      Automatically registers the task with the watchdog.
+ *
+ * \param p_task constant task pointer corresponding to the task to be enabled
+ *
+ * \returns void
+ *
+ * \warning requires the task list mutex
+ * \warning modifies a task struct
+ */
 void task_manager_enable_task(pvdx_task_t *const p_task) {
     lock_mutex(task_list_mutex);
 
@@ -48,7 +64,19 @@ void task_manager_enable_task(pvdx_task_t *const p_task) {
     debug("task_manager: %s task enabled\n", p_task->name);
 }
 
-// Disables a task so that it can not be run by the RTOS scheduler. Automatically unregisters the task with the watchdog.
+/**
+ * \fn task_manager_disable_task
+ *
+ * \brief Disables a task so that it cannot be run by the RTOS scheduler. 
+ *      Automatically unregisters the task with the watchdog.
+ *
+ * \param p_task constant task pointer corresponding to the task to be disabled
+ *
+ * \returns void
+ *
+ * \warning requires the task list mutex
+ * \warning modifies a task struct
+ */
 void task_manager_disable_task(pvdx_task_t *const p_task) {
     lock_mutex(task_list_mutex);
 
@@ -74,7 +102,16 @@ void task_manager_disable_task(pvdx_task_t *const p_task) {
 
 /* ---------- NON-DISPATCHABLE FUNCTIONS (do not go through the command dispatcher) ---------- */
 
-// Initializes the task manager task
+/**
+ * \fn init_task_manager
+ *
+ * \brief Initializes task manager task dependencies
+ * 
+ * \returns QueueHandle_t, a handle to the created queue
+ * 
+ * \note Initialises task manager command queue, before `init_task_pointer()`. See`init_task_pointer()` 
+ *       for usage of functions of the type `init_<TASK>()`
+ */
 QueueHandle_t init_task_manager(void) {
     QueueHandle_t task_manager_command_queue_handle =
         xQueueCreateStatic(COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE, task_manager_mem.task_manager_command_queue_buffer,
@@ -88,17 +125,20 @@ QueueHandle_t init_task_manager(void) {
 }
 
 /**
- * init_task_pointer(pvdx_task_t *const p_task)
+ * \fn init_task_pointer
  *
  * \brief Initialises the task given by the pointer. Don't run if scheduler has started.
  *
- * \param p_task: a pointer to a `pvdx_task_t`
+ * \param p_task: a pointer to a PVDX task
  *
- * \return N/A
- *
- * \warning Modifies the task list
+ * \warning acquires the task list mutex
+ * \warning modifies a task struct
+ * 
+ * \note See `register_task_with_watchdog()`
  */
 void init_task_pointer(pvdx_task_t *const p_task) {
+    lock_mutex(task_list_mutex);
+
     // some functions don't have queues to initialise. init is NULL in such cases
     init_function task_init = p_task->init;
     if (task_init) {
@@ -129,10 +169,17 @@ void init_task_pointer(pvdx_task_t *const p_task) {
         vTaskSuspend(p_task->handle);
         info("%s task is disabled on startup.\n", p_task->name);
     }
+    unlock_mutex(task_list_mutex);
 }
 
+/**
+ * \fn exec_command_task_manager
+ * 
+ * \brief Executes function corresponding to the command
+ * 
+ * \param p_cmd a pointer to a command forwarded to the task manager
+ */
 void exec_command_task_manager(command_t *const p_cmd) {
-  
     if (p_cmd->target != p_task_manager_task) {
         fatal("task manager: command target is not task manager! target: %d operation: %d\n", p_cmd->target, p_cmd->operation);
     }
@@ -152,7 +199,7 @@ void exec_command_task_manager(command_t *const p_cmd) {
             break;
         default:
             fatal("task-manager: Invalid operation!\n");
-            p_cmd->result = ERROR_INTERNAL; // TODO: appropriate status?
+            p_cmd->result = ERROR_SANITY_CHECK_FAILED; // TODO: appropriate status?
             break;
     }
 }

@@ -4,7 +4,7 @@
 // Includes
 #include "atmel_start.h"
 #include "globals.h"
-#include "hardware_watchdog_utils.h"
+#include "watchdog_driver.h"
 #include "logging.h"
 #include "mutexes.h"
 #include "rtos_start.h"
@@ -27,9 +27,7 @@ typedef struct {
 } watchdog_task_memory_t;
 
 extern watchdog_task_memory_t watchdog_mem;
-extern volatile Wdt *const p_watchdog;
 extern QueueHandle_t watchdog_command_queue_handle;
-// extern uint8_t watchdog_command_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
 
 void watchdog_checkin(pvdx_task_t *const task);
 QueueHandle_t init_watchdog();

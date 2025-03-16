@@ -2,7 +2,8 @@
  * Code for the RM3100 Magnetometer Sensor task
  *
  * Created: ?
- * Authors: Nathan Kim, Alexander Thaep, Siddharta Laloux
+ * Authors: Nathan Kim, Alexander Thaep, Siddharta Laloux, Defne Doken, 
+ *          Aidan Wang, Tanish Makadia
  **/
 
 #include "magnetometer_task.h"
@@ -10,6 +11,14 @@
 // Magnetometer Task memory structures
 magnetometer_task_memory_t magnetometer_mem;
 
+/**
+ * \fn main_magnetometer
+ *
+ * \param pvParameters a void pointer to the parametres required by the 
+ *      magnetometer task; not currently set by config
+ *
+ * \warning should never return
+ */
 void main_magnetometer(void *pvParameters) {
     info("magnetometer: Task Started!\n");
 
@@ -42,16 +51,17 @@ void main_magnetometer(void *pvParameters) {
     }
 }
 
+// KEEP FOR REFERENCE!! DO NOT YOINK IMMEDIATELY
 // OLD ONE (needs to be yoinked)
 
 // void rm3100_main(void *pvParameters) {
-//     if (init_rm3100() != SensorOK) {
+//     if (init_rm3100() != SENSOR_OK) {
 //         return;
 //     };
 
 //     watchdog_checkin(RM3100_TASK);
 
-//     mGain = 0.3671 * mCycleCount + 1.5;
+//     m_gain = 0.3671 * m_cycle_count + 1.5;
 
 //     while (1) {
 //         while (gpio_get_pin_level(DRDY_PIN) == 0) {

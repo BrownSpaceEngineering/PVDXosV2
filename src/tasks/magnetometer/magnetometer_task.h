@@ -3,10 +3,9 @@
 
 #include <atmel_start.h>
 #include <driver_init.h>
-
 #include "globals.h"
 #include "logging.h"
-#include "magnetometer_hal.h"
+#include "magnetometer_driver.h"
 #include "rtos_start.h"
 #include "stdbool.h"
 #include "string.h"
@@ -25,6 +24,12 @@ typedef struct {
     StaticQueue_t magnetometer_task_queue;
     StaticTask_t magnetometer_task_tcb;
 } magnetometer_task_memory_t;
+
+// Arguments to `magnetometer_read` defined in `magnetometer_task.c`
+typedef struct {
+    int32_t *const raw_readings;
+    float *const gain_adj_readings;
+} magnetometer_read_args_t;
 
 extern magnetometer_task_memory_t magnetometer_mem;
 

@@ -5,7 +5,7 @@
  * which can be filtered out based on the desired verbosity of the output.
  * 
  * Created: February 25, 2024
- * Authors: Oren Kohavi, Guo Ma
+ * Authors: Oren Kohavi, Guo Ma, Siddharta Laloux, Yi Liu
  */
 
 #include "logging.h"

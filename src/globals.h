@@ -28,8 +28,6 @@
 /* ---------- TASK CONSTANTS ---------- */
 
 #define TASK_STACK_OVERFLOW_PADDING 16            // Buffer for the stack size so that overflow doesn't corrupt any TCBs
-#define SUBTASK_START_INDEX 3                     // The index of the first subtask in the task list
-#define MINIMUM_HIGH_PRIORITY 128                 // The minimum value for a high-priority operation
 #define COMMAND_QUEUE_MAX_COMMANDS 30             // Maximum number of commands that can be queued at once for any task
 #define COMMAND_QUEUE_ITEM_SIZE sizeof(command_t) // Size of each item in command queues
 
@@ -37,28 +35,18 @@
 
 // An enum to represent the different statuses that a function can return
 typedef enum {
-    PROCESSING = 0,
-    NO_STATUS_RETURN,
-    SUCCESS,
+    // Standard Responses
+    PROCESSING = 0,         // Function is still processing and will return a result later
+    NO_STATUS_RETURN,       // Function does not return a status, so don't check it
+    SUCCESS,               
 
-    // Recoverable or low-significance errors are all less than 128
-    ERROR_INTERNAL, // Generic error for when something goes wrong
-    ERROR_NO_DATA,
-    ERROR_NO_MEMORY,
+    // Error Responses
+    ERROR_READ_FAILED,
     ERROR_WRITE_FAILED,
-    ERROR_NOT_YET_IMPLEMENTED,
-    ERROR_RESOURCE_IN_USE, // Similar to EAGAIN in Linux (Basically, this WOULD work but busy rn, try again later)
-    ERROR_MAX_SIZE_EXCEEDED,
-    ERROR_NULL_HANDLE,
-    ERROR_IO,
-    ERROR_TIMEOUT,
-
+    ERROR_SPI_TRANSFER_FAILED,
     ERROR_TASK_DISABLED,
     ERROR_BAD_TARGET,
-
-    // High significance errors start at 128 (0x80) (in these cases, restart the system)
-    ERROR_UNRECOVERABLE = MINIMUM_HIGH_PRIORITY,
-    ERROR_BITFLIP, // Specifically if we detect a bitflip, so we can increment counters.
+    ERROR_SANITY_CHECK_FAILED,
 } status_t;
 
 // An enum to represent the different operations that tasks can perform (contained within a command_t)
@@ -66,15 +54,22 @@ typedef enum {
 typedef enum {
     // General operations (can be overloaded by any task)
     OPERATION_POWER_OFF = 0,
-    // Watchdog specific operations
+
+    // Watchdog operations
     OPERATION_CHECKIN, // p_data: TaskHandle_t *handle
-    // Task-Manager specific operations
+
+    // Task-Manager operations
     OPERATION_INIT_SUBTASKS,   // p_data: NULL
     OPERATION_ENABLE_SUBTASK,  // p_data: TaskHandle_t *handle
     OPERATION_DISABLE_SUBTASK, // p_data: TaskHandle_t *handle
-    // Display specific operations
-    OPERATION_DISPLAY_IMAGE, // p_data: const color_t *p_buffer
-    OPERATION_CLEAR_IMAGE,   // p_data: NULL
+
+    // Display operations
+    OPERATION_DISPLAY_IMAGE,   // p_data: color_t *p_buffer
+    OPERATION_CLEAR_IMAGE,     // p_data: NULL
+
+    // Magnetometer operations
+    OPERATION_READ,            // p_data: magnetometer_read_args_t *readings
+
     // TESTING
     TEST_OP, // p_data: char message[]
 } operation_t;

@@ -1,14 +1,18 @@
-#ifndef MAGNETOMETER_HAL_H
-#define MAGNETOMETER_HAL_H
+#ifndef MAGNETOMETER_DRIVER_H
+#define MAGNETOMETER_DRIVER_H
 
-#include <stdint.h>
+#include "stdint.h"
+#include "globals.h"
+#include "atmel_start.h"
+#include "logging.h"
+#include "string.h"
 
 #define MAX_I2C_WRITE                32
 
 // We are on revision 34 (decimal), 0x22 (hex)
 
 // Need to put the holy grail of values here
-#define RM3100Address 		0x20 // Hexadecimal slave address for RM3100 with Pin 2 and Pin 4 set to LOW
+#define RM3100_ADDRESS 		0x20 // Hexadecimal slave address for RM3100 with Pin 2 and Pin 4 set to LOW
 
 // Data reading regs are numbered in the opposite from documentation so we're reading 0-1-2 rather than 2-1-0 cause we hate RM3100
 //internal register values without the R/W bit
@@ -62,30 +66,24 @@
 #define REQUEST 0x70 // 0b 0111 0000
 
 // options
-#define initialCC  200 // Set the cycle count
-#define sampleRate   2 // 2 HZ
-#define singleMode   0 // 0 = use continuous measurement mode; 1 = use single measurement mode
-
-typedef struct {
-    int32_t x;
-    int32_t y;
-    int32_t z;
-} RM3100_return_t;
+#define INITIAL_CC  200 // Set the cycle count
+#define SAMPLE_RATE   2 // 2 HZ
+#define SINGLE_MODE   0 // 0 = use continuous measurement mode; 1 = use single measurement mode
+#define SENSOR_OK     0 // Used in magnetometer initialization
 
 typedef enum {
-	/* Valid Responses */
-	SensorOK,                       /**< @brief Sensor responded with expected data. */
+	SENSOR_POWER_MODE_INACTIVE = 0,       
+	SENSOR_POWER_MODE_CONTINUOUS = 1,  
+	SENSOR_POWER_MODE_SINGLE = 2
+} rm3100_power_mode_t;
 
-	/* Error Responses */
-	SensorI2CError,                 /**< @brief An unknown error has occurred. */
-	SensorErrorNonExistant,         /**< @brief Unable to communicate with sensor, sensor did not ACK. */
-	SensorErrorUnexpectedDevice,    /**< @brief A different sensor was detected at the address. */
-} SensorStatus;
+status_t init_rm3100(void);
+status_t rm3100_read_reg(int32_t *p_bytes_read, uint8_t addr, uint8_t *read_buf, uint16_t size);
+status_t rm3100_write_reg(int32_t *p_bytes_written, uint8_t addr, uint8_t *data, uint16_t size);
+status_t mag_read_data(int32_t *raw_readings, float *gain_adj_readings);
+status_t mag_modify_interrupts(uint8_t cmm_value, uint8_t poll_value);
+rm3100_power_mode_t mag_set_power_mode(rm3100_power_mode_t mode);
+uint16_t mag_set_sample_rate(uint16_t sample_rate);
+status_t mag_change_cycle_count(uint16_t newCC);
 
-typedef enum {
-	SensorPowerModeInactive = 0,       
-	SensorPowerModeContinuous = 1,  
-	SensorPowerModeSingle = 2
-} SensorPowerMode;
-
-#endif // MAGNETOMETER_HAL_H
+#endif // MAGNETOMETER_DRIVER_H

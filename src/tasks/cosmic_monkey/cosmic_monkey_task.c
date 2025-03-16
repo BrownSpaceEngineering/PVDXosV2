@@ -25,6 +25,13 @@ static const int VALID_MEMORY_RANGE_IN_BYTES = 18;
 static const int RAND_THREE_BIT_MASK = 0x1c0000;
 static const int EIGHTEEN_BIT_MASK = 0x3FFFF;
 
+/**
+ * \fn perform_flip()
+ * 
+ * \brief randomly selects a bit in memory and flips it
+ * 
+ * \warning only used for testing; this function should never be called!
+ */
 status_t perform_flip() {
     /* Generate random number */
     uint32_t rand_int = rand_sync_read32(&RAND_0); // Mask the first 21 bits
@@ -32,7 +39,7 @@ status_t perform_flip() {
         VALID_MEMORY_RANGE_START + (rand_int & EIGHTEEN_BIT_MASK); // Isolate 18 bits of randomness to pick a random memory address
     int bit_position = (rand_int & RAND_THREE_BIT_MASK) >> VALID_MEMORY_RANGE_IN_BYTES; // Pick the next 3 bits as the index
     if (8 <= bit_position) {
-        return ERROR_INTERNAL;
+        return ERROR_SANITY_CHECK_FAILED;
     }
     uint8_t byte_flip_mask = 1 << bit_position; // Generates the a mask of the form 0 ... 010 ... 0
 

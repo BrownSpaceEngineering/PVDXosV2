@@ -2,8 +2,7 @@
 #define DISPLAY_TASK_H
 
 // Includes
-#include "atmel_start.h"
-#include "display_hal.h"
+#include "display_driver.h"
 #include "globals.h"
 #include "image_buffer_BrownLogo.h"
 #include "image_buffer_PVDX.h"
