@@ -11,141 +11,167 @@
 #include "task_list.h"
 
 // Define task structs; tasks are mutable so not constant
-pvdx_task_t watchdog_task = {.name = "Watchdog",
-                             .enabled = true,
-                             .handle = NULL,
-                             .command_queue = NULL,
-                             .init = init_watchdog,
-                             .function = main_watchdog,
-                             .stack_size = WATCHDOG_TASK_STACK_SIZE,
-                             .stack_buffer = watchdog_mem.watchdog_task_stack,
-                             .pvParameters = NULL,
-                             .priority = 3,
-                             .task_tcb = &watchdog_mem.watchdog_task_tcb,
-                             .watchdog_timeout_ms = 10000,
-                             .last_checkin_time_ticks = 0xDEADBEEF,
-                             .has_registered = false,
-                             .task_type = OS};
-pvdx_task_t command_dispatcher_task = {.name = "CommandDispatcher",
-                                       .enabled = true,
-                                       .handle = NULL,
-                                       .command_queue = NULL,
-                                       .init = init_command_dispatcher,
-                                       .function = main_command_dispatcher,
-                                       .stack_size = COMMAND_DISPATCHER_TASK_STACK_SIZE,
-                                       .stack_buffer = command_dispatcher_mem.command_dispatcher_task_stack,
-                                       .pvParameters = NULL,
-                                       .priority = 4,
-                                       .task_tcb = &command_dispatcher_mem.command_dispatcher_task_tcb,
-                                       .watchdog_timeout_ms = 10000,
-                                       .last_checkin_time_ticks = 0xDEADBEEF,
-                                       .has_registered = false,
-                                       .task_type = OS};
-pvdx_task_t task_manager_task = {.name = "TaskManager",
-                                 .enabled = true,
-                                 .handle = NULL,
-                                 .command_queue = NULL,
-                                 .init = init_task_manager,
-                                 .function = main_task_manager,
-                                 .stack_size = TASK_MANAGER_TASK_STACK_SIZE,
-                                 .stack_buffer = task_manager_mem.task_manager_task_stack,
-                                 .pvParameters = NULL,
-                                 .priority = 2,
-                                 .task_tcb = &task_manager_mem.task_manager_task_tcb,
-                                 .watchdog_timeout_ms = 10000,
-                                 .last_checkin_time_ticks = 0xDEADBEEF,
-                                 .has_registered = false,
-                                 .task_type = OS};
-pvdx_task_t magnetometer_task = {.name = "Magnetometer",
-                                 .enabled = false,
-                                 .handle = NULL,
-                                 .command_queue = NULL,
-                                 .init = init_magnetometer,
-                                 .function = main_magnetometer,
-                                 .stack_size = MAGNETOMETER_TASK_STACK_SIZE,
-                                 .stack_buffer = magnetometer_mem.magnetometer_task_stack,
-                                 .pvParameters = NULL,
-                                 .priority = 2,
-                                 .task_tcb = &magnetometer_mem.magnetometer_task_tcb,
-                                 .watchdog_timeout_ms = 10000,
-                                 .last_checkin_time_ticks = 0xDEADBEEF,
-                                 .has_registered = false,
-                                 .task_type = SENSOR};
-pvdx_task_t shell_task = {.name = "Shell",
-                          .enabled = false,
-                          .handle = NULL,
-                          .command_queue = NULL,
-                          .init = NULL,
-                          .function = main_shell,
-                          .stack_size = SHELL_TASK_STACK_SIZE,
-                          .stack_buffer = shell_mem.shell_task_stack,
-                          .pvParameters = NULL,
-                          .priority = 2,
-                          .task_tcb = &shell_mem.shell_task_tcb,
-                          .watchdog_timeout_ms = 10000,
-                          .last_checkin_time_ticks = 0xDEADBEEF,
-                          .has_registered = false,
-                          .task_type = TESTING};
-pvdx_task_t display_task = {.name = "Display",
-                            .enabled = false,
-                            .handle = NULL,
-                            .command_queue = NULL,
-                            .init = init_display,
-                            .function = main_display,
-                            .stack_size = DISPLAY_TASK_STACK_SIZE,
-                            .stack_buffer = display_mem.display_task_stack,
-                            .pvParameters = NULL,
-                            .priority = 2,
-                            .task_tcb = &display_mem.display_task_tcb,
-                            .watchdog_timeout_ms = 10000,
-                            .last_checkin_time_ticks = 0xDEADBEEF,
-                            .has_registered = false,
-                            .task_type = ACTUATOR};
-pvdx_task_t heartbeat_task = {.name = "Heartbeat",
-                              .enabled = true,
-                              .handle = NULL,
-                              .command_queue = NULL,
-                              .init = NULL,
-                              .function = main_heartbeat,
-                              .stack_size = HEARTBEAT_TASK_STACK_SIZE,
-                              .stack_buffer = heartbeat_mem.heartbeat_task_stack,
-                              .pvParameters = NULL,
-                              .priority = 2,
-                              .task_tcb = &heartbeat_mem.heartbeat_task_tcb,
-                              .watchdog_timeout_ms = 10000,
-                              .last_checkin_time_ticks = 0xDEADBEEF,
-                              .has_registered = false,
-                              .task_type = ACTUATOR};
-pvdx_task_t test_one_task = {.name = "Test 1",
-                             .enabled = true,
-                             .handle = NULL,
-                             .command_queue = NULL,
-                             .init = init_test_one,
-                             .function = main_test_one,
-                             .stack_size = TEST_ONE_TASK_STACK_SIZE,
-                             .stack_buffer = test_one_mem.test_one_task_stack,
-                             .pvParameters = NULL,
-                             .priority = 2,
-                             .task_tcb = &test_one_mem.test_one_task_tcb,
-                             .watchdog_timeout_ms = 10000,
-                             .last_checkin_time_ticks = 0xDEADBEEF,
-                             .has_registered = false,
-                             .task_type = TESTING};
-pvdx_task_t test_two_task = {.name = "Test 2",
-                             .enabled = true,
-                             .handle = NULL,
-                             .command_queue = NULL,
-                             .init = init_test_two,
-                             .function = main_test_two,
-                             .stack_size = TEST_ONE_TASK_STACK_SIZE,
-                             .stack_buffer = test_two_mem.test_two_task_stack,
-                             .pvParameters = NULL,
-                             .priority = 2,
-                             .task_tcb = &test_two_mem.test_two_task_tcb,
-                             .watchdog_timeout_ms = 10000,
-                             .last_checkin_time_ticks = 0xDEADBEEF,
-                             .has_registered = false,
-                             .task_type = TESTING};
+pvdx_task_t watchdog_task = {
+    .name = "Watchdog",
+    .enabled = true,
+    .handle = NULL,
+    .command_queue = NULL,
+    .init = init_watchdog,
+    .function = main_watchdog,
+    .stack_size = WATCHDOG_TASK_STACK_SIZE,
+    .stack_buffer = watchdog_mem.watchdog_task_stack,
+    .pvParameters = NULL,
+    .priority = 3,
+    .task_tcb = &watchdog_mem.watchdog_task_tcb,
+    .watchdog_timeout_ms = 10000,
+    .last_checkin_time_ticks = 0xDEADBEEF,
+    .has_registered = false,
+    .task_type = OS
+};
+
+pvdx_task_t command_dispatcher_task = {
+    .name = "CommandDispatcher",
+    .enabled = true,
+    .handle = NULL,
+    .command_queue = NULL,
+    .init = init_command_dispatcher,
+    .function = main_command_dispatcher,
+    .stack_size = COMMAND_DISPATCHER_TASK_STACK_SIZE,
+    .stack_buffer = command_dispatcher_mem.command_dispatcher_task_stack,
+    .pvParameters = NULL,
+    .priority = 4,
+    .task_tcb = &command_dispatcher_mem.command_dispatcher_task_tcb,
+    .watchdog_timeout_ms = 10000,
+    .last_checkin_time_ticks = 0xDEADBEEF,
+    .has_registered = false,
+    .task_type = OS
+};
+
+pvdx_task_t task_manager_task = {
+    .name = "TaskManager",
+    .enabled = true,
+    .handle = NULL,
+    .command_queue = NULL,
+    .init = init_task_manager,
+    .function = main_task_manager,
+    .stack_size = TASK_MANAGER_TASK_STACK_SIZE,
+    .stack_buffer = task_manager_mem.task_manager_task_stack,
+    .pvParameters = NULL,
+    .priority = 2,
+    .task_tcb = &task_manager_mem.task_manager_task_tcb,
+    .watchdog_timeout_ms = 10000,
+    .last_checkin_time_ticks = 0xDEADBEEF,
+    .has_registered = false,
+    .task_type = OS
+};
+
+pvdx_task_t magnetometer_task = {
+    .name = "Magnetometer",
+    .enabled = false,
+    .handle = NULL,
+    .command_queue = NULL,
+    .init = init_magnetometer,
+    .function = main_magnetometer,
+    .stack_size = MAGNETOMETER_TASK_STACK_SIZE,
+    .stack_buffer = magnetometer_mem.magnetometer_task_stack,
+    .pvParameters = NULL,
+    .priority = 2,
+    .task_tcb = &magnetometer_mem.magnetometer_task_tcb,
+    .watchdog_timeout_ms = 10000,
+    .last_checkin_time_ticks = 0xDEADBEEF,
+    .has_registered = false,
+    .task_type = SENSOR
+};
+
+pvdx_task_t shell_task = {
+    .name = "Shell",
+    .enabled = false,
+    .handle = NULL,
+    .command_queue = NULL,
+    .init = NULL,
+    .function = main_shell,
+    .stack_size = SHELL_TASK_STACK_SIZE,
+    .stack_buffer = shell_mem.shell_task_stack,
+    .pvParameters = NULL,
+    .priority = 2,
+    .task_tcb = &shell_mem.shell_task_tcb,
+    .watchdog_timeout_ms = 10000,
+    .last_checkin_time_ticks = 0xDEADBEEF,
+    .has_registered = false,
+    .task_type = TESTING
+};
+
+pvdx_task_t display_task = {
+    .name = "Display",
+    .enabled = false,
+    .handle = NULL,
+    .command_queue = NULL,
+    .init = init_display,
+    .function = main_display,
+    .stack_size = DISPLAY_TASK_STACK_SIZE,
+    .stack_buffer = display_mem.display_task_stack,
+    .pvParameters = NULL,
+    .priority = 2,
+    .task_tcb = &display_mem.display_task_tcb,
+    .watchdog_timeout_ms = 10000,
+    .last_checkin_time_ticks = 0xDEADBEEF,
+    .has_registered = false,
+    .task_type = ACTUATOR
+};
+
+pvdx_task_t heartbeat_task = {
+    .name = "Heartbeat",
+    .enabled = true,
+    .handle = NULL,
+    .command_queue = NULL,
+    .init = NULL,
+    .function = main_heartbeat,
+    .stack_size = HEARTBEAT_TASK_STACK_SIZE,
+    .stack_buffer = heartbeat_mem.heartbeat_task_stack,
+    .pvParameters = NULL,
+    .priority = 2,
+    .task_tcb = &heartbeat_mem.heartbeat_task_tcb,
+    .watchdog_timeout_ms = 10000,
+    .last_checkin_time_ticks = 0xDEADBEEF,
+    .has_registered = false,
+    .task_type = ACTUATOR
+};
+
+pvdx_task_t test_one_task = {
+    .name = "Test 1",
+    .enabled = true,
+    .handle = NULL,
+    .command_queue = NULL,
+    .init = init_test_one,
+    .function = main_test_one,
+    .stack_size = TEST_ONE_TASK_STACK_SIZE,
+    .stack_buffer = test_one_mem.test_one_task_stack,
+    .pvParameters = NULL,
+    .priority = 2,
+    .task_tcb = &test_one_mem.test_one_task_tcb,
+    .watchdog_timeout_ms = 10000,
+    .last_checkin_time_ticks = 0xDEADBEEF,
+    .has_registered = false,
+    .task_type = TESTING
+};
+
+pvdx_task_t test_two_task = {
+    .name = "Test 2",
+    .enabled = true,
+    .handle = NULL,
+    .command_queue = NULL,
+    .init = init_test_two,
+    .function = main_test_two,
+    .stack_size = TEST_ONE_TASK_STACK_SIZE,
+    .stack_buffer = test_two_mem.test_two_task_stack,
+    .pvParameters = NULL,
+    .priority = 2,
+    .task_tcb = &test_two_mem.test_two_task_tcb,
+    .watchdog_timeout_ms = 10000,
+    .last_checkin_time_ticks = 0xDEADBEEF,
+    .has_registered = false,
+    .task_type = TESTING
+};
 
 // and define their constant pointers
 pvdx_task_t *const p_watchdog_task = &watchdog_task;
@@ -171,21 +197,28 @@ pvdx_task_t *task_list[] = {
 };
 
 /**
- * \name pvdx_task_t *get_current_task(void)
+ * \fn get_current_task
  *
  * \return a pvdx_task_t *, a pointer to the current task struct.
- *
- * \warning TODO: is this thread-safe?
  */
 inline pvdx_task_t *get_current_task(void) {
     // handle = NULL means current task
     return (pvdx_task_t *)pvTaskGetThreadLocalStoragePointer(NULL, 0);
 }
 
-// Given a pointer to a `pvdx_task_t` struct, returns the maximum block time in ticks when attempting to dequeue
-// a command from the task's command queue.
-inline TickType_t get_command_queue_block_time_ticks(pvdx_task_t *const task) {
-    return pdMS_TO_TICKS(task->watchdog_timeout_ms / 2);
+/**
+ * \fn get_command_queue_block_time_ticks
+ * 
+ * \brief Given a pointer to a `pvdx_task_t` struct, returns the maximum block time in ticks when attempting to dequeue
+ *        a command from the task's command queue.
+ * 
+ * \param p_task Pointer to the `pvdx_task_t` of the task whose block time is desired
+ * 
+ * \return `TickType_t` block time in ticks 
+ * 
+ */
+inline TickType_t get_command_queue_block_time_ticks(pvdx_task_t *const p_task) {
+    return pdMS_TO_TICKS(p_task->watchdog_timeout_ms / 2);
 }
 
 inline bool should_checkin(pvdx_task_t *const p_task) {
