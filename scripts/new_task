@@ -16,8 +16,8 @@ do
     mkdir $task_dir
     echo "Created /src/tasks/$task_name_lower"
     echo "Creating source files"
-    sed -e $sed_upper_arg -e $sed_lower_arg -e "s/\[DATE\]/$today/g" ./src/misc/task_prototype/_task > ${task_dir}/${task_name_lower}_task.h
+    sed -e $sed_upper_arg -e $sed_lower_arg -e "s/\[DATE\]/$today/g" ./src/misc/task_prototype/_task_header > ${task_dir}/${task_name_lower}_task.h
     sed -e $sed_upper_arg -e $sed_lower_arg -e "s/\[DATE\]/$today/g" ./src/misc/task_prototype/_main > ${task_dir}/${task_name_lower}_main.c
-    sed -e $sed_upper_arg -e $sed_lower_arg -e "s/\[DATE\]/$today/g" ./src/misc/task_prototype/_helpers > ${task_dir}/${task_name_lower}_helpers.c
+    sed -e $sed_upper_arg -e $sed_lower_arg -e "s/\[DATE\]/$today/g" ./src/misc/task_prototype/_task > ${task_dir}/${task_name_lower}_task.c
     echo "$task_name_lower header, main and helper files created"
 done 

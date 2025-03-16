@@ -9,6 +9,13 @@
 
 [lower]_task_memory_t [lower]_mem;
 
+/**
+ * \fn main_[lower]
+ *
+ * \param pvParameters a void pointer to the parametres required by [lower]; not currently set by config
+ *
+ * \warning should never return
+ */
 void main_[lower](void *pvParameters) {
     info("[lower]: Task Started!\n");
 
