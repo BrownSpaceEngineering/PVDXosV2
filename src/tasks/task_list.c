@@ -154,7 +154,7 @@ pvdx_task_t *const task_list_null_terminator = NULL;
 // NOTE: Watchdog task must be first in the list, Command Dispatcher second, and Task Manager third.
 // If you change the order of any of these, make sure that main.c reflects the change and update this comment.
 pvdx_task_t *task_list[] = {
-    p_watchdog_task, 
+    p_watchdog_task,
     p_command_dispatcher_task, 
     p_task_manager_task, 
     p_magnetometer_task, 

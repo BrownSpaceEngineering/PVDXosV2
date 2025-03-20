@@ -50,10 +50,7 @@ void main_command_dispatcher(void *pvParameters) {
         // Check in with the watchdog task
         if (should_checkin(current_task)) {
             enqueue_command(&cmd_checkin);
+            debug("command_dispatcher: Enqueued watchdog checkin command\n");
         }
-        debug("command_dispatcher: Enqueued watchdog checkin command\n");
-
-        // Wait 1 second before attempting to run the loop again
-        vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }

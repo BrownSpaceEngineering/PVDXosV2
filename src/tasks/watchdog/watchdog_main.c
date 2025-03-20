@@ -71,9 +71,7 @@ void main_watchdog(void *pvParameters) {
         // Watchdog checks in with itself
         if (should_checkin(current_task)) {
             enqueue_command(&cmd_checkin);
+            debug("watchdog: Enqueued watchdog checkin command\n");
         }
-        debug("watchdog: Enqueued watchdog checkin command\n");
-
-        vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }
