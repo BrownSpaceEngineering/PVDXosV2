@@ -97,8 +97,16 @@ void watchdog_feed(volatile Wdt *const p_watchdog) {
     watchdog_set_clear_register(p_watchdog, WDT_CLEAR_CLEAR_KEY);
 }
 
+/**
+ * \fn watchdog_kick
+ * 
+ * \brief Intentionally sets the hardware watchdog's clear register to an incorrect
+ *        value to cause a system-reset.
+ *
+ * \param p_watchdog Pointer to a watchdog timer hardware instance
+ *
+ * \warning This function should never return because the system should reset
+ */
 void watchdog_kick(volatile Wdt *const p_watchdog) {
-    // set intentionally wrong clear key, so the watchdog will reset the system
-    // this function should never return because the system should reset
     watchdog_set_clear_register(p_watchdog, 0x12); 
 }
