@@ -52,10 +52,11 @@ void exec_command_magnetometer(command_t *const p_cmd) {
     }
 
     switch (p_cmd->operation) {
-        case OPERATION_READ:
-            const magnetometer_read_args_t *const args = p_cmd->p_data;
+        case OPERATION_READ: {
+            const magnetometer_read_args_t *const args = p_cmd->p_data; 
             p_cmd->result = magnetometer_read(args->raw_readings, args->gain_adj_readings);
             break;
+        }
         default:
             fatal("magnetometer: Invalid operation! target: %d operation: %d\n", p_cmd->target, p_cmd->operation);
             break;
