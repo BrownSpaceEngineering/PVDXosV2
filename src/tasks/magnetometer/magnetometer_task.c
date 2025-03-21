@@ -16,7 +16,7 @@ extern magnetometer_task_memory_t magnetometer_mem;
 /**
  * \fn magnetometer_read
  * 
- * \brief Read X,Y,Z magnetometer axes
+ * \brief Reads X,Y,Z magnetometer axes
  * 
  * \param raw_readings If not NULL, pointer to a buffer (int32_t array of size 3) 
  *                     to store the raw readings from the magnetometer.
