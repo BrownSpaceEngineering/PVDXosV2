@@ -39,16 +39,15 @@ void main_magnetometer(void *pvParameters) {
         if (xQueueReceive(p_magnetometer_task->command_queue, &cmd, queue_block_time_ticks) == pdPASS) {
             do {
                 debug("magnetometer: Command popped off queue. Target: %d, Operation: %d\n", cmd.target, cmd.operation);
-                exec_command_magnetometer(&cmd); // TODO
+                exec_command_magnetometer(&cmd);
             } while (xQueueReceive(p_magnetometer_task->command_queue, &cmd, 0) == pdPASS);
         }
         debug("magnetometer: No more commands queued.\n");
 
-        ;
         if (should_checkin(current_task)) {
             enqueue_command(&cmd_checkin);
+            debug("magnetometer: Enqueued watchdog checkin command\n");
         }
-        debug("magnetometer: Enqueued watchdog checkin command\n");
     }
 }
 

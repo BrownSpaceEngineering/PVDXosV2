@@ -49,7 +49,7 @@ void exec_command_magnetometer(command_t *const p_cmd) {
  * \brief Initializes the magnetometer task, including hardware setup and command queue creation
  */
 QueueHandle_t init_magnetometer(void) {
-    init_rm3100();
+    fatal_on_error(init_rm3100(), "magnetometer: Hardware initialization failed!");
 
     // Initialize the magnetometer command queue
     QueueHandle_t magnetometer_command_queue_handle =
