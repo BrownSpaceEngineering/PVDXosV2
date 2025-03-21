@@ -68,7 +68,8 @@ void main_watchdog(void *pvParameters) {
 
         // if we get here, then all tasks have checked in within the allowed time
         pet_watchdog();
-        // Watchdog checks in with itself
+
+        // Watchdog Task must also check-in with itself
         if (should_checkin(current_task)) {
             enqueue_command(&cmd_checkin);
             debug("watchdog: Enqueued watchdog checkin command\n");
