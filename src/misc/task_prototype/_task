@@ -1,0 +1,34 @@
+/**
+ * [lower]_helpers.c
+ *
+ * Created: [DATE]
+ * Authors:
+ */
+
+#include "[lower]_task.h"
+
+/* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
+
+
+/* ---------- NON-DISPATCHABLE FUNCTIONS (do not go through the command dispatcher) ---------- */
+
+/**
+ * \fn init_[lower]
+ *
+ * \brief Initialises [lower] command queue, before `init_task_pointer()`.
+ *
+ * \returns QueueHandle_t, a handle to the created queue
+ *
+ * \see `init_task_pointer()` for usage of functions of the type `init_<TASK>()`
+ */
+QueueHandle_t init_[lower](void) {
+    QueueHandle_t [lower]_command_queue_handle = xQueueCreateStatic(
+        COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE, [lower]_mem.[lower]_command_queue_buffer,
+        &[lower]_mem.[lower]_task_queue);
+
+    if ([lower]_command_queue_handle == NULL) {
+        fatal("Failed to create command queue!\n");
+    }
+
+    return [lower]_command_queue_handle;
+}
