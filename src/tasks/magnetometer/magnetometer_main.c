@@ -50,25 +50,3 @@ void main_magnetometer(void *pvParameters) {
         }
     }
 }
-
-// KEEP FOR REFERENCE!! DO NOT YOINK IMMEDIATELY
-// OLD ONE (needs to be yoinked)
-
-// void rm3100_main(void *pvParameters) {
-//     if (init_rm3100() != SENSOR_OK) {
-//         return;
-//     };
-
-//     watchdog_checkin(RM3100_TASK);
-
-//     m_gain = 0.3671 * m_cycle_count + 1.5;
-
-//     while (1) {
-//         while (gpio_get_pin_level(DRDY_PIN) == 0) {
-//             vTaskDelay(pdMS_TO_TICKS(100));
-//             watchdog_checkin(RM3100_TASK);
-//         }
-
-//         mag_read_data();
-//     }
-// }

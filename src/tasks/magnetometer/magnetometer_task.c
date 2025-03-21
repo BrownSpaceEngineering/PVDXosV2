@@ -14,7 +14,12 @@ extern magnetometer_task_memory_t magnetometer_mem;
 /* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
 
 status_t magnetometer_read(int32_t *const raw_readings, float *const gain_adj_readings) {
-    debug("magnetometer: Reading x,y,z data");
+    if (gpio_get_pin_level(Magnetometer_DRDY) == 0) {
+        debug("magnetometer: DRDY is false; not ready to read yet...");
+        return ERROR_NOT_READY;
+    }
+    
+    debug("magnetometer: Reading X,Y,Z data");
     return mag_read_data(raw_readings, gain_adj_readings);
 }
 
