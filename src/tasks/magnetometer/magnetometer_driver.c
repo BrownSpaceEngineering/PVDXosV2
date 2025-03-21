@@ -27,12 +27,10 @@ static float m_gain;
 /**
  * \fn init_rm3100
  * 
- * \brief Initializes the RM3100 Magnetometer
+ * \brief Initializes the RM3100 magnetometer sensor by setting up the I2C interface, reading 
+ *        the handshake and revision ID registers, and setting the cycle count and sample rate.
  * 
  * \return `status_t` SUCCESS if the initialization was successful, calls fatal() otherwise
- * 
- * \note This function initializes the RM3100 magnetometer sensor by setting up the I2C interface, reading the 
- * handshake and revision ID registers, and setting the cycle count and sample rate.
  */
 status_t init_rm3100(void) {
     // Initialize I2C

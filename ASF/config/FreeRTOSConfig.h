@@ -261,6 +261,11 @@ to exclude the API function. */
 #define configNUM_THREAD_LOCAL_STORAGE_POINTERS 1
 #endif
 
+// Enable a single thread local storage pointer
+#ifndef configNUM_THREAD_LOCAL_STORAGE_POINTERS
+#define configNUM_THREAD_LOCAL_STORAGE_POINTERS 1
+#endif
+
 #define INCLUDE_uxTaskGetStackHighWaterMark 1
 
 // <q> Include the function to get idle task handler

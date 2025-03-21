@@ -40,3 +40,7 @@ ASF/gcc/*
 
 #Logs folder
 logs/*
+
+#Compilation Database
+compile_commands.json
+.cache
