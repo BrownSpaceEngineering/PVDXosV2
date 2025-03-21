@@ -29,7 +29,7 @@ void main_[lower](void *pvParameters) {
     command_t cmd;
 
     while (true) {
-        debug("\n---------- [lower] Task Loop ----------\n");
+        debug_impl("\n---------- [lower] Task Loop ----------\n");
 
         // Block waiting for at least one command to appear in the command queue
         if (xQueueReceive(p_[lower]_task->command_queue, &cmd, queue_block_time_ticks) == pdPASS) {
