@@ -1,6 +1,6 @@
 #include "arducam_registers.h"
 
-const struct sensor_reg OV2640_JPEG_INIT[] =
+extern const struct sensor_reg OV2640_JPEG_INIT[] =
 {
   { 0xff, 0x00 },
   { 0x2c, 0xff },
@@ -196,7 +196,7 @@ const struct sensor_reg OV2640_JPEG_INIT[] =
   { 0xff, 0xff },
 };             
 
-const struct sensor_reg OV2640_YUV422[] =
+extern const struct sensor_reg OV2640_YUV422[] =
 {
   { 0xFF, 0x00 },
   { 0x05, 0x00 },
@@ -210,7 +210,7 @@ const struct sensor_reg OV2640_YUV422[] =
   { 0xff, 0xff },
 };
 
-const struct sensor_reg OV2640_JPEG[] =  
+extern const struct sensor_reg OV2640_JPEG[] =  
 {
   { 0xe0, 0x14 },
   { 0xe1, 0x77 },
@@ -223,7 +223,7 @@ const struct sensor_reg OV2640_JPEG[] =
   { 0xff, 0xff },
 }; 
 
-const struct sensor_reg OV2640_320x240_JPEG[] =  
+extern const struct sensor_reg OV2640_320x240_JPEG[] =  
 {
   { 0xff, 0x01 },
   { 0x12, 0x40 },
