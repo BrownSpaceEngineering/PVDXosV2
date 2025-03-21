@@ -119,6 +119,7 @@ typedef struct {
 // A struct to represent a command that OS tasks can execute
 typedef struct {
     pvdx_task_t *const target;            // The target task for the command
+    pvdx_task_t *const source;            // the source task for the command
     const operation_t operation;          // The operation to perform
     const void *const p_data;             // Pointer to data needed for the operation
     const size_t len;                     // Length of the data

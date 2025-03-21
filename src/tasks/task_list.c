@@ -137,6 +137,42 @@ pvdx_task_t heartbeat_task = {
     .task_type = ACTUATOR
 };
 
+pvdx_task_t task1 = {
+    .name = "task1",
+    .enabled = true,
+    .handle = NULL,
+    .command_queue = NULL,
+    .init = NULL,
+    .function = main_task1,
+    .stack_size = TASK1_TASK_STACK_SIZE,
+    .stack_buffer = task1_mem.task1_task_stack,
+    .pvParameters = NULL,
+    .priority = 2,
+    .task_tcb = &task1_mem.task1_task_tcb,
+    .watchdog_timeout_ms = 10000,
+    .last_checkin_time_ticks = 0xDEADBEEF,
+    .has_registered = false,
+    .task_type = ACTUATOR
+};
+
+pvdx_task_t task2 = {
+    .name = "task2",
+    .enabled = true,
+    .handle = NULL,
+    .command_queue = NULL,
+    .init = NULL,
+    .function = main_task2,
+    .stack_size = TASK2_TASK_STACK_SIZE,
+    .stack_buffer = task2_mem.task2_task_stack,
+    .pvParameters = NULL,
+    .priority = 2,
+    .task_tcb = &task2_mem.task1_task_tcb,
+    .watchdog_timeout_ms = 10000,
+    .last_checkin_time_ticks = 0xDEADBEEF,
+    .has_registered = false,
+    .task_type = ACTUATOR
+};
+
 // and define their constant pointers
 pvdx_task_t *const p_watchdog_task = &watchdog_task;
 pvdx_task_t *const p_command_dispatcher_task = &command_dispatcher_task;
@@ -145,6 +181,8 @@ pvdx_task_t *const p_magnetometer_task = &magnetometer_task;
 pvdx_task_t *const p_shell_task = &shell_task;
 pvdx_task_t *const p_display_task = &display_task;
 pvdx_task_t *const p_heartbeat_task = &heartbeat_task;
+pvdx_task_t *const p_test_one_task = &task1;
+pvdx_task_t *const p_test_two_task = &task2;
 pvdx_task_t *const task_list_null_terminator = NULL;
 
 // Global list of all tasks running on PVDXos (see `pvdx_task_t` definition in globals.h)
@@ -162,6 +200,8 @@ pvdx_task_t *task_list[] = {
     p_display_task, 
     p_heartbeat_task,
     task_list_null_terminator,
+    p_test_one_task,
+    p_test_two_task,
 };
 
 /**

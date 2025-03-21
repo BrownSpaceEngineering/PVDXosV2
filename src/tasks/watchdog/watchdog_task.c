@@ -170,6 +170,7 @@ inline command_t get_watchdog_checkin_command(pvdx_task_t *const p_task) {
     // NOTE: Be sure to use the address of the task handle within the global task list (static lifetime) to ensure
     // that `*p_data` is still valid when the command is received.
     return (command_t){.target = p_watchdog_task,
+                       .source = p_task,
                        .operation = OPERATION_CHECKIN,
                        .p_data = p_task,
                        .len = sizeof(pvdx_task_t *),

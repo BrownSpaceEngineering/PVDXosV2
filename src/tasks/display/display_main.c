@@ -52,7 +52,7 @@ void main_display(void *pvParameters) {
         status_t result = SUCCESS; // TODO: Don't initialize result to SUCCESS and block until it is set by the display_image command
         {
             // TODO: Add logic for blocking on the result of the display_image command
-            command_t display_image_command = get_display_image_command(IMAGE_BUFFER_PVDX);
+            command_t display_image_command = get_display_image_command(p_display_task, IMAGE_BUFFER_PVDX);
             enqueue_command(&display_image_command);
 
             if (display_image_command.result != SUCCESS) {
@@ -62,7 +62,7 @@ void main_display(void *pvParameters) {
         {
             // Set the display buffer to the second image
             // TODO: Add logic for blocking on the result of the display_image command
-            command_t display_image_command = get_display_image_command(IMAGE_BUFFER_BROWNLOGO);
+            command_t display_image_command = get_display_image_command(p_display_task, IMAGE_BUFFER_BROWNLOGO);
             enqueue_command(&display_image_command);
 
             if (display_image_command.result != SUCCESS) {

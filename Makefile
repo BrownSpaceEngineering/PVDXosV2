@@ -42,6 +42,12 @@ export OBJS :=                                              	\
                                                             	\
 ../src/tasks/task_manager/task_manager_main.o               	\
 ../src/tasks/task_manager/task_manager_task.o               	\
+																\
+../src/tasks/task1/task1_main.o               	        \
+../src/tasks/task1/task1_task.o               	        \
+																\
+../src/tasks/task2/task2_main.o               	        \
+../src/tasks/task2/task2_task.o               	        \
                                                             	\
 ../src/tasks/command_dispatcher/command_dispatcher_main.o   	\
 ../src/tasks/command_dispatcher/command_dispatcher_task.o   	\
@@ -72,6 +78,8 @@ export EXTRA_VPATH := \
 ../../src/tasks/display \
 ../../src/tasks/display/image_buffers \
 ../../src/tasks/task_manager \
+../../src/tasks/task1 \
+../../src/tasks/task2 \
 ../../src/tasks/command_dispatcher \
 ../../src/tasks/magnetometer \
 ../../src/tasks/shell \

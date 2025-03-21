@@ -245,7 +245,7 @@ void shell_display(char **args, int arg_count) {
     }
 
     const uint8_t *image_buffers[] = {IMAGE_BUFFER_BROWNLOGO, IMAGE_BUFFER_PVDX};
-    command_t display_image_command = get_display_image_command(image_buffers[args[1][0] - '0']);
+    command_t display_image_command = get_display_image_command(p_shell_task, image_buffers[args[1][0] - '0']);
     enqueue_command(&display_image_command);
     terminal_printf("fr\n");
 }

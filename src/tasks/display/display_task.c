@@ -54,15 +54,17 @@ status_t clear_image(void) {
  * \fn get_display_image_command
  * 
  * \brief Gets the task command for display image
- *
+ * 
+ * \param p_task the task that calls this function
  * \param p_buffer the pointer to the buffer of what we want to display
  *
  * \returns `command_t`, the command to display image
  */
-inline command_t get_display_image_command(const color_t *const p_buffer) {
+inline command_t get_display_image_command(pvdx_task_t *const p_task, const color_t *const p_buffer) {
     // NOTE: Be sure to use a pointer to a static lifetime variable to ensure
     // that `*p_data` is still valid when the command is received.
     command_t cmd = {.target = p_display_task,
+                     .source = p_task,
                      .operation = OPERATION_DISPLAY_IMAGE,
                      .p_data = p_buffer,
                      .len = sizeof(color_t *),
