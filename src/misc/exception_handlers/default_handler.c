@@ -1,3 +1,15 @@
+/**
+ * default_handler.c
+ * 
+ * This file contains the implementation of the default interrupt handler 
+ * for handling unexpected or unconfigured interrupts in the system. It
+ * provides detailed diagnostics by decoding and logging fault-related
+ * CPU register values and resets the system if necessary.
+ * 
+ * Created: April 5, 2024
+ * Author: Oren Kohavi
+ */
+
 #include "default_handler.h"
 
 #include "globals.h"
@@ -9,7 +21,13 @@
 const char *FAULT_NAMES[] = {"Thread mode", "Reserved", "NMI",      "HardFault", "MemManage",          "BusFault", "UsageFault", "Reserved",
                              "Reserved",    "Reserved", "Reserved", "SVCall",    "Reserved for Debug", "Reserved", "PendSV",     "SysTick"};
 
-void PVDX_default_handler() {
+/**
+ * \fn PVDX_default_handler
+ * 
+ * \brief Handles unexpected or unconfigured interrupts in PVDXos; provides detailed diagnostics
+ * by decoding and logging fault-related CPU registers and resets the system if needed
+ */
+void PVDX_default_handler(void) {
     // Figure out which interrupt brought us here
     SCB_Type *scb = SCB;
     uint32_t ICSR_value = scb->ICSR;

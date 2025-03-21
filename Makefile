@@ -1,66 +1,85 @@
-###############################################################################
-##################### ADDING SOMETHING?  READ THIS FIRST! #####################
-###############################################################################
-###
-###  When adding a new C file to the source, you must do 2 things:
-###    - Add the file to the OBJS list below (with a .o extension)
-###    - If it is in a new directory, Add the directory to the EXTRA_VPATH list below (with a .c extension)
-###  Remember to add the trailing \ to the end of each line!
-###
-###############################################################################
-###############################################################################
-###############################################################################
-
-
+#####################################################################################
+###                       ADDING SOMETHING? READ THIS FIRST!                      ###
+#####################################################################################
+###   When adding a new C file to the source, you must do 2 things: 		      ###
+###     - Add the file to the OBJS list below (with a .o extension) 		      ###
+###     - If it is in a new directory, Add the directory to the EXTRA_VPATH list  ###
+###       below (with a .c extension) 										      ###
+###   Remember to add the trailing \ to the end of each line!                     ###
+#####################################################################################
 
 ### ALL C FILES SHOULD HAVE AN OBJECT FILE LISTED HERE ###
-export OBJS := \
-../src/main.o \
-../src/tasks/heartbeat/heartbeat_main.o \
-../src/tasks/watchdog/watchdog_main.o \
-../src/tasks/watchdog/watchdog_helpers.o \
-../src/misc/printf/SEGGER_RTT.o \
-../src/misc/printf/SEGGER_RTT_printf.o \
-../src/misc/rtos_support/rtos_static_memory.o \
-../src/misc/rtos_support/rtos_stack_overflow.o \
-../src/tasks/cosmic_monkey/cosmicmonkey_main.o \
-../src/misc/logging/logging.o \
-../src/misc/exception_handlers/default_handler.o \
-../src/misc/exception_handlers/specific_handlers.o \
-../src/tasks/display/display_ssd1362.o \
-../src/tasks/task_manager/task_manager.o \
-../src/tasks/shell/shell_main.o \
-../src/tasks/shell/shell_helpers.o \
-../src/tasks/shell/shell_commands.o \
-
-
+export OBJS :=                                              	\
+../src/main.o                                               	\
+                                                            	\
+../src/mutexes/mutexes.o                                    	\
+                                                            	\
+../src/misc/printf/SEGGER_RTT.o                             	\
+../src/misc/printf/SEGGER_RTT_printf.o                      	\
+                                                            	\
+../src/misc/rtos_support/rtos_static_memory.o               	\
+../src/misc/rtos_support/rtos_stack_overflow.o              	 \
+                                                            	\
+../src/misc/logging/logging.o                               	\
+                                                            	\
+../src/misc/exception_handlers/default_handler.o            	\
+../src/misc/exception_handlers/specific_handlers.o          	 \
+                                                            	\
+../src/tasks/heartbeat/heartbeat_main.o                     	\
+                                                            	\
+../src/tasks/watchdog/watchdog_driver.o                     	\
+../src/tasks/watchdog/watchdog_task.o                       	\
+../src/tasks/watchdog/watchdog_main.o                       	\
+                                                            	\
+../src/tasks/cosmic_monkey/cosmic_monkey_main.o             	\
+../src/tasks/cosmic_monkey/cosmic_monkey_task.o             	\
+                                                            	\
+../src/tasks/display/display_driver.o                       	\
+../src/tasks/display/display_task.o                         	\
+../src/tasks/display/display_main.o                         	\
+../src/tasks/display/image_buffers/image_buffer_BrownLogo.o 	\
+../src/tasks/display/image_buffers/image_buffer_PVDX.o      	\
+                                                            	\
+../src/tasks/task_manager/task_manager_main.o               	\
+../src/tasks/task_manager/task_manager_task.o               	\
+                                                            	\
+../src/tasks/command_dispatcher/command_dispatcher_main.o   	\
+../src/tasks/command_dispatcher/command_dispatcher_task.o   	\
+                                                            	\
+../src/tasks/magnetometer/magnetometer_driver.o             	\
+../src/tasks/magnetometer/magnetometer_task.o               	\
+../src/tasks/magnetometer/magnetometer_main.o               	\
+                                                            	\
+../src/tasks/shell/shell_main.o                             	\
+../src/tasks/shell/shell_helpers.o                          	\
+../src/tasks/shell/shell_commands.o                         	\
+                                                            	\
+../src/tasks/task_list.o                                        \
 
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###
 ### THESE ARE WRITTEN RELATIVE TO THE ./ASF/gcc/Makefile FILE ###
 export EXTRA_VPATH := \
 ../../src \
-../../src/tasks \
-../../src/tasks/heartbeat \
-../../src/tasks/watchdog \
 ../../src/misc \
 ../../src/misc/printf \
 ../../src/misc/rtos_support \
-../../src/misc/hardware_watchdog_utils \
-../../src/tasks/cosmic_monkey \
 ../../src/misc/logging \
 ../../src/misc/exception_handlers \
+../../src/tasks \
+../../src/tasks/watchdog \
+../../src/tasks/heartbeat \
+../../src/tasks/cosmic_monkey \
 ../../src/tasks/display \
-../../src/tasks/task_manager \
 ../../src/tasks/display/image_buffers \
+../../src/tasks/task_manager \
+../../src/tasks/command_dispatcher \
+../../src/tasks/magnetometer \
 ../../src/tasks/shell \
+../../src/mutexes
 
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-#Technical stuff
+###################################################################
+###   Compiler Flags and Build-Specific Configuration Options   ###
+###################################################################
 
 #Makefile usually uses /bin/sh to evaluate commands, so we need to change it to /bin/bash
 #To allow for the if statement in the connect target to execute correctly
@@ -93,8 +112,6 @@ else
     GIT_COMMIT_HASH := \"NONE\"
 endif
 
-
-# Compiler flags
 # Include git branch and commit hash in the build
 CFLAGS += -D'GIT_BRANCH_NAME="$(GIT_BRANCH_NAME)"' -D'GIT_COMMIT_HASH="$(GIT_COMMIT_HASH)"'
 
@@ -123,6 +140,9 @@ export OBJS_AS_ARGS := $(foreach obj,$(OBJS),$(patsubst ../%,%,$(obj)))
 
 export DEPS_AS_ARGS := $(patsubst %.o,%.d,$(OBJS_AS_ARGS))
 
+###########################################
+###  Targets for Building and Cleaning  ###
+###########################################
 
 .PHONY: all dev release test clean connect update_asf flash_bootloader
 
@@ -153,27 +173,69 @@ clean:
 	&& rm -f ./PVDXos.elf \
 	&& echo " --- Cleaned Build Files --- "
 
-# Connects to remote target, loads program, and sets breakpoint at main
-connect:
-ifeq (,$(findstring microsoft,$(shell uname -r))) #Detects a WSL kernel name, and runs a WSL-specific command for connecting to the GDB server
-	@gdb -ex "target remote localhost:2331" -ex "load" -ex "monitor halt" -ex "monitor reset" -ex "b main" -ex "continue" ./PVDXos.elf
-else ifeq (,$(findstring generic,$(shell uname -r)))
-	@gdb-multiarch -ex "target remote localhost:2331" -ex "load" -ex "monitor halt" -ex "monitor reset" -ex "b main" -ex "continue" ./PVDXos.elf
-else #Run the windows-specific command
-	@hostname=$(shell hostname) && \
-	gdb-multiarch -ex "target remote $$hostname.local:2331" -ex "load" -ex "monitor halt" -ex "monitor reset" -ex "b main" -ex "continue" ./PVDXos.elf
+#############################################
+###  Targets for Connecting and Flashing  ###
+#############################################
+
+# Detect OS and set:
+#   1) GDBCMD    = the GDB (or gdb-multiarch) command to run
+#   2) GDBTARGET = either localhost:2331 or hostname.local:2331, etc.
+
+ifeq ($(OS),Windows_NT)
+    # Pure Windows (e.g. MSYS2/MinGW). Note that in WSL, $(OS) is *not* Windows_NT.
+    GDBCMD    = gdb-multiarch
+    GDBTARGET = $(shell hostname).local:2331
+else
+    # We are in a Unix-like environment (Linux or macOS or WSL). Here, $(OS) is not defined.
+    UNAME_S := $(shell uname -s)
+    UNAME_R := $(shell uname -r)
+
+    ifeq ($(UNAME_S),Darwin)
+        # macOS
+        GDBCMD    = gdb
+        GDBTARGET = localhost:2331
+    else ifeq ($(UNAME_S),Linux)
+        # Linux or WSL. Check if it's WSL by searching "microsoft" in uname -r
+        ifneq (,$(findstring microsoft,$(UNAME_R)))
+            # WSL
+            GDBCMD    = gdb
+            GDBTARGET = localhost:2331
+        else
+            # "Pure" Linux
+            GDBCMD    = gdb-multiarch
+            GDBTARGET = localhost:2331
+        endif
+    else
+        $(error Unknown or unsupported OS)
+    endif
 endif
 
-#Builds the bootloader, then flashes it to the board. Make connect needs to be run after this.
+connect:
+	@$(GDBCMD) \
+	  -ex "target remote $(GDBTARGET)" \
+	  -ex "load" \
+	  -ex "monitor halt" \
+	  -ex "monitor reset" \
+	  -ex "b main" \
+	  -ex "continue" \
+	  ./PVDXos.elf
+
 flash_bootloader:
-	$(MAKE) -C ./bootloader clean
-	$(MAKE) -C ./bootloader # Builds the bootloader
-ifeq (,$(findstring microsoft,$(shell uname -r))) #Detects a WSL kernel name, and runs a WSL-specific command for connecting to the GDB server
-	@gdb -ex "target remote localhost:2331" -ex "load" -ex "monitor halt" -ex "monitor reset" -ex "set confirm off" -ex "add-symbol-file PVDXos.elf" -ex "set confirm on" ./bootloader/bootloader.elf
-else #Run the windows-specific command
-	@hostname=$(shell hostname) && \
-	gdb-multiarch -ex "target remote $$hostname.local:2331" -ex "load" -ex "monitor halt" -ex "monitor reset" -ex "set confirm off" -ex "add-symbol-file PVDXos.elf" -ex "set confirm on" ./bootloader/bootloader.elf
-endif
+	@$(MAKE) -C ./bootloader clean
+	@$(MAKE) -C ./bootloader  # Builds the bootloader
+	@$(GDBCMD) \
+	  -ex "target remote $(GDBTARGET)" \
+	  -ex "load" \
+	  -ex "monitor halt" \
+	  -ex "monitor reset" \
+	  -ex "set confirm off" \
+	  -ex "add-symbol-file PVDXos.elf" \
+	  -ex "set confirm on" \
+	  ./bootloader/bootloader.elf
+
+############################################
+### Target for ASF Configuration Update  ###
+############################################
 
 # When updating the ASF configuration, this must be run once in order to automatically integrate the new ASF config
 # Hopefully nobody ever needs to touch this, but you can add to it if you want to automatically trigger an action when the ASF is updated
@@ -221,8 +283,11 @@ update_asf:
 	&& echo "(8.2) ASF FreeRTOSConfig.h: Task stack high watermark function enabled" \
 	&& $(SED) -i 's|#define configCHECK_FOR_STACK_OVERFLOW 1|#define configCHECK_FOR_STACK_OVERFLOW 2|' ./ASF/config/FreeRTOSConfig.h \
 	&& echo "(8.3) ASF FreeRTOSConfig.h: Task stack overflow checking upgraded to type 2 (higher accuracy)" \
+	&& $(SED) -i "/#define INCLUDE_xTaskGetCurrentTaskHandle 0/a #endif \n\n// \<q\> Include thread-local storage pointers \n// \<id\> freertos_num_thread_local_storage_pointers \n#ifndef configNUM_THREAD_LOCAL_STORAGE_POINTERS \n#define configNUM_THREAD_LOCAL_STORAGE_POINTERS 1" ./ASF/config/FreeRTOSConfig.h \
+	&& echo "(8.4) ASF FreeRTOSConfig.h: Thread-local storage enabled" \
 	&& $(SED) -i 's|ORIGIN = 0x00000000, LENGTH = 0x00100000|ORIGIN = 0x00002000, LENGTH = 0x000FE000|' ./ASF/samd51a/gcc/gcc/samd51p20a_flash.ld \
 	&& echo "(9) ASF Linker Script: Flash memory region updated to exclude bootloader" \
 	&& find ./ASF -type f -newermt now -exec touch {} + \
 	&& echo "(10) Timestamps in future updated to present" \
 	&& echo " --- Finished Integrating ASF --- "
+

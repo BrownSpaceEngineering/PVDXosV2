@@ -25,4 +25,7 @@ void help_loglevel();
 void shell_reboot(char **args, int arg_count);
 void help_reboot();
 
+void shell_display(char **args, int arg_count);
+void help_display();
+
 #endif // SHELL_COMMANDS_H

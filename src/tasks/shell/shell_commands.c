@@ -1,19 +1,42 @@
+/**
+ * shell_commands.c
+ *
+ * Implementations of the shell commands available to a user using PVDX's terminal interface.
+ *
+ * Created: April 11, 2024
+ * Author: Oren Kohavi, Simon Juknelis
+ */
+
 #include "shell_commands.h"
+
+#include <atmel_start.h>
 
 #include "logging.h"
 #include "shell_helpers.h"
 #include "watchdog_task.h"
 
-#include <atmel_start.h>
-
 shell_command_t shell_commands[] = {
-    {"help", shell_help, help_help},       {"echo", shell_echo, help_echo},
-    {"clear", shell_clear, help_clear},    {"loglevel", shell_loglevel, help_loglevel},
-    {"reboot", shell_reboot, help_reboot}, {NULL, NULL, NULL} // Null-terminated array
+    {"help", shell_help, help_help},
+    {"echo", shell_echo, help_echo},
+    {"clear", shell_clear, help_clear},
+    {"loglevel", shell_loglevel, help_loglevel},
+    {"reboot", shell_reboot, help_reboot},
+    {"display", shell_display, help_display},
+    {NULL, NULL, NULL} // Null-terminated array
 };
 
-// ----- HELP COMMAND -----
+/* ---------- HELP COMMAND ---------- */
 
+/**
+ * \fn shell_help
+ *
+ * \brief This function is a utility that will only exist on the ground station
+ *
+ * \param args the command and arguments the shell command recieves
+ * 
+ * \param arg_count the number of total arguments provided
+ *
+ */
 void shell_help(char **args, int arg_count) {
     if (arg_count == 1) {
         terminal_printf("🚀 Available commands 🚀\n");
@@ -35,6 +58,12 @@ void shell_help(char **args, int arg_count) {
     }
 }
 
+/**
+ * \fn help_help
+ *
+ * \brief This function displays the help for the shell help command
+ *
+ */
 void help_help() {
     terminal_printf("Usage: help\n");
     terminal_printf("\tDisplays the available commands\n");
@@ -42,8 +71,19 @@ void help_help() {
     terminal_printf("\tDisplays the help message for the specified command\n");
 }
 
-// ----- ECHO COMMAND -----
+/* ---------- ECHO COMMAND ---------- */
 
+
+/**
+ * \fn shell_echo
+ *
+ * \brief This function echos the command recieved
+ *
+ * \param args the command and arguments the shell command recieves
+ * 
+ * \param arg_count the number of total arguments provided
+ *
+ */
 void shell_echo(char **args, int arg_count) {
     if (arg_count < 2) {
         terminal_printf("Usage: echo <message>\n");
@@ -60,13 +100,29 @@ void shell_echo(char **args, int arg_count) {
     }
 }
 
+/**
+ * \fn help_echo
+ *
+ * \brief The help function for the shell echo command
+ *
+ */
 void help_echo() {
     terminal_printf("Usage: echo <message>\n");
     terminal_printf("\tEchoes the provided message back to the terminal\n");
 }
 
-// ----- CLEAR COMMAND -----
+/* ---------- CLEAR COMMAND ---------- */
 
+/**
+ * \fn shell_clear
+ *
+ * \brief Clears the shell
+ *
+ * \param args the command and arguments the shell command recieves
+ * 
+ * \param arg_count the number of total arguments provided
+ *
+ */
 void shell_clear(char **args, int arg_count) {
     if (arg_count != 1) {
         terminal_printf("Invalid usage. Try 'help clear'\n");
@@ -75,15 +131,31 @@ void shell_clear(char **args, int arg_count) {
     terminal_printf(RTT_CTRL_CLEAR RTT_CTRL_RESET); // Clear the terminal screen
 }
 
+/**
+ * \fn help_clear
+ *
+ * \brief help function for shell clear
+ *
+ */
 void help_clear() {
     terminal_printf("Usage: clear\n");
     terminal_printf("\tClears the terminal screen\n");
 }
 
-// ----- LOGLEVEL COMMAND -----
+/* ---------- LOGLEVEL COMMAND ---------- */
 
 char *log_level_string_mappings[] = {"DEBUG", "INFO", "EVENT", "WARNING"};
 
+/**
+ * \fn shell_loglevel
+ *
+ * \brief Sets or displays the log_level of the shell
+ *
+ * \param args the command and arguments the shell command recieves
+ * 
+ * \param arg_count the number of total arguments provided
+ *
+ */
 void shell_loglevel(char **args, int arg_count) {
     if (arg_count == 1) {
         terminal_printf("Current log level: %s(%d)\n", log_level_string_mappings[get_log_level()], get_log_level());
@@ -103,6 +175,12 @@ void shell_loglevel(char **args, int arg_count) {
     }
 }
 
+/**
+ * \fn help_loglevel
+ *
+ * \brief helper for shell_loglevel
+ *
+ */
 void help_loglevel() {
     terminal_printf("Usage: loglevel\n");
     terminal_printf("\tDisplays the current log level\n");
@@ -114,8 +192,18 @@ void help_loglevel() {
     terminal_printf("\t[3] (warning level) ==> Only errors and critical events are displayed\n");
 }
 
-// ----- REBOOT COMMAND -----
+/* ---------- REBOOT COMMAND ---------- */
 
+/**
+ * \fn shell_reboot
+ *
+ * \brief reboots the shell
+ *
+ * \param args the command and arguments the shell command recieves
+ * 
+ * \param arg_count the number of total arguments provided
+ *
+ */
 void shell_reboot(char **args, int arg_count) {
     if (arg_count != 1) {
         terminal_printf("Invalid usage. Try 'help reboot'\n");
@@ -124,10 +212,51 @@ void shell_reboot(char **args, int arg_count) {
     warning("Reboot command executed by user\n");
     terminal_printf("Rebooting the satellite...\n");
     delay_ms(1000);  // Give the message time to print
-    watchdog_kick(); // Kick the watchdog to trigger a reboot
+    kick_watchdog(); // Kick the watchdog to trigger a reboot
 }
 
+/**
+ * \fn help_loglevel
+ *
+ * \brief helper for shell_reboot
+ *
+ */
 void help_reboot() {
     terminal_printf("Usage: reboot\n");
     terminal_printf("\tReboots the satellite\n");
+}
+
+/* DISPLAY COMMAND */
+
+/**
+ * \fn shell_reboot
+ *
+ * \brief displays the image on the display
+ *
+ * \param args the command and arguments the shell command recieves
+ * 
+ * \param arg_count the number of total arguments provided
+ *
+ */
+void shell_display(char **args, int arg_count) {
+    if (arg_count != 2) {
+        terminal_printf("Invalid usage. Try 'help display'\n");
+        return;
+    }
+
+    const uint8_t *image_buffers[] = {IMAGE_BUFFER_BROWNLOGO, IMAGE_BUFFER_PVDX};
+    command_t display_image_command = get_display_image_command(image_buffers[args[1][0] - '0']);
+    enqueue_command(&display_image_command);
+    terminal_printf("fr\n");
+}
+
+/**
+ * \fn help_loglevel
+ *
+ * \brief helper for shell_display
+ *
+ */
+void help_display() {
+    terminal_printf("Usage: display\n");
+    terminal_printf("\tgjnerergjkn\n");
 }
