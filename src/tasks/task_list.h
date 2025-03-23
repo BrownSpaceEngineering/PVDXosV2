@@ -10,7 +10,8 @@
 #include "shell_task.h"
 #include "task_manager_task.h"
 #include "watchdog_task.h"
-
+#include "task1_task.h"
+#include "task2_task.h"
 // add extern defs of task pointers here?
 extern pvdx_task_t *const p_watchdog_task;
 extern pvdx_task_t *const p_command_dispatcher_task;

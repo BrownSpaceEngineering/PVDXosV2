@@ -14,14 +14,15 @@ void execute_task1(void) {
     info("sending command to task2:");
     command_t cmd = {p_test_two_task, p_test_one_task, -1, NULL, 0, PROCESSING, NULL};
     enqueue_command(&cmd);
+
+    info("task1: blocked waiting for notification!");
     /* Wait to be notified that the transmission is complete. Note
        the first parameter is pdTRUE, which has the effect of clearing
        the task's notification value back to 0, making the notification
        value act like a binary (rather than a counting) semaphore. */
-    info("task1: blocked waiting for notification!");
     const TickType_t xMaxBlockTime = pdMS_TO_TICKS(5000);
-    uint32_t ulNotificationValue = ulTaskNotifyTake(pdTRUE, xMaxBlockTime);
-    if( ulNotificationValue == 1) {
+    const uint32_t ulNotificationValue = ulTaskNotifyTake(pdTRUE, xMaxBlockTime);
+    if (ulNotificationValue == 1) {
         info("task1: received notification!");
     }
     else {
