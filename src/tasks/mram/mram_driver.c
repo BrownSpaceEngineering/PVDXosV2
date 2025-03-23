@@ -1,42 +1,62 @@
 // TODO: verify that MRAM starts in 1S-1S-1S transfer mode
 
-#include "../../../ASF/driver_init.h"
-#include "../../../ASF/hal/include/hal_spi_m_sync.h"
-#include "../../../ASF/hal/include/hpl_spi.h"
+#include "mram_driver.h"
 
-#define massert(x) ((x) ? 0 : fatal("massert failed"));
+char mram_inited = 0;
 
-#define MRAM_MAX_ADDRESS        8388608 // 8MiB
-#define MRAM_REGION_SIZE        1000000
-#define MRAM_REGION_BUF_SIZE    4096
+void mram_init(void) {
+    if (mram_inited) {
+        return;
+    }
+    mram_inited = 1;
 
-#define MRAM_CS_LOW()           gpio_set_pin_level(0, 0)
-#define MRAM_CS_HIGH()          gpio_set_pin_level(0, 1)
+    // Send 32 dummy cycles (4 bytes)
+    MRAM_CS_LOW();
+    char tx_buf[] = {0, 0, 0, 0};
+    massert(SPI_0.io.write(&SPI_0, tx_buf, 4) == 4);
+    MRAM_CS_HIGH();
 
-#define MRAM_CMD_READ           0x03
-#define MRAM_CMD_WRITE_EN       0x06
-#define MRAM_CMD_WRITE          0x02
+    // Send write enable command, otherwise write commands will be ignored
+    MRAM_CS_LOW();
+    tx_buf[0] = MRAM_CMD_WRITE_ENABLE;
+    massert(SPI_0.io.write(&SPI_0, tx_buf, 1) == 1);
+    MRAM_CS_HIGH();
+}
 
 void mram_write_raw(long pos, long len, const char *buf) {
     massert(0 <= pos && pos < MRAM_MAX_ADDRESS);
     massert(0 <= len && pos + len < MRAM_MAX_ADDRESS);
 
-    // Send write enable command, otherwise write command will be ignored
-    MRAM_CS_LOW();
-    char tx_buf[] = {MRAM_CMD_WRITE_EN};
-    massert(SPI_0.io.write(&SPI_0, tx_buf, 1) == 1);
-    MRAM_CS_HIGH();
-
     MRAM_CS_LOW();
 
-    // Send write command
-    tx_buf[0] = MRAM_CMD_WRITE;
-    massert(SPI_0.io.write(&SPI_0, tx_buf, 1) == 1);
+    // Send write command, followed by 3-byte address in MSB-first order
+    char tx_buf[] = {
+        MRAM_CMD_READ,
+        (pos >> 16) & 0xff,
+        (pos >> 8) & 0xff,
+        pos & 0xff
+    };
+    massert(SPI_0.io.write(&SPI_0, tx_buf, 4) == 4);
 
     // Send len bytes of data to be written
     massert(SPI_0.io.write(&SPI_0, buf, len));
 
     MRAM_CS_HIGH();
+
+    // While the LSB of the status register is 1, the write is not finished
+    char status;
+    do {
+        MRAM_CS_LOW();
+
+        // Send read status command
+        tx_buf[0] = MRAM_CMD_READ_STATUS;
+        massert(SPI_0.io.write(&SPI_0, tx_buf, 1) == 1);
+
+        // Read one byte (the status register)
+        massert(SPI_0.io.read(&SPI_0, &status, 1));
+
+        MRAM_CS_HIGH();
+    } while (status & 1);
 }
 
 void mram_read_raw(long pos, long len, char *buf) {
@@ -111,7 +131,8 @@ void mram_read(long pos, long len, char *buf) {
                     corrections--;
                 }
             }
-            warning("mram: byte verification failure resolved by %d bit corrections", corrections);
+            warning("mram: byte verification failure resolved by %d bit corrections\n",
+                corrections);
 
             // Rewrite the corrected byte to all regions
             mram_write(pos + i, 1, &valid);
