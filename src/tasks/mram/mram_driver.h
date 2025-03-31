@@ -5,6 +5,8 @@
 #include "../../../ASF/hal/include/hal_spi_m_sync.h"
 #include "../../../ASF/hal/include/hpl_spi.h"
 
+#include "globals.h"
+
 #define MRAM_MAX_ADDRESS        8388608 // 8MiB
 #define MRAM_REGION_SIZE        1000000
 #define MRAM_REGION_BUF_SIZE    4096
@@ -17,14 +19,12 @@
 #define MRAM_CMD_WRITE          0x02
 #define MRAM_CMD_READ_STATUS    0x05
 
-#define massert(x) ((x) ? 0 : fatal("massert failed"));
+status_t mram_init_hardware(void);
 
-void mram_init(void);
+status_t mram_write_raw(long pos, long len, const char *buf);
+status_t mram_read_raw(long pos, long len, char *buf);
 
-void mram_write_raw(long pos, long len, const char *buf);
-void mram_read_raw(long pos, long len, char *buf);
-
-void mram_write(long pos, long len, const char *buf);
-void mram_read(long pos, long len, char *buf);
+status_t mram_write(long pos, long len, const char *buf);
+status_t mram_read(long pos, long len, char *buf);
 
 #endif

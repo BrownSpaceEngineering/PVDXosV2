@@ -29,7 +29,7 @@ void mram_test_cmp(char *write_buf, char *read_buf) {
 }
 
 void mram_test(void) {
-    massert(0 < MRAM_TEST_LEN && MRAM_TEST_LEN < 256);
+    assert(0 < MRAM_TEST_LEN && MRAM_TEST_LEN < 256, __FILE__, __LINE__);
 
     char write_buf[MRAM_TEST_LEN], read_buf[MRAM_TEST_LEN];
     for (char i = 0; i < MRAM_TEST_LEN; i++) {
@@ -41,10 +41,10 @@ void mram_test(void) {
     memset(read_buf, MRAM_TEST_DEF, MRAM_TEST_LEN);
     mram_write_raw(MRAM_TEST_POS, MRAM_TEST_LEN, write_buf);
     mram_read_raw(MRAM_TEST_POS, MRAM_TEST_LEN, read_buf);
-    massert(memcmp(write_buf, read_buf, MRAM_TEST_LEN) == 0);
+    assert(memcmp(write_buf, read_buf, MRAM_TEST_LEN) == 0, __FILE__, __LINE__);
 
     memset(read_buf, MRAM_TEST_DEF, MRAM_TEST_LEN);
     mram_write(MRAM_TEST_POS, MRAM_TEST_LEN, write_buf);
     mram_read(MRAM_TEST_POS, MRAM_TEST_LEN, read_buf);
-    massert(memcmp(write_buf, read_buf, MRAM_TEST_LEN) == 0);
+    assert(memcmp(write_buf, read_buf, MRAM_TEST_LEN) == 0, __FILE__, __LINE__);
 }

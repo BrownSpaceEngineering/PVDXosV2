@@ -4,28 +4,36 @@
 
 char mram_inited = 0;
 
-void mram_init(void) {
+status_t mram_init_hardware(void) {
     if (mram_inited) {
-        return;
+        return SUCCESS;
     }
     mram_inited = 1;
 
     // Send 32 dummy cycles (4 bytes)
     MRAM_CS_LOW();
     char tx_buf[] = {0, 0, 0, 0};
-    massert(SPI_0.io.write(&SPI_0, tx_buf, 4) == 4);
+    if (SPI_0.io.write(&SPI_0, tx_buf, 4) != 4) {
+        mram_inited = 0;
+        return ERROR_SPI_TRANSFER_FAILED;
+    }
     MRAM_CS_HIGH();
 
     // Send write enable command, otherwise write commands will be ignored
     MRAM_CS_LOW();
     tx_buf[0] = MRAM_CMD_WRITE_ENABLE;
-    massert(SPI_0.io.write(&SPI_0, tx_buf, 1) == 1);
+    if (SPI_0.io.write(&SPI_0, tx_buf, 1) != 1) {
+        mram_inited = 0;
+        return ERROR_SPI_TRANSFER_FAILED;
+    }
     MRAM_CS_HIGH();
+
+    return SUCCESS;
 }
 
-void mram_write_raw(long pos, long len, const char *buf) {
-    massert(0 <= pos && pos < MRAM_MAX_ADDRESS);
-    massert(0 <= len && pos + len < MRAM_MAX_ADDRESS);
+status_t mram_write_raw(long pos, long len, const char *buf) {
+    assert(0 <= pos && pos < MRAM_MAX_ADDRESS, __FILE__, __LINE__);
+    assert(0 <= len && pos + len < MRAM_MAX_ADDRESS, __FILE__, __LINE__);
 
     MRAM_CS_LOW();
 
@@ -36,32 +44,42 @@ void mram_write_raw(long pos, long len, const char *buf) {
         (pos >> 8) & 0xff,
         pos & 0xff
     };
-    massert(SPI_0.io.write(&SPI_0, tx_buf, 4) == 4);
+    if (SPI_0.io.write(&SPI_0, tx_buf, 4) != 4) {
+        return ERROR_SPI_TRANSFER_FAILED;
+    }
 
     // Send len bytes of data to be written
-    massert(SPI_0.io.write(&SPI_0, buf, len));
+    if (SPI_0.io.write(&SPI_0, buf, len) != len) {
+        return ERROR_SPI_TRANSFER_FAILED;
+    }
 
     MRAM_CS_HIGH();
 
     // While the LSB of the status register is 1, the write is not finished
-    char status;
+    char status_reg;
     do {
         MRAM_CS_LOW();
 
         // Send read status command
         tx_buf[0] = MRAM_CMD_READ_STATUS;
-        massert(SPI_0.io.write(&SPI_0, tx_buf, 1) == 1);
+        if (SPI_0.io.write(&SPI_0, tx_buf, 1) != 1) {
+            return ERROR_SPI_TRANSFER_FAILED;
+        }
 
         // Read one byte (the status register)
-        massert(SPI_0.io.read(&SPI_0, &status, 1));
+        if (SPI_0.io.read(&SPI_0, &status_reg, 1) != 1) {
+            return ERROR_SPI_TRANSFER_FAILED;
+        }
 
         MRAM_CS_HIGH();
-    } while (status & 1);
+    } while (status_reg & 1);
+
+    return SUCCESS;
 }
 
-void mram_read_raw(long pos, long len, char *buf) {
-    massert(0 <= pos && pos < MRAM_MAX_ADDRESS);
-    massert(0 <= len && pos + len < MRAM_MAX_ADDRESS);
+status_t mram_read_raw(long pos, long len, char *buf) {
+    assert(0 <= pos && pos < MRAM_MAX_ADDRESS, __FILE__, __LINE__);
+    assert(0 <= len && pos + len < MRAM_MAX_ADDRESS, __FILE__, __LINE__);
 
     MRAM_CS_LOW();
 
@@ -72,35 +90,57 @@ void mram_read_raw(long pos, long len, char *buf) {
         (pos >> 8) & 0xff,
         pos & 0xff
     };
-    massert(SPI_0.io.write(&SPI_0, tx_buf, 4) == 4);
+    if (SPI_0.io.write(&SPI_0, tx_buf, 4) != 4) {
+        return ERROR_SPI_TRANSFER_FAILED;
+    }
 
     // Read len bytes
-    massert(SPI_0.io.read(&SPI_0, buf, len) == len);
+    if (SPI_0.io.read(&SPI_0, buf, len) != len) {
+        return ERROR_SPI_TRANSFER_FAILED;
+    }
 
     MRAM_CS_HIGH();
+
+    return SUCCESS;
 }
 
-void mram_write(long pos, long len, const char *buf) {
-    massert(pos < MRAM_REGION_SIZE);
-    massert(pos + len < MRAM_REGION_SIZE);
+status_t mram_write(long pos, long len, const char *buf) {
+    assert(pos < MRAM_REGION_SIZE, __FILE__, __LINE__);
+    assert(pos + len < MRAM_REGION_SIZE, __FILE__, __LINE__);
 
     // Write a copy of buf to each region at index pos
-    mram_write_raw(pos, len, buf);
-    mram_write_raw(pos + MRAM_REGION_SIZE, len, buf);
-    mram_write_raw(pos + MRAM_REGION_SIZE * 2, len, buf);
+    status_t status;
+    if ((status = mram_write_raw(pos, len, buf)) != SUCCESS) {
+        return status;
+    }
+    if ((status = mram_write_raw(pos + MRAM_REGION_SIZE, len, buf)) != SUCCESS) {
+        return status;
+    }
+    if ((status = mram_write_raw(pos + MRAM_REGION_SIZE * 2, len, buf)) != SUCCESS) {
+        return status;
+    }
+
+    return SUCCESS;
 }
 
-void mram_read(long pos, long len, char *buf) {
-    massert(pos < MRAM_REGION_SIZE);
-    massert(pos + len < MRAM_REGION_SIZE);
+status_t mram_read(long pos, long len, char *buf) {
+    assert(pos < MRAM_REGION_SIZE, __FILE__, __LINE__);
+    assert(pos + len < MRAM_REGION_SIZE, __FILE__, __LINE__);
 
     // Read len bytes from each region starting at index pos
+    status_t status;
     char r1_buf[MRAM_REGION_BUF_SIZE];
-    mram_read_raw(pos, len, r1_buf);
+    if ((status = mram_read_raw(pos, len, r1_buf)) != SUCCESS) {
+        return status;
+    }
     char r2_buf[MRAM_REGION_BUF_SIZE];
-    mram_read_raw(pos + MRAM_REGION_SIZE, len, r2_buf);
+    if ((status = mram_read_raw(pos + MRAM_REGION_SIZE, len, r2_buf)) != SUCCESS) {
+        return status;
+    }
     char r3_buf[MRAM_REGION_BUF_SIZE];
-    mram_read_raw(pos + MRAM_REGION_SIZE * 2, len, r3_buf);
+    if ((status = mram_read_raw(pos + MRAM_REGION_SIZE * 2, len, r3_buf)) != SUCCESS) {
+        return status;
+    }
 
     // Validate the data, which we expect to have been the same in each region
     for (long i = 0; i < len; i++) {
@@ -131,7 +171,7 @@ void mram_read(long pos, long len, char *buf) {
                     corrections--;
                 }
             }
-            warning("mram: byte verification failure resolved by %d bit corrections\n",
+            warning("mram: byte validation failure resolved by %d bit corrections\n",
                 corrections);
 
             // Rewrite the corrected byte to all regions
@@ -143,4 +183,6 @@ void mram_read(long pos, long len, char *buf) {
             buf[i] = valid;
         }
     }
+
+    return SUCCESS;
 }

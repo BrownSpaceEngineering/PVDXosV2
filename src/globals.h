@@ -71,6 +71,9 @@ typedef enum {
     // Magnetometer operations
     OPERATION_READ,            // p_data: magnetometer_read_args_t *readings
 
+    // MRAM operations
+    OPERATION_MRAM,            // p_data: mram_request_t *request
+
     // TESTING
     TEST_OP, // p_data: char message[]
 } operation_t;
