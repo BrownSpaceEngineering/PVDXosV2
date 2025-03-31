@@ -2,6 +2,20 @@
 
 #include "mram_driver.h"
 
+status_t mram_end_command(void) {
+    // MRAM needs to see at least one clock cycle while CS is high to recognize
+    // end of command
+
+    MRAM_CS_HIGH();
+
+    char tx_buf[] = {0};
+    if (SPI_0.io.write(&SPI_0, tx_buf, 1) != 1) {
+        return ERROR_SPI_TRANSFER_FAILED;
+    }
+
+    return SUCCESS;
+}
+
 char mram_inited = 0;
 
 status_t mram_init_hardware(void) {
@@ -10,23 +24,36 @@ status_t mram_init_hardware(void) {
     }
     mram_inited = 1;
 
+    // In case CS started low
+    if (mram_end_command() == ERROR_SPI_TRANSFER_FAILED) {
+        return ERROR_SPI_TRANSFER_FAILED;
+    }
+
     // Send 32 dummy cycles (4 bytes)
     MRAM_CS_LOW();
+
     char tx_buf[] = {0, 0, 0, 0};
     if (SPI_0.io.write(&SPI_0, tx_buf, 4) != 4) {
         mram_inited = 0;
         return ERROR_SPI_TRANSFER_FAILED;
     }
-    MRAM_CS_HIGH();
+
+    if (mram_end_command() == ERROR_SPI_TRANSFER_FAILED) {
+        return ERROR_SPI_TRANSFER_FAILED;
+    }
 
     // Send write enable command, otherwise write commands will be ignored
     MRAM_CS_LOW();
+
     tx_buf[0] = MRAM_CMD_WRITE_ENABLE;
     if (SPI_0.io.write(&SPI_0, tx_buf, 1) != 1) {
         mram_inited = 0;
         return ERROR_SPI_TRANSFER_FAILED;
     }
-    MRAM_CS_HIGH();
+
+    if (mram_end_command() == ERROR_SPI_TRANSFER_FAILED) {
+        return ERROR_SPI_TRANSFER_FAILED;
+    }
 
     return SUCCESS;
 }
@@ -37,9 +64,9 @@ status_t mram_write_raw(long pos, long len, const char *buf) {
 
     MRAM_CS_LOW();
 
-    // Send write command, followed by 3-byte address in MSB-first order
+    // Send write command, followed by 3-byte address in MSByte-first order
     char tx_buf[] = {
-        MRAM_CMD_READ,
+        MRAM_CMD_WRITE,
         (pos >> 16) & 0xff,
         (pos >> 8) & 0xff,
         pos & 0xff
@@ -53,9 +80,11 @@ status_t mram_write_raw(long pos, long len, const char *buf) {
         return ERROR_SPI_TRANSFER_FAILED;
     }
 
-    MRAM_CS_HIGH();
+    if (mram_end_command() == ERROR_SPI_TRANSFER_FAILED) {
+        return ERROR_SPI_TRANSFER_FAILED;
+    }
 
-    // While the LSB of the status register is 1, the write is not finished
+    // While the LSBit of the status register is 1, the write is not finished
     char status_reg;
     do {
         MRAM_CS_LOW();
@@ -71,7 +100,9 @@ status_t mram_write_raw(long pos, long len, const char *buf) {
             return ERROR_SPI_TRANSFER_FAILED;
         }
 
-        MRAM_CS_HIGH();
+        if (mram_end_command() == ERROR_SPI_TRANSFER_FAILED) {
+            return ERROR_SPI_TRANSFER_FAILED;
+        }
     } while (status_reg & 1);
 
     return SUCCESS;
@@ -83,7 +114,7 @@ status_t mram_read_raw(long pos, long len, char *buf) {
 
     MRAM_CS_LOW();
 
-    // Send read command, followed by 3-byte address in MSB-first order
+    // Send read command, followed by 3-byte address in MSByte-first order
     char tx_buf[] = {
         MRAM_CMD_READ,
         (pos >> 16) & 0xff,
@@ -99,7 +130,9 @@ status_t mram_read_raw(long pos, long len, char *buf) {
         return ERROR_SPI_TRANSFER_FAILED;
     }
 
-    MRAM_CS_HIGH();
+    if (mram_end_command() == ERROR_SPI_TRANSFER_FAILED) {
+        return ERROR_SPI_TRANSFER_FAILED;
+    }
 
     return SUCCESS;
 }
