@@ -117,7 +117,6 @@ typedef struct {
     const uint8_t num_readings;         // If a sensor, how many past readings to store
     const size_t reading_size;          // If a sensor, number of bytes in a reading
     bool has_registered;                // Whether the task is being monitored by the watchdog (initialized to NULL)
-    const task_type_t task_type;        // Whether the task is OS-integrity, a sensor, or an actuator
 } pvdx_task_t;
 
 // A struct to represent a command that OS tasks can execute
