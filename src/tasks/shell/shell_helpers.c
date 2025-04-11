@@ -5,7 +5,7 @@
  * over RTT and executing them.
  *
  * Created: April 11, 2024
- * Author: Oren Kohavi
+ * Author: Oren Kohavi, Siddharta Laloux, Simon Juknelis
  */
 
 #include "shell_helpers.h"
@@ -20,7 +20,7 @@ size_t get_line_from_terminal(uint8_t *p_linebuffer) {
     size_t linebuffer_idx = 0;
 
     // Obtain a pointer to the current task within the global task list
-    pvdx_task_t *const current_task = get_task(xTaskGetCurrentTaskHandle());
+    pvdx_task_t *const current_task = get_current_task();
     // Cache the watchdog checkin command to avoid creating it every iteration
     command_t cmd_checkin = get_watchdog_checkin_command(current_task);
 
@@ -30,6 +30,7 @@ size_t get_line_from_terminal(uint8_t *p_linebuffer) {
         debug("shell: Enqueued watchdog checkin command\n");
 
         int character_read = SEGGER_RTT_GetKey();
+        warning("character read: %d\n", character_read);
         if (character_read < 0 || character_read > 255) {
             // No character was read, nothing's ready yet.
             // Loop again after a delay

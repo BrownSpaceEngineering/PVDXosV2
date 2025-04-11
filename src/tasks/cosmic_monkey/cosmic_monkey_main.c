@@ -12,7 +12,14 @@
 #include "cosmic_monkey_task.h"
 
 cosmic_monkey_task_memory_t cosmic_monkey_mem;
-
+/**
+ * \fn main_cosmic_monkey
+ *
+ * \param pvParameters a void pointer to the parametres required by the cosmic
+ *      monkey; not currently set by config
+ *
+ * \returns should never return
+ */
 void main_cosmic_monkey(void *pvParameters) {
     cosmic_monkey_task_arguments_t args = *((cosmic_monkey_task_arguments_t *)pvParameters);
 

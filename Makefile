@@ -9,57 +9,73 @@
 #####################################################################################
 
 ### ALL C FILES SHOULD HAVE AN OBJECT FILE LISTED HERE ###
-export OBJS := \
-../src/main.o \
-../src/mutexes/mutexes.o \
-../src/misc/printf/SEGGER_RTT.o \
-../src/misc/printf/SEGGER_RTT_printf.o \
-../src/misc/rtos_support/rtos_static_memory.o \
-../src/misc/rtos_support/rtos_stack_overflow.o \
-../src/misc/logging/logging.o \
-../src/misc/exception_handlers/default_handler.o \
-../src/misc/exception_handlers/specific_handlers.o \
-../src/tasks/heartbeat/heartbeat_main.o \
-../src/tasks/watchdog/watchdog_main.o \
-../src/tasks/watchdog/watchdog_helpers.o \
-../src/tasks/cosmic_monkey/cosmic_monkey_main.o \
-../src/tasks/cosmic_monkey/cosmic_monkey_helpers.o \
-../src/tasks/display/display_main.o \
-../src/tasks/display/display_helpers.o \
-../src/tasks/display/image_buffers/image_buffer_BrownLogo.o \
-../src/tasks/display/image_buffers/image_buffer_PVDX.o \
-../src/tasks/task_manager/task_manager_main.o \
-../src/tasks/task_manager/task_manager_helpers.o \
-../src/tasks/command_dispatcher/command_dispatcher_main.o \
-../src/tasks/command_dispatcher/command_dispatcher_helpers.o \
-../src/tasks/shell/shell_main.o \
-../src/tasks/shell/shell_helpers.o \
-../src/tasks/shell/shell_commands.o \
-../src/tasks/task_list.o \
-../src/tasks/datastore/datastore_main.o \
-../src/tasks/datastore/datastore_helpers.o
+export OBJS :=                                              	\
+../src/main.o                                               	\
+                                                            	\
+../src/mutexes/mutexes.o                                    	\
+                                                            	\
+../src/misc/printf/SEGGER_RTT.o                             	\
+../src/misc/printf/SEGGER_RTT_printf.o                      	\
+                                                            	\
+../src/misc/rtos_support/rtos_static_memory.o               	\
+../src/misc/rtos_support/rtos_stack_overflow.o              	 \
+                                                            	\
+../src/misc/logging/logging.o                               	\
+                                                            	\
+../src/misc/exception_handlers/default_handler.o            	\
+../src/misc/exception_handlers/specific_handlers.o          	 \
+                                                            	\
+../src/tasks/heartbeat/heartbeat_main.o                     	\
+                                                            	\
+../src/tasks/watchdog/watchdog_driver.o                     	\
+../src/tasks/watchdog/watchdog_task.o                       	\
+../src/tasks/watchdog/watchdog_main.o                       	\
+                                                            	\
+../src/tasks/cosmic_monkey/cosmic_monkey_main.o             	\
+../src/tasks/cosmic_monkey/cosmic_monkey_task.o             	\
+                                                            	\
+../src/tasks/display/display_driver.o                       	\
+../src/tasks/display/display_task.o                         	\
+../src/tasks/display/display_main.o                         	\
+../src/tasks/display/image_buffers/image_buffer_BrownLogo.o 	\
+../src/tasks/display/image_buffers/image_buffer_PVDX.o      	\
+                                                            	\
+../src/tasks/task_manager/task_manager_main.o               	\
+../src/tasks/task_manager/task_manager_task.o               	\
+                                                            	\
+../src/tasks/command_dispatcher/command_dispatcher_main.o   	\
+../src/tasks/command_dispatcher/command_dispatcher_task.o   	\
+                                                            	\
+../src/tasks/magnetometer/magnetometer_driver.o             	\
+../src/tasks/magnetometer/magnetometer_task.o               	\
+../src/tasks/magnetometer/magnetometer_main.o               	\
+                                                            	\
+../src/tasks/shell/shell_main.o                             	\
+../src/tasks/shell/shell_helpers.o                          	\
+../src/tasks/shell/shell_commands.o                         	\
+                                                            	\
+../src/tasks/task_list.o                                        \
 
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###
 ### THESE ARE WRITTEN RELATIVE TO THE ./ASF/gcc/Makefile FILE ###
 export EXTRA_VPATH := \
 ../../src \
-../../src/tasks \
-../../src/tasks/heartbeat \
-../../src/tasks/watchdog \
 ../../src/misc \
 ../../src/misc/printf \
 ../../src/misc/rtos_support \
-../../src/misc/hardware_watchdog_utils \
-../../src/tasks/cosmic_monkey \
 ../../src/misc/logging \
 ../../src/misc/exception_handlers \
+../../src/tasks \
+../../src/tasks/watchdog \
+../../src/tasks/heartbeat \
+../../src/tasks/cosmic_monkey \
 ../../src/tasks/display \
 ../../src/tasks/display/image_buffers \
 ../../src/tasks/task_manager \
 ../../src/tasks/command_dispatcher \
+../../src/tasks/magnetometer \
 ../../src/tasks/shell \
 ../../src/mutexes \
-../../src/tasks/datastore 
 
 ###################################################################
 ###   Compiler Flags and Build-Specific Configuration Options   ###
@@ -267,8 +283,11 @@ update_asf:
 	&& echo "(8.2) ASF FreeRTOSConfig.h: Task stack high watermark function enabled" \
 	&& $(SED) -i 's|#define configCHECK_FOR_STACK_OVERFLOW 1|#define configCHECK_FOR_STACK_OVERFLOW 2|' ./ASF/config/FreeRTOSConfig.h \
 	&& echo "(8.3) ASF FreeRTOSConfig.h: Task stack overflow checking upgraded to type 2 (higher accuracy)" \
+	&& $(SED) -i "/#define INCLUDE_xTaskGetCurrentTaskHandle 0/a #endif \n\n// \<q\> Include thread-local storage pointers \n// \<id\> freertos_num_thread_local_storage_pointers \n#ifndef configNUM_THREAD_LOCAL_STORAGE_POINTERS \n#define configNUM_THREAD_LOCAL_STORAGE_POINTERS 1" ./ASF/config/FreeRTOSConfig.h \
+	&& echo "(8.4) ASF FreeRTOSConfig.h: Thread-local storage enabled" \
 	&& $(SED) -i 's|ORIGIN = 0x00000000, LENGTH = 0x00100000|ORIGIN = 0x00002000, LENGTH = 0x000FE000|' ./ASF/samd51a/gcc/gcc/samd51p20a_flash.ld \
 	&& echo "(9) ASF Linker Script: Flash memory region updated to exclude bootloader" \
 	&& find ./ASF -type f -newermt now -exec touch {} + \
 	&& echo "(10) Timestamps in future updated to present" \
 	&& echo " --- Finished Integrating ASF --- "
+

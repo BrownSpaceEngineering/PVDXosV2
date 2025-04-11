@@ -1,3 +1,9 @@
+# PVDXos
+
+The real-time operating system for Brown Space Engineering's second satellite, Perovskite Visuals and Degredation eXperiment (PVDX).
+
+![PVDXos Diagram](pvdxos.png)
+
 # Project Setup and Toolchain Installation Guide
 
 ## Building and Running:
@@ -17,7 +23,7 @@
 
 3. **Flash the Bootloader:**
 
-   - If you're using a brand-new devboard, you *must* flash the bootloader. This is done by running `make flash_bootloader`. Once GDB starts up successfully, you can exit gdb.
+   - If you're using a brand-new devboard, you _must_ flash the bootloader. This is done by running `make flash_bootloader`. Once GDB starts up successfully, you can exit gdb.
    - If you're using a devboard that has already been set up, you can usually skip this step, but it never hurts!
    - If/When the bootloader gets an update, you can update it by running `make flash_bootloader` again.
 
@@ -27,7 +33,7 @@
    - To connect to the PVDXos Shell, use Telnet to establish a connection to localhost:19021. You can use PuTTY for this on Windows, or `nc localhost 19021` to connect with netcat on a Mac/Linux terminal
    - If using PuTTY, go to 'Terminal' and check the box for 'Implicit CR in every LF' so that line endings work correctly
    - Log output can be viewed by running `python3 scripts/rtt_logs.py` in a separate terminal window. This will also record logs to the `/logs` folder.
-   - - If the script fails to run, you may need to install 'pylink-square' (`pip install pylink-square`)
+   - If the script fails to run, you may need to install 'pylink-square' (`pip install pylink-square`)
    - Alternatively, you can try running `python3 scripts/rtt_splitscreen.py` for both the PVDXos Shell and log output in the same terminal window, but this might not work!
 
 ## Toolchain Installation
@@ -50,6 +56,7 @@
    - `sudo apt install gcc-arm-none-eabi`
 
 4. Install GDB Multiarch and other build tools:
+
    - `sudo apt install gdb-multiarch`
    - `sudo apt install build-essential`
    - `sudo apt install clang-format`
@@ -102,6 +109,7 @@
    - IMPORTANT: Remember to replace `<VersionNumber>` with the version number of the toolchain you downloaded. It should be something like '13.2.Rel1'
 
 8. Install other build tools:
+
    - `brew install gnu-sed` (if on mac)
    - `brew install clang-format`
 

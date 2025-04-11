@@ -52,32 +52,19 @@ int main(void) {
     // Initialize a mutex wrapping the shared PVDX task list struct
     task_list_mutex = xSemaphoreCreateMutexStatic(&task_list_mutex_buffer);
 
-    if (task_list_mutex == NULL){
+    if (task_list_mutex == NULL) {
         fatal("Failed to create PVDX task list mutex");
     }
+    if (task_list[0] != p_watchdog_task) {
+        fatal("Watchdog is not first in task_list!");
+    }
 
-    void (*main_functions[SUBTASK_START_INDEX])(void *pvParameters) = {
-        main_watchdog,
-        main_command_dispatcher,
-        main_task_manager,
-    };
-    void (*init_functions[SUBTASK_START_INDEX])(void) = {
-        init_watchdog,
-        init_command_dispatcher,
-        init_task_manager,
-    };
-    const char *task_names[SUBTASK_START_INDEX] = {"Watchdog Task", "Command Dispatcher Task", "Task Manager Task"};
-
-    for (int16_t i = 0; i < SUBTASK_START_INDEX; i++) {
-        init_functions[i]();
-
-        if (task_list[i].function == main_functions[i]) {
-            init_task(i);
-        } else {
-            fatal("%s not found at index %d of task list!\n", task_names[i], i);
+    // Initialize all OS integrity tasks
+    for (pvdx_task_t **curr_task = task_list; *curr_task != NULL; curr_task++) {
+        if ((*curr_task)->task_type == OS) {
+            init_task_pointer(*curr_task);
+            info("%s initialized\n", (*curr_task)->name);
         }
-
-        info("%s initialized\n", task_names[i]);
     }
 
     /* ---------- COSMIC MONKEY TASK ---------- */
@@ -87,12 +74,12 @@ int main(void) {
         cm_args.frequency = 10;
         #endif
         #if defined(DEVBUILD)
-        cm_args.frequency = 0;
+        cm_args.frequency = 0; // Bitflips per second
         #endif
 
         TaskHandle_t cosmic_monkey_task_handle =
             xTaskCreateStatic(main_cosmic_monkey, "CosmicMonkey", COSMIC_MONKEY_TASK_STACK_SIZE, (void *)&cm_args, 1,
-                            cosmic_monkey_mem.cosmic_monkey_task_stack, &cosmic_monkey_mem.cosmic_monkey_task_tcb);
+                              cosmic_monkey_mem.cosmic_monkey_task_stack, &cosmic_monkey_mem.cosmic_monkey_task_tcb);
         if (cosmic_monkey_task_handle == NULL) {
             warning("Cosmic Monkey Task Creation Failed!\n");
         } else {

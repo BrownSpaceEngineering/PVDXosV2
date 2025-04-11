@@ -10,7 +10,7 @@ def open_rtt_channels(logfile = None):
     jlink.rtt_start()
 
     while True:
-        buf1 = jlink.rtt_read(1, 2048)
+        buf1 = jlink.rtt_read(0, 2048)
 
         if buf1:
             text1 = bytes(buf1).decode('ascii', errors='replace')
@@ -19,11 +19,14 @@ def open_rtt_channels(logfile = None):
             if logfile is not None:
                 logfile.write(text1)
 
+            if "PVDXos Shell> $" in text1:
+                jlink.rtt_write(0, (input("> ") + "\n").encode('ascii'))
+
 def main():
     # Sanity check to make sure this is not in WSL
-    # if "microsoft" in platform.uname().release:
-    #     print("This code cannot be executed in a WSL environment. Run natively on Windows instead!")
-    #     exit(1)
+    if "microsoft" in platform.uname().release:
+        print("This code cannot be executed in a WSL environment. Run natively on Windows instead!")
+        exit(1)
 
     #Check if the ./logs directory exists
     current_script_dir = os.path.dirname(__file__)
