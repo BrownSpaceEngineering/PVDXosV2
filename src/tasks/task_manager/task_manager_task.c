@@ -137,7 +137,7 @@ QueueHandle_t init_task_manager(void) {
  * \note See `register_task_with_watchdog()`
  */
 void init_task_pointer(pvdx_task_t *const p_task) {
-    lock_mutex(task_list_mutex);
+    //lock_mutex(task_list_mutex);
 
     // some functions don't have queues to initialise. init is NULL in such cases
     init_function task_init = p_task->init;
@@ -169,7 +169,7 @@ void init_task_pointer(pvdx_task_t *const p_task) {
         vTaskSuspend(p_task->handle);
         info("%s task is disabled on startup.\n", p_task->name);
     }
-    unlock_mutex(task_list_mutex);
+    //unlock_mutex(task_list_mutex);
 }
 
 /**

@@ -142,7 +142,7 @@ pvdx_task_t task1 = {
     .enabled = true,
     .handle = NULL,
     .command_queue = NULL,
-    .init = NULL,
+    .init = init_task1,
     .function = main_task1,
     .stack_size = TASK1_TASK_STACK_SIZE,
     .stack_buffer = task1_mem.task1_task_stack,
@@ -160,7 +160,7 @@ pvdx_task_t task2 = {
     .enabled = true,
     .handle = NULL,
     .command_queue = NULL,
-    .init = NULL,
+    .init = init_task2,
     .function = main_task2,
     .stack_size = TASK2_TASK_STACK_SIZE,
     .stack_buffer = task2_mem.task2_task_stack,
@@ -199,9 +199,9 @@ pvdx_task_t *task_list[] = {
     p_shell_task,
     p_display_task, 
     p_heartbeat_task,
-    task_list_null_terminator,
     p_test_one_task,
     p_test_two_task,
+    task_list_null_terminator,
 };
 
 /**

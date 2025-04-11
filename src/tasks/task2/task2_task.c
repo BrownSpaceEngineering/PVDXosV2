@@ -12,9 +12,9 @@
 void execute_task2(command_t *const p_cmd) {
     info("task2: doing task!\n");
     vTaskDelay(500); // Simulating doing a task.
-    info("task2: telling task1 that do_task is complete!\n");
+    info("task2: telling %s that execute_task2 is complete!\n", p_cmd->source->name);
     p_cmd->result = SUCCESS;
-    xTaskNotifyGive(p_cmd->source);
+    xTaskNotifyGive(p_cmd->source->handle);
 }
 
 /* ---------- NON-DISPATCHABLE FUNCTIONS (do not go through the command dispatcher) ---------- */

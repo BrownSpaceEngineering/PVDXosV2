@@ -72,6 +72,8 @@ typedef enum {
 
     // TESTING
     TEST_OP, // p_data: char message[]
+
+    OPERATION_TEST,
 } operation_t;
 
 // An enum to represent the different log levels that functions can use
