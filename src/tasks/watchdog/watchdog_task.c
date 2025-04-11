@@ -174,6 +174,7 @@ inline command_t get_watchdog_checkin_command(pvdx_task_t *const p_task) {
                        .operation = OPERATION_CHECKIN,
                        .p_data = p_task,
                        .len = sizeof(pvdx_task_t *),
+                       .notify_source = false,
                        .result = NO_STATUS_RETURN,
                        .callback = NULL};
 }

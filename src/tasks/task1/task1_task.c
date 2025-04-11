@@ -12,7 +12,7 @@ void execute_task1(void) {
     info("task1: doing task!\n");
 
     info("sending command to task2:");
-    command_t cmd = {p_test_two_task, p_test_one_task, -1, NULL, 0, PROCESSING, NULL};
+    command_t cmd = {p_test_two_task, p_test_one_task, -1, NULL, 0, true, PROCESSING, NULL};
     enqueue_command(&cmd);
 
     info("task1: blocked waiting for notification!");

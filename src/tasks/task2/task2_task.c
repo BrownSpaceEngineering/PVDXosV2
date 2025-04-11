@@ -12,9 +12,7 @@
 void execute_task2(command_t *const p_cmd) {
     info("task2: doing task!\n");
     vTaskDelay(500); // Simulating doing a task.
-    info("task2: telling %s that execute_task2 is complete!\n", p_cmd->source->name);
     p_cmd->result = SUCCESS;
-    xTaskNotifyGive(p_cmd->source->handle);
 }
 
 /* ---------- NON-DISPATCHABLE FUNCTIONS (do not go through the command dispatcher) ---------- */
@@ -24,6 +22,10 @@ void exec_command_task2(command_t *const p_cmd) {
         fatal("Not task2! target: %d operation: %d\n", p_cmd->target->name, p_cmd->operation);
     }
     execute_task2(p_cmd);
+    if (p_cmd->notify_source) {
+        info("task2: telling %s that execute_task2 is complete!\n", p_cmd->source->name);
+        xTaskNotifyGive(p_cmd->source->handle);
+    }
 }
 
 /**
@@ -41,6 +43,7 @@ QueueHandle_t init_task2(void) {
         &task2_mem.task2_task_queue);
 
     if (task2_command_queue_handle == NULL) {
+        
         fatal("Failed to create command queue!\n");
     }
 

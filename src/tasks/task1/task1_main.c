@@ -49,7 +49,7 @@ void main_task1(void *pvParameters) {
         debug("task1: Enqueued watchdog checkin command\n");
 
         // Wait 1 second before attempting to run the loop again
-        command_t new_cmd = {p_test_one_task, p_test_one_task, -1, NULL, 0, PROCESSING, NULL};
+        command_t new_cmd = {p_test_one_task, p_test_one_task, -1, NULL, 0, false, PROCESSING, NULL};
         enqueue_command(&new_cmd);
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
