@@ -178,7 +178,7 @@ void system_init(void)
 	                   // <id> pad_initial_level
 	                   // <false"> Low
 	                   // <true"> High
-	                   false);
+	                   true);
 
 	// Set pin direction to output
 	gpio_set_pin_direction(Display_RST, GPIO_DIRECTION_OUT);
@@ -192,7 +192,7 @@ void system_init(void)
 	                   // <id> pad_initial_level
 	                   // <false"> Low
 	                   // <true"> High
-	                   false);
+	                   true);
 
 	// Set pin direction to output
 	gpio_set_pin_direction(Display_DC, GPIO_DIRECTION_OUT);
@@ -206,7 +206,7 @@ void system_init(void)
 	                   // <id> pad_initial_level
 	                   // <false"> Low
 	                   // <true"> High
-	                   false);
+	                   true);
 
 	// Set pin direction to output
 	gpio_set_pin_direction(Display_CS, GPIO_DIRECTION_OUT);
@@ -220,7 +220,7 @@ void system_init(void)
 	                   // <id> pad_initial_level
 	                   // <false"> Low
 	                   // <true"> High
-	                   false);
+	                   true);
 
 	// Set pin direction to output
 	gpio_set_pin_direction(Camera_CS, GPIO_DIRECTION_OUT);
@@ -234,12 +234,96 @@ void system_init(void)
 	                   // <id> pad_initial_level
 	                   // <false"> Low
 	                   // <true"> High
-	                   false);
+	                   true);
 
 	// Set pin direction to output
 	gpio_set_pin_direction(LED_RED, GPIO_DIRECTION_OUT);
 
 	gpio_set_pin_function(LED_RED, GPIO_PIN_FUNCTION_OFF);
+
+	// GPIO on PC04
+
+	gpio_set_pin_level(MRAM1_CS,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   true);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(MRAM1_CS, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(MRAM1_CS, GPIO_PIN_FUNCTION_OFF);
+
+	// GPIO on PC05
+
+	gpio_set_pin_level(MRAM1_RST,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   true);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(MRAM1_RST, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(MRAM1_RST, GPIO_PIN_FUNCTION_OFF);
+
+	// GPIO on PC06
+
+	gpio_set_pin_level(MRAM2_CS,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   true);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(MRAM2_CS, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(MRAM2_CS, GPIO_PIN_FUNCTION_OFF);
+
+	// GPIO on PC07
+
+	gpio_set_pin_level(MRAM2_RST,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   true);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(MRAM2_RST, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(MRAM2_RST, GPIO_PIN_FUNCTION_OFF);
+
+	// GPIO on PC10
+
+	gpio_set_pin_level(MRAM3_RST,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   true);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(MRAM3_RST, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(MRAM3_RST, GPIO_PIN_FUNCTION_OFF);
+
+	// GPIO on PC11
+
+	gpio_set_pin_level(MRAM3_CS,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   true);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(MRAM3_CS, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(MRAM3_CS, GPIO_PIN_FUNCTION_OFF);
 
 	// GPIO on PC30
 

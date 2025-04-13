@@ -1168,18 +1168,48 @@ pads:
     mode: Analog
     user_label: PB08
     configuration: null
+  MRAM1_CS:
+    name: PC04
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC04
+    mode: Digital output
+    user_label: MRAM1_CS
+    configuration:
+      pad_initial_level: High
+  MRAM1_RST:
+    name: PC05
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC05
+    mode: Digital output
+    user_label: MRAM1_RST
+    configuration:
+      pad_initial_level: High
+  MRAM2_CS:
+    name: PC06
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC06
+    mode: Digital output
+    user_label: MRAM2_CS
+    configuration:
+      pad_initial_level: High
+  MRAM2_RST:
+    name: PC07
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC07
+    mode: Digital output
+    user_label: MRAM2_RST
+    configuration:
+      pad_initial_level: High
   Display_RST:
     name: PB12
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB12
     mode: Digital output
     user_label: Display_RST
-    configuration: null
+    configuration:
+      pad_initial_level: High
   Display_DC:
     name: PB13
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB13
     mode: Digital output
     user_label: Display_DC
-    configuration: null
+    configuration:
+      pad_initial_level: High
   Shared_MOSI:
     name: PD08
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PD08
@@ -1198,6 +1228,20 @@ pads:
     mode: Digital input
     user_label: Shared_MISO
     configuration: null
+  MRAM3_RST:
+    name: PC10
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC10
+    mode: Digital output
+    user_label: MRAM3_RST
+    configuration:
+      pad_initial_level: High
+  MRAM3_CS:
+    name: PC11
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC11
+    mode: Digital output
+    user_label: MRAM3_CS
+    configuration:
+      pad_initial_level: High
   Shared_SCL:
     name: PA16
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA16
@@ -1222,19 +1266,22 @@ pads:
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB20
     mode: Digital output
     user_label: Display_CS
-    configuration: null
+    configuration:
+      pad_initial_level: High
   Camera_CS:
     name: PB21
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB21
     mode: Digital output
     user_label: Camera_CS
-    configuration: null
+    configuration:
+      pad_initial_level: High
   LED_RED:
     name: PB31
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB31
     mode: Digital output
     user_label: LED_RED
-    configuration: null
+    configuration:
+      pad_initial_level: High
   LED_Orange1:
     name: PC30
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC30
