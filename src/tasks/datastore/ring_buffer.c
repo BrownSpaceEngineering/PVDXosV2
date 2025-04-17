@@ -53,7 +53,7 @@ status_t read_n(ring_buffer_t *p_buffer, int num_read, sensor_reading_t *read_de
             // TODO: check pointer arithmetic: probably works in little-endian, but will
             // have to be tested.
             size_t copy_two = total_copy_size - copy_one;
-            memccpy(read_dest + copy_one, (p_buffer->buffer + p_buffer->total_buffer_size), copy_two);
+            memcpy(read_dest + copy_one, (p_buffer->buffer + p_buffer->total_buffer_size), copy_two);
             return SUCCESS;
         }
     } else {
@@ -88,7 +88,7 @@ status_t write(ring_buffer_t *p_buffer, sensor_reading_t *value) {
         p_write_location = p_buffer->buffer; 
     }
 
-    
+    memccpy()
 
     return SUCCESS;
 }
