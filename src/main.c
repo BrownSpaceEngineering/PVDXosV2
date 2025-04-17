@@ -91,5 +91,6 @@ int main(void) {
 
     // Start the scheduler
     vTaskStartScheduler();
+
     fatal("vTaskStartScheduler Returned! -- Should never happen!\n");
 }

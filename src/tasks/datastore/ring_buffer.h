@@ -2,11 +2,14 @@
 #define RING_BUFFER_H
 
 #include "globals.h"
+#include "logging.h"
+
+typedef sensor_reading_t void; 
 
 typedef struct ring_buffer {
-    void *head; // where to insert or read from
+    sensor_reading_t *head; // where to insert or read from
     // void *tail;               // end of the buffer
-    void *buffer; // beginning of the buffer
+    sensor_reading_t *buffer; // beginning of the buffer
     int elements;
     size_t total_buffer_size; // total size of buffer in bytes
     size_t read_size;         // how many bytes to read per read?

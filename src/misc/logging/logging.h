@@ -44,6 +44,11 @@ DEBUG: Detailed information about the system for debugging (e.g. length of array
         status_t s = status;                            \
         if (s != SUCCESS) { warning(msg); return s; }   \
     } while (0) 
+    #define assert_equal(realised, expected, msg) do {  \
+        if (realised != expected) {                     \
+            fatal(msg);                                 \
+        }                                               \
+    } while (0)
 #else
     /* Other build types (such as release or unittest) don't need filenames or line numbers */
     #define fatal(msg, ...) fatal_impl(RTT_CTRL_TEXT_BRIGHT_RED "[FATAL]: " msg RTT_CTRL_RESET, ##__VA_ARGS__)
