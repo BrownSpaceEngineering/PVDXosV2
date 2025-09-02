@@ -48,6 +48,9 @@ typedef enum {
     ERROR_BAD_TARGET,
     ERROR_SANITY_CHECK_FAILED,
     ERROR_NOT_READY,
+
+    // Fun errors 
+    ERROR_NOT_YET_IMPLEMENTED, 
 } status_t;
 
 // An enum to represent the different operations that tasks can perform (contained within a command_t)

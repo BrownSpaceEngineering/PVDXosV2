@@ -4,9 +4,12 @@
 // includes
 #include <atmel_start.h>
 #include <driver_init.h>
+#include <stdint.h> // ?????
+#include <task.h>
 
 #include "globals.h"
 #include "logging.h"
+#include "ring_buffer.h"
 
 // Memory for the datastore
 #define DATASTORE_TASK_STACK_SIZE 1024        // Size of the stack in words (multiply by 4 to get bytes)
@@ -27,11 +30,9 @@ extern datastore_task_memory_t datastore_mem;
 extern uint8_t datastore_command_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
 extern QueueHandle_t datastore_command_queue_handle;
 
-typedef void *ring_buf_t; // TODO: define this type properly
-
 typedef struct {
     pvdx_task_t *task;
-    ring_buf_t *rb;
+    ring_buffer_t rb;
 } mapping_t;
 
 #endif // DATASTORE_TASK_H

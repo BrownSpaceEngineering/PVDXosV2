@@ -137,6 +137,24 @@ pvdx_task_t heartbeat_task = {
     .task_type = ACTUATOR
 };
 
+pvdx_task_t datastore_task = {
+    .name = "CommandDispatcher",
+    .enabled = true,
+    .handle = NULL,
+    .command_queue = NULL,
+    .init = init_datastore,
+    .function = main_datastore,
+    .stack_size = DATASTORE_TASK_STACK_SIZE,
+    .stack_buffer = datastore_mem.datastore_task_stack,
+    .pvParameters = NULL,
+    .priority = 4,
+    .task_tcb = &datastore_mem.datastore_task_tcb,
+    .watchdog_timeout_ms = 10000,
+    .last_checkin_time_ticks = 0xDEADBEEF,
+    .has_registered = false,
+    .task_type = SENSOR
+};
+
 // and define their constant pointers
 pvdx_task_t *const p_watchdog_task = &watchdog_task;
 pvdx_task_t *const p_command_dispatcher_task = &command_dispatcher_task;

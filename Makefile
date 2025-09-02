@@ -18,12 +18,12 @@ export OBJS :=                                              	\
 ../src/misc/printf/SEGGER_RTT_printf.o                      	\
                                                             	\
 ../src/misc/rtos_support/rtos_static_memory.o               	\
-../src/misc/rtos_support/rtos_stack_overflow.o              	 \
+../src/misc/rtos_support/rtos_stack_overflow.o              	\
                                                             	\
 ../src/misc/logging/logging.o                               	\
                                                             	\
 ../src/misc/exception_handlers/default_handler.o            	\
-../src/misc/exception_handlers/specific_handlers.o          	 \
+../src/misc/exception_handlers/specific_handlers.o          	\
                                                             	\
 ../src/tasks/heartbeat/heartbeat_main.o                     	\
                                                             	\
@@ -53,6 +53,10 @@ export OBJS :=                                              	\
 ../src/tasks/shell/shell_main.o                             	\
 ../src/tasks/shell/shell_helpers.o                          	\
 ../src/tasks/shell/shell_commands.o                         	\
+																\
+../src/tasks/datastore/datastore_main.o							\
+../src/tasks/datastore/datastore_task.o							\
+../src/tasks/datastore/ring_buffer.o							\
                                                             	\
 ../src/tasks/task_list.o                                        \
 
@@ -75,6 +79,7 @@ export EXTRA_VPATH := \
 ../../src/tasks/command_dispatcher \
 ../../src/tasks/magnetometer \
 ../../src/tasks/shell \
+../../src/tasks/datastore \
 ../../src/mutexes \
 
 ###################################################################
