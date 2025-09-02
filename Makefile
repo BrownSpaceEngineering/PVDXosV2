@@ -50,10 +50,6 @@ export OBJS :=                                              	\
 ../src/tasks/magnetometer/magnetometer_task.o               	\
 ../src/tasks/magnetometer/magnetometer_main.o               	\
                                                             	\
-../src/tasks/shell/shell_main.o                             	\
-../src/tasks/shell/shell_helpers.o                          	\
-../src/tasks/shell/shell_commands.o                         	\
-                                                            	\
 ../src/tasks/task_list.o                                        \
 
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###
@@ -74,7 +70,6 @@ export EXTRA_VPATH := \
 ../../src/tasks/task_manager \
 ../../src/tasks/command_dispatcher \
 ../../src/tasks/magnetometer \
-../../src/tasks/shell \
 ../../src/mutexes
 
 ###################################################################
