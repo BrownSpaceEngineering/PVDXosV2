@@ -1,14 +1,36 @@
+/**
+ * shell_helpers.c
+ *
+ * Helper functions for the shell task. This task is responsible for receiving commands from the terminal
+ * over RTT and executing them.
+ *
+ * Created: April 11, 2024
+ * Author: Oren Kohavi, Siddharta Laloux, Simon Juknelis
+ */
+
 #include "shell_helpers.h"
+
+/* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
+
+/* ---------- NON-DISPATCHABLE FUNCTIONS (do not go through the command dispatcher) ---------- */
 
 // Returns the number of characters read
 size_t get_line_from_terminal(uint8_t *p_linebuffer) {
     // Poll the RTT for input
     size_t linebuffer_idx = 0;
-    while (1) {
+
+    // Obtain a pointer to the current task within the global task list
+    pvdx_task_t *const current_task = get_current_task();
+    // Cache the watchdog checkin command to avoid creating it every iteration
+    command_t cmd_checkin = get_watchdog_checkin_command(current_task);
+
+    while (true) {
         // This is really the loop that we expect the program to spend most of its time in, so pet the watchdog here
-        watchdog_checkin(SHELL_TASK);
+        enqueue_command(&cmd_checkin);
+        debug("shell: Enqueued watchdog checkin command\n");
 
         int character_read = SEGGER_RTT_GetKey();
+        warning("character read: %d\n", character_read);
         if (character_read < 0 || character_read > 255) {
             // No character was read, nothing's ready yet.
             // Loop again after a delay

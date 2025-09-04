@@ -21,9 +21,9 @@ def open_rtt_channels(logfile = None):
 
 def main():
     # Sanity check to make sure this is not in WSL
-    if "microsoft" in platform.uname().release:
-        print("This code cannot be executed in a WSL environment. Run natively on Windows instead!")
-        exit(1)
+    # if "microsoft" in platform.uname().release:
+    #     print("This code cannot be executed in a WSL environment. Run natively on Windows instead!")
+    #     exit(1)
 
     #Check if the ./logs directory exists
     current_script_dir = os.path.dirname(__file__)

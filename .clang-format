@@ -1,5 +1,5 @@
 Language: Cpp #C and C++ option
-BasedOnStyle: LLVM
+BasedOnStyle: Google
 ColumnLimit: 140 #I don't particularly like column limits, but 140 is quite a lot so nothing longer than this
 IndentWidth: 4
 TabWidth: 4
