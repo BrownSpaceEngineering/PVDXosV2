@@ -9,25 +9,31 @@ extern void bootloader(void);
 
 void startup(void);
 
-__attribute__((section(".vectors"))) const long startup_vectors[] = {0x2003FFFC, (long)startup};
+// The vectors section will be placed at address 0 in flash based on the linker script
+__attribute__((section(".vectors"))) const long startup_vectors[] = {
+    0x2003FFFC,     // Initial (bootloader's) SP
+    (long)startup   // Initial PC
+};
 
+// Responsible for initializing global variables for the bootloader
+// As such this function must not reference global variables
 void startup(void) {
-    char *p_src, *p_dst;
+    char *src, *dst;
 
     // Copy bootloader's data segment
-    p_src = &_sidata;
-    p_dst = &_sdata;
-    while (p_dst < &_edata) {
-        *p_dst = *p_src;
-        p_src++;
-        p_dst++;
+    src = &_sidata;
+    dst = &_sdata;
+    while (dst < &_edata) {
+        *dst = *src;
+        src++;
+        dst++;
     }
 
     // Zero out bootloader's BSS segment
-    p_dst = &_sbss;
-    while (p_dst < &_ebss) {
-        *p_dst = 0;
-        p_dst++;
+    dst = &_sbss;
+    while (dst < &_ebss) {
+        *dst = 0;
+        dst++;
     }
 
     bootloader();

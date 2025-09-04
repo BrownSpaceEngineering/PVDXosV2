@@ -11,6 +11,7 @@
 
 # Compiled files
 *.hex
+*.bin
 *.elf
 *.cof
 

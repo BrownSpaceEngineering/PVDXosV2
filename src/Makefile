@@ -131,50 +131,30 @@ all: dev
 
 dev:
 	@$(MAKE) -C $(CHILD_MAKEFILE_PATH) CFLAGS=" $(CFLAGS_DEV) $(CFLAGS)" \
-	&& cp -f ../ASF/gcc/PVDXos.elf ./ \
 	&& cp -f ../ASF/gcc/PVDXos.bin ./ \
-	&& echo " --- Finished Building PVDXos.elf --- " \
-	&& echo " ---    THIS IS THE DEV BUILD!    --- "
+	&& cp -f ../ASF/gcc/PVDXos.elf ./ \
+	&& echo " --- Finished Building PVDXos --- " \
+	&& echo " ---  THIS IS THE DEV BUILD! --- "
 
 release: clean #Might as well clean before compiling the release build
 	@$(MAKE) -C $(CHILD_MAKEFILE_PATH) CFLAGS=" $(CFLAGS_RELEASE) $(CFLAGS)" \
+	&& cp -f ../ASF/gcc/PVDXos.bin ./ \
 	&& cp -f ../ASF/gcc/PVDXos.elf ./ \
-	&& echo " --- Finished Building PVDXos.elf --- " \
-	&& echo " ---  THIS IS THE RELEASE BUILD!  --- "
+	&& echo " ---  Finished Building PVDXos  --- " \
+	&& echo " --- THIS IS THE RELEASE BUILD! --- "
 
 test:
 	@$(MAKE) -C $(CHILD_MAKEFILE_PATH) CFLAGS=" $(CFLAGS_UNITTEST) $(CFLAGS)" \
 	&& cp -f ../ASF/gcc/PVDXos.elf ./ \
-	&& echo " --- Finished Building PVDXos.elf --- " \
+	&& cp -f ../ASF/gcc/PVDXos.bin ./ \
+	&& echo " ---   Finished Building PVDXos   --- " \
 	&& echo " --- THIS IS THE UNIT TEST BUILD! --- "
 
 # Clean target
 clean:
 	@$(MAKE) -C $(CHILD_MAKEFILE_PATH) clean \
-	&& rm -f ./PVDXos.elf \
+	&& rm -f ./PVDXos.bin ./PVDXos.elf \
 	&& echo " --- Cleaned Build Files --- "
-
-# Connects to remote target, loads program, and sets breakpoint at main
-connect:
-ifeq (,$(findstring microsoft,$(shell uname -r))) #Detects a WSL kernel name, and runs a WSL-specific command for connecting to the GDB server
-	@gdb -ex "target remote localhost:2331" -ex "load" -ex "monitor halt" -ex "monitor reset" -ex "b main" -ex "continue" ./PVDXos.elf
-else ifeq (,$(findstring generic,$(shell uname -r)))
-	@gdb-multiarch -ex "target remote localhost:2331" -ex "load" -ex "monitor halt" -ex "monitor reset" -ex "b main" -ex "continue" ./PVDXos.elf
-else #Run the windows-specific command
-	@hostname=$(shell hostname) && \
-	gdb-multiarch -ex "target remote $$hostname.local:2331" -ex "load" -ex "monitor halt" -ex "monitor reset" -ex "b main" -ex "continue" ./PVDXos.elf
-endif
-
-#Builds the bootloader, then flashes it to the board. Make connect needs to be run after this.
-flash_bootloader:
-	$(MAKE) -C ./bootloader clean
-	$(MAKE) -C ./bootloader # Builds the bootloader
-ifeq (,$(findstring microsoft,$(shell uname -r))) #Detects a WSL kernel name, and runs a WSL-specific command for connecting to the GDB server
-	@gdb -ex "target remote localhost:2331" -ex "load" -ex "monitor halt" -ex "monitor reset" -ex "set confirm off" -ex "add-symbol-file PVDXos.elf" -ex "set confirm on" ./bootloader/bootloader.elf
-else #Run the windows-specific command
-	@hostname=$(shell hostname) && \
-	gdb-multiarch -ex "target remote $$hostname.local:2331" -ex "load" -ex "monitor halt" -ex "monitor reset" -ex "set confirm off" -ex "add-symbol-file PVDXos.elf" -ex "set confirm on" ./bootloader/bootloader.elf
-endif
 
 # When updating the ASF configuration, this must be run once in order to automatically integrate the new ASF config
 # Hopefully nobody ever needs to touch this, but you can add to it if you want to automatically trigger an action when the ASF is updated

@@ -18,10 +18,11 @@
 void bootloader(void);
 void go_to_app(void);
 
-volatile int test = 8;
+volatile int startup_test_value = 8;
 
 void bootloader(void) {
-    while (test != 8);
+    // This loop will spin forever if startup did not copy data segment
+    while (startup_test_value != 8);
 
     // Copy application from flash to RAM
     char *src = (char *)APP_FLASH_START;

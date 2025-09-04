@@ -2,9 +2,9 @@ device ATSAMD51P20A
 if SWD
 speed 4000
 connect
-r
+reset
 loadbin bootloader/bootloader.bin, 0x00000000
 loadbin src/PVDXos.bin, 0x00010000
-r
-g
+reset
+go
 exit
