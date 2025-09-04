@@ -1,37 +1,41 @@
-.PHONY: all clean
+# === CONFIG ===
+TARGET = bootloader
+MCU = cortex-m4
+FPU = fpv4-sp-d16
+FLOAT_ABI = hard
+LD_SCRIPT = bootloader_flash.ld
 
-# Compiler and flags
+# === Toolchain ===
 CC = arm-none-eabi-gcc
+LD = arm-none-eabi-gcc
 AS = arm-none-eabi-as
-LD = arm-none-eabi-ld
+OBJCOPY = arm-none-eabi-objcopy
+SIZE = arm-none-eabi-size
 
-CFLAGS = -nostartfiles -nostdlib -g -Wall -Wextra -Wpedantic -Werror -mcpu=cortex-m4 -mthumb -c
-ASFLAGS = -mcpu=cortex-m4 -mthumb -c
-LDFLAGS = -T linkerscript.ld
+# === Flags ===
+CFLAGS = -mcpu=$(MCU) -mthumb -mfpu=$(FPU) -mfloat-abi=$(FLOAT_ABI) \
+         -Wall -Werror -O2 -ffreestanding -nostdlib -nostartfiles -g
 
-TARGET = bootloader.elf
+LDFLAGS = -T$(LD_SCRIPT) -nostdlib -Wl,-Map=$(TARGET).map
 
-C_SOURCES = bootloader.c
-ASM_SOURCES = startup.s
+SOURCES = bootloader.c startup.c
+OBJECTS = $(SOURCES:.c=.o)
 
-# Object files
-OBJECTS=$(C_SOURCES:.c=.o) $(ASM_SOURCES:.s=.o)
+# === Build Rules ===
+all: $(TARGET).bin $(TARGET).hex
 
-# Default rule
-all: $(TARGET)
-
-# Rule to link the final target
-$(TARGET): $(OBJECTS)
-	$(LD) $(LDFLAGS) $(OBJECTS) -o $@
-
-# Rule to compile C source files
 %.o: %.c
-	$(CC) $(CFLAGS) $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
 
-# Rule to compile assembly source files
-%.o: %.s
-	$(AS) $(ASFLAGS) $< -o $@
+$(TARGET).elf: $(OBJECTS)
+	$(LD) $(CFLAGS) $(LDFLAGS) $(OBJECTS) -o $@
+	$(SIZE) $@
 
-# Clean rule
+%.bin: %.elf
+	$(OBJCOPY) -O binary $< $@
+
+%.hex: %.elf
+	$(OBJCOPY) -O ihex $< $@
+
 clean:
-	rm -f $(OBJECTS) $(TARGET)
+	rm -f *.o *.elf *.bin *.hex *.map
