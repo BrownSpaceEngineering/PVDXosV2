@@ -34,7 +34,7 @@
 #define Display_DC GPIO(GPIO_PORTB, 13)
 #define Display_CS GPIO(GPIO_PORTB, 20)
 #define Camera_CS GPIO(GPIO_PORTB, 21)
-#define LED_RED GPIO(GPIO_PORTB, 31)
+#define LED_RED GPIO(GPIO_PORTB, 1) // 31
 #define MRAM1_CS GPIO(GPIO_PORTC, 4)
 #define MRAM1_RST GPIO(GPIO_PORTC, 5)
 #define MRAM2_CS GPIO(GPIO_PORTC, 6)

@@ -14,45 +14,73 @@
 
 
 ### ALL C FILES SHOULD HAVE AN OBJECT FILE LISTED HERE ###
-export OBJS := \
-../src/main.o \
-../src/tasks/heartbeat/heartbeat_main.o \
-../src/tasks/watchdog/watchdog_main.o \
-../src/tasks/watchdog/watchdog_helpers.o \
-../src/misc/printf/SEGGER_RTT.o \
-../src/misc/printf/SEGGER_RTT_printf.o \
-../src/misc/rtos_support/rtos_static_memory.o \
-../src/misc/rtos_support/rtos_stack_overflow.o \
-../src/tasks/cosmic_monkey/cosmicmonkey_main.o \
-../src/misc/logging/logging.o \
-../src/misc/exception_handlers/default_handler.o \
-../src/misc/exception_handlers/specific_handlers.o \
-../src/tasks/display/display_ssd1362.o \
-../src/tasks/task_manager/task_manager.o \
-../src/tasks/shell/shell_main.o \
-../src/tasks/shell/shell_helpers.o \
-../src/tasks/shell/shell_commands.o \
-
-
+export OBJS :=                                              	\
+../src/main.o                                               	\
+                                                            	\
+../src/mutexes/mutexes.o                                    	\
+                                                            	\
+../src/misc/printf/SEGGER_RTT.o                             	\
+../src/misc/printf/SEGGER_RTT_printf.o                      	\
+                                                            	\
+../src/misc/rtos_support/rtos_static_memory.o               	\
+../src/misc/rtos_support/rtos_stack_overflow.o              	 \
+                                                            	\
+../src/misc/logging/logging.o                               	\
+                                                            	\
+../src/misc/exception_handlers/default_handler.o            	\
+../src/misc/exception_handlers/specific_handlers.o          	 \
+                                                            	\
+../src/tasks/heartbeat/heartbeat_main.o                     	\
+                                                            	\
+../src/tasks/watchdog/watchdog_driver.o                     	\
+../src/tasks/watchdog/watchdog_task.o                       	\
+../src/tasks/watchdog/watchdog_main.o                       	\
+                                                            	\
+../src/tasks/cosmic_monkey/cosmic_monkey_main.o             	\
+../src/tasks/cosmic_monkey/cosmic_monkey_task.o             	\
+                                                            	\
+../src/tasks/display/display_driver.o                       	\
+../src/tasks/display/display_task.o                         	\
+../src/tasks/display/display_main.o                         	\
+../src/tasks/display/image_buffers/image_buffer_BrownLogo.o 	\
+../src/tasks/display/image_buffers/image_buffer_PVDX.o      	\
+                                                            	\
+../src/tasks/task_manager/task_manager_main.o               	\
+../src/tasks/task_manager/task_manager_task.o               	\
+                                                            	\
+../src/tasks/command_dispatcher/command_dispatcher_main.o   	\
+../src/tasks/command_dispatcher/command_dispatcher_task.o   	\
+                                                            	\
+../src/tasks/magnetometer/magnetometer_driver.o             	\
+../src/tasks/magnetometer/magnetometer_task.o               	\
+../src/tasks/magnetometer/magnetometer_main.o               	\
+                                                            	\
+../src/tasks/shell/shell_main.o                             	\
+../src/tasks/shell/shell_helpers.o                          	\
+../src/tasks/shell/shell_commands.o                         	\
+                                                            	\
+../src/tasks/task_list.o                                        \
 
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###
 ### THESE ARE WRITTEN RELATIVE TO THE ./ASF/gcc/Makefile FILE ###
 export EXTRA_VPATH := \
 ../../src \
-../../src/tasks \
-../../src/tasks/heartbeat \
-../../src/tasks/watchdog \
 ../../src/misc \
 ../../src/misc/printf \
 ../../src/misc/rtos_support \
-../../src/misc/hardware_watchdog_utils \
-../../src/tasks/cosmic_monkey \
 ../../src/misc/logging \
 ../../src/misc/exception_handlers \
+../../src/tasks \
+../../src/tasks/watchdog \
+../../src/tasks/heartbeat \
+../../src/tasks/cosmic_monkey \
 ../../src/tasks/display \
-../../src/tasks/task_manager \
 ../../src/tasks/display/image_buffers \
+../../src/tasks/task_manager \
+../../src/tasks/command_dispatcher \
+../../src/tasks/magnetometer \
 ../../src/tasks/shell \
+../../src/mutexes
 
 
 ###############################################################################
