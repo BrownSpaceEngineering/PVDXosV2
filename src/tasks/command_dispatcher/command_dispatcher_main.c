@@ -52,5 +52,7 @@ void main_command_dispatcher(void *pvParameters) {
             enqueue_command(&cmd_checkin);
             debug("command_dispatcher: Enqueued watchdog checkin command\n");
         }
+
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
 }

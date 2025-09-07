@@ -74,5 +74,7 @@ void main_watchdog(void *pvParameters) {
             enqueue_command(&cmd_checkin);
             debug("watchdog: Enqueued watchdog checkin command\n");
         }
+        
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
 }
