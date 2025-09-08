@@ -3,8 +3,7 @@ if SWD
 speed 4000
 connect
 reset
-loadbin bootloader/bootloader.bin, 0x00000000
-loadbin src/PVDXos.bin, 0x00010000
+loadbin flash.bin, 0x00000000
 reset
 go
 exit

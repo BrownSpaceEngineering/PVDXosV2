@@ -1,4 +1,5 @@
 #define APP_FLASH_START (0x00010000) // Change based on where your app is stored
+#define APP_FLASH_STEP (0x00010000) // Step to next copy of app in flash
 #define APP_RAM_START (0x20000000)   // Starting RAM address for the app
 #define RAM_SIZE (0x3E000)           // Size of the app in bytes
 
@@ -28,7 +29,10 @@ void bootloader(void) {
     char *src = (char *)APP_FLASH_START;
     char *dst = (char *)APP_RAM_START;
     for (long i = 0; i < RAM_SIZE; i++) {
-        dst[i] = src[i];
+        // dst[i] = src[i];
+        // take the majority (if at least one AND pair evaluates to 1 then it should be 1)
+        dst[i] = (src[i] & src[i+APP_FLASH_STEP]) | (src[i+APP_FLASH_STEP] & src[i+2*APP_FLASH_STEP]) | (src[i+2*APP_FLASH_STEP] & src[i]);
+
     }
     
     go_to_app();

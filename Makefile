@@ -5,7 +5,9 @@ bootloader_target:
 	make -C bootloader
 
 dev: bootloader_target
-	make -C src dev
+	make -C src dev \
+	&& python3 scripts/create_flash_segment.py \
+	&& python3 scripts/flip_rand_bit.py
 
 release: bootloader_target
 	make -C src release
