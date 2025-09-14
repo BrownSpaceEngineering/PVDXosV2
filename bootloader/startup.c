@@ -18,6 +18,8 @@ __attribute__((section(".vectors"))) const long startup_vectors[] = {
 // Responsible for initializing global variables for the bootloader
 // As such this function must not reference global variables
 void startup(void) {
+    // if (startup_vectors == 0x3000)
+
     char *src, *dst;
 
     // Copy bootloader's data segment

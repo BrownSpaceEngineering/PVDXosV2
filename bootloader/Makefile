@@ -1,9 +1,13 @@
 # === CONFIG ===
-TARGET = bootloader
+TARGET1 = bootloader1
+TARGET2 = bootloader2
+TARGET3 = bootloader3
 MCU = cortex-m4
 FPU = fpv4-sp-d16
 FLOAT_ABI = hard
-LD_SCRIPT = bootloader_flash.ld
+LD_SCRIPT1 = bootloader_flash1.ld
+LD_SCRIPT2 = bootloader_flash2.ld
+LD_SCRIPT3 = bootloader_flash3.ld
 
 # === Toolchain ===
 CC = arm-none-eabi-gcc
@@ -16,19 +20,29 @@ SIZE = arm-none-eabi-size
 CFLAGS = -mcpu=$(MCU) -mthumb -mfpu=$(FPU) -mfloat-abi=$(FLOAT_ABI) \
          -Wall -Werror -O2 -ffreestanding -nostdlib -nostartfiles -g
 
-LDFLAGS = -T$(LD_SCRIPT) -nostdlib -Wl,-Map=$(TARGET).map
+LDFLAGS1 = -T$(LD_SCRIPT1) -nostdlib -Wl,-Map=$(TARGET).map
+LDFLAGS2 = -T$(LD_SCRIPT2) -nostdlib -Wl,-Map=$(TARGET).map
+LDFLAGS3 = -T$(LD_SCRIPT3) -nostdlib -Wl,-Map=$(TARGET).map
 
 SOURCES = bootloader.c startup.c
 OBJECTS = $(SOURCES:.c=.o)
 
 # === Build Rules ===
-all: $(TARGET).bin $(TARGET).hex
+all: $(TARGET1).bin $(TARGET1).hex $(TARGET2).bin $(TARGET2).hex $(TARGET3).bin $(TARGET3).hex
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(TARGET).elf: $(OBJECTS)
-	$(LD) $(CFLAGS) $(LDFLAGS) $(OBJECTS) -o $@
+$(TARGET1).elf: $(OBJECTS)
+	$(LD) $(CFLAGS) $(LDFLAGS1) $(OBJECTS) -o $@
+	$(SIZE) $@
+
+$(TARGET2).elf: $(OBJECTS)
+	$(LD) $(CFLAGS) $(LDFLAGS2) $(OBJECTS) -o $@
+	$(SIZE) $@
+
+$(TARGET3).elf: $(OBJECTS)
+	$(LD) $(CFLAGS) $(LDFLAGS3) $(OBJECTS) -o $@
 	$(SIZE) $@
 
 %.bin: %.elf

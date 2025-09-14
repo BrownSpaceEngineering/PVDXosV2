@@ -23,7 +23,7 @@ connect: all
 		-ex "set confirm on" \
 		-ex "target remote localhost:2331" \
 		-ex "monitor reset" \
-		bootloader/bootloader.elf
+		bootloader/bootloader1.elf
 
 clean:
 	rm -f PVDXos.bin PVDXos.elf \
