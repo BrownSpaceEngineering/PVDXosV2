@@ -1,3 +1,12 @@
+/*
+ * magnetorquer_task.h
+ *
+ * As of 20250921, this is just a skeleton for the magnetorquer task, which will
+ * need a driver for the physical magnetorquers
+ *
+ * Author(s): Zach Mahan
+ */
+
 #ifndef MAGNETORQUER_TASK_H
 #define MAGNETORQUER_TASK_H
 
@@ -36,6 +45,6 @@ QueueHandle_t init_magnetorquer(void);
 void exec_command_magnetorquer(command_t *const p_cmd);
 void main_magnetorquer(void *pvParameters);
 
-// TODO finish skeleton
+void magnetorquer_update_voltages(magnetorquer_input_voltages_t voltages); // use inside of task, delegate to a driver
 
 #endif // !MAGNETORQUER_TASK_H
