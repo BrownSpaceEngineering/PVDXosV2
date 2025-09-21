@@ -71,6 +71,9 @@ typedef enum {
     // Magnetometer operations
     OPERATION_READ,            // p_data: magnetometer_read_args_t *readings
 
+    // Photodiode operations
+    OPERATION_PHOTODIODE_READ,        // p_data: photodiode_read_args_t *readings
+    OPERATION_PHOTODIODE_CALIBRATE,   // p_data: NULL
     // TESTING
     TEST_OP, // p_data: char message[]
 } operation_t;

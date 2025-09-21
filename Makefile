@@ -49,7 +49,9 @@ export OBJS :=                                              	\
 ../src/tasks/magnetometer/magnetometer_driver.o             	\
 ../src/tasks/magnetometer/magnetometer_task.o               	\
 ../src/tasks/magnetometer/magnetometer_main.o               	\
-                                                            	\
+../src/tasks/photodiode/photodiode_driver.o               	\
+../src/tasks/photodiode/photodiode_task.o                 	\
+../src/tasks/photodiode/photodiode_main.o                 	\                                                            	\
 ../src/tasks/shell/shell_main.o                             	\
 ../src/tasks/shell/shell_helpers.o                          	\
 ../src/tasks/shell/shell_commands.o                         	\
@@ -74,6 +76,7 @@ export EXTRA_VPATH := \
 ../../src/tasks/task_manager \
 ../../src/tasks/command_dispatcher \
 ../../src/tasks/magnetometer \
+../../src/tasks/photodiode \
 ../../src/tasks/shell \
 ../../src/mutexes
 
