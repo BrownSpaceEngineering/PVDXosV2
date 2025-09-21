@@ -81,6 +81,8 @@ void main_shell(void *pvParameters) {
             command_func(args, arg_count);
             debug("shell: Command func for %s finished\n", user_command);
         }
+
+        // The shell needs a delay because it doesn't interact with a command queue
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }

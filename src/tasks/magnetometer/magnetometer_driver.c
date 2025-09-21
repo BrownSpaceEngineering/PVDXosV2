@@ -21,7 +21,7 @@
 struct io_descriptor *rm3100_io;
 static rm3100_power_mode_t m_sensor_mode;
 static uint16_t m_sample_rate;
-static uint8_t m_cycle_count;
+static uint16_t m_cycle_count;
 static float m_gain;
 
 /**
@@ -44,38 +44,44 @@ status_t init_rm3100(void) {
     
     // Read the revision ID and handshake registers
     fatal_on_error(rm3100_read_reg(NULL, RM3100_REVID_REG, &init_values[0], 1), 
-        "magnetometer-init: Error reading RM3100 RevID register during initialization");
+        "magnetometer: Error reading RM3100 RevID register during initialization");
     fatal_on_error(rm3100_read_reg(NULL, RM3100_HSHAKE_REG, &init_values[1], 1),
-        "magnetometer-init: Error reading RM3100 handshake register during initialization");
+        "magnetometer: Error reading RM3100 handshake register during initialization");
     if (init_values[0] != RM3100_REVID_VALUE) {
-        fatal("magnetometer-init: Unexpected RM3100 RevID value during initialization");
+        fatal("magnetometer: Unexpected RM3100 RevID value during initialization");
     } 
     if (init_values[1] != RM3100_HSHAKE_VALUE) {
-        fatal("magnetometer-init: Unexpected RM3100 handshake value during initialization");
+        fatal("magnetometer: Unexpected RM3100 handshake value during initialization");
     }
     
     // Read the LROSCADJ and SLPOSCADJ registers
     fatal_on_error(rm3100_read_reg(NULL, RM3100_LROSCADJ_REG, &init_values[2], 2),
-        "magnetometer-init: Error reading RM3100 LROSCADJ register during initialization");
+        "magnetometer: Error reading RM3100 LROSCADJ register during initialization");
     if (init_values[2] != RM3100_LROSCADJ_VALUE) {
-        fatal("magnetometer-init: Unexpected RM3100 LROSCADJ register value during initialization");
+        fatal("magnetometer: Unexpected RM3100 LROSCADJ register value during initialization");
     }
     if (init_values[3] != RM3100_SLPOSCADJ_VALUE) {
-        fatal("magnetometer-init: Unexpected RM3100 SLPOSCADJ register value during initialization");
+        fatal("magnetometer: Unexpected RM3100 SLPOSCADJ register value during initialization");
     }
 
-    // Set the cycle count and sample rate
+    // Set the cycle count for all three magnetometer axes
     mag_change_cycle_count(INITIAL_CC);
 
-    fatal_on_error(rm3100_read_reg(NULL, RM3100_CCX1_REG, &cycle_values[0], 1), 
-        "magnetometer-init: Error reading first part of RM3100 CCX1 cycle-count register during initialization");
-    fatal_on_error(rm3100_read_reg(NULL, RM3100_CCX1_REG, &cycle_values[1], 1), 
-        "magnetometer-init: Error reading second part of RM3100 CCX1 cycle-count register during initialization");
+    // Attempt to read back the cycle count we just set from one axis as a sanity check
+    fatal_on_error(rm3100_read_reg(NULL, RM3100_CCX1_REG, &cycle_values[0], 2),
+        "magnetometer: Error reading first part of RM3100 CCX1 cycle-count register during initialization");
 
-    // TODO: this needs explanation!
     m_cycle_count = cycle_values[0];
     m_cycle_count = (m_cycle_count << 8) | cycle_values[1];
+        
+    if (m_cycle_count != INITIAL_CC) {
+        fatal("magnetometer: Cycle count value read from RM3100 X-axis does not match expected value");
+    }
 
+    // Calculate the gain using the cycle count
+    m_gain = 0.3671 * m_cycle_count + 1.5;
+
+    // Set the power mode and sample rate
     if (!SINGLE_MODE) {
         mag_set_power_mode(SENSOR_POWER_MODE_CONTINUOUS);
         mag_set_sample_rate(SAMPLE_RATE);

@@ -32,3 +32,23 @@ QueueHandle_t init_[lower](void) {
 
     return [lower]_command_queue_handle;
 }
+
+/**
+ * \fn exec_command_[lower]
+ * 
+ * \brief Executes function corresponding to the command
+ * 
+ * \param p_cmd a pointer to a command forwarded to [lower]
+ */
+void exec_command_task_manager(command_t *const p_cmd) {
+    if (p_cmd->target != p_[lower]_task) {
+        fatal("[lower]: command target is not [lower]! target: %d operation: %d\n", p_cmd->target, p_cmd->operation);
+    }
+
+    switch (p_cmd->operation) {
+        default:
+            fatal("[lower]: Invalid operation!\n");
+            p_cmd->result = ERROR_SANITY_CHECK_FAILED; // TODO: appropriate status?
+            break;
+    }
+}

@@ -39,37 +39,14 @@ void main_magnetometer(void *pvParameters) {
         if (xQueueReceive(p_magnetometer_task->command_queue, &cmd, queue_block_time_ticks) == pdPASS) {
             do {
                 debug("magnetometer: Command popped off queue. Target: %d, Operation: %d\n", cmd.target, cmd.operation);
-                exec_command_magnetometer(&cmd); // TODO
+                exec_command_magnetometer(&cmd);
             } while (xQueueReceive(p_magnetometer_task->command_queue, &cmd, 0) == pdPASS);
         }
         debug("magnetometer: No more commands queued.\n");
 
-        ;
         if (should_checkin(current_task)) {
             enqueue_command(&cmd_checkin);
+            debug("magnetometer: Enqueued watchdog checkin command\n");
         }
-        debug("magnetometer: Enqueued watchdog checkin command\n");
     }
 }
-
-// KEEP FOR REFERENCE!! DO NOT YOINK IMMEDIATELY
-// OLD ONE (needs to be yoinked)
-
-// void rm3100_main(void *pvParameters) {
-//     if (init_rm3100() != SENSOR_OK) {
-//         return;
-//     };
-
-//     watchdog_checkin(RM3100_TASK);
-
-//     m_gain = 0.3671 * m_cycle_count + 1.5;
-
-//     while (1) {
-//         while (gpio_get_pin_level(DRDY_PIN) == 0) {
-//             vTaskDelay(pdMS_TO_TICKS(100));
-//             watchdog_checkin(RM3100_TASK);
-//         }
-
-//         mag_read_data();
-//     }
-// }

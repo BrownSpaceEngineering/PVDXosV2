@@ -82,7 +82,7 @@ void main_heartbeat(void *pvParameters) {
         // Check in with the watchdog task
         if (should_checkin(current_task)) {
             enqueue_command(&cmd_checkin);
+            debug("heartbeat: Enqueued watchdog checkin command\n");
         }
-        debug("heartbeat: Enqueued watchdog checkin command\n");
     }
 }

@@ -1,8 +1,8 @@
 /**
- * task_manager_main.c
+ * task_manager_helpers.c
  *
- * Main loop of the Task Manager RTOS task. This task is responsible for initializing and enabling/disabling
- * all other tasks in the system based on PVDX's satellite state diagram.
+ * Helper functions for the task manager task. This task is responsible for initializing and enabling/disabling
+ * all other tasks in the system based on PVDX's state diagram.
  *
  * Created: April 14, 2024
  * Authors: Oren Kohavi, Ignacio Blancas Rodriguez, Tanish Makadia, Yi Liu, Siddharta Laloux, Aidan Wang, Simon Juknelis,
@@ -21,7 +21,7 @@ StaticSemaphore_t task_list_mutex_buffer;
  * \param pvParameters a void pointer to the parametres required by the task 
  *      manager; not currently set by config
  *
- * \returns should never return 
+ * \warning should never return 
  */
 void main_task_manager(void *pvParameters) {
     info("task-manager: Task Started!\n");
@@ -55,7 +55,7 @@ void main_task_manager(void *pvParameters) {
         // Check in with the watchdog task
         if (should_checkin(current_task)) {
             enqueue_command(&cmd_checkin);
+            debug("task_manager: Enqueued watchdog checkin command\n");
         }
-        debug("task_manager: Enqueued watchdog checkin command\n");
     }
 }

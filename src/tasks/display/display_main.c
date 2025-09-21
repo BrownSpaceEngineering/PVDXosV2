@@ -73,7 +73,7 @@ void main_display(void *pvParameters) {
         // Check in with the watchdog task
         if (should_checkin(current_task)) {
             enqueue_command(&cmd_checkin);
+            debug("display: Enqueued watchdog checkin command\n");
         }
-        debug("display: Enqueued watchdog checkin command\n");
     }
 }

@@ -2,7 +2,7 @@
  * task_list.c
  *
  * Global list of all tasks running on PVDXos. This list is used to initialize all tasks in the system
- * and to provide a way to access task information given a FreeRTOS task handle.
+ * and to provide access to global task data through `pvdx_task_t*` pointers.
  *
  * Created: January 24, 2025
  * Authors: Oren Kohavi, Tanish Makadia, Yi Liu, Siddharta Laloux
@@ -192,7 +192,7 @@ pvdx_task_t *const task_list_null_terminator = NULL;
 // NOTE: Watchdog task must be first in the list, Command Dispatcher second, and Task Manager third.
 // If you change the order of any of these, make sure that main.c reflects the change and update this comment.
 pvdx_task_t *task_list[] = {
-    p_watchdog_task, 
+    p_watchdog_task,
     p_command_dispatcher_task, 
     p_task_manager_task, 
     p_magnetometer_task, 
