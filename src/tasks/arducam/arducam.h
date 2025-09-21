@@ -23,8 +23,6 @@
 #define ARDUCAM_SPI_BUFFER_CAPACITY 64
 
 // Functions for setting the chip-select pins on the camera to low/high voltage
-#define CS_LOW() gpio_set_pin_level(Display_CS, 0)
-#define CS_HIGH() gpio_set_pin_level(Display_CS, 1)
 
 extern struct io_descriptor *arducam_i2c_io;
 extern struct io_descriptor *arducam_spi_io;

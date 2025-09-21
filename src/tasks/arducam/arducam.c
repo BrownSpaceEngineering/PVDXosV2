@@ -30,7 +30,8 @@ void init_arducam()
 
     watchdog_checkin(ARDUCAM_TASK);
 
-    spi_m_sync_set_baudrate(&SPI_0, 115200);
+    gpio_set_pin_direction(Camera_CS, GPIO_DIRECTION_OUT);
+    spi_m_sync_set_baudrate(&SPI_0, 6000000);
     spi_m_sync_get_io_descriptor(&SPI_0, &arducam_spi_io);
     spi_m_sync_enable(&SPI_0);
 
@@ -38,10 +39,10 @@ void init_arducam()
     uint8_t data[2] = { 0x00, 0x01 };
 
     ARDUCAMSPIWrite(ARDUCHIP_TEST1, 0x55);
-    int temp = ARDUCAMSPIRead(ARDUCHIP_TEST1 & 0x7F);
-    if (temp != 0x55){
-        info("Bruh");
-    }
+    // int temp = ARDUCAMSPIRead(ARDUCHIP_TEST1 & 0x7F);
+    // if (temp != 0x55){
+    //     info("Bruh");
+    // }
 
     ARDUCAMI2CWrite( 0xFF, data + 1, 1 );
     ARDUCAMI2CRead( OV2640_CHIPID_HIGH, vidpid, 1 );
