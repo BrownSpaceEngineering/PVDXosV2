@@ -9,7 +9,9 @@ offsets = {
     "bootloader1": 0x00000000,
     "bootloader2": 0x00003000,
     "bootloader3": 0x00006000,
-    "checksums": 0x00009000,
+    "checksum1": 0x00009000,
+    "checksum2": 0x00009004,
+    "checksum3": 0x00009008,
     "pvdxos_1": 0x00010000,
     "pvdxos_2": 0x00020000,
     "pvdxos_3": 0x00030000,
@@ -49,7 +51,12 @@ flash = bytearray([0x00] * flash_size)
 for i in range(1, 4):
     start = offsets[f"bootloader{i}"]
     flash[start:start + len(bootloaders[i-1])] = bootloaders[i-1]
-    flash[start+len(bootloaders[i-1])] = bootloader_sums[i-1]
+    sum_start = offsets[f"checksum{i}"]
+    flash[sum_start] = bootloader_sums[i-1]
+
+# REMOVE THIS LINE LATER
+# flash[offsets["bootloader1"]+49] = 0x00;
+# flash[offsets["bootloader2"]+49] = 0x00;
 
 # Place PVDXos copies
 for i in range(1, 4):

@@ -7,7 +7,7 @@ bootloader_target:
 dev: bootloader_target
 	make -C src dev \
 	&& python3 scripts/create_flash_segment.py \
-	&& python3 scripts/flip_rand_bit.py
+	# && python3 scripts/flip_rand_bit.py
 
 release: bootloader_target
 	make -C src release
@@ -20,6 +20,8 @@ connect: all
 	&& gdb \
 		-ex "set confirm off" \
 		-ex "add-symbol-file src/PVDXos.elf" \
+		-ex "add-symbol-file bootloader/bootloader2.elf" \
+		-ex "add-symbol-file bootloader/bootloader3.elf" \
 		-ex "set confirm on" \
 		-ex "target remote localhost:2331" \
 		-ex "monitor reset" \
