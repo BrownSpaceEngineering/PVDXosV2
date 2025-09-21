@@ -1,67 +1,24 @@
 /**
- * photodiode_helpers.c
+ * photodiode_task.c
+ *
+ * RTOS task for photodiode sensors used in ADCS sun sensing.
+ * Supports 13-21 photodiodes with configurable sampling rates (0.1-100 Hz).
  *
  * Created: September 20, 2024
- * Authors:
+ * Authors: [Your Name]
  */
 
 #include "photodiode_task.h"
 
+// Global configuration
+photodiode_config_t photodiode_config = {
+    .photodiode_count = PHOTODIODE_DEFAULT_COUNT,
+    .sample_rate_hz = PHOTODIODE_DEFAULT_SAMPLE_RATE,
+    .use_multiplexing = false,
+    .adc_channels = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0}
+};
+
 /* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
-
-
-/* ---------- NON-DISPATCHABLE FUNCTIONS (do not go through the command dispatcher) ---------- */
-
-/**
- * \fn init_photodiode
- *
- * \brief Initialises photodiode command queue, before `init_task_pointer()`.
- *
- * \returns QueueHandle_t, a handle to the created queue
- *
- * \see `init_task_pointer()` for usage of functions of the type `init_<TASK>()`
- */
-QueueHandle_t init_photodiode(void) {
-    QueueHandle_t photodiode_command_queue_handle = xQueueCreateStatic(
-        COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE, photodiode_mem.photodiode_command_queue_buffer,
-        &photodiode_mem.photodiode_task_queue);
-
-    if (photodiode_command_queue_handle == NULL) {
-        fatal("Failed to create command queue!\n");
-    }
-
-    return photodiode_command_queue_handle;
-}
-
-/**
- * \fn exec_command_photodiode
- * 
- * \brief Executes function corresponding to the command
- * 
- * \param p_cmd a pointer to a command forwarded to photodiode
- */
-void exec_command_photodiode(command_t *const p_cmd) {
-    if (p_cmd->target != p_photodiode_task) {
-        fatal("photodiode: command target is not photodiode! target: %d operation: %d\n", p_cmd->target, p_cmd->operation);
-    }
-
-    switch (p_cmd->operation) {
-        case OPERATION_PHOTODIODE_READ:
-            {
-                photodiode_read_args_t *args = (photodiode_read_args_t *)p_cmd->p_data;
-                p_cmd->result = photodiode_read(args->data_buffer);
-            }
-            break;
-        case OPERATION_PHOTODIODE_CALIBRATE:
-            p_cmd->result = photodiode_calibrate();
-            break;
-        default:
-            fatal("photodiode: Invalid operation!\n");
-            p_cmd->result = ERROR_SANITY_CHECK_FAILED; // TODO: appropriate status?
-            break;
-    }
-}
-/* ---------- PHOTODIODE-SPECIFIC FUNCTIONS ---------- */
 
 /**
  * \fn photodiode_read
@@ -77,26 +34,42 @@ status_t photodiode_read(photodiode_data_t *const data) {
         return ERROR_SANITY_CHECK_FAILED;
     }
     
-    debug("photodiode: Reading photodiode values\n");
+    debug("photodiode: Reading %d photodiode values\n", photodiode_config.photodiode_count);
     
-    // TODO: Implement ADC reading for all photodiodes
     // Read raw ADC values
-    uint16_t raw_values[PHOTODIODE_COUNT];
-    ret_err_status(read_photodiode_adc(raw_values, PHOTODIODE_COUNT), "photodiode: ADC read failed");
+    uint16_t raw_values[PHOTODIODE_MAX_COUNT];
+    status_t result;
+    
+    if (photodiode_config.use_multiplexing) {
+        result = read_photodiode_adc_multiplexed(raw_values, photodiode_config.photodiode_count, 
+                                                photodiode_config.adc_channels);
+    } else {
+        result = read_photodiode_adc(raw_values, photodiode_config.photodiode_count, 
+                                   photodiode_config.adc_channels);
+    }
+    
+    if (result != SUCCESS) {
+        warning("photodiode: ADC read failed\n");
+        return result;
+    }
     
     // Copy raw values to data structure
-    for (int i = 0; i < PHOTODIODE_COUNT; i++) {
+    for (int i = 0; i < photodiode_config.photodiode_count; i++) {
         data->raw_values[i] = raw_values[i];
     }
     
     // Calibrate readings
-    ret_err_status(calibrate_photodiode_readings(raw_values, data->calibrated_values, PHOTODIODE_COUNT), "photodiode: Calibration failed");
+    ret_err_status(calibrate_photodiode_readings(raw_values, data->calibrated_values, 
+                                                photodiode_config.photodiode_count), 
+                   "photodiode: Calibration failed");
     
     // Calculate sun vector
-    ret_err_status(calculate_sun_vector(data->calibrated_values, data->sun_vector), "photodiode: Sun vector calculation failed");    // TODO: Implement calibration calculations
-    // TODO: Calculate sun vector from photodiode readings
+    ret_err_status(calculate_sun_vector(data->calibrated_values, data->sun_vector, 
+                                       photodiode_config.photodiode_count), 
+                   "photodiode: Sun vector calculation failed");
     
     data->timestamp = xTaskGetTickCount();
+    data->active_count = photodiode_config.photodiode_count;
     data->valid = true;
     
     return SUCCESS;
@@ -114,6 +87,49 @@ status_t photodiode_calibrate(void) {
     
     // TODO: Implement photodiode calibration
     // TODO: Store calibration values
+    
+    return SUCCESS;
+}
+
+/**
+ * \fn photodiode_set_config
+ *
+ * \brief Sets photodiode configuration (count, sampling rate, etc.)
+ *
+ * \param config pointer to photodiode configuration
+ *
+ * \returns status_t SUCCESS if configuration was successful
+ */
+status_t photodiode_set_config(const photodiode_config_t *const config) {
+    if (!config) {
+        return ERROR_SANITY_CHECK_FAILED;
+    }
+    
+    // Validate configuration
+    if (config->photodiode_count < PHOTODIODE_MIN_COUNT || 
+        config->photodiode_count > PHOTODIODE_MAX_COUNT) {
+        warning("photodiode: Invalid photodiode count: %d (must be %d-%d)\n", 
+                config->photodiode_count, PHOTODIODE_MIN_COUNT, PHOTODIODE_MAX_COUNT);
+        return ERROR_SANITY_CHECK_FAILED;
+    }
+    
+    if (config->sample_rate_hz < PHOTODIODE_MIN_SAMPLE_RATE || 
+        config->sample_rate_hz > PHOTODIODE_MAX_SAMPLE_RATE) {
+        warning("photodiode: Invalid sample rate: %.2f Hz (must be %.1f-%.1f Hz)\n", 
+                config->sample_rate_hz, PHOTODIODE_MIN_SAMPLE_RATE, PHOTODIODE_MAX_SAMPLE_RATE);
+        return ERROR_SANITY_CHECK_FAILED;
+    }
+    
+    // Update configuration
+    photodiode_config = *config;
+    
+    // Set hardware sampling rate
+    ret_err_status(set_photodiode_sample_rate(config->sample_rate_hz), 
+                   "photodiode: Failed to set sample rate");
+    
+    info("photodiode: Configuration updated - Count: %d, Rate: %.2f Hz, Multiplexing: %s\n",
+         config->photodiode_count, config->sample_rate_hz, 
+         config->use_multiplexing ? "Yes" : "No");
     
     return SUCCESS;
 }
@@ -143,3 +159,86 @@ command_t get_photodiode_read_command(photodiode_data_t *const data) {
     };
 }
 
+/**
+ * \fn get_photodiode_config_command
+ *
+ * \brief Creates a command to configure photodiode settings
+ *
+ * \param config pointer to configuration structure
+ *
+ * \returns command_t command structure
+ */
+command_t get_photodiode_config_command(const photodiode_config_t *const config) {
+    photodiode_config_args_t args = {
+        .config = (photodiode_config_t *)config
+    };
+    
+    return (command_t) {
+        .target = p_photodiode_task,
+        .operation = OPERATION_PHOTODIODE_CONFIG, // Reuse for config
+        .p_data = &args,
+        .len = sizeof(photodiode_config_args_t),
+        .result = PROCESSING,
+        .callback = NULL
+    };
+}
+
+/* ---------- NON-DISPATCHABLE FUNCTIONS (do not go through the command dispatcher) ---------- */
+
+/**
+ * \fn init_photodiode
+ *
+ * \brief Initialises photodiode command queue, before `init_task_pointer()`.
+ *
+ * \returns QueueHandle_t, a handle to the created queue
+ *
+ * \see `init_task_pointer()` for usage of functions of the type `init_<TASK>()`
+ */
+QueueHandle_t init_photodiode(void) {
+    QueueHandle_t photodiode_command_queue_handle = xQueueCreateStatic(
+        COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE, photodiode_mem.photodiode_command_queue_buffer,
+        &photodiode_mem.photodiode_task_queue);
+
+    if (photodiode_command_queue_handle == NULL) {
+        fatal("Failed to create photodiode command queue!\n");
+    }
+
+    // Initialize photodiode hardware
+    ret_err_status(init_photodiode_hardware(), "photodiode: Hardware initialization failed");
+
+    return photodiode_command_queue_handle;
+}
+
+/**
+ * \fn exec_command_photodiode
+ * 
+ * \brief Executes function corresponding to the command
+ * 
+ * \param p_cmd a pointer to a command forwarded to photodiode
+ */
+void exec_command_photodiode(command_t *const p_cmd) {
+    if (p_cmd->target != p_photodiode_task) {
+        fatal("photodiode: command target is not photodiode! target: %d operation: %d\n", p_cmd->target, p_cmd->operation);
+    }
+
+    switch (p_cmd->operation) {
+        case OPERATION_PHOTODIODE_READ:
+            {
+                photodiode_read_args_t *args = (photodiode_read_args_t *)p_cmd->p_data;
+                p_cmd->result = photodiode_read(args->data_buffer);
+            }
+            break;
+        case OPERATION_PHOTODIODE_CONFIG:
+            break;
+        case OPERATION_PHOTODIODE_CONFIG:
+            {
+                photodiode_config_args_t *args = (photodiode_config_args_t *)p_cmd->p_data;
+                p_cmd->result = photodiode_set_config(args->config);
+            }            p_cmd->result = photodiode_calibrate();
+            break;
+        default:
+            fatal("photodiode: Invalid operation!\n");
+            p_cmd->result = ERROR_SANITY_CHECK_FAILED;
+            break;
+    }
+}
