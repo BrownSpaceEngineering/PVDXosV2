@@ -189,7 +189,7 @@ clean:
 # The worst part of this is step 6, making text modifications to the stock ASF Makefile
 # IF YOU MODIFY STEP 6, PLEASE MAKE SURE YOU KNOW WHAT YOU'RE DOING
 update_asf:
-	@if [ ! -f ASF.atzip ]; then \
+	@if [ ! -f ../ASF.atzip ]; then \
 		echo "ASF.atzip not found in the current directory! (Make sure spelling and capitalization is exact)"; \
 		echo " --- Operation Aborted --- "; \
 		exit 1; \
@@ -200,38 +200,42 @@ update_asf:
 		exit 1; \
 	fi;
 	@echo "(0) Starting..." \
-	&& rm -rf ./ASF \
+	&& rm -rf ../ASF \
 	&& echo "(1) ASF dir removed" \
-	&& rm -f ./atmel_start_config.atstart \
+	&& rm -f ../atmel_start_config.atstart \
 	&& echo "(2) ASF config removed" \
-	&& mkdir -p ASF \
+	&& mkdir -p ../ASF \
 	&& echo "(3) ASF dir re-Created" \
-	&& unzip -q ASF.atzip -d ASF \
+	&& unzip -q ../ASF.atzip -d ../ASF \
 	&& echo "(4) ASF unzipped" \
-	&& cp -f ./ASF/atmel_start_config.atstart ./ \
+	&& cp -f ../ASF/atmel_start_config.atstart ./ \
 	&& echo "(5) ASF config lifted" \
-	&& $(SED) -i 's/\$$(\@:%\.o=%\.d)/$$(patsubst ..\/%,%, \$$(\@:%\.o=%\.d))/g' ./ASF/gcc/Makefile \
+	&& $(SED) -i 's/\$$(\@:%\.o=%\.d)/$$(patsubst ..\/%,%, \$$(\@:%\.o=%\.d))/g' ../ASF/gcc/Makefile \
 	&& echo "(6.1) ASF Makefile: GCC dependency filepaths corrected" \
-	&& $(SED) -i 's/\$$(\@:%\.o=%\.o)/$$(patsubst ..\/%,%, \$$(\@:%\.o=%\.o))/g' ./ASF/gcc/Makefile \
+	&& $(SED) -i 's/\$$(\@:%\.o=%\.o)/$$(patsubst ..\/%,%, \$$(\@:%\.o=%\.o))/g' ../ASF/gcc/Makefile \
 	&& echo "(6.2) ASF Makefile: GCC object filepaths corrected" \
-	&& $(SED) -i 's/\$$@/\$$(strip \$$(patsubst ..\/%, %, $$@))/g' ./ASF/gcc/Makefile \
+	&& $(SED) -i 's/\$$@/\$$(strip \$$(patsubst ..\/%, %, $$@))/g' ../ASF/gcc/Makefile \
 	&& echo "(6.3) ASF Makefile: GCC output filepaths corrected" \
-	&& $(SED) -i '/main/d' ./ASF/gcc/Makefile \
+	&& $(SED) -i '/main/d' ../ASF/gcc/Makefile \
 	&& echo "(6.4) ASF Makefile: References to ASF main.c removed" \
-	&& $(SED) -i 's/-DDEBUG/$$(CFLAGS) -D__FILENAME__=\\"$$\(notdir $$<)\\"/g' ./ASF/gcc/Makefile \
+	&& $(SED) -i 's/-DDEBUG/$$(CFLAGS) -D__FILENAME__=\\"$$\(notdir $$<)\\"/g' ../ASF/gcc/Makefile \
 	&& echo "(6.5) ASF Makefile: CFLAGS and __FILENAME__ hook injected" \
-	&& $(SED) -i 's/AtmelStart/PVDXos/g' ./ASF/gcc/Makefile \
+	&& $(SED) -i 's/AtmelStart/PVDXos/g' ../ASF/gcc/Makefile \
 	&& echo "(6.6) ASF Makefile: Project name updated to PVDXos" \
-	&& rm -f ./ASF/main.c \
+	&& rm -f ../ASF/main.c \
 	&& echo "(7) ASF main.c removed" \
-	&& $(SED) -i 's|// <h> Basic|#define configSUPPORT_STATIC_ALLOCATION 1\n#define INCLUDE_xQueueGetMutexHolder 1|' ./ASF/config/FreeRTOSConfig.h \
+	&& $(SED) -i 's|// <h> Basic|#define configSUPPORT_STATIC_ALLOCATION 1\n#define INCLUDE_xQueueGetMutexHolder 1|' ../ASF/config/FreeRTOSConfig.h \
 	&& echo "(8.1) ASF FreeRTOSConfig.h: Static allocation & QueueGetMutexHolder enabled" \
-	&& $(SED) -i 's|#define INCLUDE_uxTaskGetStackHighWaterMark 0|#define INCLUDE_uxTaskGetStackHighWaterMark 1|' ./ASF/config/FreeRTOSConfig.h \
+	&& $(SED) -i 's|#define INCLUDE_uxTaskGetStackHighWaterMark 0|#define INCLUDE_uxTaskGetStackHighWaterMark 1|' ../ASF/config/FreeRTOSConfig.h \
 	&& echo "(8.2) ASF FreeRTOSConfig.h: Task stack high watermark function enabled" \
-	&& $(SED) -i 's|#define configCHECK_FOR_STACK_OVERFLOW 1|#define configCHECK_FOR_STACK_OVERFLOW 2|' ./ASF/config/FreeRTOSConfig.h \
+	&& $(SED) -i 's|#define configCHECK_FOR_STACK_OVERFLOW 1|#define configCHECK_FOR_STACK_OVERFLOW 2|' ../ASF/config/FreeRTOSConfig.h \
 	&& echo "(8.3) ASF FreeRTOSConfig.h: Task stack overflow checking upgraded to type 2 (higher accuracy)" \
-	&& $(SED) -i 's|ORIGIN = 0x00000000, LENGTH = 0x00100000|ORIGIN = 0x00002000, LENGTH = 0x000FE000|' ./ASF/samd51a/gcc/gcc/samd51p20a_flash.ld \
-	&& echo "(9) ASF Linker Script: Flash memory region updated to exclude bootloader" \
-	&& find ./ASF -type f -newermt now -exec touch {} + \
+	&& $(SED) -i "/#define INCLUDE_xTaskGetCurrentTaskHandle 0/a #endif \n\n// \<q\> Include thread-local storage pointers \n// \<id\> freertos_num_thread_local_storage_pointers \n#ifndef configNUM_THREAD_LOCAL_STORAGE_POINTERS \n#define configNUM_THREAD_LOCAL_STORAGE_POINTERS 1" ../ASF/config/FreeRTOSConfig.h \
+	&& echo "(8.4) ASF FreeRTOSConfig.h: Thread-local storage enabled" \
+	&& $(SED) -i 's|"\.\./samd51a/gcc/gcc/samd51p20a_flash\.ld"|"\.\./\.\./src/src_ram\.ld"|' ../ASF/gcc/Makefile \
+	&& echo "(9) ASF Linker Script: ASF Makefile updated to use custom flash script" \
+	# && $(SED) -i 's|ORIGIN = 0x00000000, LENGTH = 0x00100000|ORIGIN = 0x00002000, LENGTH = 0x000FE000|' ./ASF/samd51a/gcc/gcc/samd51p20a_flash.ld \
+	# && echo "(9) ASF Linker Script: Flash memory region updated to exclude bootloader" \
+	&& find ../ASF -type f -newermt now -exec touch {} + \
 	&& echo "(10) Timestamps in future updated to present" \
 	&& echo " --- Finished Integrating ASF --- "
