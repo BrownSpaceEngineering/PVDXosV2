@@ -5,7 +5,7 @@
  * Supports 13-21 photodiodes with configurable sampling rates (0.1-100 Hz).
  *
  * Created: September 20, 2024
- * Authors: [Your Name]
+ * Authors: Avinash Patel
  */
 
 #include "photodiode_task.h"
@@ -32,14 +32,14 @@ void main_photodiode(void *pvParameters) {
     // Variable to hold commands popped off the queue
     command_t cmd;
     
-    // Calculate sampling delay based on configured rate
-    TickType_t sampling_delay_ticks = pdMS_TO_TICKS(1000.0f / photodiode_config.sample_rate_hz);
+    // Calculate sampling delay based on configured delay
+    TickType_t sampling_delay_ticks = pdMS_TO_TICKS(photodiode_config.delay_ms);
     
     // Data buffer for photodiode readings
     photodiode_data_t photodiode_data;
     
-    info("photodiode: Initialized with %d photodiodes at %.2f Hz\n", 
-         photodiode_config.photodiode_count, photodiode_config.sample_rate_hz);
+    info("photodiode: Initialized with %d photodiodes at %d ms delay\n", 
+         photodiode_config.photodiode_count, photodiode_config.delay_ms);
 
     while (true) {
         debug_impl("\n---------- Photodiode Task Loop ----------\n");
@@ -54,9 +54,9 @@ void main_photodiode(void *pvParameters) {
                 // Handle configuration changes
                 if (cmd.operation == OPERATION_PHOTODIODE_CONFIG) {
                     // Recalculate sampling delay if configuration changed
-                    sampling_delay_ticks = pdMS_TO_TICKS(1000.0f / photodiode_config.sample_rate_hz);
-                    debug("photodiode: Updated sampling delay to %d ticks (%.2f Hz)\n", 
-                          sampling_delay_ticks, photodiode_config.sample_rate_hz);
+                    sampling_delay_ticks = pdMS_TO_TICKS(photodiode_config.delay_ms);
+                    debug("photodiode: Updated sampling delay to %d ticks (%d ms)\n", 
+                          sampling_delay_ticks, photodiode_config.delay_ms);
                 }
                 
             } while (xQueueReceive(p_photodiode_task->command_queue, &cmd, 0) == pdPASS);

@@ -5,7 +5,7 @@
  * Supports 13-21 photodiodes with configurable sampling rates (0.1-100 Hz).
  *
  * Created: September 20, 2024
- * Authors: [Your Name]
+ * Authors: Avinash Patel
  */
 
 #include "photodiode_task.h"
@@ -13,8 +13,7 @@
 // Global configuration
 photodiode_config_t photodiode_config = {
     .photodiode_count = PHOTODIODE_DEFAULT_COUNT,
-    .sample_rate_hz = PHOTODIODE_DEFAULT_SAMPLE_RATE,
-    .use_multiplexing = false,
+    .delay_ms = PHOTODIODE_DEFAULT_DELAY_MS,
     .adc_channels = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0}
 };
 
@@ -38,15 +37,7 @@ status_t photodiode_read(photodiode_data_t *const data) {
     
     // Read raw ADC values
     uint16_t raw_values[PHOTODIODE_MAX_COUNT];
-    status_t result;
-    
-    if (photodiode_config.use_multiplexing) {
-        result = read_photodiode_adc_multiplexed(raw_values, photodiode_config.photodiode_count, 
-                                                photodiode_config.adc_channels);
-    } else {
-        result = read_photodiode_adc(raw_values, photodiode_config.photodiode_count, 
-                                   photodiode_config.adc_channels);
-    }
+    status_t result = read_photodiode_adc(raw_values, photodiode_config.photodiode_count);
     
     if (result != SUCCESS) {
         warning("photodiode: ADC read failed\n");
@@ -64,8 +55,7 @@ status_t photodiode_read(photodiode_data_t *const data) {
                    "photodiode: Calibration failed");
     
     // Calculate sun vector
-    ret_err_status(calculate_sun_vector(data->calibrated_values, data->sun_vector, 
-                                       photodiode_config.photodiode_count), 
+    ret_err_status(calculate_sun_vector(data->calibrated_values, data->sun_vector), 
                    "photodiode: Sun vector calculation failed");
     
     data->timestamp = xTaskGetTickCount();
@@ -113,23 +103,18 @@ status_t photodiode_set_config(const photodiode_config_t *const config) {
         return ERROR_SANITY_CHECK_FAILED;
     }
     
-    if (config->sample_rate_hz < PHOTODIODE_MIN_SAMPLE_RATE || 
-        config->sample_rate_hz > PHOTODIODE_MAX_SAMPLE_RATE) {
-        warning("photodiode: Invalid sample rate: %.2f Hz (must be %.1f-%.1f Hz)\n", 
-                config->sample_rate_hz, PHOTODIODE_MIN_SAMPLE_RATE, PHOTODIODE_MAX_SAMPLE_RATE);
+    if (config->delay_ms < PHOTODIODE_MIN_DELAY_MS || 
+        config->delay_ms > PHOTODIODE_MAX_DELAY_MS) {
+        warning("photodiode: Invalid delay: %d ms (must be %d-%d ms)\n", 
+                config->delay_ms, PHOTODIODE_MIN_DELAY_MS, PHOTODIODE_MAX_DELAY_MS);
         return ERROR_SANITY_CHECK_FAILED;
     }
     
     // Update configuration
     photodiode_config = *config;
     
-    // Set hardware sampling rate
-    ret_err_status(set_photodiode_sample_rate(config->sample_rate_hz), 
-                   "photodiode: Failed to set sample rate");
-    
-    info("photodiode: Configuration updated - Count: %d, Rate: %.2f Hz, Multiplexing: %s\n",
-         config->photodiode_count, config->sample_rate_hz, 
-         config->use_multiplexing ? "Yes" : "No");
+    info("photodiode: Configuration updated - Count: %d, Delay: %d ms\n",
+         config->photodiode_count, config->delay_ms);
     
     return SUCCESS;
 }
@@ -229,12 +214,13 @@ void exec_command_photodiode(command_t *const p_cmd) {
             }
             break;
         case OPERATION_PHOTODIODE_CONFIG:
-            break;
-        case OPERATION_PHOTODIODE_CONFIG:
             {
                 photodiode_config_args_t *args = (photodiode_config_args_t *)p_cmd->p_data;
                 p_cmd->result = photodiode_set_config(args->config);
-            }            p_cmd->result = photodiode_calibrate();
+            }
+            break;
+        case OPERATION_PHOTODIODE_CALIBRATE:
+            p_cmd->result = photodiode_calibrate();
             break;
         default:
             fatal("photodiode: Invalid operation!\n");

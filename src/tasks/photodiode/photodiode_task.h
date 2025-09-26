@@ -19,10 +19,10 @@
 #define PHOTODIODE_DEFAULT_COUNT 16    // Default number of photodiodes (matches ADC channels)
 #define PHOTODIODE_ADC_CHANNELS 16     // Available ADC channels (can use multiplexing for more)
 
-// Sampling rate constants (Hz)
-#define PHOTODIODE_MIN_SAMPLE_RATE 0.1f    // Minimum: 0.1 Hz (1 reading every 10 seconds)
-#define PHOTODIODE_MAX_SAMPLE_RATE 100.0f  // Maximum: 100 Hz
-#define PHOTODIODE_DEFAULT_SAMPLE_RATE 1.0f // Default: 1 Hz (algorithm requirement >1 Hz)
+// Sampling rate constants (delay in ms)
+#define PHOTODIODE_MIN_DELAY_MS 10      // Minimum: 10ms (100 Hz)
+#define PHOTODIODE_MAX_DELAY_MS 10000   // Maximum: 10000ms (0.1 Hz)  
+#define PHOTODIODE_DEFAULT_DELAY_MS 1000 // Default: 1000ms (1 Hz)
 
 // Placed in a struct to ensure that the TCB is placed higher than the stack in memory
 //^ This ensures that stack overflows do not corrupt the TCB (since the stack grows downwards)
@@ -37,8 +37,7 @@ typedef struct {
 // Photodiode configuration structure
 typedef struct {
     uint8_t photodiode_count;      // Number of active photodiodes (13-21)
-    float sample_rate_hz;          // Sampling rate in Hz (0.1-100)
-    bool use_multiplexing;         // Whether to use ADC multiplexing
+    uint32_t delay_ms;             // Sampling delay in milliseconds
     uint8_t adc_channels[PHOTODIODE_MAX_COUNT]; // ADC channel mapping for each photodiode
 } photodiode_config_t;
 
