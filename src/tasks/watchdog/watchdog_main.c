@@ -75,6 +75,7 @@ void main_watchdog(void *pvParameters) {
             debug("watchdog: Enqueued watchdog checkin command\n");
         }
         
+        // Guarantee other tasks get time to run
         vTaskDelay(pdMS_TO_TICKS(100));
     }
 }
