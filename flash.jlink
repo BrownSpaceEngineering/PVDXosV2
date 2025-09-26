@@ -1,0 +1,9 @@
+device ATSAMD51P20A
+if SWD
+speed 4000
+connect
+reset
+loadbin flash.bin, 0x00000000
+reset
+go
+exit

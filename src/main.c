@@ -74,7 +74,7 @@ int main(void) {
         cm_args.frequency = 10;
         #endif
         #if defined(DEVBUILD)
-        cm_args.frequency = 0; // Bitflips per second
+        cm_args.frequency = 1; // Bitflips per second
         #endif
 
         TaskHandle_t cosmic_monkey_task_handle =

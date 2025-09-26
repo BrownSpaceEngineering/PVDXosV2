@@ -171,6 +171,20 @@ void system_init(void)
 {
 	init_mcu();
 
+	// GPIO on PB01
+
+	gpio_set_pin_level(LED_RED,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   true);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(LED_RED, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(LED_RED, GPIO_PIN_FUNCTION_OFF);
+
 	// GPIO on PB12
 
 	gpio_set_pin_level(Display_RST,
@@ -226,20 +240,6 @@ void system_init(void)
 	gpio_set_pin_direction(Camera_CS, GPIO_DIRECTION_OUT);
 
 	gpio_set_pin_function(Camera_CS, GPIO_PIN_FUNCTION_OFF);
-
-	// GPIO on PB31
-
-	gpio_set_pin_level(LED_RED,
-	                   // <y> Initial level
-	                   // <id> pad_initial_level
-	                   // <false"> Low
-	                   // <true"> High
-	                   true);
-
-	// Set pin direction to output
-	gpio_set_pin_direction(LED_RED, GPIO_DIRECTION_OUT);
-
-	gpio_set_pin_function(LED_RED, GPIO_PIN_FUNCTION_OFF);
 
 	// GPIO on PC04
 

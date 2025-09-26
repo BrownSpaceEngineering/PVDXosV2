@@ -134,7 +134,7 @@ pvdx_task_t heartbeat_task = {
     .watchdog_timeout_ms = 10000,
     .last_checkin_time_ticks = 0xDEADBEEF,
     .has_registered = false,
-    .task_type = ACTUATOR
+    .task_type = OS // ACTUATOR
 };
 
 // and define their constant pointers

@@ -1,86 +1,60 @@
-#include "bootloader.h"
+#define APP_FLASH_START (0x00010000) // Change based on where your app is stored
+#define APP_FLASH_STEP (0x00010000) // Step to next copy of app in flash
+#define APP_RAM_START (0x20000000)   // Starting RAM address for the app
+#define RAM_SIZE (0x3E000)           // Size of the app in bytes
 
-#include <stdint.h>
+#define SCS_BASE (0xE000E000UL)
+#define SCB_BASE (SCS_BASE + 0x0D00UL)
+#define SCB_VTOR (SCB_BASE + 0x08)  // VTOR: Vector Table Offset Register (where the processor will reset from)
+#define SCB_AIRCR (SCB_BASE + 0x0C) // AIRCR Contains SYSRESETREQ bit to request a system reset
 
-__attribute__((noreturn)) void bootloader() {
+#define SCB_VTOR_TBLOFF_Msk (0xFFFFFF80UL) // Mask off the last 7 bits (128 bytes alignment)
 
-    /*
+#define SCB_AIRCR_VECTKEY_Pos 16U
+#define SCB_AIRCR_SYSRESETREQ_Pos 2U
+#define SCB_AIRCR_SYSRESETREQ_Msk (1UL << SCB_AIRCR_SYSRESETREQ_Pos)
 
-    In the future, we may want the bootloader to behave differently for different kinds of resets
-    i.e. if the reset was caused by a watchdog timeout, we may want to record this in some way
+#define RSTC_RCAUSE (0x40000C00UL + 0x00UL) // Reset Cause Register
 
-    Uncomment this block if/when we decide to implement this
+void bootloader(void);
+void go_to_app(void);
 
-    uint8_t *p_rcause = (uint8_t *)RSTC_RCAUSE;
-    uint8_t rcause = *p_rcause;
+volatile int startup_test_value = 8;
 
-    switch (rcause) {
-        case 0x01:
-            // Power-on reset
-            break;
-        case 0x02:
-            // Brown-out reset 12
-            break;
-        case 0x04:
-            // Brown-out reset 33
-            break;
-        case 0x08:
-            // NVM reset
-            break;
-        case 0x10:
-            // External reset
-            break;
-        case 0x20:
-            // Watchdog reset
-            break;
-        case 0x40:
-            // System reset request
-            break;
-        case 0x80:
-            // Backup reset
-            break;
-        default:
-            // Unknown reset
-            break;
+void bootloader(void) {
+    // This loop will spin forever if startup did not copy data segment
+    while (startup_test_value != 8);
+
+    // Copy application from flash to RAM
+    char *src = (char *)APP_FLASH_START;
+    char *dst = (char *)APP_RAM_START;
+    for (long i = 0; i < RAM_SIZE; i++) {
+        // dst[i] = src[i];
+        // take the majority (if at least one AND pair evaluates to 1 then it should be 1)
+        dst[i] = (src[i] & src[i+APP_FLASH_STEP]) | (src[i+APP_FLASH_STEP] & src[i+2*APP_FLASH_STEP]) | (src[i+2*APP_FLASH_STEP] & src[i]);
+
     }
-    */
-
-    // write magic number to backup RAM to indicate bootloader has ran successfully
-    uint32_t *p_magic_number = (uint32_t *)MAGIC_NUMBER_ADDRESS;
-    *p_magic_number = MAGIC_NUMBER;
-
-    // Done with bootloader: transfer control to PVDX application
-    transfer_to_application();
+    
+    go_to_app();
     __builtin_unreachable();
 }
 
-__attribute__((noreturn)) void transfer_to_application() {
-    // Read PVDX's exception table to find the PVDX reset vector (First byte is SP, second is PC)
-    uintptr_t desired_sp = (*(uint32_t *)APPLICATION_START_ADDRESS);
-    uintptr_t desired_pc = *(uint32_t *)(APPLICATION_START_ADDRESS + 4);
+void go_to_app(void) {
+    // Read app's vector table (first value is SP, second value is PC)
+    long *vector_table = (long *)APP_RAM_START;
+    long desired_sp = vector_table[0];
+    long desired_pc = vector_table[1];
 
     // Set the least significant bit of the PC to indicate that the reset vector is in Thumb mode
     desired_pc |= 0x1;
 
-    if (desired_pc < APPLICATION_START_ADDRESS || desired_pc > FLASH_END) {
-        // PC is not within flash
-        // TODO fail in some way
-    }
-    if (desired_sp < RAM_START || desired_sp > RAM_END) {
-        // SP is not within RAM
-        // TODO fail in some way
-    }
+    // Tell the SAMD51 where the app's vector table is
+    *((long *)SCB_VTOR) = (long)vector_table;
 
-    // tell the SAMD51 that the exception table is at the start of PVDX (at APPLICATION_START_ADDRESS)
-    uint32_t *p_scb_vtor = (uint32_t *)SCB_VTOR;
-    *p_scb_vtor = (APPLICATION_START_ADDRESS & SCB_VTOR_TBLOFF_Msk);
-
-    // set SP to desired_sp and then jump to PC using assembly
+    // Set SP to desired_sp and then jump to PC using assembly
     __asm__ volatile("mov sp, %0\n" // Move the value in desired_sp into SP
                      "bx %1"        // Branch to the address contained in desired_pc
                      :
                      : "r"(desired_sp), "r"(desired_pc) // Arguments to the assembly (accessed as %0 and %1 in the assembly code)
                      :);
-    // Marker to tell the compiler that we never get here
-    __builtin_unreachable();
 }

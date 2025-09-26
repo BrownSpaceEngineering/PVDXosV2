@@ -1296,13 +1296,6 @@ pads:
     user_label: Camera_CS
     configuration:
       pad_initial_level: High
-  LED_RED:
-    name: PB31
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB31
-    mode: Digital output
-    user_label: LED_RED
-    configuration:
-      pad_initial_level: High
   LED_Orange1:
     name: PC30
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC30
@@ -1315,6 +1308,13 @@ pads:
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC31
     mode: Digital output
     user_label: LED_Orange2
+    configuration:
+      pad_initial_level: High
+  LED_RED:
+    name: PB01
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB01
+    mode: Digital output
+    user_label: LED_RED
     configuration:
       pad_initial_level: High
 toolchain_options: []

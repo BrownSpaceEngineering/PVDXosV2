@@ -27,9 +27,9 @@ void main_task_manager(void *pvParameters) {
     info("task-manager: Task Started!\n");
 
     // Enqueue a command to initialize all subtasks
-    command_t command_task_manager_init_subtasks = {p_task_manager_task, OPERATION_INIT_SUBTASKS, NULL, 0, PROCESSING, NULL};
+    // command_t command_task_manager_init_subtasks = {p_task_manager_task, OPERATION_INIT_SUBTASKS, NULL, 0, PROCESSING, NULL};
 
-    enqueue_command(&command_task_manager_init_subtasks);
+    // enqueue_command(&command_task_manager_init_subtasks); I CHANGED THIS
     debug("task_manager: Enqueued command to initialize all subtasks\n");
     // Obtain a pointer to the current task within the global task list
     pvdx_task_t *const current_task = get_current_task();
