@@ -6,14 +6,18 @@ bootloader_target:
 
 dev: bootloader_target
 	make -C src dev \
-	&& python3 scripts/create_flash_segment.py \
-	# && python3 scripts/flip_rand_bit.py
+	&& python3 scripts/create_flash_segment.py
 
 release: bootloader_target
-	make -C src release
+	make -C src release \
+	&& python3 scripts/create_flash_segment.py
 
 test: bootloader_target
-	make -C src test
+	make -C src test \
+	&& python3 scripts/create_flash_segment.py
+
+flash_monkey:
+	python3 scripts/flip_rand_bit.py
 
 connect: all
 	JLinkExe -CommanderScript flash.jlink \
