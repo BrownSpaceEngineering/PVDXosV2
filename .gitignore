@@ -45,3 +45,6 @@ logs/*
 #Compilation Database
 compile_commands.json
 .cache
+
+#waf 
+.waf*/
