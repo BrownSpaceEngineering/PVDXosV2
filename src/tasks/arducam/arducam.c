@@ -68,7 +68,8 @@ void init_arducam()
 
     while (!get_bit(ARDUCHIP_TRIG, CAP_DONE_MASK));
 
-    capture();
+    // capture();
+    capture_rtt();
 
     watchdog_checkin(ARDUCAM_TASK);
 
@@ -93,7 +94,7 @@ uint32_t ARDUCAMI2CWrite(uint8_t addr, uint8_t *data, uint16_t size)
 {
     uint8_t writeBuf[32 + 1];
     writeBuf[0] = addr;
-    memcpy(&(writeBuf[1]), data, size);
+    memcpy(writeBuf + 1, data, size);
     int32_t rv;
     if ((rv = io_write(arducam_i2c_io, writeBuf, size + 1)) < 0){
         warning("Error in Arducam Write");

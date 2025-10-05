@@ -151,6 +151,16 @@ int main(void) {
     }
 }
 
+// void hardware_init() {
+//     // Segger Buffer 0 is pre-configured at compile time according to segger documentation
+//     // Config the logging output channel (assuming it's not zero)
+//     if (LOGGING_RTT_OUTPUT_CHANNEL != 0) {
+//         SEGGER_RTT_ConfigUpBuffer(LOGGING_RTT_OUTPUT_CHANNEL, "Log Output", SEGGER_RTT_LOG_BUFFER, SEGGER_RTT_LOG_BUFFER_SIZE,
+//                                   SEGGER_RTT_MODE_NO_BLOCK_SKIP);
+//     }
+//     return;
+// }
+
 void hardware_init() {
     // Segger Buffer 0 is pre-configured at compile time according to segger documentation
     // Config the logging output channel (assuming it's not zero)
@@ -158,5 +168,10 @@ void hardware_init() {
         SEGGER_RTT_ConfigUpBuffer(LOGGING_RTT_OUTPUT_CHANNEL, "Log Output", SEGGER_RTT_LOG_BUFFER, SEGGER_RTT_LOG_BUFFER_SIZE,
                                   SEGGER_RTT_MODE_NO_BLOCK_SKIP);
     }
+
+    // Image streaming channel (ch 2)
+    static uint8_t RTT_IMAGE_BUFFER[4096];
+    SEGGER_RTT_ConfigUpBuffer(2, "Image", RTT_IMAGE_BUFFER, sizeof(RTT_IMAGE_BUFFER),
+                              SEGGER_RTT_MODE_BLOCK_IF_FIFO_FULL);
     return;
 }
