@@ -14,7 +14,8 @@
 photodiode_config_t photodiode_config = {
     .photodiode_count = PHOTODIODE_DEFAULT_COUNT,
     .delay_ms = PHOTODIODE_DEFAULT_DELAY_MS,
-    .adc_channels = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0}
+    .mux_select_pins = {PA20, PA21, PA22, PA23, PA24}, // GPIO pins for MUX select lines (S0-S4)
+    .use_multiplexer = true
 };
 
 /* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */

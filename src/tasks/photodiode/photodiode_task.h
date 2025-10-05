@@ -14,10 +14,12 @@
 #define PHOTODIODE_TASK_STACK_SIZE 1024 // Size of the stack in words (multiply by 4 to get bytes)
 
 // Photodiode system constants
-#define PHOTODIODE_MAX_COUNT 21        // Maximum number of photodiodes (13-21 expected)
+#define PHOTODIODE_MAX_COUNT 22        // Maximum number of photodiodes (13-22 with multiplexer)
 #define PHOTODIODE_MIN_COUNT 13        // Minimum number of photodiodes
-#define PHOTODIODE_DEFAULT_COUNT 16    // Default number of photodiodes (matches ADC channels)
-#define PHOTODIODE_ADC_CHANNELS 16     // Available ADC channels (can use multiplexing for more)
+#define PHOTODIODE_DEFAULT_COUNT 22    // Default number of photodiodes (with multiplexer)
+#define PHOTODIODE_ADC_CHANNELS 1      // Single ADC channel with multiplexer
+#define PHOTODIODE_MUX_SELECT_BITS 5   // 5 bits needed for 22 channels (2^5 = 32 > 22)
+#define PHOTODIODE_MUX_SETTLE_TIME_MS 1 // Multiplexer settling time in milliseconds
 
 // Sampling rate constants (delay in ms)
 #define PHOTODIODE_MIN_DELAY_MS 10      // Minimum: 10ms (100 Hz)
@@ -36,14 +38,15 @@ typedef struct {
 
 // Photodiode configuration structure
 typedef struct {
-    uint8_t photodiode_count;      // Number of active photodiodes (13-21)
+    uint8_t photodiode_count;      // Number of active photodiodes (13-22)
     uint32_t delay_ms;             // Sampling delay in milliseconds
-    uint8_t adc_channels[PHOTODIODE_MAX_COUNT]; // ADC channel mapping for each photodiode
+    uint8_t mux_select_pins[PHOTODIODE_MUX_SELECT_BITS]; // GPIO pins for multiplexer select lines
+    bool use_multiplexer;          // Enable multiplexer mode
 } photodiode_config_t;
 
 // Photodiode data structures
 typedef struct {
-    uint16_t raw_values[PHOTODIODE_MAX_COUNT];        // Raw ADC readings (up to 21)
+    uint16_t raw_values[PHOTODIODE_MAX_COUNT];        // Raw ADC readings (up to 22)
     float calibrated_values[PHOTODIODE_MAX_COUNT];    // Calibrated light intensities
     float sun_vector[3];                              // Calculated sun direction vector
     uint32_t timestamp;                               // Reading timestamp

@@ -38,8 +38,9 @@ void main_photodiode(void *pvParameters) {
     // Data buffer for photodiode readings
     photodiode_data_t photodiode_data;
     
-    info("photodiode: Initialized with %d photodiodes at %d ms delay\n", 
-         photodiode_config.photodiode_count, photodiode_config.delay_ms);
+    info("photodiode: Initialized with %d photodiodes at %d ms delay (multiplexer: %s)\n", 
+         photodiode_config.photodiode_count, photodiode_config.delay_ms,
+         photodiode_config.use_multiplexer ? "enabled" : "disabled");
 
     while (true) {
         debug_impl("\n---------- Photodiode Task Loop ----------\n");

@@ -2,31 +2,29 @@
  * photodiode_driver.c
  *
  * Hardware driver for photodiode sensors used in ADCS sun sensing.
- * Supports 13-21 photodiodes with configurable sampling rates (0.1-100 Hz).
  *
  * Created: September 20, 2024
- * Authors: [Your Name]
+ * Authors: Avinash Patel
  */
 
 #include "photodiode_driver.h"
-
-// Global configuration
-static float current_sample_rate_hz = PHOTODIODE_DEFAULT_SAMPLE_RATE;
+#include "photodiode_task.h"
 
 /**
  * \fn init_photodiode_hardware
  *
- * \brief Initialize photodiode hardware (ADC channels and multiplexing)
+ * \brief Initialize photodiode hardware (ADC channels)
  *
  * \returns status_t SUCCESS if initialization was successful
  */
 status_t init_photodiode_hardware(void) {
     debug("photodiode_driver: Initializing photodiode hardware\n");
     
+    // Initialize multiplexer GPIO pins
+    ret_err_status(init_multiplexer_gpio(), "photodiode_driver: Multiplexer GPIO initialization failed");
+    
     // TODO: Configure ADC channels for photodiode readings
-    // TODO: Set up GPIO pins for photodiode control
-    // TODO: Initialize multiplexer if needed
-    // TODO: Configure ADC sampling rate
+    // TODO: Initialize any required peripherals
     
     info("photodiode_driver: Hardware initialization complete\n");
     return SUCCESS;
@@ -35,56 +33,24 @@ status_t init_photodiode_hardware(void) {
 /**
  * \fn read_photodiode_adc
  *
- * \brief Read ADC values from photodiode sensors (direct channel access)
+ * \brief Read ADC values from photodiode sensors
  *
  * \param values pointer to array to store ADC readings
  * \param count number of photodiodes to read
- * \param channel_map array of ADC channel numbers for each photodiode
  *
  * \returns status_t SUCCESS if reading was successful
  */
-status_t read_photodiode_adc(uint16_t *values, uint8_t count, const uint8_t *channel_map) {
-    if (!values || !channel_map || count == 0 || count > PHOTODIODE_MAX_COUNT) {
+status_t read_photodiode_adc(uint16_t *values, uint8_t count) {
+    if (!values || count == 0 || count > PHOTODIODE_MAX_COUNT) {
         return ERROR_SANITY_CHECK_FAILED;
     }
     
-    debug("photodiode_driver: Reading %d photodiode ADC values (direct)\n", count);
+    debug("photodiode_driver: Reading %d photodiode ADC values\n", count);
     
-    // TODO: Implement actual ADC reading for each photodiode channel
-    // For now, return dummy values
+    // Read each photodiode through the multiplexer
     for (uint8_t i = 0; i < count; i++) {
-        if (channel_map[i] < PHOTODIODE_MAX_ADC_CHANNELS) {
-            values[i] = 2048 + (i * 100); // Dummy value with variation
-        } else {
-            values[i] = 0; // Invalid channel
-        }
-    }
-    
-    return SUCCESS;
-}
-
-/**
- * \fn read_photodiode_adc_multiplexed
- *
- * \brief Read ADC values from photodiode sensors (with multiplexing)
- *
- * \param values pointer to array to store ADC readings
- * \param count number of photodiodes to read
- * \param channel_map array of ADC channel numbers for each photodiode
- *
- * \returns status_t SUCCESS if reading was successful
- */
-status_t read_photodiode_adc_multiplexed(uint16_t *values, uint8_t count, const uint8_t *channel_map) {
-    if (!values || !channel_map || count == 0 || count > PHOTODIODE_MAX_COUNT) {
-        return ERROR_SANITY_CHECK_FAILED;
-    }
-    
-    debug("photodiode_driver: Reading %d photodiode ADC values (multiplexed)\n", count);
-    
-    // TODO: Implement multiplexed ADC reading
-    // For now, return dummy values
-    for (uint8_t i = 0; i < count; i++) {
-        values[i] = 2048 + (i * 50); // Dummy value with variation
+        ret_err_status(read_single_photodiode_adc(i, &values[i]), 
+                       "photodiode_driver: Failed to read photodiode %d", i);
     }
     
     return SUCCESS;
@@ -124,16 +90,15 @@ status_t calibrate_photodiode_readings(uint16_t *raw_values, float *calibrated_v
  *
  * \param calibrated_values pointer to calibrated photodiode values
  * \param sun_vector pointer to array for sun vector [x, y, z]
- * \param count number of photodiode values
  *
  * \returns status_t SUCCESS if calculation was successful
  */
-status_t calculate_sun_vector(float *calibrated_values, float *sun_vector, uint8_t count) {
-    if (!calibrated_values || !sun_vector || count == 0) {
+status_t calculate_sun_vector(float *calibrated_values, float *sun_vector) {
+    if (!calibrated_values || !sun_vector) {
         return ERROR_SANITY_CHECK_FAILED;
     }
     
-    debug("photodiode_driver: Calculating sun vector from %d photodiodes\n", count);
+    debug("photodiode_driver: Calculating sun vector\n");
     
     // TODO: Implement actual sun vector calculation algorithm
     // This is a simplified example - real implementation would use
@@ -148,25 +113,82 @@ status_t calculate_sun_vector(float *calibrated_values, float *sun_vector, uint8
 }
 
 /**
- * \fn set_photodiode_sample_rate
+ * \fn init_multiplexer_gpio
  *
- * \brief Set the sampling rate for photodiode readings
+ * \brief Initialize GPIO pins for multiplexer control
  *
- * \param sample_rate_hz desired sampling rate in Hz (0.1-100)
- *
- * \returns status_t SUCCESS if rate was set successfully
+ * \returns status_t SUCCESS if initialization was successful
  */
-status_t set_photodiode_sample_rate(float sample_rate_hz) {
-    if (sample_rate_hz < PHOTODIODE_MIN_SAMPLE_RATE || sample_rate_hz > PHOTODIODE_MAX_SAMPLE_RATE) {
-        warning("photodiode_driver: Sample rate %.2f Hz out of range (%.1f-%.1f Hz)\n", 
-                sample_rate_hz, PHOTODIODE_MIN_SAMPLE_RATE, PHOTODIODE_MAX_SAMPLE_RATE);
+status_t init_multiplexer_gpio(void) {
+    debug("photodiode_driver: Initializing multiplexer GPIO pins\n");
+    
+    // Configure GPIO pins for multiplexer select lines
+    // Note: These pin assignments need to be defined based on your hardware
+    // For now, using placeholder pin numbers that should be updated
+    for (uint8_t i = 0; i < PHOTODIODE_MUX_SELECT_BITS; i++) {
+        // TODO: Configure actual GPIO pins for multiplexer select lines
+        // gpio_set_pin_direction(photodiode_config.mux_select_pins[i], GPIO_DIRECTION_OUT);
+        // gpio_set_pin_level(photodiode_config.mux_select_pins[i], false);
+        debug("photodiode_driver: Configured MUX select pin %d (placeholder)\n", i);
+    }
+    
+    info("photodiode_driver: Multiplexer GPIO initialization complete\n");
+    return SUCCESS;
+}
+
+/**
+ * \fn set_multiplexer_channel
+ *
+ * \brief Set multiplexer to select specified channel
+ *
+ * \param channel channel number to select (0-21)
+ *
+ * \returns status_t SUCCESS if channel selection was successful
+ */
+status_t set_multiplexer_channel(uint8_t channel) {
+    if (channel >= PHOTODIODE_MAX_COUNT) {
         return ERROR_SANITY_CHECK_FAILED;
     }
     
-    current_sample_rate_hz = sample_rate_hz;
-    debug("photodiode_driver: Sample rate set to %.2f Hz\n", sample_rate_hz);
+    debug("photodiode_driver: Setting multiplexer to channel %d\n", channel);
     
-    // TODO: Configure hardware timers/ADC for the new sampling rate
+    // Set multiplexer select pins based on channel number
+    for (uint8_t i = 0; i < PHOTODIODE_MUX_SELECT_BITS; i++) {
+        bool bit_value = (channel >> i) & 0x01;
+        // TODO: Set actual GPIO pin level
+        // gpio_set_pin_level(photodiode_config.mux_select_pins[i], bit_value);
+        debug("photodiode_driver: MUX pin %d = %d\n", i, bit_value);
+    }
+    
+    // Wait for multiplexer to settle
+    vTaskDelay(pdMS_TO_TICKS(PHOTODIODE_MUX_SETTLE_TIME_MS));
+    
+    return SUCCESS;
+}
+
+/**
+ * \fn read_single_photodiode_adc
+ *
+ * \brief Read ADC value from a single photodiode channel
+ *
+ * \param channel channel number to read (0-21)
+ * \param value pointer to store the ADC reading
+ *
+ * \returns status_t SUCCESS if reading was successful
+ */
+status_t read_single_photodiode_adc(uint8_t channel, uint16_t *value) {
+    if (!value || channel >= PHOTODIODE_MAX_COUNT) {
+        return ERROR_SANITY_CHECK_FAILED;
+    }
+    
+    // Set multiplexer to desired channel
+    ret_err_status(set_multiplexer_channel(channel), 
+                   "photodiode_driver: Failed to set multiplexer channel");
+    
+    // TODO: Implement actual ADC reading
+    // For now, return dummy value with some variation based on channel
+    *value = 2000 + (channel * 10); // Dummy value with channel variation
+    debug("photodiode_driver: Read channel %d: %d\n", channel, *value);
     
     return SUCCESS;
 }
