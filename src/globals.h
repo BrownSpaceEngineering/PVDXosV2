@@ -75,6 +75,13 @@ typedef enum {
     OPERATION_PHOTODIODE_READ,        // p_data: photodiode_read_args_t *readings
     OPERATION_PHOTODIODE_CALIBRATE,   // p_data: NULL
     OPERATION_PHOTODIODE_CONFIG,     // p_data: photodiode_config_args_t *config    // TESTING
+
+    // Camera operations
+    OPERATION_CAMERA_CAPTURE,        // p_data: camera_capture_args_t *capture_args
+    OPERATION_CAMERA_CONFIG,         // p_data: camera_config_args_t *config_args
+    OPERATION_CAMERA_STATUS,         // p_data: camera_status_args_t *status_args
+    OPERATION_CAMERA_AUTO_EXPOSURE,  // p_data: camera_auto_exposure_args_t *ae_args
+
     TEST_OP, // p_data: char message[]
 } operation_t;
 

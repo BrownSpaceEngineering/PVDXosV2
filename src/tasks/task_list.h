@@ -3,6 +3,7 @@
 
 // Includes
 #include "command_dispatcher_task.h"
+#include "camera_task.h"
 #include "display_task.h"
 #include "globals.h"
 #include "heartbeat_task.h"
@@ -18,6 +19,7 @@ extern pvdx_task_t *const p_command_dispatcher_task;
 extern pvdx_task_t *const p_task_manager_task;
 extern pvdx_task_t *const p_magnetometer_task;
 extern pvdx_task_t *const p_photodiode_task;
+extern pvdx_task_t *const p_camera_task;
 extern pvdx_task_t *const p_shell_task;
 extern pvdx_task_t *const p_display_task;
 extern pvdx_task_t *const p_heartbeat_task;
