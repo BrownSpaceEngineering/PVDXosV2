@@ -50,7 +50,7 @@ status_t read_photodiode_adc(uint16_t *values, uint8_t count) {
     // Read each photodiode through the multiplexer
     for (uint8_t i = 0; i < count; i++) {
         ret_err_status(read_single_photodiode_adc(i, &values[i]), 
-                       "photodiode_driver: Failed to read photodiode %d", i);
+                       "photodiode_driver: Failed to read photodiode");
     }
     
     return SUCCESS;

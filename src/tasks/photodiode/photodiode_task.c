@@ -14,7 +14,7 @@
 photodiode_config_t photodiode_config = {
     .photodiode_count = PHOTODIODE_DEFAULT_COUNT,
     .delay_ms = PHOTODIODE_DEFAULT_DELAY_MS,
-    .mux_select_pins = {PA20, PA21, PA22, PA23, PA24}, // GPIO pins for MUX select lines (S0-S4)
+    .mux_select_pins = {20, 21, 22, 23, 24}, // GPIO pins for MUX select lines (S0-S4) - using pin numbers
     .use_multiplexer = true
 };
 
@@ -190,7 +190,10 @@ QueueHandle_t init_photodiode(void) {
     }
 
     // Initialize photodiode hardware
-    ret_err_status(init_photodiode_hardware(), "photodiode: Hardware initialization failed");
+    status_t result = init_photodiode_hardware();
+    if (result != SUCCESS) {
+        warning("photodiode: Hardware initialization failed\n");
+    }
 
     return photodiode_command_queue_handle;
 }
