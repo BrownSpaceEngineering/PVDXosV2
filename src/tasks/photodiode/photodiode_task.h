@@ -14,11 +14,13 @@
 #define PHOTODIODE_TASK_STACK_SIZE 1024 // Size of the stack in words (multiply by 4 to get bytes)
 
 // Photodiode system constants
-#define PHOTODIODE_MAX_COUNT 22        // Maximum number of photodiodes (13-22 with multiplexer)
-#define PHOTODIODE_MIN_COUNT 13        // Minimum number of photodiodes
-#define PHOTODIODE_DEFAULT_COUNT 22    // Default number of photodiodes (with multiplexer)
-#define PHOTODIODE_ADC_CHANNELS 1      // Single ADC channel with multiplexer
-#define PHOTODIODE_MUX_SELECT_BITS 5   // 5 bits needed for 22 channels (2^5 = 32 > 22)
+#define PHOTODIODE_MAX_COUNT 22        // Maximum number of photodiodes (8 multiplexed + 14 direct)
+#define PHOTODIODE_MIN_COUNT 1         // Minimum number of photodiodes
+#define PHOTODIODE_DEFAULT_COUNT 22   // Default number of photodiodes (8 mux + 14 direct)
+#define PHOTODIODE_ADC_CHANNELS 15     // 1 multiplexed + 14 direct ADC channels
+#define PHOTODIODE_MUX_SELECT_BITS 3   // 3 bits needed for 8 channels (2^3 = 8)
+#define PHOTODIODE_MUX_CHANNELS 8      // 8 photodiodes on multiplexer (channels 0-7)
+#define PHOTODIODE_DIRECT_CHANNELS 14  // 14 photodiodes on direct ADC (channels 8-21)
 #define PHOTODIODE_MUX_SETTLE_TIME_MS 1 // Multiplexer settling time in milliseconds
 
 // Sampling rate constants (delay in ms)
@@ -38,9 +40,10 @@ typedef struct {
 
 // Photodiode configuration structure
 typedef struct {
-    uint8_t photodiode_count;      // Number of active photodiodes (13-22)
+    uint8_t photodiode_count;      // Number of active photodiodes (8-22)
     uint32_t delay_ms;             // Sampling delay in milliseconds
     uint8_t mux_select_pins[PHOTODIODE_MUX_SELECT_BITS]; // GPIO pins for multiplexer select lines
+    uint8_t mux_enable_pin;        // GPIO pin for multiplexer enable/disable
     bool use_multiplexer;          // Enable multiplexer mode
 } photodiode_config_t;
 

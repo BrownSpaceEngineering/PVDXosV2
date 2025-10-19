@@ -14,7 +14,8 @@
 photodiode_config_t photodiode_config = {
     .photodiode_count = PHOTODIODE_DEFAULT_COUNT,
     .delay_ms = PHOTODIODE_DEFAULT_DELAY_MS,
-    .mux_select_pins = {20, 21, 22, 23, 24}, // GPIO pins for MUX select lines (S0-S4) - using pin numbers
+    .mux_select_pins = {Photodiode_MUX_S0, Photodiode_MUX_S1, Photodiode_MUX_S2}, // GPIO pins for MUX select lines (S0-S2)
+    .mux_enable_pin = Photodiode_MUX_EN, // GPIO pin for multiplexer enable/disable
     .use_multiplexer = true
 };
 

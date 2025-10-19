@@ -51,4 +51,10 @@
 #define Shared_MISO GPIO(GPIO_PORTD, 11)
 #define Magnetometer_DRDY GPIO(GPIO_PORTD, 21)
 
+// Photodiode multiplexer control pins (3-bit selection + enable)
+#define Photodiode_MUX_S0 GPIO(GPIO_PORTD, 12)  // Multiplexer select line 0 (LSB)
+#define Photodiode_MUX_S1 GPIO(GPIO_PORTD, 13)  // Multiplexer select line 1
+#define Photodiode_MUX_S2 GPIO(GPIO_PORTD, 14)  // Multiplexer select line 2 (MSB)
+#define Photodiode_MUX_EN GPIO(GPIO_PORTD, 15)  // Multiplexer enable/disable pin
+
 #endif // ATMEL_START_PINS_H_INCLUDED
