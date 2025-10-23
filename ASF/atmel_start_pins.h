@@ -27,14 +27,16 @@
 #define GPIO_PIN_FUNCTION_M 12
 #define GPIO_PIN_FUNCTION_N 13
 
+#define Photodiode_MUX_S2 GPIO(GPIO_PORTA, 12)
+#define Photodiode_MUX_EN GPIO(GPIO_PORTA, 14)
 #define Shared_SCL GPIO(GPIO_PORTA, 16)
 #define Shared_SDA GPIO(GPIO_PORTA, 17)
+#define LED_RED GPIO(GPIO_PORTB, 1)
 #define PB08 GPIO(GPIO_PORTB, 8)
 #define Display_RST GPIO(GPIO_PORTB, 12)
 #define Display_DC GPIO(GPIO_PORTB, 13)
 #define Display_CS GPIO(GPIO_PORTB, 20)
 #define Camera_CS GPIO(GPIO_PORTB, 21)
-#define LED_RED GPIO(GPIO_PORTB, 31)
 #define MRAM1_CS GPIO(GPIO_PORTC, 4)
 #define MRAM1_RST GPIO(GPIO_PORTC, 5)
 #define MRAM2_CS GPIO(GPIO_PORTC, 6)
@@ -44,17 +46,13 @@
 #define MRAM3_WP GPIO(GPIO_PORTC, 12)
 #define MRAM1_WP GPIO(GPIO_PORTC, 14)
 #define MRAM2_WP GPIO(GPIO_PORTC, 15)
+#define Photodiode_MUX_S1 GPIO(GPIO_PORTC, 17)
 #define LED_Orange1 GPIO(GPIO_PORTC, 30)
 #define LED_Orange2 GPIO(GPIO_PORTC, 31)
 #define Shared_MOSI GPIO(GPIO_PORTD, 8)
 #define Shared_SCK GPIO(GPIO_PORTD, 9)
 #define Shared_MISO GPIO(GPIO_PORTD, 11)
+#define Photodiode_MUX_S0 GPIO(GPIO_PORTD, 12)
 #define Magnetometer_DRDY GPIO(GPIO_PORTD, 21)
-
-// Photodiode multiplexer control pins (3-bit selection + enable)
-#define Photodiode_MUX_S0 GPIO(GPIO_PORTD, 12)  // Multiplexer select line 0 (LSB)
-#define Photodiode_MUX_S1 GPIO(GPIO_PORTD, 13)  // Multiplexer select line 1
-#define Photodiode_MUX_S2 GPIO(GPIO_PORTD, 14)  // Multiplexer select line 2 (MSB)
-#define Photodiode_MUX_EN GPIO(GPIO_PORTD, 15)  // Multiplexer enable/disable pin
 
 #endif // ATMEL_START_PINS_H_INCLUDED

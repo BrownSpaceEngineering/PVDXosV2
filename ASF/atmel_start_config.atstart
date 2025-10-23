@@ -1228,6 +1228,13 @@ pads:
     mode: Digital input
     user_label: Shared_MISO
     configuration: null
+  Photodiode_MUX_S0:
+    name: PD12
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PD12
+    mode: Digital output
+    user_label: Photodiode_MUX_S0
+    configuration:
+      pad_initial_level: High
   MRAM3_RST:
     name: PC10
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC10
@@ -1263,6 +1270,20 @@ pads:
     user_label: MRAM2_WP
     configuration:
       pad_initial_level: High
+  Photodiode_MUX_S2:
+    name: PA12
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA12
+    mode: Digital output
+    user_label: Photodiode_MUX_S2
+    configuration:
+      pad_initial_level: High
+  Photodiode_MUX_EN:
+    name: PA14
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA14
+    mode: Digital output
+    user_label: Photodiode_MUX_EN
+    configuration:
+      pad_initial_level: High
   Shared_SCL:
     name: PA16
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA16
@@ -1275,6 +1296,13 @@ pads:
     mode: I2C
     user_label: Shared_SDA
     configuration: null
+  Photodiode_MUX_S1:
+    name: PC17
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC17
+    mode: Digital output
+    user_label: Photodiode_MUX_S1
+    configuration:
+      pad_initial_level: High
   Magnetometer_DRDY:
     name: PD21
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PD21
@@ -1296,13 +1324,6 @@ pads:
     user_label: Camera_CS
     configuration:
       pad_initial_level: High
-  LED_RED:
-    name: PB31
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB31
-    mode: Digital output
-    user_label: LED_RED
-    configuration:
-      pad_initial_level: High
   LED_Orange1:
     name: PC30
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC30
@@ -1315,6 +1336,13 @@ pads:
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC31
     mode: Digital output
     user_label: LED_Orange2
+    configuration:
+      pad_initial_level: High
+  LED_RED:
+    name: PB01
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB01
+    mode: Digital output
+    user_label: LED_RED
     configuration:
       pad_initial_level: High
 toolchain_options: []
