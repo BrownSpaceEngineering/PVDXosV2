@@ -8,7 +8,7 @@
  * Authors: PVDX Team
  */
 
-#include "camera_task.h"
+#include "camera.h"
 
 // Camera Task memory structures
 camera_task_memory_t camera_mem;
@@ -20,7 +20,7 @@ camera_task_memory_t camera_mem;
  *
  * \warning should never return
  */
-void main_camera(void *pvParameters) {
+void camera_main(void *pvParameters) {
     info("camera: Task Started!\n");
 
     // Obtain a pointer to the current task within the global task list
@@ -44,8 +44,8 @@ void main_camera(void *pvParameters) {
         debug_impl("\n---------- Camera Task Loop ----------\n");
 
         // Handle continuous capture mode
-        if (camera_config.capture_mode == CAPTURE_CONTINUOUS && camera_status.initialized) {
-            uint32_t current_time = xTaskGetTickCount();
+        if (camera_config.capture_mode == CAMERA_CAPTURE_CONTINUOUS && camera_status.initialized) {
+            uint32_t current_time = rtc_get_seconds();
             
             if (!continuous_capture_active) {
                 continuous_capture_active = true;
@@ -54,11 +54,11 @@ void main_camera(void *pvParameters) {
                      camera_config.capture_interval_ms);
             }
             
-            // Check if it's time for the next capture
-            if ((current_time - last_capture_time) >= pdMS_TO_TICKS(camera_config.capture_interval_ms)) {
+            // Check if it's time for the next capture (convert ms to seconds)
+            if ((current_time - last_capture_time) >= (camera_config.capture_interval_ms / 1000)) {
                 camera_image_t *free_buffer = camera_get_free_buffer();
                 if (free_buffer) {
-                    command_t capture_cmd = get_camera_capture_command(free_buffer, NULL);
+                    command_t capture_cmd = camera_get_capture_command(free_buffer, NULL);
                     enqueue_command(&capture_cmd);
                     last_capture_time = current_time;
                     debug("camera: Enqueued continuous capture command\n");
@@ -76,13 +76,13 @@ void main_camera(void *pvParameters) {
             // Once there is at least one command in the queue, empty the entire queue
             do {
                 debug("camera: Command popped off queue. Target: %d, Operation: %d\n", cmd.target, cmd.operation);
-                exec_command_camera(&cmd);
+                camera_exec_command(&cmd);
                 
                 // Handle configuration changes that might affect continuous capture
                 if (cmd.operation == OPERATION_CAMERA_CONFIG) {
                     camera_config_args_t *args = (camera_config_args_t*)cmd.p_data;
                     if (args && args->config) {
-                        if (args->config->capture_mode != CAPTURE_CONTINUOUS && continuous_capture_active) {
+                        if (args->config->capture_mode != CAMERA_CAPTURE_CONTINUOUS && continuous_capture_active) {
                             continuous_capture_active = false;
                             info("camera: Disabled continuous capture due to configuration change\n");
                         }
@@ -95,11 +95,11 @@ void main_camera(void *pvParameters) {
 
         // Perform periodic auto-exposure calibration if enabled
         if (camera_config.auto_exposure_enabled && camera_status.initialized && 
-            camera_config.capture_mode == CAPTURE_CONTINUOUS) {
+            camera_config.capture_mode == CAMERA_CAPTURE_CONTINUOUS) {
             
             // Perform auto-exposure calibration every 10 captures
             if (camera_status.images_captured % 10 == 0 && camera_status.images_captured > 0) {
-                command_t ae_cmd = get_camera_auto_exposure_command(CAMERA_AE_TARGET_BRIGHTNESS, false);
+                command_t ae_cmd = camera_get_auto_exposure_command(CAMERA_AE_TARGET_BRIGHTNESS, false);
                 enqueue_command(&ae_cmd);
                 debug("camera: Enqueued periodic auto-exposure calibration\n");
             }
@@ -123,7 +123,7 @@ void main_camera(void *pvParameters) {
  *
  * \param p_cmd pointer to command to execute
  */
-void exec_command_camera(command_t *const p_cmd) {
+void camera_exec_command(command_t *const p_cmd) {
     if (!p_cmd) {
         fatal("camera: Received NULL command pointer\n");
     }

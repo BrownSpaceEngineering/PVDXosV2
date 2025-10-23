@@ -8,19 +8,19 @@
  * Authors: PVDX Team
  */
 
-#include "camera_task.h"
+#include "camera.h"
 
 // Global configuration
 camera_config_t camera_config = {
     .width = CAMERA_DEFAULT_WIDTH,
     .height = CAMERA_DEFAULT_HEIGHT,
-    .format = CAMERA_DEFAULT_FORMAT,
+    .format = CAMERA_FORMAT_RGB565,
     .quality = CAMERA_DEFAULT_QUALITY,
     .exposure = CAMERA_DEFAULT_EXPOSURE,
     .brightness = CAMERA_DEFAULT_BRIGHTNESS,
     .contrast = CAMERA_DEFAULT_CONTRAST,
     .auto_exposure_enabled = true,
-    .capture_mode = CAPTURE_SINGLE,
+    .capture_mode = CAMERA_CAPTURE_SINGLE,
     .capture_interval_ms = 1000
 };
 
@@ -66,7 +66,7 @@ status_t camera_capture_image(camera_image_t *const image_buffer, const camera_c
     }
     
     const camera_config_t *capture_config = config ? config : &camera_config;
-    uint32_t capture_start_time = xTaskGetTickCount();
+    uint32_t capture_start_time = rtc_get_seconds();
     
     debug("camera: Starting image capture (resolution: %dx%d, format: %d)\n", 
           capture_config->width, capture_config->height, capture_config->format);
@@ -82,12 +82,12 @@ status_t camera_capture_image(camera_image_t *const image_buffer, const camera_c
                    "camera: Failed to start capture");
     
     // Wait for capture completion and get image data
-    status_t result = camera_get_captured_image(image_buffer, ARDUCAM_CAPTURE_TIMEOUT_MS);
+    status_t result = camera_hw_get_captured_image(image_buffer, CAMERA_HW_CAPTURE_TIMEOUT_MS);
     
     camera_status.capturing = false;
     
     if (result == SUCCESS) {
-        uint32_t capture_time = xTaskGetTickCount() - capture_start_time;
+        uint32_t capture_time = rtc_get_seconds() - capture_start_time;
         
         // Update image metadata
         image_buffer->timestamp = capture_start_time;
@@ -253,7 +253,7 @@ status_t camera_auto_exposure_calibrate(uint8_t target_brightness, bool force_re
     // Apply optimal exposure
     camera_config.exposure = best_exposure;
     camera_status.current_config.exposure = best_exposure;
-    ret_err_status(camera_set_exposure(best_exposure), 
+    ret_err_status(camera_hw_set_exposure(best_exposure), 
                    "camera: Failed to set optimal exposure %d", best_exposure);
     
     // Update analysis data
@@ -491,7 +491,7 @@ status_t camera_copy_image(const camera_image_t *const src, camera_image_t *cons
  *
  * \returns command_t camera capture command
  */
-command_t get_camera_capture_command(camera_image_t *const image_buffer, const camera_config_t *const config) {
+command_t camera_get_capture_command(camera_image_t *const image_buffer, const camera_config_t *const config) {
     camera_capture_args_t *args = malloc(sizeof(camera_capture_args_t));
     if (!args) {
         fatal("camera: Failed to allocate memory for capture command arguments\n");
@@ -519,7 +519,7 @@ command_t get_camera_capture_command(camera_image_t *const image_buffer, const c
  *
  * \returns command_t camera configuration command
  */
-command_t get_camera_config_command(const camera_config_t *const config) {
+command_t camera_get_config_command(const camera_config_t *const config) {
     camera_config_args_t *args = malloc(sizeof(camera_config_args_t));
     if (!args) {
         fatal("camera: Failed to allocate memory for config command arguments\n");
@@ -546,7 +546,7 @@ command_t get_camera_config_command(const camera_config_t *const config) {
  *
  * \returns command_t camera status command
  */
-command_t get_camera_status_command(camera_status_t *const status) {
+command_t camera_get_status_command(camera_status_t *const status) {
     camera_status_args_t *args = malloc(sizeof(camera_status_args_t));
     if (!args) {
         fatal("camera: Failed to allocate memory for status command arguments\n");
@@ -574,7 +574,7 @@ command_t get_camera_status_command(camera_status_t *const status) {
  *
  * \returns command_t auto-exposure calibration command
  */
-command_t get_camera_auto_exposure_command(uint8_t target_brightness, bool force_recalibration) {
+command_t camera_get_auto_exposure_command(uint8_t target_brightness, bool force_recalibration) {
     camera_auto_exposure_args_t *args = malloc(sizeof(camera_auto_exposure_args_t));
     if (!args) {
         fatal("camera: Failed to allocate memory for auto-exposure command arguments\n");

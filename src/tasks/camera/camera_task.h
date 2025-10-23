@@ -9,6 +9,7 @@
 #include "atmel_start.h"
 #include "watchdog_task.h"
 #include "camera_driver.h"
+#include "misc/rtc/rtc_driver.h"
 
 // Constants
 #define CAMERA_TASK_STACK_SIZE 2048 // Size of the stack in words (multiply by 4 to get bytes)
