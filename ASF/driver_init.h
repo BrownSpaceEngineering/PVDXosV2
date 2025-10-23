@@ -32,6 +32,8 @@ extern "C" {
 
 #include <hal_wdt.h>
 
+#include <hal_rtc_sync.h>
+
 extern struct adc_sync_descriptor ADC_0;
 
 extern struct i2c_m_sync_desc       I2C_0;
@@ -40,6 +42,8 @@ extern struct spi_m_sync_descriptor SPI_0;
 extern struct rand_sync_desc RAND_0;
 
 extern struct wdt_descriptor WDT_0;
+
+extern struct rtc_sync_descriptor RTC_0;
 
 void ADC_0_PORT_init(void);
 void ADC_0_CLOCK_init(void);
@@ -60,6 +64,9 @@ void RAND_0_init(void);
 
 void WDT_0_CLOCK_init(void);
 void WDT_0_init(void);
+
+void RTC_0_CLOCK_init(void);
+void RTC_0_init(void);
 
 /**
  * \brief Perform system initialization, initialize pins and clocks for
