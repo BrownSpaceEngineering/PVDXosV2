@@ -152,13 +152,17 @@ status_t set_multiplexer_channel(uint8_t channel) {
     
     debug("photodiode_driver: Setting multiplexer to channel %d\n", channel);
     
-    // Set multiplexer select pins based on channel number
-    for (uint8_t i = 0; i < PHOTODIODE_MUX_SELECT_BITS; i++) {
-        bool bit_value = (channel >> i) & 0x01;
-        // TODO: Set actual GPIO pin level
-        // gpio_set_pin_level(photodiode_config.mux_select_pins[i], bit_value);
-        debug("photodiode_driver: MUX pin %d = %d\n", i, bit_value);
-    }
+    // Set multiplexer select pins atomically (all 3 pins in one swift motion)
+    // This prevents intermediate states and ensures clean multiplexer switching
+    gpio_set_pin_level(photodiode_config.mux_select_pins[0], (channel & 0x01) ? true : false);
+    gpio_set_pin_level(photodiode_config.mux_select_pins[1], (channel & 0x02) ? true : false);
+    gpio_set_pin_level(photodiode_config.mux_select_pins[2], (channel & 0x04) ? true : false);
+    
+    debug("photodiode_driver: MUX channel %d (binary: %d%d%d)\n", 
+          channel, 
+          (channel & 0x04) ? 1 : 0,
+          (channel & 0x02) ? 1 : 0,
+          (channel & 0x01) ? 1 : 0);
     
     // Wait for multiplexer to settle
     vTaskDelay(pdMS_TO_TICKS(PHOTODIODE_MUX_SETTLE_TIME_MS));
