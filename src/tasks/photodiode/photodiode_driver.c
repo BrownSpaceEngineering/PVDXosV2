@@ -138,7 +138,7 @@ status_t init_multiplexer_gpio(void) {
     
     // Configure multiplexer enable pin
     gpio_set_pin_direction(photodiode_config.mux_enable_pin, GPIO_DIRECTION_OUT);
-    gpio_set_pin_level(photodiode_config.mux_enable_pin, false); // Start with multiplexer disabled
+    gpio_set_pin_level(photodiode_config.mux_enable_pin, true); // Start with multiplexer disabled (active low)
     gpio_set_pin_function(photodiode_config.mux_enable_pin, GPIO_PIN_FUNCTION_OFF);
     
     debug("photodiode_driver: Configured MUX enable pin\n");
@@ -163,15 +163,20 @@ status_t set_multiplexer_channel(uint8_t channel) {
     
     debug("photodiode_driver: Setting multiplexer to channel %d\n", channel);
     
-    // Enable multiplexer first
-    gpio_set_pin_level(photodiode_config.mux_enable_pin, true);
+    // Enable multiplexer first (active low)
+    gpio_set_pin_level(photodiode_config.mux_enable_pin, false);
     
-    // Set multiplexer select pins based on channel number
-    for (uint8_t i = 0; i < PHOTODIODE_MUX_SELECT_BITS; i++) {
-        bool bit_value = (channel >> i) & 0x01;
-        gpio_set_pin_level(photodiode_config.mux_select_pins[i], bit_value);
-        debug("photodiode_driver: MUX pin %d = %d\n", i, bit_value);
-    }
+    // Set multiplexer select pins atomically based on channel number
+    // All three pins are in the same register, so we can write them together
+    gpio_set_pin_level(photodiode_config.mux_select_pins[0], (channel & 0x01) ? true : false);
+    gpio_set_pin_level(photodiode_config.mux_select_pins[1], (channel & 0x02) ? true : false);
+    gpio_set_pin_level(photodiode_config.mux_select_pins[2], (channel & 0x04) ? true : false);
+    
+    debug("photodiode_driver: MUX channel %d (binary: %d%d%d)\n", 
+          channel, 
+          (channel & 0x04) ? 1 : 0,
+          (channel & 0x02) ? 1 : 0,
+          (channel & 0x01) ? 1 : 0);
     
     // Wait for multiplexer to settle
     vTaskDelay(pdMS_TO_TICKS(PHOTODIODE_MUX_SETTLE_TIME_MS));
@@ -188,7 +193,7 @@ status_t set_multiplexer_channel(uint8_t channel) {
  */
 status_t enable_multiplexer(void) {
     debug("photodiode_driver: Enabling multiplexer\n");
-    gpio_set_pin_level(photodiode_config.mux_enable_pin, true);
+    gpio_set_pin_level(photodiode_config.mux_enable_pin, false); // Active low - LOW enables
     return SUCCESS;
 }
 
@@ -201,7 +206,7 @@ status_t enable_multiplexer(void) {
  */
 status_t disable_multiplexer(void) {
     debug("photodiode_driver: Disabling multiplexer\n");
-    gpio_set_pin_level(photodiode_config.mux_enable_pin, false);
+    gpio_set_pin_level(photodiode_config.mux_enable_pin, true); // Active low - HIGH disables
     return SUCCESS;
 }
 
