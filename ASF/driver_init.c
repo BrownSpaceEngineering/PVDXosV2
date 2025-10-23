@@ -23,6 +23,8 @@ struct rand_sync_desc RAND_0;
 
 struct wdt_descriptor WDT_0;
 
+struct rtc_sync_descriptor RTC_0;
+
 void ADC_0_PORT_init(void)
 {
 
@@ -165,6 +167,18 @@ void WDT_0_init(void)
 {
 	WDT_0_CLOCK_init();
 	wdt_init(&WDT_0, WDT);
+}
+
+void RTC_0_CLOCK_init(void)
+{
+	hri_mclk_set_APBAMASK_RTC_bit(MCLK);
+	hri_gclk_write_PCHCTRL_reg(GCLK, RTC_GCLK_ID, CONF_GCLK_RTC_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+}
+
+void RTC_0_init(void)
+{
+	RTC_0_CLOCK_init();
+	rtc_sync_init(&RTC_0, RTC);
 }
 
 void system_init(void)
@@ -421,4 +435,6 @@ void system_init(void)
 	RAND_0_init();
 
 	WDT_0_init();
+
+	RTC_0_init();
 }

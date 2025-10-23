@@ -11,6 +11,7 @@
 #include "logging.h"
 #include "rtos_start.h"
 #include "task_list.h"
+#include "misc/rtc/rtc_driver.h"
 
 /*
 Standard definitions for main.c

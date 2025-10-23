@@ -29,6 +29,18 @@ int main(void) {
     /* Initializes MCU, drivers and middleware */
     atmel_start_init();
     PVDX_init();
+    
+    /* Initialize RTC for camera timestamp functionality */
+    if (rtc_init() != SUCCESS) {
+        fatal("Failed to initialize RTC\n");
+    }
+    info_impl("RTC initialized successfully\n");
+    
+    /* Test RTC functionality */
+    if (rtc_test() != SUCCESS) {
+        warning("RTC test failed, but continuing...\n");
+    }
+    
     // info_impl(RTT_CTRL_RESET RTT_CTRL_CLEAR); // Reset the terminal
     info_impl("--- Atmel & Hardware Initialization Complete ---\n");
     info_impl("[+] Build Type: %s\n", BUILD_TYPE);
