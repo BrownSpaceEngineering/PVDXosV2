@@ -29,12 +29,12 @@
 
 #define Shared_SCL GPIO(GPIO_PORTA, 16)
 #define Shared_SDA GPIO(GPIO_PORTA, 17)
+#define LED_RED GPIO(GPIO_PORTB, 1)
 #define PB08 GPIO(GPIO_PORTB, 8)
 #define Display_RST GPIO(GPIO_PORTB, 12)
 #define Display_DC GPIO(GPIO_PORTB, 13)
 #define Display_CS GPIO(GPIO_PORTB, 20)
 #define Camera_CS GPIO(GPIO_PORTB, 21)
-#define LED_RED GPIO(GPIO_PORTB, 31)
 #define MRAM1_CS GPIO(GPIO_PORTC, 4)
 #define MRAM1_RST GPIO(GPIO_PORTC, 5)
 #define MRAM2_CS GPIO(GPIO_PORTC, 6)
