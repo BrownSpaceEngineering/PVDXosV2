@@ -24,32 +24,6 @@ void ADC_0_example(void)
 	}
 }
 
-/**
- * Example of using ADC_1 to generate waveform.
- */
-void ADC_1_example(void)
-{
-	uint8_t buffer[2];
-
-	adc_sync_enable_channel(&ADC_1, 0);
-
-	while (1) {
-		adc_sync_read_channel(&ADC_1, 0, buffer, 2);
-	}
-}
-
-/**
- * Example of using USART_0 to write "Hello World" using the IO abstraction.
- */
-void USART_0_example(void)
-{
-	struct io_descriptor *io;
-	usart_sync_get_io_descriptor(&USART_0, &io);
-	usart_sync_enable(&USART_0);
-
-	io_write(io, (uint8_t *)"Hello World!", 12);
-}
-
 void I2C_0_example(void)
 {
 	struct io_descriptor *I2C_0_io;
