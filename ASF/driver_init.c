@@ -171,34 +171,6 @@ void system_init(void)
 {
 	init_mcu();
 
-	// GPIO on PA12
-
-	gpio_set_pin_level(Photodiode_MUX_S2,
-	                   // <y> Initial level
-	                   // <id> pad_initial_level
-	                   // <false"> Low
-	                   // <true"> High
-	                   true);
-
-	// Set pin direction to output
-	gpio_set_pin_direction(Photodiode_MUX_S2, GPIO_DIRECTION_OUT);
-
-	gpio_set_pin_function(Photodiode_MUX_S2, GPIO_PIN_FUNCTION_OFF);
-
-	// GPIO on PA14
-
-	gpio_set_pin_level(Photodiode_MUX_EN,
-	                   // <y> Initial level
-	                   // <id> pad_initial_level
-	                   // <false"> Low
-	                   // <true"> High
-	                   true);
-
-	// Set pin direction to output
-	gpio_set_pin_direction(Photodiode_MUX_EN, GPIO_DIRECTION_OUT);
-
-	gpio_set_pin_function(Photodiode_MUX_EN, GPIO_PIN_FUNCTION_OFF);
-
 	// GPIO on PB01
 
 	gpio_set_pin_level(LED_RED,
@@ -395,7 +367,21 @@ void system_init(void)
 
 	gpio_set_pin_function(MRAM2_WP, GPIO_PIN_FUNCTION_OFF);
 
-	// GPIO on PC17
+	// GPIO on PC18
+
+	gpio_set_pin_level(Photodiode_MUX_S0,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   true);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(Photodiode_MUX_S0, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(Photodiode_MUX_S0, GPIO_PIN_FUNCTION_OFF);
+
+	// GPIO on PC19
 
 	gpio_set_pin_level(Photodiode_MUX_S1,
 	                   // <y> Initial level
@@ -408,6 +394,34 @@ void system_init(void)
 	gpio_set_pin_direction(Photodiode_MUX_S1, GPIO_DIRECTION_OUT);
 
 	gpio_set_pin_function(Photodiode_MUX_S1, GPIO_PIN_FUNCTION_OFF);
+
+	// GPIO on PC20
+
+	gpio_set_pin_level(Photodiode_MUX_S2,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   true);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(Photodiode_MUX_S2, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(Photodiode_MUX_S2, GPIO_PIN_FUNCTION_OFF);
+
+	// GPIO on PC21
+
+	gpio_set_pin_level(Photodiode_MUX_EN,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   true);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(Photodiode_MUX_EN, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(Photodiode_MUX_EN, GPIO_PIN_FUNCTION_OFF);
 
 	// GPIO on PC30
 
@@ -436,20 +450,6 @@ void system_init(void)
 	gpio_set_pin_direction(LED_Orange2, GPIO_DIRECTION_OUT);
 
 	gpio_set_pin_function(LED_Orange2, GPIO_PIN_FUNCTION_OFF);
-
-	// GPIO on PD12
-
-	gpio_set_pin_level(Photodiode_MUX_S0,
-	                   // <y> Initial level
-	                   // <id> pad_initial_level
-	                   // <false"> Low
-	                   // <true"> High
-	                   true);
-
-	// Set pin direction to output
-	gpio_set_pin_direction(Photodiode_MUX_S0, GPIO_DIRECTION_OUT);
-
-	gpio_set_pin_function(Photodiode_MUX_S0, GPIO_PIN_FUNCTION_OFF);
 
 	// GPIO on PD21
 
