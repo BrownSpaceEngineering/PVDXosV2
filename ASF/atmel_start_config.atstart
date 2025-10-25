@@ -1275,6 +1275,34 @@ pads:
     mode: I2C
     user_label: Shared_SDA
     configuration: null
+  Photodiode_MUX_S0:
+    name: PC18
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC18
+    mode: Digital output
+    user_label: Photodiode_MUX_S0
+    configuration:
+      pad_initial_level: High
+  Photodiode_MUX_S1:
+    name: PC19
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC19
+    mode: Digital output
+    user_label: Photodiode_MUX_S1
+    configuration:
+      pad_initial_level: High
+  Photodiode_MUX_S2:
+    name: PC20
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC20
+    mode: Digital output
+    user_label: Photodiode_MUX_S2
+    configuration:
+      pad_initial_level: High
+  Photodiode_MUX_EN:
+    name: PC21
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC21
+    mode: Digital output
+    user_label: Photodiode_MUX_EN
+    configuration:
+      pad_initial_level: High
   Magnetometer_DRDY:
     name: PD21
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PD21
