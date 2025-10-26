@@ -23,7 +23,7 @@ struct rand_sync_desc RAND_0;
 
 struct wdt_descriptor WDT_0;
 
-struct rtc_sync_descriptor RTC_0;
+// struct rtc_sync_descriptor RTC_0; // TODO: Re-enable once RTC HAL driver is available
 
 void ADC_0_PORT_init(void)
 {
@@ -171,14 +171,14 @@ void WDT_0_init(void)
 
 void RTC_0_CLOCK_init(void)
 {
-	hri_mclk_set_APBAMASK_RTC_bit(MCLK);
-	hri_gclk_write_PCHCTRL_reg(GCLK, RTC_GCLK_ID, CONF_GCLK_RTC_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+	// hri_mclk_set_APBAMASK_RTC_bit(MCLK); // TODO: Re-enable once RTC HAL driver is available
+	// hri_gclk_write_PCHCTRL_reg(GCLK, RTC_GCLK_ID, CONF_GCLK_RTC_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos)); // TODO: Re-enable once RTC HAL driver is available
 }
 
 void RTC_0_init(void)
 {
 	RTC_0_CLOCK_init();
-	rtc_sync_init(&RTC_0, RTC);
+	// rtc_sync_init(&RTC_0, RTC); // TODO: Re-enable once RTC HAL driver is available
 }
 
 void system_init(void)
