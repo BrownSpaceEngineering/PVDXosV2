@@ -11,7 +11,7 @@
 #include "logging.h"
 #include "rtos_start.h"
 #include "task_list.h"
-#include "misc/rtc/rtc_driver.h"
+// #include "misc/rtc/rtc_driver.h" // TODO: Re-enable once ASF configuration is updated
 
 /*
 Standard definitions for main.c

@@ -32,7 +32,7 @@ extern "C" {
 
 #include <hal_wdt.h>
 
-#include <hal_rtc_sync.h>
+// #include <hal_rtc_sync.h> // TODO: Re-enable once ASF configuration is updated
 
 extern struct adc_sync_descriptor ADC_0;
 
@@ -43,7 +43,7 @@ extern struct rand_sync_desc RAND_0;
 
 extern struct wdt_descriptor WDT_0;
 
-extern struct rtc_sync_descriptor RTC_0;
+// extern struct rtc_sync_descriptor RTC_0; // TODO: Re-enable once ASF configuration is updated
 
 void ADC_0_PORT_init(void);
 void ADC_0_CLOCK_init(void);
@@ -65,8 +65,8 @@ void RAND_0_init(void);
 void WDT_0_CLOCK_init(void);
 void WDT_0_init(void);
 
-void RTC_0_CLOCK_init(void);
-void RTC_0_init(void);
+// void RTC_0_CLOCK_init(void); // TODO: Re-enable once ASF configuration is updated
+// void RTC_0_init(void); // TODO: Re-enable once ASF configuration is updated
 
 /**
  * \brief Perform system initialization, initialize pins and clocks for
