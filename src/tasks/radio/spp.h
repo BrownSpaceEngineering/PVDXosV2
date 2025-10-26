@@ -16,13 +16,13 @@
 // version number, always 000, see SPP Blue Book 4.1.3.2.2 (pg. 4-2):
 #define SPP_VERSION_NUMBER 0
 // packet type, see SPP Blue Book 4.1.3.3.2.3 (pg. 4-3)
-#define SPP_PACKET_TYPE_REPORTING 0
-#define SPP_PACKET_TYPE_REQUESTING 1
+#define SPP_PACKET_TYPE_REPORTING 0  // telemetry
+#define SPP_PACKET_TYPE_REQUESTING 1 // telecommands
 // secondary header flag:
 #define SPP_SECONDARY_HEADER_PRESENT 1
 #define SPP_SECONDARY_HEADER_NOT_PRESENT 0
 // Application Process Identifer (APID), see SPP Blue Book 4.1.3.3.4.4 (pg. 4-4)
-#define SPP_APID_IDLE_PACKET 0b11111111111
+#define SPP_APID_IDLE_PACKET 0b11111111111 // reserved value for idle packets
 // sequence flags, see SPP Blue Book 4.1.3.4.2.2 (pg. 4-4 - 4-5)
 #define SPP_SEQ_FLAG_CONTINUATION_OF_DATA 0b00
 #define SPP_SEQ_FLAG_FIRST_SEGMENT_OF_DATA 0b01
