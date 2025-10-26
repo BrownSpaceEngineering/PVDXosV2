@@ -9,6 +9,15 @@
 
 #include "photodiode_task.h"
 
+// Global photodiode configuration
+photodiode_config_t photodiode_config = {
+    .mux_select_pins = {MUX_SEL0_PIN, MUX_SEL1_PIN, MUX_SEL2_PIN},
+    .mux_enable_pin = MUX_EN_PIN,
+    .adc_channel = PHOTODIODE_ADC_CHANNEL,
+    .calibration_enabled = true,
+    .calibration_values = {0}
+};
+
 /* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
 
 /**

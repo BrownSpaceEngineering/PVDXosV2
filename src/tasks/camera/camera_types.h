@@ -11,9 +11,9 @@
 #ifndef CAMERA_TYPES_H
 #define CAMERA_TYPES_H
 
-#include "globals.h"
-#include "logging.h"
-#include "misc/rtc/rtc_driver.h"
+#include "../../globals.h"
+#include "../../misc/logging/logging.h"
+// #include "misc/rtc/rtc_driver.h" // RTC driver not available on this branch
 
 // ============================================================================
 // CAMERA CONSTANTS
@@ -95,7 +95,7 @@ typedef enum {
     CAMERA_STATUS_CAPTURING,         // Camera currently capturing
     CAMERA_STATUS_ERROR,             // Camera in error state
     CAMERA_STATUS_BUSY               // Camera busy with operation
-} camera_status_t;
+} camera_status_enum_t;
 
 // ============================================================================
 // CAMERA STRUCTURES
@@ -134,7 +134,7 @@ typedef struct {
  * Camera status structure
  */
 typedef struct {
-    camera_status_t status;                  // Current camera status
+    camera_status_enum_t status;             // Current camera status
     bool initialized;                        // Initialization status
     bool capturing;                         // Currently capturing flag
     uint32_t images_captured;               // Total images captured

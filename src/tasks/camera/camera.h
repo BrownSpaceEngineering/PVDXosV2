@@ -11,13 +11,16 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
-#include "globals.h"
-#include "logging.h"
-#include "queue.h"
-#include "task_list.h"
-#include "atmel_start.h"
-#include "watchdog_task.h"
+#include "../../globals.h"
+#include "../../misc/logging/logging.h"
+#include "../../ASF/thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/include/queue.h"
+#include "../task_list.h"
+#include "../../ASF/atmel_start.h"
+#include "../watchdog/watchdog_task.h"
 #include "camera_types.h"
+#include "camera_config.h"
+#include "camera_hw.h"
+#include "camera_driver.h"
 
 // ============================================================================
 // CAMERA TASK CONFIGURATION

@@ -9,9 +9,10 @@
  */
 
 #include "camera.h"
+#include "FreeRTOS.h"
+#include "task.h"
 
-// Camera Task memory structures
-camera_task_memory_t camera_mem;
+// Note: camera_mem is defined in camera.c
 
 /**
  * \fn main_camera
@@ -45,7 +46,7 @@ void camera_main(void *pvParameters) {
 
         // Handle continuous capture mode
         if (camera_config.capture_mode == CAMERA_CAPTURE_CONTINUOUS && camera_status.initialized) {
-            uint32_t current_time = rtc_get_seconds();
+            uint32_t current_time = xTaskGetTickCount() / portTICK_PERIOD_MS;
             
             if (!continuous_capture_active) {
                 continuous_capture_active = true;
@@ -185,7 +186,7 @@ void camera_exec_command(command_t *const p_cmd) {
     
     // Free command arguments memory if allocated
     if (p_cmd->p_data) {
-        free(p_cmd->p_data);
-        p_cmd->p_data = NULL;
+        free((void*)p_cmd->p_data);  // Cast away const for free
+        // Note: Cannot set p_data to NULL because it's const
     }
 }

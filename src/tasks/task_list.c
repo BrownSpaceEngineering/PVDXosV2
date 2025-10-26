@@ -9,6 +9,7 @@
  */
 
 #include "task_list.h"
+#include "camera/camera.h"
 
 // Define task structs; tasks are mutable so not constant
 pvdx_task_t watchdog_task = {
@@ -105,8 +106,8 @@ pvdx_task_t camera_task = {
     .enabled = false,
     .handle = NULL,
     .command_queue = NULL,
-    .init = init_camera,
-    .function = main_camera,
+    .init = camera_init,
+    .function = camera_main,
     .stack_size = CAMERA_TASK_STACK_SIZE,
     .stack_buffer = camera_mem.camera_task_stack,
     .pvParameters = NULL,

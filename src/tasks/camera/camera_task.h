@@ -2,14 +2,14 @@
 #define CAMERA_TASK_H
 
 // Includes
-#include "globals.h"
-#include "logging.h"
-#include "queue.h"
-#include "task_list.h"
-#include "atmel_start.h"
-#include "watchdog_task.h"
+#include "../../globals.h"
+#include "../../misc/logging/logging.h"
+#include "../../ASF/thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/include/queue.h"
+#include "../task_list.h"
+#include "../../ASF/atmel_start.h"
+#include "../watchdog/watchdog_task.h"
 #include "camera_driver.h"
-#include "misc/rtc/rtc_driver.h"
+// #include "misc/rtc/rtc_driver.h" // RTC driver not available on this branch
 
 // Constants
 #define CAMERA_TASK_STACK_SIZE 2048 // Size of the stack in words (multiply by 4 to get bytes)

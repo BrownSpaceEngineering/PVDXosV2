@@ -11,9 +11,10 @@
 #ifndef CAMERA_HW_H
 #define CAMERA_HW_H
 
-#include "globals.h"
-#include "logging.h"
-#include "atmel_start.h"
+#include "../../globals.h"
+#include "../../misc/logging/logging.h"
+#include "../../ASF/atmel_start.h"
+#include "camera_types.h"
 
 // ============================================================================
 // HARDWARE CONSTANTS

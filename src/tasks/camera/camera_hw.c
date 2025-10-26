@@ -9,7 +9,10 @@
  */
 
 #include "camera_hw.h"
-#include "misc/rtc/rtc_driver.h"
+// #include "misc/rtc/rtc_driver.h" // RTC driver not available on this branch
+#include "FreeRTOS.h"
+#include "task.h"
+#include <string.h>
 
 // ============================================================================
 // HARDWARE STATE VARIABLES
@@ -51,15 +54,15 @@ status_t camera_hw_init(void) {
     
     // Wait for camera to be ready
     if (camera_hw_wait_ready(CAMERA_HW_INIT_TIMEOUT_MS) != SUCCESS) {
-        error("camera_hw: Camera not responding during initialization\n");
-        return ERROR_TIMEOUT;
+        warning("camera_hw: Camera not responding during initialization\n");
+        return ERR_TIMEOUT;
     }
     
     // Verify communication by reading sensor ID
     uint16_t sensor_id;
     if (camera_hw_get_sensor_id(&sensor_id) != SUCCESS) {
-        error("camera_hw: Failed to read sensor ID\n");
-        return ERROR_TIMEOUT;
+        warning("camera_hw: Failed to read sensor ID\n");
+        return ERR_TIMEOUT;
     }
     
     debug("camera_hw: Sensor ID: 0x%04X\n", sensor_id);
@@ -183,7 +186,7 @@ status_t camera_hw_spi_transaction(const uint8_t *tx_data, uint8_t *rx_data, uin
     
     if (result != SUCCESS) {
         warning("camera_hw: SPI transaction failed\n");
-        return ERROR_TIMEOUT;
+        return ERR_TIMEOUT;
     }
     
     // Copy received data if requested
@@ -218,10 +221,10 @@ status_t camera_hw_send_command(uint8_t command, uint8_t param) {
  * \return status_t SUCCESS if camera is ready within timeout
  */
 status_t camera_hw_wait_ready(uint32_t timeout_ms) {
-    uint32_t start_time = rtc_get_seconds();
-    uint32_t timeout_seconds = timeout_ms / 1000;
+    uint32_t start_time = xTaskGetTickCount();
+    uint32_t timeout_ticks = pdMS_TO_TICKS(timeout_ms);
     
-    while ((rtc_get_seconds() - start_time) < timeout_seconds) {
+    while ((xTaskGetTickCount() - start_time) < timeout_ticks) {
         // Check camera status by reading a register
         uint8_t status;
         status_t result = camera_hw_read_register(CAMERA_HW_REG_SENSOR_ID, &status);
@@ -231,7 +234,7 @@ status_t camera_hw_wait_ready(uint32_t timeout_ms) {
         vTaskDelay(pdMS_TO_TICKS(10));
     }
     
-    return ERROR_TIMEOUT;
+    return ERR_TIMEOUT;
 }
 
 // ============================================================================
@@ -244,7 +247,7 @@ status_t camera_hw_wait_ready(uint32_t timeout_ms) {
  */
 status_t camera_hw_start_capture(void) {
     if (!camera_hw_initialized) {
-        return ERROR_NOT_INITIALIZED;
+        return ERR_NOT_INITIALIZED;
     }
     
     debug("camera_hw: Starting image capture\n");
@@ -262,7 +265,7 @@ status_t camera_hw_start_capture(void) {
  */
 status_t camera_hw_stop_capture(void) {
     if (!camera_hw_initialized) {
-        return ERROR_NOT_INITIALIZED;
+        return ERR_NOT_INITIALIZED;
     }
     
     debug("camera_hw: Stopping capture\n");
@@ -277,7 +280,7 @@ status_t camera_hw_stop_capture(void) {
  */
 status_t camera_hw_flush_fifo(void) {
     if (!camera_hw_initialized) {
-        return ERROR_NOT_INITIALIZED;
+        return ERR_NOT_INITIALIZED;
     }
     
     debug("camera_hw: Flushing FIFO\n");
@@ -297,13 +300,13 @@ status_t camera_hw_get_captured_image(camera_image_t *image_buffer, uint32_t tim
         return ERROR_SANITY_CHECK_FAILED;
     }
     
-    uint32_t start_time = rtc_get_seconds();
-    uint32_t timeout_seconds = timeout_ms / 1000;
+    uint32_t start_time = xTaskGetTickCount();
+    uint32_t timeout_ticks = pdMS_TO_TICKS(timeout_ms);
     
     debug("camera_hw: Waiting for capture completion\n");
     
     // Wait for capture to complete
-    while ((rtc_get_seconds() - start_time) < timeout_seconds) {
+    while ((xTaskGetTickCount() - start_time) < timeout_ticks) {
         // TODO: Implement capture completion detection
         // This would typically involve checking a status register or interrupt
         
@@ -311,7 +314,7 @@ status_t camera_hw_get_captured_image(camera_image_t *image_buffer, uint32_t tim
         vTaskDelay(pdMS_TO_TICKS(100));
         
         // Simulate successful capture after delay
-        if ((rtc_get_seconds() - start_time) > 1) {  // 1 second delay
+        if ((xTaskGetTickCount() - start_time) > pdMS_TO_TICKS(1000)) {  // 1 second delay
             break;
         }
     }
@@ -341,7 +344,7 @@ status_t camera_hw_get_captured_image(camera_image_t *image_buffer, uint32_t tim
  */
 status_t camera_hw_set_exposure(uint8_t exposure) {
     if (!camera_hw_initialized) {
-        return ERROR_NOT_INITIALIZED;
+        return ERR_NOT_INITIALIZED;
     }
     
     // Convert 8-bit exposure to 12-bit for camera registers
@@ -370,7 +373,7 @@ status_t camera_hw_set_exposure(uint8_t exposure) {
  */
 status_t camera_hw_set_brightness(uint8_t brightness) {
     if (!camera_hw_initialized) {
-        return ERROR_NOT_INITIALIZED;
+        return ERR_NOT_INITIALIZED;
     }
     
     debug("camera_hw: Setting brightness to %d\n", brightness);
@@ -388,7 +391,7 @@ status_t camera_hw_set_brightness(uint8_t brightness) {
  */
 status_t camera_hw_set_contrast(uint8_t contrast) {
     if (!camera_hw_initialized) {
-        return ERROR_NOT_INITIALIZED;
+        return ERR_NOT_INITIALIZED;
     }
     
     debug("camera_hw: Setting contrast to %d\n", contrast);
@@ -406,7 +409,7 @@ status_t camera_hw_set_contrast(uint8_t contrast) {
  */
 status_t camera_hw_set_format(camera_format_t format) {
     if (!camera_hw_initialized) {
-        return ERROR_NOT_INITIALIZED;
+        return ERR_NOT_INITIALIZED;
     }
     
     debug("camera_hw: Setting format to %d\n", format);
@@ -425,7 +428,7 @@ status_t camera_hw_set_format(camera_format_t format) {
  */
 status_t camera_hw_set_resolution(uint16_t width, uint16_t height) {
     if (!camera_hw_initialized) {
-        return ERROR_NOT_INITIALIZED;
+        return ERR_NOT_INITIALIZED;
     }
     
     debug("camera_hw: Setting resolution to %dx%d\n", width, height);
@@ -498,7 +501,7 @@ status_t camera_hw_get_chip_id(uint16_t *chip_id) {
  */
 status_t camera_hw_check_communication(void) {
     if (!camera_hw_initialized) {
-        return ERROR_NOT_INITIALIZED;
+        return ERR_NOT_INITIALIZED;
     }
     
     uint16_t sensor_id;

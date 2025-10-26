@@ -9,6 +9,7 @@
  */
 
 #include "camera_driver.h"
+#include <string.h>
 
 // SPI transaction structure for ArduCam communication
 struct spi_xfer camera_spi_xfer = {.rxbuf = NULL, .txbuf = NULL, .size = 0};
@@ -351,16 +352,16 @@ status_t camera_set_format(camera_format_t format) {
     uint8_t format_value;
     
     switch (format) {
-        case RGB565:
+        case CAMERA_FORMAT_RGB565:
             format_value = ARDUCAM_FORMAT_RGB565;
             break;
-        case RGB888:
+        case CAMERA_FORMAT_RGB888:
             format_value = ARDUCAM_FORMAT_RGB888;
             break;
-        case YUV422:
+        case CAMERA_FORMAT_YUV422:
             format_value = ARDUCAM_FORMAT_YUV422;
             break;
-        case JPEG:
+        case CAMERA_FORMAT_JPEG:
             format_value = ARDUCAM_FORMAT_JPEG;
             break;
         default:
@@ -370,6 +371,7 @@ status_t camera_set_format(camera_format_t format) {
     
     // TODO: Implement format-specific register configuration
     // This would depend on the specific ArduCam model and sensor
+    (void)format_value;  // Suppress unused variable warning until implementation is complete
     
     debug("camera: Image format set to %d\n", format);
     
@@ -416,17 +418,17 @@ status_t camera_start_capture(const camera_config_t *const config) {
     
     // Start capture based on capture mode
     switch (config->capture_mode) {
-        case CAPTURE_SINGLE:
+        case CAMERA_CAPTURE_SINGLE:
             ret_err_status(camera_send_command(ARDUCAM_CMD_SINGLE_CAPTURE, 0), 
                            "camera_driver: Failed to start single capture");
             break;
             
-        case CAPTURE_CONTINUOUS:
+        case CAMERA_CAPTURE_CONTINUOUS:
             ret_err_status(camera_send_command(ARDUCAM_CMD_CONTINUOUS_CAPTURE, 0), 
                            "camera_driver: Failed to start continuous capture");
             break;
             
-        case CAPTURE_BURST:
+        case CAMERA_CAPTURE_BURST:
             // TODO: Implement burst capture mode
             warning("camera_driver: Burst capture mode not yet implemented\n");
             return ERROR_NOT_READY;
@@ -477,7 +479,7 @@ status_t camera_get_captured_image(camera_image_t *const image_buffer, uint32_t 
     // This would involve reading the image data through SPI
     
     // For now, simulate image data
-    image_buffer->size = image_buffer->width * image_buffer->height * 2; // RGB565
+    image_buffer->size = image_buffer->width * image_buffer->height * 2; // CAMERA_FORMAT_RGB565
     if (image_buffer->size > CAMERA_MAX_IMAGE_SIZE) {
         image_buffer->size = CAMERA_MAX_IMAGE_SIZE;
     }

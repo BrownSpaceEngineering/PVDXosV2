@@ -1,14 +1,10 @@
 #ifndef CAMERA_DRIVER_H
 #define CAMERA_DRIVER_H
 
-#include "atmel_start.h"
-#include "globals.h"
-#include "logging.h"
-
-// Forward declarations
-typedef struct camera_config_s camera_config_t;
-typedef struct camera_image_s camera_image_t;
-typedef enum camera_format_e camera_format_t;
+#include "../../ASF/atmel_start.h"
+#include "../../globals.h"
+#include "../../misc/logging/logging.h"
+#include "camera_types.h"
 
 // ArduCam SPI communication constants
 #define ARDUCAM_SPI_CS_PIN Camera_CS

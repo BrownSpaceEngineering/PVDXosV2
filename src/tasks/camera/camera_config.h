@@ -38,6 +38,7 @@
 // Auto-exposure configuration
 #define CAMERA_AE_SAMPLES            5                 // Number of samples for AE
 #define CAMERA_AE_MAX_STEPS          10                // Maximum exposure steps
+#define CAMERA_MAX_EXPOSURE_STEPS    10                // Alias for CAMERA_AE_MAX_STEPS
 #define CAMERA_AE_TARGET_BRIGHTNESS  128               // Target brightness (0-255)
 #define CAMERA_AE_TOLERANCE          10                // Acceptable deviation
 #define CAMERA_AE_MIN_EXPOSURE       10                // Minimum exposure
@@ -121,12 +122,12 @@
 
 #ifdef DEVBUILD
     #define CAMERA_DEBUG_ENABLED     1
-    #define CAMERA_DEBUG_VERBOSE     1
-    #define CAMERA_DEBUG_PERFORMANCE 1
+    #define CAMERA_VERBOSE_ENABLED   1
+    #define CAMERA_PERF_ENABLED      1
 #else
     #define CAMERA_DEBUG_ENABLED     0
-    #define CAMERA_DEBUG_VERBOSE     0
-    #define CAMERA_DEBUG_PERFORMANCE 0
+    #define CAMERA_VERBOSE_ENABLED   0
+    #define CAMERA_PERF_ENABLED      0
 #endif
 
 // Debug output macros
@@ -138,13 +139,13 @@
     #define CAMERA_DEBUG_HW(fmt, ...)
 #endif
 
-#if CAMERA_DEBUG_VERBOSE
+#if CAMERA_VERBOSE_ENABLED
     #define CAMERA_DEBUG_VERBOSE(fmt, ...) debug("camera: " fmt, ##__VA_ARGS__)
 #else
     #define CAMERA_DEBUG_VERBOSE(fmt, ...)
 #endif
 
-#if CAMERA_DEBUG_PERFORMANCE
+#if CAMERA_PERF_ENABLED
     #define CAMERA_DEBUG_PERF(fmt, ...) debug("camera_perf: " fmt, ##__VA_ARGS__)
 #else
     #define CAMERA_DEBUG_PERF(fmt, ...)

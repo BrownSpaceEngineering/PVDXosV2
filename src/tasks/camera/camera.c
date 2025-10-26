@@ -9,6 +9,8 @@
  */
 
 #include "camera.h"
+#include "FreeRTOS.h"
+#include "task.h"
 
 // ============================================================================
 // GLOBAL VARIABLES
@@ -41,8 +43,8 @@ camera_status_t camera_status = {
     .capturing = false,
     .images_captured = 0,
     .capture_errors = 0,
-    .last_capture_time = 0,
-    .current_config = camera_config
+    .last_capture_time = 0
+    // Note: current_config will be initialized in camera_init()
 };
 
 // ============================================================================
@@ -58,7 +60,7 @@ QueueHandle_t camera_init(void) {
     
     // Initialize hardware
     if (camera_hw_init() != SUCCESS) {
-        error("camera: Failed to initialize hardware\n");
+        warning("camera: Failed to initialize hardware\n");
         return NULL;
     }
     
@@ -123,7 +125,7 @@ status_t camera_capture_image(camera_image_t *image_buffer, const camera_config_
     }
     
     const camera_config_t *capture_config = config ? config : &camera_config;
-    uint32_t capture_start_time = rtc_get_seconds();
+    uint32_t capture_start_time = xTaskGetTickCount();
     
     debug("camera: Starting image capture (resolution: %dx%d, format: %d)\n", 
           capture_config->width, capture_config->height, capture_config->format);
@@ -133,13 +135,13 @@ status_t camera_capture_image(camera_image_t *image_buffer, const camera_config_
     // Configure camera with capture settings
     if (camera_configure(capture_config) != SUCCESS) {
         camera_status.capturing = false;
-        return ERROR_TIMEOUT;
+        return ERR_TIMEOUT;
     }
     
     // Start capture
     if (camera_hw_start_capture() != SUCCESS) {
         camera_status.capturing = false;
-        return ERROR_TIMEOUT;
+        return ERR_TIMEOUT;
     }
     
     // Wait for capture completion and get image data
@@ -148,7 +150,7 @@ status_t camera_capture_image(camera_image_t *image_buffer, const camera_config_
     camera_status.capturing = false;
     
     if (result == SUCCESS) {
-        uint32_t capture_time = rtc_get_seconds() - capture_start_time;
+        uint32_t capture_time = (xTaskGetTickCount() - capture_start_time) / portTICK_PERIOD_MS;
         
         // Update image metadata
         image_buffer->timestamp = capture_start_time;
@@ -178,7 +180,7 @@ status_t camera_capture_image(camera_image_t *image_buffer, const camera_config_
  */
 status_t camera_start_continuous(uint32_t interval_ms) {
     if (!camera_status.initialized) {
-        return ERROR_NOT_INITIALIZED;
+        return ERR_NOT_INITIALIZED;
     }
     
     if (interval_ms < CAMERA_CONTINUOUS_MIN_INTERVAL_MS || 
@@ -201,7 +203,7 @@ status_t camera_start_continuous(uint32_t interval_ms) {
  */
 status_t camera_stop_continuous(void) {
     if (!camera_status.initialized) {
-        return ERROR_NOT_INITIALIZED;
+        return ERR_NOT_INITIALIZED;
     }
     
     // Update configuration
@@ -268,7 +270,7 @@ status_t camera_get_status(camera_status_t *status) {
  */
 status_t camera_auto_exposure_calibrate(uint8_t target_brightness, bool force_recalibration) {
     if (!camera_status.initialized) {
-        return ERROR_NOT_INITIALIZED;
+        return ERR_NOT_INITIALIZED;
     }
     
     debug("camera: Starting auto-exposure calibration (target: %d)\n", target_brightness);
@@ -410,10 +412,12 @@ command_t camera_get_capture_command(camera_image_t *image_buffer, const camera_
     args->capture_config = (camera_config_t*)config;  // Cast away const for command structure
     
     return (command_t){
-        .target = TARGET_CAMERA,
+        .target = p_camera_task,
         .operation = OPERATION_CAMERA_CAPTURE,
         .p_data = args,
-        .result = SUCCESS
+        .len = sizeof(camera_capture_args_t),
+        .result = NO_STATUS_RETURN,
+        .callback = NULL
     };
 }
 
@@ -431,10 +435,12 @@ command_t camera_get_config_command(const camera_config_t *config) {
     args->config = (camera_config_t*)config;  // Cast away const for command structure
     
     return (command_t){
-        .target = TARGET_CAMERA,
+        .target = p_camera_task,
         .operation = OPERATION_CAMERA_CONFIG,
         .p_data = args,
-        .result = SUCCESS
+        .len = sizeof(camera_config_args_t),
+        .result = NO_STATUS_RETURN,
+        .callback = NULL
     };
 }
 
@@ -452,10 +458,12 @@ command_t camera_get_status_command(camera_status_t *status) {
     args->status = status;
     
     return (command_t){
-        .target = TARGET_CAMERA,
+        .target = p_camera_task,
         .operation = OPERATION_CAMERA_STATUS,
         .p_data = args,
-        .result = SUCCESS
+        .len = sizeof(camera_status_args_t),
+        .result = NO_STATUS_RETURN,
+        .callback = NULL
     };
 }
 
@@ -475,9 +483,11 @@ command_t camera_get_auto_exposure_command(uint8_t target_brightness, bool force
     args->force_recalibration = force_recalibration;
     
     return (command_t){
-        .target = TARGET_CAMERA,
+        .target = p_camera_task,
         .operation = OPERATION_CAMERA_AUTO_EXPOSURE,
         .p_data = args,
-        .result = SUCCESS
+        .len = sizeof(camera_auto_exposure_args_t),
+        .result = NO_STATUS_RETURN,
+        .callback = NULL
     };
 }

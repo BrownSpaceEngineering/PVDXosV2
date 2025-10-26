@@ -51,10 +51,12 @@ export OBJS :=                                              	\
 ../src/tasks/magnetometer/magnetometer_main.o               	\
 ../src/tasks/photodiode/photodiode_driver.o               	\
 ../src/tasks/photodiode/photodiode_task.o                 	\
-../src/tasks/photodiode/photodiode_main.o                 	\                                                            	\
+../src/tasks/photodiode/photodiode_main.o                 	\
+../src/tasks/camera/camera_hw.o                       	\
 ../src/tasks/camera/camera_driver.o                       	\
 ../src/tasks/camera/camera_task.o                         	\
 ../src/tasks/camera/camera_main.o                         	\
+../src/tasks/camera/camera.o                              	\
 ../src/tasks/shell/shell_main.o                             	\
 ../src/tasks/shell/shell_helpers.o                          	\
 ../src/tasks/shell/shell_commands.o                         	\

@@ -1,8 +1,8 @@
 #ifndef LOGGING_H
 #define LOGGING_H
 
-#include "SEGGER_RTT.h"
-#include "globals.h"
+#include "../printf/SEGGER_RTT.h"
+#include "../../globals.h"
 
 #define LOGGING_RTT_OUTPUT_CHANNEL 1
 
