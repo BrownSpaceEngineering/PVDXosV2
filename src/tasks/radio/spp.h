@@ -106,7 +106,7 @@ typedef struct spp_packet_view {
  * On a "general packetization" function:
  * I'm not entirely sure we want or need general packetization logic/functions. I think the optimal strategy should be to
  * construct packets in-place within statically allocated buffers. Dealing with a function that can take a variable length
- * parameter could get dangerous.
+ * parameter and builds an array of packets could get dangerous.
  *
  * For decoding packets, we will also need to take on similar approach and should confirm with GSW the length
  * (in both packets and bytes per packet) of all possible uplink transmissions
