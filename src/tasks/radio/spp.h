@@ -1,7 +1,7 @@
 /**
  * src/task/rado/spp.h
  *
- * header for the PVDX implementation of the CCSDS Space Pactket Protocol (SPP)
+ * header file for the PVDX implementation of the CCSDS Space Pactket Protocol (SPP)
  *
  * Created: 20251026 SUN
  * Authors: Zach Mahan
@@ -41,7 +41,7 @@
 #define SPP_STANDARD_PACKET_SIZE 512 // abitrarily chosen for now
 
 /*
- * ssp primary packet header, bitfield struct, see SPP Blue Book pg. 4-2
+ * spp primary packet header, bitfield struct, see SPP Blue Book pg. 4-2
  *
  * we also could consider making this a struct of 3 uint16_t's and then manually
  * setting the bitfields with bitmasks, which could be more predictable but more
@@ -57,7 +57,7 @@ typedef struct spp_primary_packet_header {
     uint16_t application_process_identifier : 11; // "APID", indicates source, destination, or type
     // packet sequence ctrl (2 bytes):
     uint8_t sequence_flags : 2;
-    uint16_t sequence_count : 14; // or packet name
+    uint16_t sequence_count : 14; // gives numerical ordering for packets
     // packet data length (2 bytes):
     uint16_t data_length; // NOTE: this should be <number_of_bytes> - 1, see SPP Blue Book 4.1.3.5.3
 } spp_primary_packet_header_t;
@@ -77,8 +77,7 @@ typedef struct spp_secondary_packet_header {
 } spp_secondary_packet_header_t;
 
 /*
- * standard spp packet we could use to encode anything
- * this struct stores data inside an interal buffer
+ * standard spp packet with an in-place data field
  */
 typedef struct spp_packet {
     spp_primary_packet_header_t header;
@@ -86,7 +85,7 @@ typedef struct spp_packet {
 } spp_packet_t;
 
 /*
- * standard spp packet we could use to encode anything
+ * standard spp packet with a view into a buffer as its data field
  */
 typedef struct spp_packet_view {
     spp_primary_packet_header_t header;
@@ -105,16 +104,19 @@ typedef struct spp_packet_view {
 
 /*
  * On a "general packetization" function:
- * We also will *probably* want or need general packetization logic/functions. I think the optimal strategy should be to
- * construct packets in-place within statically allocated buffers.
+ * I'm not entirely sure we want or need general packetization logic/functions. I think the optimal strategy should be to
+ * construct packets in-place within statically allocated buffers. Dealing with a function that can take a variable length
+ * parameter could get dangerous.
  *
  * For decoding packets, we will also need to take on similar approach and should confirm with GSW the length
  * (in both packets and bytes per packet) of all possible uplink transmissions
  */
-void spp_build_packet_view(spp_packet_view_t *packet, void *data, uint16_t apid, uint8_t secondary_header_flag, uint8_t packet_type,
-                           uint16_t packet_seq_count_or_name);
-// alternative (building packets w/ in-place buffers)
-void spp_build_packet(spp_packet_t *packet, void *data, uint16_t apid, uint8_t secondary_header_flag, uint8_t packet_type,
-                      uint16_t packet_seq_count_or_name);
+
+// ctor for building packets w/ in-place buffers
+void spp_packet_create(spp_packet_t *packet, void *data, uint16_t apid, uint8_t secondary_header_flag, uint8_t packet_type,
+                       uint8_t sequence_flags, uint16_t packet_seq_count, uint16_t data_length);
+
+void spp_packet_view_create(spp_packet_view_t *packet, void *data, uint16_t apid, uint8_t secondary_header_flag, uint8_t packet_type,
+                            uint8_t sequence_flags, uint16_t packet_seq_count, uint16_t data_length);
 
 #endif // !RADIO_SPP_H
