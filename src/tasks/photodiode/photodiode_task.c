@@ -2,21 +2,12 @@
  * photodiode_task.c
  *
  * RTOS task for photodiode sensors used in ADCS sun sensing.
- * Supports 13-21 photodiodes with configurable sampling rates (0.1-100 Hz).
  *
- * Created: September 20, 2024
- * Authors: Avinash Patel
+ * Created: September 20, 2025
+ * Authors: Avinash Patel, Yi Lyo
  */
 
 #include "photodiode_task.h"
-
-// Global configuration
-photodiode_config_t photodiode_config = {
-    .photodiode_count = PHOTODIODE_DEFAULT_COUNT,
-    .delay_ms = PHOTODIODE_DEFAULT_DELAY_MS,
-    .mux_select_pins = {20, 21, 22, 23, 24}, // GPIO pins for MUX select lines (S0-S4) - using pin numbers
-    .use_multiplexer = true
-};
 
 /* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
 
@@ -33,90 +24,26 @@ status_t photodiode_read(photodiode_data_t *const data) {
     if (!data) {
         return ERROR_SANITY_CHECK_FAILED;
     }
-    
-    debug("photodiode: Reading %d photodiode values\n", photodiode_config.photodiode_count);
-    
+
+    debug("photodiode: Reading photodiode values\n");
+
     // Read raw ADC values
     uint16_t raw_values[PHOTODIODE_MAX_COUNT];
-    status_t result = read_photodiode_adc(raw_values, photodiode_config.photodiode_count);
-    
+    status_t result = read_photodiodes(raw_values);
+
     if (result != SUCCESS) {
         warning("photodiode: ADC read failed\n");
         return result;
     }
-    
+
     // Copy raw values to data structure
-    for (int i = 0; i < photodiode_config.photodiode_count; i++) {
+    for (int i = 0; i < PHOTODIODE_MAX_COUNT; i++) {
         data->raw_values[i] = raw_values[i];
     }
-    
-    // Calibrate readings
-    ret_err_status(calibrate_photodiode_readings(raw_values, data->calibrated_values, 
-                                                photodiode_config.photodiode_count), 
-                   "photodiode: Calibration failed");
-    
-    // Calculate sun vector
-    ret_err_status(calculate_sun_vector(data->calibrated_values, data->sun_vector), 
-                   "photodiode: Sun vector calculation failed");
-    
+
     data->timestamp = xTaskGetTickCount();
-    data->active_count = photodiode_config.photodiode_count;
     data->valid = true;
-    
-    return SUCCESS;
-}
 
-/**
- * \fn photodiode_calibrate
- *
- * \brief Calibrates photodiode readings
- *
- * \returns status_t SUCCESS if calibration was successful
- */
-status_t photodiode_calibrate(void) {
-    debug("photodiode: Calibrating photodiode readings\n");
-    
-    // TODO: Implement photodiode calibration
-    // TODO: Store calibration values
-    
-    return SUCCESS;
-}
-
-/**
- * \fn photodiode_set_config
- *
- * \brief Sets photodiode configuration (count, sampling rate, etc.)
- *
- * \param config pointer to photodiode configuration
- *
- * \returns status_t SUCCESS if configuration was successful
- */
-status_t photodiode_set_config(const photodiode_config_t *const config) {
-    if (!config) {
-        return ERROR_SANITY_CHECK_FAILED;
-    }
-    
-    // Validate configuration
-    if (config->photodiode_count < PHOTODIODE_MIN_COUNT || 
-        config->photodiode_count > PHOTODIODE_MAX_COUNT) {
-        warning("photodiode: Invalid photodiode count: %d (must be %d-%d)\n", 
-                config->photodiode_count, PHOTODIODE_MIN_COUNT, PHOTODIODE_MAX_COUNT);
-        return ERROR_SANITY_CHECK_FAILED;
-    }
-    
-    if (config->delay_ms < PHOTODIODE_MIN_DELAY_MS || 
-        config->delay_ms > PHOTODIODE_MAX_DELAY_MS) {
-        warning("photodiode: Invalid delay: %d ms (must be %d-%d ms)\n", 
-                config->delay_ms, PHOTODIODE_MIN_DELAY_MS, PHOTODIODE_MAX_DELAY_MS);
-        return ERROR_SANITY_CHECK_FAILED;
-    }
-    
-    // Update configuration
-    photodiode_config = *config;
-    
-    info("photodiode: Configuration updated - Count: %d, Delay: %d ms\n",
-         config->photodiode_count, config->delay_ms);
-    
     return SUCCESS;
 }
 
@@ -131,39 +58,14 @@ status_t photodiode_set_config(const photodiode_config_t *const config) {
  */
 command_t get_photodiode_read_command(photodiode_data_t *const data) {
     photodiode_read_args_t args = {
-        .data_buffer = data,
-        .request_calibration = false
+        .data_buffer = data
     };
-    
+
     return (command_t) {
         .target = p_photodiode_task,
         .operation = OPERATION_PHOTODIODE_READ,
         .p_data = &args,
         .len = sizeof(photodiode_read_args_t),
-        .result = PROCESSING,
-        .callback = NULL
-    };
-}
-
-/**
- * \fn get_photodiode_config_command
- *
- * \brief Creates a command to configure photodiode settings
- *
- * \param config pointer to configuration structure
- *
- * \returns command_t command structure
- */
-command_t get_photodiode_config_command(const photodiode_config_t *const config) {
-    photodiode_config_args_t args = {
-        .config = (photodiode_config_t *)config
-    };
-    
-    return (command_t) {
-        .target = p_photodiode_task,
-        .operation = OPERATION_PHOTODIODE_CONFIG, // Reuse for config
-        .p_data = &args,
-        .len = sizeof(photodiode_config_args_t),
         .result = PROCESSING,
         .callback = NULL
     };
@@ -200,9 +102,9 @@ QueueHandle_t init_photodiode(void) {
 
 /**
  * \fn exec_command_photodiode
- * 
+ *
  * \brief Executes function corresponding to the command
- * 
+ *
  * \param p_cmd a pointer to a command forwarded to photodiode
  */
 void exec_command_photodiode(command_t *const p_cmd) {
@@ -212,19 +114,8 @@ void exec_command_photodiode(command_t *const p_cmd) {
 
     switch (p_cmd->operation) {
         case OPERATION_PHOTODIODE_READ:
-            {
-                photodiode_read_args_t *args = (photodiode_read_args_t *)p_cmd->p_data;
-                p_cmd->result = photodiode_read(args->data_buffer);
-            }
-            break;
-        case OPERATION_PHOTODIODE_CONFIG:
-            {
-                photodiode_config_args_t *args = (photodiode_config_args_t *)p_cmd->p_data;
-                p_cmd->result = photodiode_set_config(args->config);
-            }
-            break;
-        case OPERATION_PHOTODIODE_CALIBRATE:
-            p_cmd->result = photodiode_calibrate();
+            photodiode_read_args_t *args = (photodiode_read_args_t *)p_cmd->p_data;
+            p_cmd->result = photodiode_read(args->data_buffer);
             break;
         default:
             fatal("photodiode: Invalid operation!\n");
