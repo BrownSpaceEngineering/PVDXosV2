@@ -4,6 +4,7 @@
  * header file for the PVDX implementation of the CCSDS Space Pactket Protocol (SPP)
  *
  * Created: 20251026 SUN
+ * Updated: 20251030 THU
  * Authors: Zach Mahan
  */
 
@@ -62,7 +63,7 @@ typedef struct spp_primary_packet_header {
  * contents. The bluebook states that there is an option for an ancillary data field for
  * "time, internal data field format, spacecraft position/attitude, etc."
  * See SPP Blue Book pg. 4-7
- * TODO: not included in our header, add in if we want additional
+ * TODO: not included in our header, add in if we want additional, GSW currently is not using this either
  *
  */
 typedef struct spp_secondary_packet_header {
