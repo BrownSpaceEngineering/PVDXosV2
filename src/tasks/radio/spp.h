@@ -42,11 +42,6 @@
 
 /*
  * spp primary packet header, bitfield struct, see SPP Blue Book pg. 4-2
- *
- * we also could consider making this a struct of 3 uint16_t's and then manually
- * setting the bitfields with bitmasks, which could be more predictable but more
- * unwieldy. The SAMD51 is little endian, but we will need to test that the bits
- * are being placed correctly when using bitfields.
  */
 typedef struct spp_primary_packet_header {
     // leading info (2 bytes):
@@ -66,10 +61,9 @@ typedef struct spp_primary_packet_header {
  * Note: this is the optional secondary header where we entirely define its length and
  * contents. The bluebook states that there is an option for an ancillary data field for
  * "time, internal data field format, spacecraft position/attitude, etc."
- *
- * TODO: should we use this? I'm leaving it out of the spp packet struct for now
- *
  * See SPP Blue Book pg. 4-7
+ * TODO: not included in our header, add in if we want additional
+ *
  */
 typedef struct spp_secondary_packet_header {
     uint32_t time;
@@ -102,21 +96,30 @@ typedef struct spp_packet_view {
  * OCTET_STRING_indication(Octet String, APID, Secondary Header Indicator, Data Loss Indicator(optional));
  */
 
-/*
- * On a "general packetization" function:
- * I'm not entirely sure we want or need general packetization logic/functions. I think the optimal strategy should be to
- * construct packets in-place within statically allocated buffers. Dealing with a function that can take a variable length
- * parameter and builds an array of packets could get dangerous.
- *
- * For decoding packets, we will also need to take on similar approach and should confirm with GSW the length
- * (in both packets and bytes per packet) of all possible uplink transmissions
+/**
+ * ctor for building packets w/ in-place buffers, does NOT zero-initialize data buffer
  */
+spp_packet_t spp_packet_create_header_only(uint16_t apid, uint8_t secondary_header_flag, uint8_t packet_type, uint8_t sequence_flags,
+                                           uint16_t packet_seq_count, uint16_t data_length);
 
-// ctor for building packets w/ in-place buffers
-void spp_packet_create(spp_packet_t *packet, void *data, uint16_t apid, uint8_t secondary_header_flag, uint8_t packet_type,
-                       uint8_t sequence_flags, uint16_t packet_seq_count, uint16_t data_length);
+/**
+ * ctor for building a packet w/ a zero-initialized data buffer
+ */
+spp_packet_t spp_packet_create_zero_init(uint16_t apid, uint8_t secondary_header_flag, uint8_t packet_type, uint8_t sequence_flags,
+                                         uint16_t packet_seq_count_or_name, uint16_t data_length);
 
-void spp_packet_view_create(spp_packet_view_t *packet, void *data, uint16_t apid, uint8_t secondary_header_flag, uint8_t packet_type,
-                            uint8_t sequence_flags, uint16_t packet_seq_count, uint16_t data_length);
+/**
+ * ctor/initalizer for packet_view_t, useful if we want to store data externally and use packet_view_t's for everything
+ */
+void spp_packet_view_init(spp_packet_view_t *packet, void *data, uint16_t apid, uint8_t secondary_header_flag, uint8_t packet_type,
+                          uint8_t sequence_flags, uint16_t packet_seq_count, uint16_t data_length);
 
+/**
+ * ctor for packet_view_t from a packet
+ */
+spp_packet_view_t spp_packet_view_from(spp_packet_t *packet);
+/**
+ * help to clear/zero a packet_views's data
+ */
+void spp_packet_view_clear_data(spp_packet_view_t view);
 #endif // !RADIO_SPP_H
