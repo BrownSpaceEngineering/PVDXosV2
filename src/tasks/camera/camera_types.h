@@ -25,7 +25,7 @@
 
 // Image and buffer configuration
 #define CAMERA_MAX_IMAGE_SIZE        (320 * 240 * 2)  // Max image size (RGB565)
-#define CAMERA_BUFFER_COUNT          3                 // Number of image buffers
+#define CAMERA_BUFFER_COUNT          1                 // Number of image buffers (reduced from 3 to fit RAM)
 #define CAMERA_MAX_IMAGE_WIDTH       320               // Maximum image width
 #define CAMERA_MAX_IMAGE_HEIGHT      240               // Maximum image height
 

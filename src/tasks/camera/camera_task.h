@@ -16,7 +16,7 @@
 
 // Camera system constants
 #define CAMERA_MAX_IMAGE_SIZE (320 * 240 * 2)  // Maximum image size in bytes (RGB565)
-#define CAMERA_BUFFER_COUNT 3                  // Number of image buffers for double buffering
+#define CAMERA_BUFFER_COUNT 1                  // Number of image buffers (reduced from 3 to fit RAM)
 #define CAMERA_AUTO_EXPOSURE_SAMPLES 5         // Number of samples for auto-exposure algorithm
 #define CAMERA_MAX_EXPOSURE_STEPS 10           // Maximum exposure adjustment steps
 

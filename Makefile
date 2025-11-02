@@ -57,6 +57,7 @@ export OBJS :=                                              	\
 ../src/tasks/camera/camera_task.o                         	\
 ../src/tasks/camera/camera_main.o                         	\
 ../src/tasks/camera/camera.o                              	\
+../src/tasks/camera/tests/camera_tests.o                  	\
 ../src/tasks/shell/shell_main.o                             	\
 ../src/tasks/shell/shell_helpers.o                          	\
 ../src/tasks/shell/shell_commands.o                         	\
@@ -83,6 +84,7 @@ export EXTRA_VPATH := \
 ../../src/tasks/magnetometer \
 ../../src/tasks/photodiode \
 ../../src/tasks/camera \
+../../src/tasks/camera/tests \
 ../../src/tasks/shell \
 ../../src/mutexes
 

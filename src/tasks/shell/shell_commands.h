@@ -28,4 +28,8 @@ void help_reboot();
 void shell_display(char **args, int arg_count);
 void help_display();
 
+// Camera test command (testing framework scaffold)
+void shell_camtest(char **args, int arg_count);
+void help_camtest();
+
 #endif // SHELL_COMMANDS_H

@@ -14,6 +14,7 @@
 #include "logging.h"
 #include "shell_helpers.h"
 #include "watchdog_task.h"
+#include "camera_tests.h"
 
 shell_command_t shell_commands[] = {
     {"help", shell_help, help_help},
@@ -22,6 +23,7 @@ shell_command_t shell_commands[] = {
     {"loglevel", shell_loglevel, help_loglevel},
     {"reboot", shell_reboot, help_reboot},
     {"display", shell_display, help_display},
+    {"camtest", shell_camtest, help_camtest},
     {NULL, NULL, NULL} // Null-terminated array
 };
 
@@ -56,6 +58,45 @@ void shell_help(char **args, int arg_count) {
     } else {
         terminal_printf("help: Invalid usage. Try 'help help'\n");
     }
+}
+
+/* ---------- CAMERA TEST COMMAND (Real tests on arducam-interface) ---------- */
+
+void help_camtest() {
+    terminal_printf("camtest - Camera testing framework\n");
+    terminal_printf("Usage:\n");
+    terminal_printf("  camtest help                 - show this help\n");
+    terminal_printf("  camtest list                 - list available camera tests\n");
+    terminal_printf("  camtest run <name> [args...] - run a specific camera test\n");
+}
+
+void shell_camtest(char **args, int arg_count) {
+    if (arg_count == 1 || (arg_count >= 2 && strcmp(args[1], "help") == 0)) {
+        help_camtest();
+        return;
+    }
+
+    if (strcmp(args[1], "list") == 0) {
+        camera_tests_list();
+        return;
+    }
+
+    if (strcmp(args[1], "run") == 0) {
+        if (arg_count < 3) {
+            terminal_printf("camtest run: missing test name. Try 'camtest list'\n");
+            return;
+        }
+        if (strcmp(args[2], "all") == 0) {
+            int total = 0;
+            int passed = camera_tests_run_all(&total);
+            (void)passed; // summary already printed
+            return;
+        }
+        (void)camera_tests_run_one(args[2]);
+        return;
+    }
+
+    terminal_printf("camtest: unknown subcommand '%s'. Try 'camtest help'\n", args[1]);
 }
 
 /**
