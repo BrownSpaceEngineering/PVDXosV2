@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# author: Siddharta Laloux
+
 for arg in "$@"
 do 
     task_name_lower=${arg,,}
