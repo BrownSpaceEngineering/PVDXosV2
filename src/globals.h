@@ -101,16 +101,16 @@ typedef enum {
 #define NUM_DEVICES 10 // This **must** be update to reflect the number of enums
 typedef enum {
     // TODO define device IDs here
-    MAGNETOMETER_ID,
-    PHOTODIODE_ID,
-    GYROSCOPE_ID,
-    MRAM_ID,
-    MAGNETORQUERS_ID,
-    SBAND_ID,
-    UHF_ID,
-    EPS_ID,
-    DISPLAY_ID,
-    CAMERA_ID,
+    MAGNETOMETER_ID = 0,
+    PHOTODIODE_ID = 1,
+    GYROSCOPE_ID = 2,
+    MRAM_ID = 3,
+    MAGNETORQUERS_ID = 4,
+    SBAND_ID = 5,
+    UHF_ID = 6,
+    EPS_ID = 7,
+    DISPLAY_ID = 8,
+    CAMERA_ID = 9,
 } device_id_e;
 
 /* ---------- MISCELLANEOUS TASK TYPES ---------- */
