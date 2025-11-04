@@ -16,11 +16,6 @@
 
 #include "globals.h"
 
-typedef struct device_check_state {
-    bool checked;
-    bool valid;
-} device_check_state_t;
-
 /**
  * \brief to be run once on startup to check the health of each device
  * \return true when at least device has failed, else false
