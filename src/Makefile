@@ -60,6 +60,10 @@ export OBJS :=                                              	\
 ../src/tasks/shell/shell_commands.o                         	\
                                                             	\
 ../src/tasks/task_list.o                                        \
+                                                            	\
+../src/tasks/photodiode/photodiode_main.o						\
+../src/tasks/photodiode/photodiode_task.o						\
+../src/tasks/photodiode/photodiode_driver.o						\
 
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###
 ### THESE ARE WRITTEN RELATIVE TO THE ./ASF/gcc/Makefile FILE ###
@@ -80,6 +84,7 @@ export EXTRA_VPATH := \
 ../../src/tasks/command_dispatcher \
 ../../src/tasks/magnetometer \
 ../../src/tasks/shell \
+../../src/tasks/photodiode \
 ../../src/mutexes
 
 
@@ -92,7 +97,7 @@ export EXTRA_VPATH := \
 
 #Makefile usually uses /bin/sh to evaluate commands, so we need to change it to /bin/bash
 #To allow for the if statement in the connect target to execute correctly
-SHELL := /bin/bash 
+SHELL := /bin/bash
 
 #Path to the child makefile
 #This makefile is used to build the ASF files, and is provided by Atmel Start

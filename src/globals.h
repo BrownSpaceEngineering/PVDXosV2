@@ -38,7 +38,7 @@ typedef enum {
     // Standard Responses
     PROCESSING = 0,         // Function is still processing and will return a result later
     NO_STATUS_RETURN,       // Function does not return a status, so don't check it
-    SUCCESS,               
+    SUCCESS,
 
     // Error Responses
     ERROR_READ_FAILED,
@@ -70,6 +70,9 @@ typedef enum {
 
     // Magnetometer operations
     OPERATION_READ,            // p_data: magnetometer_read_args_t *readings
+
+    // Photodiode operations
+    OPERATION_PHOTODIODE_READ,
 
     // TESTING
     TEST_OP, // p_data: char message[]

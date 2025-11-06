@@ -5,7 +5,7 @@
  * and to provide access to global task data through `pvdx_task_t*` pointers.
  *
  * Created: January 24, 2025
- * Authors: Oren Kohavi, Tanish Makadia, Yi Liu, Siddharta Laloux
+ * Authors: Oren Kohavi, Tanish Makadia, Yi Lyo, Siddharta Laloux
  */
 
 #include "task_list.h"
@@ -83,6 +83,24 @@ pvdx_task_t magnetometer_task = {
     .task_type = SENSOR
 };
 
+pvdx_task_t photodiode_task = {
+    .name = "Photodiode",
+    .enabled = false,
+    .handle = NULL,
+    .command_queue = NULL,
+    .init = init_photodiode,
+    .function = main_photodiode,
+    .stack_size = PHOTODIODE_TASK_STACK_SIZE,
+    .stack_buffer = photodiode_mem.photodiode_task_stack,
+    .pvParameters = NULL,
+    .priority = 2,
+    .task_tcb = &photodiode_mem.photodiode_task_tcb,
+    .watchdog_timeout_ms = 5000,
+    .last_checkin_time_ticks = 0xDEADBEEF,
+    .has_registered = false,
+    .task_type = SENSOR
+};
+
 pvdx_task_t shell_task = {
     .name = "Shell",
     .enabled = false,
@@ -142,6 +160,7 @@ pvdx_task_t *const p_watchdog_task = &watchdog_task;
 pvdx_task_t *const p_command_dispatcher_task = &command_dispatcher_task;
 pvdx_task_t *const p_task_manager_task = &task_manager_task;
 pvdx_task_t *const p_magnetometer_task = &magnetometer_task;
+pvdx_task_t *const p_photodiode_task = &photodiode_task;
 pvdx_task_t *const p_shell_task = &shell_task;
 pvdx_task_t *const p_display_task = &display_task;
 pvdx_task_t *const p_heartbeat_task = &heartbeat_task;
@@ -155,18 +174,19 @@ pvdx_task_t *const task_list_null_terminator = NULL;
 // If you change the order of any of these, make sure that main.c reflects the change and update this comment.
 pvdx_task_t *task_list[] = {
     p_watchdog_task,
-    p_command_dispatcher_task, 
-    p_task_manager_task, 
-    p_magnetometer_task, 
+    p_command_dispatcher_task,
+    p_task_manager_task,
+    p_magnetometer_task,
+    p_photodiode_task,
     p_shell_task,
-    p_display_task, 
+    p_display_task,
     p_heartbeat_task,
     task_list_null_terminator,
 };
 
 /**
  * \fn get_current_task
- * 
+ *
  * \brief Returns a pointer to the `pvdx_task_t` struct associated with the calling task
  *
  * \return `pvdx_task_t*`
@@ -178,14 +198,14 @@ inline pvdx_task_t *get_current_task(void) {
 
 /**
  * \fn get_command_queue_block_time_ticks
- * 
+ *
  * \brief Given a pointer to a `pvdx_task_t` struct, returns the maximum block time in ticks when attempting to dequeue
  *        a command from the task's command queue.
- * 
+ *
  * \param p_task Pointer to the `pvdx_task_t` of the task whose block time is desired
- * 
+ *
  * \return `TickType_t`
- * 
+ *
  */
 inline TickType_t get_command_queue_block_time_ticks(pvdx_task_t *const p_task) {
     return pdMS_TO_TICKS(p_task->watchdog_timeout_ms / 2);
@@ -193,13 +213,12 @@ inline TickType_t get_command_queue_block_time_ticks(pvdx_task_t *const p_task) 
 
 /**
  * \fn should_checkin
- * 
- * \brief Returns `true` if the given task is registered with the watchdog 
+ *
+ * \brief Returns `true` if the given task is registered with the watchdog
  *        (i.e. whether its checkins are being tracked)
- * 
+ *
  * \return `bool`
  */
 inline bool should_checkin(pvdx_task_t *const p_task) {
     return p_task->enabled;
 }
-
