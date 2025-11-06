@@ -19,7 +19,26 @@ test: bootloader_target
 flash_monkey:
 	python3 scripts/flip_rand_bit.py
 
-connect: all
+# this command will start gdb from a breakpoint at main
+# use connect_bl to start from the beginning
+connect:
+	JLinkExe -CommanderScript flash.jlink \
+	&& gdb \
+		-ex "set confirm off" \
+		-ex "add-symbol-file src/PVDXos.elf" \
+		-ex "add-symbol-file bootloader/bootloader2.elf" \
+		-ex "add-symbol-file bootloader/bootloader3.elf" \
+		-ex "set confirm on" \
+		-ex "target remote localhost:2331" \
+		-ex "monitor reset" \
+		-ex "break go_to_app" \
+		-ex "continue" \
+		-ex "break main" \
+		-ex "continue" \
+		bootloader/bootloader1.elf
+
+# connect for debugging bootloader
+connect_bl:
 	JLinkExe -CommanderScript flash.jlink \
 	&& gdb \
 		-ex "set confirm off" \
