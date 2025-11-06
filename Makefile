@@ -1,3 +1,28 @@
+ifeq ($(OS),Windows_NT)
+	# Pure Windows (e.g. MSYS2/MinGW). Note that in WSL, $(OS) is *not* Windows_NT.
+	GDBCMD = gdb-multiarch
+else
+	# We are in a Unix-like environment (Linux or macOS or WSL). Here, $(OS) is not defined.
+	UNAME_S := $(shell uname -s)
+	UNAME_R := $(shell uname -r)
+
+	ifeq ($(UNAME_S),Darwin)
+		# macOS
+		GDBCMD = gdb
+	else ifeq ($(UNAME_S),Linux)
+		# Linux or WSL. Check if it's WSL by searching "microsoft" in uname -r
+		ifneq (,$(findstring microsoft,$(UNAME_R)))
+			# WSL
+			GDBCMD = gdb
+		else
+			# "Pure" Linux
+			GDBCMD = gdb-multiarch
+		endif
+	else
+		$(error Unknown or unsupported OS)
+	endif
+endif
+
 all: dev
 
 # can't be called bootloader bc that's the folder name
@@ -23,7 +48,7 @@ flash_monkey:
 # use connect_bl to start from the beginning
 connect:
 	JLinkExe -CommanderScript flash.jlink \
-	&& gdb \
+	&& $(GDBCMD) \
 		-ex "set confirm off" \
 		-ex "add-symbol-file src/PVDXos.elf" \
 		-ex "add-symbol-file bootloader/bootloader2.elf" \
@@ -40,7 +65,7 @@ connect:
 # connect for debugging bootloader
 connect_bl:
 	JLinkExe -CommanderScript flash.jlink \
-	&& gdb \
+	&& $(GDBCMD) \
 		-ex "set confirm off" \
 		-ex "add-symbol-file src/PVDXos.elf" \
 		-ex "add-symbol-file bootloader/bootloader2.elf" \
