@@ -64,6 +64,10 @@ export OBJS :=                                              	\
 ../src/tasks/photodiode/photodiode_main.o						\
 ../src/tasks/photodiode/photodiode_task.o						\
 ../src/tasks/photodiode/photodiode_driver.o						\
+																\
+../src/tasks/arducam/arducam.o 									\
+../src/tasks/arducam/arducam_helper.o							\
+../src/tasks/arducam/arducam_registers.o						\
 
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###
 ### THESE ARE WRITTEN RELATIVE TO THE ./ASF/gcc/Makefile FILE ###
@@ -85,6 +89,7 @@ export EXTRA_VPATH := \
 ../../src/tasks/magnetometer \
 ../../src/tasks/shell \
 ../../src/tasks/photodiode \
+../../src/tasks/arducam \
 ../../src/mutexes
 
 

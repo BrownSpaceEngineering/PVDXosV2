@@ -1,0 +1,11 @@
+CS -> 21
+
+These pins are connected to the male headers in the middle of the board:
+MOSI -> MOSI
+MISO -> MISO
+SCK -> SCK
+GND -> GND
+VCC -> 5V
+
+SDA -> 36
+SCL -> 37

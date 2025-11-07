@@ -67,6 +67,8 @@ int main(void) {
         }
     }
 
+    init_task_pointer(p_arducam_task);
+
     /* ---------- COSMIC MONKEY TASK ---------- */
 
     #if defined(UNITTEST) || defined(DEVBUILD)
