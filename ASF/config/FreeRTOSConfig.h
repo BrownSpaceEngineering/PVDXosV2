@@ -253,12 +253,6 @@ to exclude the API function. */
 // <id> freertos_xtaskgetcurrenttaskhandle
 #ifndef INCLUDE_xTaskGetCurrentTaskHandle
 #define INCLUDE_xTaskGetCurrentTaskHandle 0
-#endif 
-
-// <q> Include thread-local storage pointers 
-// <id> freertos_num_thread_local_storage_pointers 
-#ifndef configNUM_THREAD_LOCAL_STORAGE_POINTERS 
-#define configNUM_THREAD_LOCAL_STORAGE_POINTERS 1
 #endif
 
 #define INCLUDE_uxTaskGetStackHighWaterMark 1
