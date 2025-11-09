@@ -24,76 +24,28 @@ void ADC_0_example(void)
 	}
 }
 
-void I2C_SBAND_example(void)
+void I2C_0_example(void)
 {
-	struct io_descriptor *I2C_SBAND_io;
+	struct io_descriptor *I2C_0_io;
 
-	i2c_m_sync_get_io_descriptor(&I2C_SBAND, &I2C_SBAND_io);
-	i2c_m_sync_enable(&I2C_SBAND);
-	i2c_m_sync_set_slaveaddr(&I2C_SBAND, 0x12, I2C_M_SEVEN);
-	io_write(I2C_SBAND_io, (uint8_t *)"Hello World!", 12);
-}
-
-void I2C_MAG_GYRO_example(void)
-{
-	struct io_descriptor *I2C_MAG_GYRO_io;
-
-	i2c_m_sync_get_io_descriptor(&I2C_MAG_GYRO, &I2C_MAG_GYRO_io);
-	i2c_m_sync_enable(&I2C_MAG_GYRO);
-	i2c_m_sync_set_slaveaddr(&I2C_MAG_GYRO, 0x12, I2C_M_SEVEN);
-	io_write(I2C_MAG_GYRO_io, (uint8_t *)"Hello World!", 12);
-}
-
-void I2C_CAMERA_example(void)
-{
-	struct io_descriptor *I2C_CAMERA_io;
-
-	i2c_m_sync_get_io_descriptor(&I2C_CAMERA, &I2C_CAMERA_io);
-	i2c_m_sync_enable(&I2C_CAMERA);
-	i2c_m_sync_set_slaveaddr(&I2C_CAMERA, 0x12, I2C_M_SEVEN);
-	io_write(I2C_CAMERA_io, (uint8_t *)"Hello World!", 12);
+	i2c_m_sync_get_io_descriptor(&I2C_0, &I2C_0_io);
+	i2c_m_sync_enable(&I2C_0);
+	i2c_m_sync_set_slaveaddr(&I2C_0, 0x12, I2C_M_SEVEN);
+	io_write(I2C_0_io, (uint8_t *)"Hello World!", 12);
 }
 
 /**
- * Example of using SPI_MRAM to write "Hello World" using the IO abstraction.
+ * Example of using SPI_0 to write "Hello World" using the IO abstraction.
  */
-static uint8_t example_SPI_MRAM[12] = "Hello World!";
+static uint8_t example_SPI_0[12] = "Hello World!";
 
-void SPI_MRAM_example(void)
+void SPI_0_example(void)
 {
 	struct io_descriptor *io;
-	spi_m_sync_get_io_descriptor(&SPI_MRAM, &io);
+	spi_m_sync_get_io_descriptor(&SPI_0, &io);
 
-	spi_m_sync_enable(&SPI_MRAM);
-	io_write(io, example_SPI_MRAM, 12);
-}
-
-/**
- * Example of using SPI_DISPLAY to write "Hello World" using the IO abstraction.
- */
-static uint8_t example_SPI_DISPLAY[12] = "Hello World!";
-
-void SPI_DISPLAY_example(void)
-{
-	struct io_descriptor *io;
-	spi_m_sync_get_io_descriptor(&SPI_DISPLAY, &io);
-
-	spi_m_sync_enable(&SPI_DISPLAY);
-	io_write(io, example_SPI_DISPLAY, 12);
-}
-
-/**
- * Example of using SPI_CAMERA to write "Hello World" using the IO abstraction.
- */
-static uint8_t example_SPI_CAMERA[12] = "Hello World!";
-
-void SPI_CAMERA_example(void)
-{
-	struct io_descriptor *io;
-	spi_m_sync_get_io_descriptor(&SPI_CAMERA, &io);
-
-	spi_m_sync_enable(&SPI_CAMERA);
-	io_write(io, example_SPI_CAMERA, 12);
+	spi_m_sync_enable(&SPI_0);
+	io_write(io, example_SPI_0, 12);
 }
 
 void delay_example(void)
