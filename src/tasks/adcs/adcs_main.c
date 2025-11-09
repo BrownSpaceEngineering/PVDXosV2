@@ -37,6 +37,13 @@ QueueHandle_t init_adcs(void) {
         warning("photodiode: Hardware initialization failed\n");
     }
 
+    // Initialize RTC timer hardware
+    info("Initializing RTC timer\n");
+    result = init_rtc_hardware();
+    if (result != SUCCESS) {
+        warning("rtc timer: Hardware initialization failed\n");
+    }
+
     return adcs_command_queue_handle;
 }
 
@@ -58,10 +65,6 @@ void main_adcs(void *pvParameters) {
     const TickType_t queue_block_time_ticks = get_command_queue_block_time_ticks(current_task);
     // Variable to hold commands popped off the queue
     command_t cmd;
-
-    info("rtc timer: Initialized\n");
-
-    init_rtc_hardware();
 
     info("photodiode: Initialized with %d photodiodes\n", PHOTODIODE_COUNT);
 

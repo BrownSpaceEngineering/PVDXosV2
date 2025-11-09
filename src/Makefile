@@ -64,6 +64,7 @@ export OBJS :=                                              	\
 ../src/tasks/adcs/adcs_main.o									\
 ../src/tasks/adcs/adcs_task.o									\
 ../src/tasks/adcs/photodiode_driver.o							\
+../src/tasks/adcs/rtc_driver.o									\
 
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###
 ### THESE ARE WRITTEN RELATIVE TO THE ./ASF/gcc/Makefile FILE ###

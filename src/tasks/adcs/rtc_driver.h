@@ -7,6 +7,7 @@
 #include "atmel_start.h"
 #include "driver_init.h"
 
-void init_rtc_hardware(void);
+// Function declarations
+status_t init_rtc_hardware(void);
 
-#endif
+#endif // RTC_DRIVER_H
