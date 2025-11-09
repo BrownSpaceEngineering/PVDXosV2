@@ -13,11 +13,11 @@
 
 // TODO: cool ascii art
 #define ADCS_ASCII_ART                                                                                                                    \
-    "  ______     \n"                                                                                                           \
-    " /  __  \\   \n"                                                                                             \
-    "|  /  \\  |  \n"                                                                                             \
-    "|  \\__/| |  \n"                                                                                             \
-    "|_|     |_|  \n"
+"    _    ____   ____ ____     \n" \
+"   / \\  |  _ \\ / ___/ ___|  \n" \
+"  / _ \\ | | | | |   \\___ \\ \n" \
+" / ___ \\| |_| | |___ ___) |  \n" \
+"/_/   \\_\\____/ \\____|____/ \n" \
 
 // Constants
 #define ADCS_TASK_STACK_SIZE 1024 // Size of the stack in words (multiply by 4 to get bytes)
