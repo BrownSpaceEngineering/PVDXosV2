@@ -82,6 +82,7 @@ hpl/dmac/hpl_dmac.o \
 hpl/oscctrl/hpl_oscctrl.o \
 hal/src/hal_rand_sync.o \
 hpl/trng/hpl_trng.o \
+hal/src/hal_usart_sync.o \
 hpl/mclk/hpl_mclk.o \
 hpl/ramecc/hpl_ramecc.o \
 hal/src/hal_init.o \
@@ -93,14 +94,14 @@ examples/driver_examples.o \
 driver_init.o \
 hal/src/hal_adc_sync.o \
 hpl/sercom/hpl_sercom.o \
+hal/src/hal_atomic.o \
 hal/src/hal_gpio.o \
 hal/utils/src/utils_event.o \
 hal/src/hal_sleep.o \
 hal/src/hal_cache.o \
-hpl/cmcc/hpl_cmcc.o \
 samd51a/gcc/gcc/startup_samd51.o \
 atmel_start.o \
-hal/src/hal_atomic.o \
+hpl/cmcc/hpl_cmcc.o \
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/tasks.o \
 hpl/adc/hpl_adc.o
 
@@ -131,6 +132,7 @@ OBJS_AS_ARGS +=  \
 "hpl/oscctrl/hpl_oscctrl.o" \
 "hal/src/hal_rand_sync.o" \
 "hpl/trng/hpl_trng.o" \
+"hal/src/hal_usart_sync.o" \
 "hpl/mclk/hpl_mclk.o" \
 "hpl/ramecc/hpl_ramecc.o" \
 "hal/src/hal_init.o" \
@@ -142,14 +144,14 @@ OBJS_AS_ARGS +=  \
 "driver_init.o" \
 "hal/src/hal_adc_sync.o" \
 "hpl/sercom/hpl_sercom.o" \
+"hal/src/hal_atomic.o" \
 "hal/src/hal_gpio.o" \
 "hal/utils/src/utils_event.o" \
 "hal/src/hal_sleep.o" \
 "hal/src/hal_cache.o" \
-"hpl/cmcc/hpl_cmcc.o" \
 "samd51a/gcc/gcc/startup_samd51.o" \
 "atmel_start.o" \
-"hal/src/hal_atomic.o" \
+"hpl/cmcc/hpl_cmcc.o" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/tasks.o" \
 "hpl/adc/hpl_adc.o"
 
@@ -216,6 +218,7 @@ DEPS_AS_ARGS +=  \
 "hpl/gclk/hpl_gclk.d" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/rtos_port.d" \
 "hal/src/hal_init.d" \
+"hal/src/hal_usart_sync.d" \
 "hpl/trng/hpl_trng.d" \
 "hal/src/hal_rand_sync.d" \
 "hpl/mclk/hpl_mclk.d" \

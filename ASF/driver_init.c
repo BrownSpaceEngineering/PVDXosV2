@@ -17,6 +17,8 @@ struct spi_m_sync_descriptor SPI_0;
 
 struct adc_sync_descriptor ADC_0;
 
+struct usart_sync_descriptor USART_0;
+
 struct i2c_m_sync_desc I2C_0;
 
 struct rand_sync_desc RAND_0;
@@ -43,6 +45,29 @@ void ADC_0_init(void)
 	ADC_0_CLOCK_init();
 	ADC_0_PORT_init();
 	adc_sync_init(&ADC_0, ADC1, (void *)NULL);
+}
+
+void USART_0_PORT_init(void)
+{
+
+	gpio_set_pin_function(PA04, PINMUX_PA04D_SERCOM0_PAD0);
+
+	gpio_set_pin_function(PA05, PINMUX_PA05D_SERCOM0_PAD1);
+}
+
+void USART_0_CLOCK_init(void)
+{
+	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM0_GCLK_ID_CORE, CONF_GCLK_SERCOM0_CORE_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM0_GCLK_ID_SLOW, CONF_GCLK_SERCOM0_SLOW_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+
+	hri_mclk_set_APBAMASK_SERCOM0_bit(MCLK);
+}
+
+void USART_0_init(void)
+{
+	USART_0_CLOCK_init();
+	usart_sync_init(&USART_0, SERCOM0, (void *)NULL);
+	USART_0_PORT_init();
 }
 
 void I2C_0_PORT_init(void)
@@ -467,6 +492,8 @@ void system_init(void)
 	gpio_set_pin_function(Magnetometer_DRDY, GPIO_PIN_FUNCTION_OFF);
 
 	ADC_0_init();
+
+	USART_0_init();
 
 	I2C_0_init();
 
