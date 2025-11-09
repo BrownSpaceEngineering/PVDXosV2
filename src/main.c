@@ -6,7 +6,9 @@
  * the FreeRTOS scheduler.
  *
  * Created: November 20, 2023
- * Authors: Oren Kohavi, Siddharta Laloux, Tanish Makadia, Yi Liu, Defne Doken, Aidan Wang, Ignacio Blancas Rodriguez
+ * Modified: November 9, 2025
+ * Authors: Oren Kohavi, Siddharta Laloux, Tanish Makadia, Yi Liu, 
+ *          Defne Doken, Aidan Wang, Ignacio Blancas Rodriguez, Alexander Thaep
  */
 
 #include "main.h"

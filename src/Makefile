@@ -61,9 +61,9 @@ export OBJS :=                                              	\
                                                             	\
 ../src/tasks/task_list.o                                        \
                                                             	\
-../src/tasks/photodiode/photodiode_main.o						\
-../src/tasks/photodiode/photodiode_task.o						\
-../src/tasks/photodiode/photodiode_driver.o						\
+../src/tasks/adcs/adcs_main.o									\
+../src/tasks/adcs/adcs_task.o									\
+../src/tasks/adcs/photodiode_driver.o							\
 
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###
 ### THESE ARE WRITTEN RELATIVE TO THE ./ASF/gcc/Makefile FILE ###
@@ -84,7 +84,7 @@ export EXTRA_VPATH := \
 ../../src/tasks/command_dispatcher \
 ../../src/tasks/magnetometer \
 ../../src/tasks/shell \
-../../src/tasks/photodiode \
+../../src/tasks/adcs \
 ../../src/mutexes
 
 
