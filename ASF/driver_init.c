@@ -13,11 +13,17 @@
 
 #include <hpl_adc_base.h>
 
-struct spi_m_sync_descriptor SPI_0;
+struct spi_m_sync_descriptor SPI_MRAM;
+struct spi_m_sync_descriptor SPI_DISPLAY;
+struct spi_m_sync_descriptor SPI_CAMERA;
 
 struct adc_sync_descriptor ADC_0;
 
-struct i2c_m_sync_desc I2C_0;
+struct i2c_m_sync_desc I2C_SBAND;
+
+struct i2c_m_sync_desc I2C_MAG_GYRO;
+
+struct i2c_m_sync_desc I2C_CAMERA;
 
 struct rand_sync_desc RAND_0;
 
@@ -45,10 +51,10 @@ void ADC_0_init(void)
 	adc_sync_init(&ADC_0, ADC1, (void *)NULL);
 }
 
-void I2C_0_PORT_init(void)
+void I2C_SBAND_PORT_init(void)
 {
 
-	gpio_set_pin_pull_mode(Shared_SDA,
+	gpio_set_pin_pull_mode(SBAND_SDA,
 	                       // <y> Pull configuration
 	                       // <id> pad_pull_config
 	                       // <GPIO_PULL_OFF"> Off
@@ -56,9 +62,9 @@ void I2C_0_PORT_init(void)
 	                       // <GPIO_PULL_DOWN"> Pull-down
 	                       GPIO_PULL_OFF);
 
-	gpio_set_pin_function(Shared_SDA, PINMUX_PA17D_SERCOM3_PAD0);
+	gpio_set_pin_function(SBAND_SDA, PINMUX_PA09D_SERCOM2_PAD0);
 
-	gpio_set_pin_pull_mode(Shared_SCL,
+	gpio_set_pin_pull_mode(SBAND_SCL,
 	                       // <y> Pull configuration
 	                       // <id> pad_pull_config
 	                       // <GPIO_PULL_OFF"> Off
@@ -66,10 +72,49 @@ void I2C_0_PORT_init(void)
 	                       // <GPIO_PULL_DOWN"> Pull-down
 	                       GPIO_PULL_OFF);
 
-	gpio_set_pin_function(Shared_SCL, PINMUX_PA16D_SERCOM3_PAD1);
+	gpio_set_pin_function(SBAND_SCL, PINMUX_PA08D_SERCOM2_PAD1);
 }
 
-void I2C_0_CLOCK_init(void)
+void I2C_SBAND_CLOCK_init(void)
+{
+	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM2_GCLK_ID_CORE, CONF_GCLK_SERCOM2_CORE_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM2_GCLK_ID_SLOW, CONF_GCLK_SERCOM2_SLOW_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+
+	hri_mclk_set_APBBMASK_SERCOM2_bit(MCLK);
+}
+
+void I2C_SBAND_init(void)
+{
+	I2C_SBAND_CLOCK_init();
+	i2c_m_sync_init(&I2C_SBAND, SERCOM2);
+	I2C_SBAND_PORT_init();
+}
+
+void I2C_MAG_GYRO_PORT_init(void)
+{
+
+	gpio_set_pin_pull_mode(Magnetometer_Gyro_SDA,
+	                       // <y> Pull configuration
+	                       // <id> pad_pull_config
+	                       // <GPIO_PULL_OFF"> Off
+	                       // <GPIO_PULL_UP"> Pull-up
+	                       // <GPIO_PULL_DOWN"> Pull-down
+	                       GPIO_PULL_OFF);
+
+	gpio_set_pin_function(Magnetometer_Gyro_SDA, PINMUX_PA17D_SERCOM3_PAD0);
+
+	gpio_set_pin_pull_mode(Magnetometer_Gyro_SCL,
+	                       // <y> Pull configuration
+	                       // <id> pad_pull_config
+	                       // <GPIO_PULL_OFF"> Off
+	                       // <GPIO_PULL_UP"> Pull-up
+	                       // <GPIO_PULL_DOWN"> Pull-down
+	                       GPIO_PULL_OFF);
+
+	gpio_set_pin_function(Magnetometer_Gyro_SCL, PINMUX_PA16D_SERCOM3_PAD1);
+}
+
+void I2C_MAG_GYRO_CLOCK_init(void)
 {
 	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM3_GCLK_ID_CORE, CONF_GCLK_SERCOM3_CORE_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
 	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM3_GCLK_ID_SLOW, CONF_GCLK_SERCOM3_SLOW_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
@@ -77,44 +122,17 @@ void I2C_0_CLOCK_init(void)
 	hri_mclk_set_APBBMASK_SERCOM3_bit(MCLK);
 }
 
-void I2C_0_init(void)
+void I2C_MAG_GYRO_init(void)
 {
-	I2C_0_CLOCK_init();
-	i2c_m_sync_init(&I2C_0, SERCOM3);
-	I2C_0_PORT_init();
+	I2C_MAG_GYRO_CLOCK_init();
+	i2c_m_sync_init(&I2C_MAG_GYRO, SERCOM3);
+	I2C_MAG_GYRO_PORT_init();
 }
 
-void SPI_0_PORT_init(void)
+void I2C_CAMERA_PORT_init(void)
 {
 
-	gpio_set_pin_level(Shared_MOSI,
-	                   // <y> Initial level
-	                   // <id> pad_initial_level
-	                   // <false"> Low
-	                   // <true"> High
-	                   false);
-
-	// Set pin direction to output
-	gpio_set_pin_direction(Shared_MOSI, GPIO_DIRECTION_OUT);
-
-	gpio_set_pin_function(Shared_MOSI, PINMUX_PD08C_SERCOM7_PAD0);
-
-	gpio_set_pin_level(Shared_SCK,
-	                   // <y> Initial level
-	                   // <id> pad_initial_level
-	                   // <false"> Low
-	                   // <true"> High
-	                   false);
-
-	// Set pin direction to output
-	gpio_set_pin_direction(Shared_SCK, GPIO_DIRECTION_OUT);
-
-	gpio_set_pin_function(Shared_SCK, PINMUX_PD09C_SERCOM7_PAD1);
-
-	// Set pin direction to input
-	gpio_set_pin_direction(Shared_MISO, GPIO_DIRECTION_IN);
-
-	gpio_set_pin_pull_mode(Shared_MISO,
+	gpio_set_pin_pull_mode(Camera_SDA,
 	                       // <y> Pull configuration
 	                       // <id> pad_pull_config
 	                       // <GPIO_PULL_OFF"> Off
@@ -122,10 +140,188 @@ void SPI_0_PORT_init(void)
 	                       // <GPIO_PULL_DOWN"> Pull-down
 	                       GPIO_PULL_OFF);
 
-	gpio_set_pin_function(Shared_MISO, PINMUX_PD11C_SERCOM7_PAD3);
+	gpio_set_pin_function(Camera_SDA, PINMUX_PA13D_SERCOM4_PAD0);
+
+	gpio_set_pin_pull_mode(Camera_SCL,
+	                       // <y> Pull configuration
+	                       // <id> pad_pull_config
+	                       // <GPIO_PULL_OFF"> Off
+	                       // <GPIO_PULL_UP"> Pull-up
+	                       // <GPIO_PULL_DOWN"> Pull-down
+	                       GPIO_PULL_OFF);
+
+	gpio_set_pin_function(Camera_SCL, PINMUX_PA12D_SERCOM4_PAD1);
 }
 
-void SPI_0_CLOCK_init(void)
+void I2C_CAMERA_CLOCK_init(void)
+{
+	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM4_GCLK_ID_CORE, CONF_GCLK_SERCOM4_CORE_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM4_GCLK_ID_SLOW, CONF_GCLK_SERCOM4_SLOW_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+
+	hri_mclk_set_APBDMASK_SERCOM4_bit(MCLK);
+}
+
+void I2C_CAMERA_init(void)
+{
+	I2C_CAMERA_CLOCK_init();
+	i2c_m_sync_init(&I2C_CAMERA, SERCOM4);
+	I2C_CAMERA_PORT_init();
+}
+
+void SPI_MRAM_PORT_init(void)
+{
+
+	gpio_set_pin_level(MRAM_MOSI,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   false);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(MRAM_MOSI, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(MRAM_MOSI, PINMUX_PB16C_SERCOM5_PAD0);
+
+	gpio_set_pin_level(MRAM_SCK,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   false);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(MRAM_SCK, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(MRAM_SCK, PINMUX_PB17C_SERCOM5_PAD1);
+
+	// Set pin direction to input
+	gpio_set_pin_direction(MRAM_MISO, GPIO_DIRECTION_IN);
+
+	gpio_set_pin_pull_mode(MRAM_MISO,
+	                       // <y> Pull configuration
+	                       // <id> pad_pull_config
+	                       // <GPIO_PULL_OFF"> Off
+	                       // <GPIO_PULL_UP"> Pull-up
+	                       // <GPIO_PULL_DOWN"> Pull-down
+	                       GPIO_PULL_OFF);
+
+	gpio_set_pin_function(MRAM_MISO, PINMUX_PB18C_SERCOM5_PAD2);
+}
+
+void SPI_MRAM_CLOCK_init(void)
+{
+	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM5_GCLK_ID_CORE, CONF_GCLK_SERCOM5_CORE_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM5_GCLK_ID_SLOW, CONF_GCLK_SERCOM5_SLOW_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+
+	hri_mclk_set_APBDMASK_SERCOM5_bit(MCLK);
+}
+
+void SPI_MRAM_init(void)
+{
+	SPI_MRAM_CLOCK_init();
+	spi_m_sync_init(&SPI_MRAM, SERCOM5);
+	SPI_MRAM_PORT_init();
+}
+
+void SPI_DISPLAY_PORT_init(void)
+{
+
+	gpio_set_pin_level(Display_MOSI,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   false);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(Display_MOSI, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(Display_MOSI, PINMUX_PD09D_SERCOM6_PAD0);
+
+	gpio_set_pin_level(Display_SCK,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   false);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(Display_SCK, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(Display_SCK, PINMUX_PD08D_SERCOM6_PAD1);
+
+	// Set pin direction to input
+	gpio_set_pin_direction(Display_MISO, GPIO_DIRECTION_IN);
+
+	gpio_set_pin_pull_mode(Display_MISO,
+	                       // <y> Pull configuration
+	                       // <id> pad_pull_config
+	                       // <GPIO_PULL_OFF"> Off
+	                       // <GPIO_PULL_UP"> Pull-up
+	                       // <GPIO_PULL_DOWN"> Pull-down
+	                       GPIO_PULL_OFF);
+
+	gpio_set_pin_function(Display_MISO, PINMUX_PD10D_SERCOM6_PAD2);
+}
+
+void SPI_DISPLAY_CLOCK_init(void)
+{
+	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM6_GCLK_ID_CORE, CONF_GCLK_SERCOM6_CORE_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM6_GCLK_ID_SLOW, CONF_GCLK_SERCOM6_SLOW_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+
+	hri_mclk_set_APBDMASK_SERCOM6_bit(MCLK);
+}
+
+void SPI_DISPLAY_init(void)
+{
+	SPI_DISPLAY_CLOCK_init();
+	spi_m_sync_init(&SPI_DISPLAY, SERCOM6);
+	SPI_DISPLAY_PORT_init();
+}
+
+void SPI_CAMERA_PORT_init(void)
+{
+
+	gpio_set_pin_level(Camera_MOSI,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   false);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(Camera_MOSI, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(Camera_MOSI, PINMUX_PB30C_SERCOM7_PAD0);
+
+	gpio_set_pin_level(Camera_SCK,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   false);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(Camera_SCK, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(Camera_SCK, PINMUX_PC13C_SERCOM7_PAD1);
+
+	// Set pin direction to input
+	gpio_set_pin_direction(Camera_MISO, GPIO_DIRECTION_IN);
+
+	gpio_set_pin_pull_mode(Camera_MISO,
+	                       // <y> Pull configuration
+	                       // <id> pad_pull_config
+	                       // <GPIO_PULL_OFF"> Off
+	                       // <GPIO_PULL_UP"> Pull-up
+	                       // <GPIO_PULL_DOWN"> Pull-down
+	                       GPIO_PULL_OFF);
+
+	gpio_set_pin_function(Camera_MISO, PINMUX_PA30C_SERCOM7_PAD2);
+}
+
+void SPI_CAMERA_CLOCK_init(void)
 {
 	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM7_GCLK_ID_CORE, CONF_GCLK_SERCOM7_CORE_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
 	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM7_GCLK_ID_SLOW, CONF_GCLK_SERCOM7_SLOW_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
@@ -133,11 +329,11 @@ void SPI_0_CLOCK_init(void)
 	hri_mclk_set_APBDMASK_SERCOM7_bit(MCLK);
 }
 
-void SPI_0_init(void)
+void SPI_CAMERA_init(void)
 {
-	SPI_0_CLOCK_init();
-	spi_m_sync_init(&SPI_0, SERCOM7);
-	SPI_0_PORT_init();
+	SPI_CAMERA_CLOCK_init();
+	spi_m_sync_init(&SPI_CAMERA, SERCOM7);
+	SPI_CAMERA_PORT_init();
 }
 
 void delay_driver_init(void)
@@ -468,9 +664,17 @@ void system_init(void)
 
 	ADC_0_init();
 
-	I2C_0_init();
+	I2C_SBAND_init();
 
-	SPI_0_init();
+	I2C_MAG_GYRO_init();
+
+	I2C_CAMERA_init();
+
+	SPI_MRAM_init();
+
+	SPI_DISPLAY_init();
+
+	SPI_CAMERA_init();
 
 	delay_driver_init();
 

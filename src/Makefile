@@ -239,8 +239,6 @@ update_asf:
 	&& echo "(8.4) ASF FreeRTOSConfig.h: Thread-local storage enabled" \
 	&& $(SED) -i 's|"\.\./samd51a/gcc/gcc/samd51p20a_flash\.ld"|"\.\./\.\./src/src_ram\.ld"|' ../ASF/gcc/Makefile \
 	&& echo "(9) ASF Linker Script: ASF Makefile updated to use custom flash script" \
-	# && $(SED) -i 's|ORIGIN = 0x00000000, LENGTH = 0x00100000|ORIGIN = 0x00002000, LENGTH = 0x000FE000|' ./ASF/samd51a/gcc/gcc/samd51p20a_flash.ld \
-	# && echo "(9) ASF Linker Script: Flash memory region updated to exclude bootloader" \
 	&& find ../ASF -type f -newermt now -exec touch {} + \
 	&& echo "(10) Timestamps in future updated to present" \
 	&& echo " --- Finished Integrating ASF --- "
