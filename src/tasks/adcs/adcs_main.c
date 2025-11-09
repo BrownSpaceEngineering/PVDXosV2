@@ -59,6 +59,10 @@ void main_adcs(void *pvParameters) {
     // Variable to hold commands popped off the queue
     command_t cmd;
 
+    info("rtc timer: Initialized\n");
+
+    init_rtc_hardware();
+
     info("photodiode: Initialized with %d photodiodes\n", PHOTODIODE_COUNT);
 
     while (true) {
