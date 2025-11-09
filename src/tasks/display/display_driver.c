@@ -36,7 +36,7 @@ status_t spi_transfer(bool data) {
     }
     CS_LOW(); // select the display for SPI communication
 
-    int32_t response = spi_m_sync_transfer(&SPI_0, &xfer);
+    int32_t response = spi_m_sync_transfer(&SPI_DISPLAY, &xfer);
     if (response != (int32_t)xfer.size) {
         return ERROR_SPI_TRANSFER_FAILED;
     }
@@ -158,7 +158,7 @@ status_t display_update(void) {
  * \returns `status_t`, whether the operation was successful
  */
 status_t init_display_hardware(void) {
-    spi_m_sync_enable(&SPI_0); // if you forget this line, this function returns -20
+    spi_m_sync_enable(&SPI_DISPLAY); // if you forget this line, this function returns -20
 
     // Reset the display by setting RST to low (it should be high during normal operation)
     RST_HIGH();
