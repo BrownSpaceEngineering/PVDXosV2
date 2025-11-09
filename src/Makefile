@@ -107,21 +107,17 @@ export OBJS :=                                              	\
                                                             	\
 ../src/tasks/task_list.o                                        \
                                                             	\
-<<<<<<< HEAD
-../src/tasks/photodiode/photodiode_main.o						\
-../src/tasks/photodiode/photodiode_task.o						\
-../src/tasks/photodiode/photodiode_driver.o						\
-../src/checks/device_checks.o 									\
-																\
-../src/tasks/radio/spp.o 									    \
+../src/tasks/photodiode/photodiode_main.o			\
+../src/tasks/photodiode/photodiode_task.o			\
+../src/tasks/photodiode/photodiode_driver.o			\
+../src/checks/device_checks.o 					\
+								\
+../src/tasks/radio/spp.o 					\
 ../src/tests/test.o                                             \
-																
-
-=======
-../src/tasks/adcs/adcs_main.o									\
+								
+./src/tasks/adcs/adcs_main.o									\
 ../src/tasks/adcs/adcs_task.o									\
-../src/tasks/adcs/photodiode_driver.o							\
->>>>>>> 5f1fd29 (convert photodiode task to adcs task)
+../src/tasks/adcs/rtc_driver.o									\
 
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###
 ### THESE ARE WRITTEN RELATIVE TO THE ./ASF/gcc/Makefile FILE ###
