@@ -34,22 +34,33 @@ The real-time operating system for Brown Space Engineering's second satellite, P
 
 ### Windows
 
-1. Install Windows Subsystem for Linux (WSL):
+PVDXos uses GCC (GNU C Compiler) to create an executable. GCC can't be ported to Windows, so we need to virtualise a Linux environment 
+for our toolchain. The standard solution is to use WSL (Windows Subsystem for Linux). 
+
+As such each instruction needs to be executed either in a Windows environment, or in the virtualised Linux environment. Each of the 
+following steps is thus prepended either by \[WIN\] or \[WSL\] to indicate which environment to run it in. 
+
+
+1. \[WIN\] Install Windows Subsystem for Linux (WSL):
 
    - Run `wsl --install` in PowerShell (as Administrator).
    - Follow prompts and restart your computer as required.
 
-2. Clone the repository into the WSL filesystem. This is important for performance during compilation.
+2. \[WSL\] Clone the repository into the WSL filesystem. This is important for performance during compilation.
 
-3. Install ARM toolchain for Linux:
+3. \[WSL\] Install ARM toolchain for Linux:
 
    - `sudo apt install gcc-arm-none-eabi`
 
-4. Install GDB Multiarch and other build tools:
+4. \[WSL\] Install GDB Multiarch and other build tools:
 
    - `sudo apt install gdb-multiarch`
    - `sudo apt install build-essential`
    - `sudo apt install clang-format`
+
+5. \[WIN\] Install [`usbipd`](https://github.com/dorssel/usbipd-win/releases) to pass USB connections through to WSL
+
+
 
 5. (Optional) Configure VSCode to use clang-format for formatting:
 
