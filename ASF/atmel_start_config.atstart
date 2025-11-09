@@ -1041,48 +1041,8 @@ drivers:
     variant: null
     clocks:
       domain_group: null
-  I2C_SBAND:
-    user_label: I2C_SBAND
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::SERCOM2::driver_config_definition::I2C.Master.Standard~2FFast-mode::HAL:Driver:I2C.Master.Sync
-    functionality: I2C
-    api: HAL:Driver:I2C_Master_Sync
-    configuration:
-      i2c_master_advanced: false
-      i2c_master_arch_dbgstop: Keep running
-      i2c_master_arch_inactout: Disabled
-      i2c_master_arch_lowtout: false
-      i2c_master_arch_mexttoen: false
-      i2c_master_arch_runstdby: false
-      i2c_master_arch_sdahold: 300-600ns hold time
-      i2c_master_arch_sexttoen: false
-      i2c_master_arch_trise: 215
-      i2c_master_baud_rate: 100000
-    optional_signals: []
-    variant:
-      specification: SDA=0, SCL=1
-      required_signals:
-      - name: SERCOM2/PAD/0
-        pad: PA09
-        label: SDA
-      - name: SERCOM2/PAD/1
-        pad: PA08
-        label: SCL
-    clocks:
-      domain_group:
-        nodes:
-        - name: Core
-          input: Generic clock generator 0
-          external: false
-          external_frequency: 0
-        - name: Slow
-          input: Generic clock generator 3
-          external: false
-          external_frequency: 0
-        configuration:
-          core_gclk_selection: Generic clock generator 0
-          slow_gclk_selection: Generic clock generator 3
-  I2C_MAG_GYRO:
-    user_label: I2C_MAG_GYRO
+  I2C_0:
+    user_label: I2C_0
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::SERCOM3::driver_config_definition::I2C.Master.Standard~2FFast-mode::HAL:Driver:I2C.Master.Sync
     functionality: I2C
     api: HAL:Driver:I2C_Master_Sync
@@ -1121,136 +1081,8 @@ drivers:
         configuration:
           core_gclk_selection: Generic clock generator 2
           slow_gclk_selection: Generic clock generator 3
-  I2C_CAMERA:
-    user_label: I2C_CAMERA
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::SERCOM4::driver_config_definition::I2C.Master.Standard~2FFast-mode::HAL:Driver:I2C.Master.Sync
-    functionality: I2C
-    api: HAL:Driver:I2C_Master_Sync
-    configuration:
-      i2c_master_advanced: false
-      i2c_master_arch_dbgstop: Keep running
-      i2c_master_arch_inactout: Disabled
-      i2c_master_arch_lowtout: false
-      i2c_master_arch_mexttoen: false
-      i2c_master_arch_runstdby: false
-      i2c_master_arch_sdahold: 300-600ns hold time
-      i2c_master_arch_sexttoen: false
-      i2c_master_arch_trise: 215
-      i2c_master_baud_rate: 100000
-    optional_signals: []
-    variant:
-      specification: SDA=0, SCL=1
-      required_signals:
-      - name: SERCOM4/PAD/0
-        pad: PA13
-        label: SDA
-      - name: SERCOM4/PAD/1
-        pad: PA12
-        label: SCL
-    clocks:
-      domain_group:
-        nodes:
-        - name: Core
-          input: Generic clock generator 0
-          external: false
-          external_frequency: 0
-        - name: Slow
-          input: Generic clock generator 3
-          external: false
-          external_frequency: 0
-        configuration:
-          core_gclk_selection: Generic clock generator 0
-          slow_gclk_selection: Generic clock generator 3
-  SPI_MRAM:
-    user_label: SPI_MRAM
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::SERCOM5::driver_config_definition::SPI.Master::HAL:Driver:SPI.Master.Sync
-    functionality: SPI
-    api: HAL:Driver:SPI_Master_Sync
-    configuration:
-      spi_master_advanced: false
-      spi_master_arch_cpha: Sample input on leading edge
-      spi_master_arch_cpol: SCK is low when idle
-      spi_master_arch_dbgstop: Keep running
-      spi_master_arch_dord: MSB first
-      spi_master_arch_ibon: In data stream
-      spi_master_arch_runstdby: false
-      spi_master_baud_rate: 50000
-      spi_master_character_size: 8 bits
-      spi_master_dummybyte: 511
-      spi_master_rx_enable: true
-    optional_signals: []
-    variant:
-      specification: TXPO=0, RXPO=2
-      required_signals:
-      - name: SERCOM5/PAD/0
-        pad: PB16
-        label: MOSI
-      - name: SERCOM5/PAD/1
-        pad: PB17
-        label: SCK
-      - name: SERCOM5/PAD/2
-        pad: PB18
-        label: MISO
-    clocks:
-      domain_group:
-        nodes:
-        - name: Core
-          input: Generic clock generator 0
-          external: false
-          external_frequency: 0
-        - name: Slow
-          input: Generic clock generator 3
-          external: false
-          external_frequency: 0
-        configuration:
-          core_gclk_selection: Generic clock generator 0
-          slow_gclk_selection: Generic clock generator 3
-  SPI_DISPLAY:
-    user_label: SPI_DISPLAY
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::SERCOM6::driver_config_definition::SPI.Master::HAL:Driver:SPI.Master.Sync
-    functionality: SPI
-    api: HAL:Driver:SPI_Master_Sync
-    configuration:
-      spi_master_advanced: false
-      spi_master_arch_cpha: Sample input on leading edge
-      spi_master_arch_cpol: SCK is low when idle
-      spi_master_arch_dbgstop: Keep running
-      spi_master_arch_dord: MSB first
-      spi_master_arch_ibon: In data stream
-      spi_master_arch_runstdby: false
-      spi_master_baud_rate: 50000
-      spi_master_character_size: 8 bits
-      spi_master_dummybyte: 511
-      spi_master_rx_enable: true
-    optional_signals: []
-    variant:
-      specification: TXPO=0, RXPO=2
-      required_signals:
-      - name: SERCOM6/PAD/0
-        pad: PD09
-        label: MOSI
-      - name: SERCOM6/PAD/1
-        pad: PD08
-        label: SCK
-      - name: SERCOM6/PAD/2
-        pad: PD10
-        label: MISO
-    clocks:
-      domain_group:
-        nodes:
-        - name: Core
-          input: Generic clock generator 0
-          external: false
-          external_frequency: 0
-        - name: Slow
-          input: Generic clock generator 3
-          external: false
-          external_frequency: 0
-        configuration:
-          core_gclk_selection: Generic clock generator 0
-          slow_gclk_selection: Generic clock generator 3
-  SPI_CAMERA:
-    user_label: SPI_CAMERA
+  SPI_0:
+    user_label: SPI_0
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::SERCOM7::driver_config_definition::SPI.Master::HAL:Driver:SPI.Master.Sync
     functionality: SPI
     api: HAL:Driver:SPI_Master_Sync
@@ -1262,22 +1094,22 @@ drivers:
       spi_master_arch_dord: MSB first
       spi_master_arch_ibon: In data stream
       spi_master_arch_runstdby: false
-      spi_master_baud_rate: 50000
+      spi_master_baud_rate: 6000000
       spi_master_character_size: 8 bits
       spi_master_dummybyte: 511
       spi_master_rx_enable: true
     optional_signals: []
     variant:
-      specification: TXPO=0, RXPO=2
+      specification: TXPO=0, RXPO=3
       required_signals:
       - name: SERCOM7/PAD/0
-        pad: PB30
+        pad: PD08
         label: MOSI
       - name: SERCOM7/PAD/1
-        pad: PC13
+        pad: PD09
         label: SCK
-      - name: SERCOM7/PAD/2
-        pad: PA30
+      - name: SERCOM7/PAD/3
+        pad: PD11
         label: MISO
     clocks:
       domain_group:
@@ -1364,18 +1196,6 @@ pads:
     user_label: MRAM2_RST
     configuration:
       pad_initial_level: High
-  SBAND_SCL:
-    name: PA08
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA08
-    mode: I2C
-    user_label: SBAND_SCL
-    configuration: null
-  SBAND_SDA:
-    name: PA09
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA09
-    mode: I2C
-    user_label: SBAND_SDA
-    configuration: null
   Display_RST:
     name: PB12
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB12
@@ -1390,23 +1210,23 @@ pads:
     user_label: Display_DC
     configuration:
       pad_initial_level: High
-  Display_SCK:
+  Shared_MOSI:
     name: PD08
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PD08
     mode: Digital output
-    user_label: Display_SCK
+    user_label: Shared_MOSI
     configuration: null
-  Display_MOSI:
+  Shared_SCK:
     name: PD09
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PD09
     mode: Digital output
-    user_label: Display_MOSI
+    user_label: Shared_SCK
     configuration: null
-  Display_MISO:
-    name: PD10
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PD10
+  Shared_MISO:
+    name: PD11
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PD11
     mode: Digital input
-    user_label: Display_MISO
+    user_label: Shared_MISO
     configuration: null
   MRAM3_RST:
     name: PC10
@@ -1429,12 +1249,6 @@ pads:
     user_label: MRAM3_WP
     configuration:
       pad_initial_level: High
-  Camera_SCK:
-    name: PC13
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC13
-    mode: Digital output
-    user_label: Camera_SCK
-    configuration: null
   MRAM1_WP:
     name: PC14
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC14
@@ -1449,29 +1263,17 @@ pads:
     user_label: MRAM2_WP
     configuration:
       pad_initial_level: High
-  Camera_SCL:
-    name: PA12
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA12
-    mode: I2C
-    user_label: Camera_SCL
-    configuration: null
-  Camera_SDA:
-    name: PA13
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA13
-    mode: I2C
-    user_label: Camera_SDA
-    configuration: null
-  Magnetometer_Gyro_SCL:
+  Shared_SCL:
     name: PA16
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA16
     mode: I2C
-    user_label: Magnetometer_Gyro_SCL
+    user_label: Shared_SCL
     configuration: null
-  Magnetometer_Gyro_SDA:
+  Shared_SDA:
     name: PA17
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA17
     mode: I2C
-    user_label: Magnetometer_Gyro_SDA
+    user_label: Shared_SDA
     configuration: null
   Photodiode_MUX_S0:
     name: PC18
@@ -1508,24 +1310,6 @@ pads:
     user_label: Magnetometer_DRDY
     configuration:
       pad_pull_config: Pull-down
-  MRAM_MOSI:
-    name: PB16
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB16
-    mode: Digital output
-    user_label: MRAM_MOSI
-    configuration: null
-  MRAM_SCK:
-    name: PB17
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB17
-    mode: Digital output
-    user_label: MRAM_SCK
-    configuration: null
-  MRAM_MISO:
-    name: PB18
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB18
-    mode: Digital input
-    user_label: MRAM_MISO
-    configuration: null
   Display_CS:
     name: PB20
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB20
@@ -1540,18 +1324,6 @@ pads:
     user_label: Camera_CS
     configuration:
       pad_initial_level: High
-  Camera_MISO:
-    name: PA30
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA30
-    mode: Digital input
-    user_label: Camera_MISO
-    configuration: null
-  Camera_MOSI:
-    name: PB30
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB30
-    mode: Digital output
-    user_label: Camera_MOSI
-    configuration: null
   LED_Orange1:
     name: PC30
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC30
