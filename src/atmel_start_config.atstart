@@ -858,7 +858,7 @@ drivers:
       RESERVED_InputFreq_id: 32kHz Ultra Low Power Internal Oscillator (OSCULP32K)
       _$freq_output_RTC source: 32768
       enable_osculp32k: true
-      enable_rtc_source: false
+      enable_rtc_source: true
       enable_xosc32k: false
       osculp32k_calib: 0
       osculp32k_calib_enable: false
