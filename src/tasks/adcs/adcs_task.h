@@ -10,6 +10,14 @@
 #include "watchdog_task.h"
 #include "photodiode_driver.h"
 
+// TODO: cool ascii art
+#define ADCS_ASCII_ART                                                                                                                    \
+    "  ______     \n"                                                                                                           \
+    " /  __  \\   \n"                                                                                             \
+    "|  /  \\  |  \n"                                                                                             \
+    "|  \\__/| |  \n"                                                                                             \
+    "|_|     |_|  \n"
+
 // Constants
 #define ADCS_TASK_STACK_SIZE 1024 // Size of the stack in words (multiply by 4 to get bytes)
 
