@@ -12,7 +12,9 @@
 #include <hal_init.h>
 
 #include <hpl_adc_base.h>
+#include <hpl_rtc_base.h>
 
+struct timer_descriptor      TIMER_0;
 struct spi_m_sync_descriptor SPI_MRAM;
 struct spi_m_sync_descriptor SPI_DISPLAY;
 struct spi_m_sync_descriptor SPI_CAMERA;
@@ -49,6 +51,17 @@ void ADC_0_init(void)
 	ADC_0_CLOCK_init();
 	ADC_0_PORT_init();
 	adc_sync_init(&ADC_0, ADC1, (void *)NULL);
+}
+
+/**
+ * \brief Timer initialization function
+ *
+ * Enables Timer peripheral, clocks and initializes Timer driver
+ */
+static void TIMER_0_init(void)
+{
+	hri_mclk_set_APBAMASK_RTC_bit(MCLK);
+	timer_init(&TIMER_0, RTC, _rtc_get_timer());
 }
 
 void I2C_SBAND_PORT_init(void)
@@ -663,6 +676,8 @@ void system_init(void)
 	gpio_set_pin_function(Magnetometer_DRDY, GPIO_PIN_FUNCTION_OFF);
 
 	ADC_0_init();
+
+	TIMER_0_init();
 
 	I2C_SBAND_init();
 
