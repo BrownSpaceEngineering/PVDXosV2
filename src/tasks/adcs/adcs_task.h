@@ -9,6 +9,7 @@
 #include "atmel_start.h"
 #include "watchdog_task.h"
 #include "photodiode_driver.h"
+#include "rtc_driver.h"
 
 // TODO: cool ascii art
 #define ADCS_ASCII_ART                                                                                                                    \
