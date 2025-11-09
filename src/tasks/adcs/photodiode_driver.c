@@ -4,11 +4,12 @@
  * Hardware driver for photodiode sensors used in ADCS sun sensing.
  *
  * Created: September 20, 2025
- * Authors: Avinash Patel, Yi Lyo
+ * Modified: November 9, 2025
+ * Authors: Avinash Patel, Yi Lyo, Alexander Thaep
  */
 #include <inttypes.h>
 #include "photodiode_driver.h"
-#include "photodiode_task.h"
+#include "adcs_task.h"
 
 /**
  * \fn init_photodiode_hardware

@@ -107,6 +107,7 @@ export OBJS :=                                              	\
                                                             	\
 ../src/tasks/task_list.o                                        \
                                                             	\
+<<<<<<< HEAD
 ../src/tasks/photodiode/photodiode_main.o						\
 ../src/tasks/photodiode/photodiode_task.o						\
 ../src/tasks/photodiode/photodiode_driver.o						\
@@ -116,6 +117,11 @@ export OBJS :=                                              	\
 ../src/tests/test.o                                             \
 																
 
+=======
+../src/tasks/adcs/adcs_main.o									\
+../src/tasks/adcs/adcs_task.o									\
+../src/tasks/adcs/photodiode_driver.o							\
+>>>>>>> 5f1fd29 (convert photodiode task to adcs task)
 
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###
 ### THESE ARE WRITTEN RELATIVE TO THE ./ASF/gcc/Makefile FILE ###
@@ -144,7 +150,8 @@ export EXTRA_VPATH := \
 ../../src/linalg \
 ../../src/linalg/Lapack \
 ../../src/linalg/LinearAlgebra \
-# $(PATH_TO_CCONTROL_INCLUDES)
+../../src/tasks/adcs \
+../../src/mutexes
 
 
 ###############################################################################

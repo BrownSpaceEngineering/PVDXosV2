@@ -1,5 +1,5 @@
-#ifndef PHOTODIODE_H
-#define PHOTODIODE_H
+#ifndef ADCS_H
+#define ADCS_H
 
 // Includes
 #include "globals.h"
@@ -11,7 +11,7 @@
 #include "photodiode_driver.h"
 
 // Constants
-#define PHOTODIODE_TASK_STACK_SIZE 1024 // Size of the stack in words (multiply by 4 to get bytes)
+#define ADCS_TASK_STACK_SIZE 1024 // Size of the stack in words (multiply by 4 to get bytes)
 
 // Photodiode system constants
 #define PHOTODIODE_COUNT 22   // Number of photodiodes (8 mux + 14 direct)
@@ -23,11 +23,11 @@
 //^ This ensures that stack overflows do not corrupt the TCB (since the stack grows downwards)
 typedef struct {
     StackType_t overflow_buffer[TASK_STACK_OVERFLOW_PADDING];
-    StackType_t photodiode_task_stack[PHOTODIODE_TASK_STACK_SIZE];
-    uint8_t photodiode_command_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
-    StaticQueue_t photodiode_task_queue;
-    StaticTask_t photodiode_task_tcb;
-} photodiode_task_memory_t;
+    StackType_t adcs_task_stack[ADCS_TASK_STACK_SIZE];
+    uint8_t adcs_command_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
+    StaticQueue_t adcs_task_queue;
+    StaticTask_t adcs_task_tcb;
+} adcs_task_memory_t;
 
 // Photodiode data structures
 typedef struct {
@@ -41,13 +41,13 @@ typedef struct {
 } photodiode_read_args_t;
 
 // Global memory and configuration
-extern photodiode_task_memory_t photodiode_mem;
+extern adcs_task_memory_t adcs_mem;
 
 // Function declarations
-QueueHandle_t init_photodiode(void);
-void main_photodiode(void *pvParameters);
+QueueHandle_t init_adcs(void);
+void main_adcs(void *pvParameters);
 void exec_command_photodiode(command_t *const p_cmd);
 status_t photodiode_read(photodiode_data_t *const data);
 command_t get_photodiode_read_command(photodiode_data_t *const data);
 
-#endif // PHOTODIODE_H
+#endif // ADCS_H

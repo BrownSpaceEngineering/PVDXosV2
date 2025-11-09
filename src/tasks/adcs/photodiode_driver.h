@@ -4,7 +4,7 @@
 #include "atmel_start.h"
 #include "globals.h"
 #include "logging.h"
-#include "photodiode_task.h"
+#include "adcs_task.h"
 
 // Function declarations
 status_t init_photodiode_hardware(void);
