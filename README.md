@@ -25,6 +25,7 @@ The real-time operating system for Brown Space Engineering's second satellite, P
    - Log output can be viewed by running `python3 scripts/rtt_logs.py` in a separate terminal window. This will also record logs to the `/logs` folder.
    - If the script fails to run, you may need to install 'pylink-square' (`pip install pylink-square`)
    - Alternatively, you can try running `python3 scripts/rtt_splitscreen.py` for both the PVDXos Shell and log output in the same terminal window, but this might not work!
+   - To sample the internal temperature sensor from the shell, run `temperature` (add the optional `raw` argument to display PTAT/CTAT diagnostic values). The command initializes the sensor if needed and prints the reading in Celsius.
 
 ## Toolchain Installation
 

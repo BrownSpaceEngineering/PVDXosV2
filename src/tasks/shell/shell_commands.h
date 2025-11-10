@@ -28,4 +28,7 @@ void help_reboot();
 void shell_display(char **args, int arg_count);
 void help_display();
 
+void shell_temperature(char **args, int arg_count);
+void help_temperature();
+
 #endif // SHELL_COMMANDS_H
