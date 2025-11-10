@@ -1308,8 +1308,8 @@ drivers:
         configuration:
           core_gclk_selection: Generic clock generator 0
           slow_gclk_selection: Generic clock generator 3
-  SPI_Display:
-    user_label: SPI_Display
+  SPI_DISPLAY:
+    user_label: SPI_DISPLAY
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::SERCOM1::driver_config_definition::SPI.Master::HAL:Driver:SPI.Master.Sync
     functionality: SPI
     api: HAL:Driver:SPI_Master_Sync
@@ -1352,8 +1352,8 @@ drivers:
         configuration:
           core_gclk_selection: Generic clock generator 0
           slow_gclk_selection: Generic clock generator 3
-  SPI_Camera:
-    user_label: SPI_Camera
+  SPI_CAMERA:
+    user_label: SPI_CAMERA
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::SERCOM2::driver_config_definition::SPI.Master::HAL:Driver:SPI.Master.Sync
     functionality: SPI
     api: HAL:Driver:SPI_Master_Sync
@@ -1396,8 +1396,8 @@ drivers:
         configuration:
           core_gclk_selection: Generic clock generator 0
           slow_gclk_selection: Generic clock generator 3
-  I2C_SBand:
-    user_label: I2C_SBand
+  I2C_SBAND:
+    user_label: I2C_SBAND
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::SERCOM3::driver_config_definition::I2C.Master.Standard~2FFast-mode::HAL:Driver:I2C.Master.Sync
     functionality: I2C
     api: HAL:Driver:I2C_Master_Sync
@@ -1436,8 +1436,8 @@ drivers:
         configuration:
           core_gclk_selection: Generic clock generator 2
           slow_gclk_selection: Generic clock generator 3
-  I2C_Mag_Gyro:
-    user_label: I2C_Mag_Gyro
+  I2C_MAGNETOMETER_GYRO:
+    user_label: I2C_MAGNETOMETER_GYRO
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::SERCOM4::driver_config_definition::I2C.Master.Standard~2FFast-mode::HAL:Driver:I2C.Master.Sync
     functionality: I2C
     api: HAL:Driver:I2C_Master_Sync
@@ -1476,8 +1476,8 @@ drivers:
         configuration:
           core_gclk_selection: Generic clock generator 0
           slow_gclk_selection: Generic clock generator 3
-  I2C_Camera:
-    user_label: I2C_Camera
+  I2C_CAMERA:
+    user_label: I2C_CAMERA
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::SERCOM5::driver_config_definition::I2C.Master.Standard~2FFast-mode::HAL:Driver:I2C.Master.Sync
     functionality: I2C
     api: HAL:Driver:I2C_Master_Sync
@@ -1670,11 +1670,11 @@ pads:
     user_label: MRAM3_CS
     configuration:
       pad_initial_level: High
-  LED_Red:
+  LED_RED:
     name: PC07
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC07
     mode: Digital output
-    user_label: LED_Red
+    user_label: LED_RED
     configuration:
       pad_initial_level: High
   PA11:
@@ -1683,32 +1683,32 @@ pads:
     mode: Analog
     user_label: PA11
     configuration: null
-  Magnetometer_DRDY:
+  MAGNETOMETER_DRDY:
     name: PB12
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB12
     mode: Digital input
-    user_label: Magnetometer_DRDY
+    user_label: MAGNETOMETER_DRDY
     configuration:
       pad_pull_config: Pull-down
-  Display_CS:
+  DISPLAY_CS:
     name: PB13
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB13
     mode: Digital output
-    user_label: Display_CS
+    user_label: DISPLAY_CS
     configuration:
       pad_initial_level: High
-  Display_RST:
+  DISPLAY_RST:
     name: PB14
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB14
     mode: Digital output
-    user_label: Display_RST
+    user_label: DISPLAY_RST
     configuration:
       pad_initial_level: High
-  Display_DC:
+  DISPLAY_DC:
     name: PB15
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB15
     mode: Digital output
-    user_label: Display_DC
+    user_label: DISPLAY_DC
     configuration:
       pad_initial_level: High
   MRAM1_RST:
@@ -1732,90 +1732,90 @@ pads:
     user_label: MRAM3_RST
     configuration:
       pad_initial_level: High
-  Magnetometer_Gyro_SCL:
+  MAGNETOMETER_GYRO_SCL:
     name: PA12
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA12
     mode: I2C
-    user_label: Magnetometer_Gyro_SCL
+    user_label: MAGNETOMETER_GYRO_SCL
     configuration: null
-  Magnetometer_Gyro_SDA:
+  MAGNETOMETER_GYRO_SDA:
     name: PA13
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA13
     mode: I2C
-    user_label: Magnetometer_Gyro_SDA
+    user_label: MAGNETOMETER_GYRO_SDA
     configuration: null
-  Camera_MISO:
+  CAMERA_MISO:
     name: PA14
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA14
     mode: Digital input
-    user_label: Camera_MISO
+    user_label: CAMERA_MISO
     configuration: null
-  SBand_SCL:
+  SBAND_SCL:
     name: PA16
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA16
     mode: I2C
-    user_label: SBand_SCL
+    user_label: SBAND_SCL
     configuration: null
-  SBand_SDA:
+  SBAND_SDA:
     name: PA17
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA17
     mode: I2C
-    user_label: SBand_SDA
+    user_label: SBAND_SDA
     configuration: null
-  Display_MISO:
+  DISPLAY_MISO:
     name: PA18
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA18
     mode: Digital input
-    user_label: Display_MISO
+    user_label: DISPLAY_MISO
     configuration: null
-  Display_MOSI:
+  DISPLAY_MOSI:
     name: PC22
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC22
     mode: Digital output
-    user_label: Display_MOSI
+    user_label: DISPLAY_MOSI
     configuration: null
-  Display_SCK:
+  DISPLAY_SCK:
     name: PC23
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC23
     mode: Digital output
-    user_label: Display_SCK
+    user_label: DISPLAY_SCK
     configuration: null
-  Camera_SCL:
+  CAMERA_SCL:
     name: PA22
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA22
     mode: I2C
-    user_label: Camera_SCL
+    user_label: CAMERA_SCL
     configuration: null
-  Camera_SDA:
+  CAMERA_SDA:
     name: PA23
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA23
     mode: I2C
-    user_label: Camera_SDA
+    user_label: CAMERA_SDA
     configuration: null
-  Camera_SCK:
+  CAMERA_SCK:
     name: PB24
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB24
     mode: Digital output
-    user_label: Camera_SCK
+    user_label: CAMERA_SCK
     configuration: null
-  Camera_MOSI:
+  CAMERA_MOSI:
     name: PB25
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB25
     mode: Digital output
-    user_label: Camera_MOSI
+    user_label: CAMERA_MOSI
     configuration: null
-  LED_Orange1:
+  LED_ORANGE1:
     name: PC30
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC30
     mode: Digital output
-    user_label: LED_Orange1
+    user_label: LED_ORANGE1
     configuration:
       pad_initial_level: High
-  LED_Orange2:
+  LED_ORANGE2:
     name: PC31
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC31
     mode: Digital output
-    user_label: LED_Orange2
+    user_label: LED_ORANGE2
     configuration:
       pad_initial_level: High
   PB00:
