@@ -23,14 +23,18 @@ extern "C" {
 
 #include <hal_adc_sync.h>
 
-#include <hal_i2c_m_sync.h>
+#include <hal_adc_sync.h>
+
+#include <hal_timer.h>
+#include <hal_spi_m_sync.h>
+#include <hal_spi_m_sync.h>
+#include <hal_spi_m_sync.h>
 
 #include <hal_i2c_m_sync.h>
 
 #include <hal_i2c_m_sync.h>
-#include <hal_spi_m_sync.h>
-#include <hal_spi_m_sync.h>
-#include <hal_spi_m_sync.h>
+
+#include <hal_i2c_m_sync.h>
 
 #include <hal_delay.h>
 
@@ -40,14 +44,17 @@ extern "C" {
 
 extern struct adc_sync_descriptor ADC_0;
 
-extern struct i2c_m_sync_desc I2C_SBAND;
-
-extern struct i2c_m_sync_desc I2C_MAG_GYRO;
-
-extern struct i2c_m_sync_desc       I2C_CAMERA;
+extern struct adc_sync_descriptor   ADC_1;
+extern struct timer_descriptor      TIMER_0;
 extern struct spi_m_sync_descriptor SPI_MRAM;
-extern struct spi_m_sync_descriptor SPI_DISPLAY;
-extern struct spi_m_sync_descriptor SPI_CAMERA;
+extern struct spi_m_sync_descriptor SPI_Display;
+extern struct spi_m_sync_descriptor SPI_Camera;
+
+extern struct i2c_m_sync_desc I2C_SBand;
+
+extern struct i2c_m_sync_desc I2C_Mag_Gyro;
+
+extern struct i2c_m_sync_desc I2C_Camera;
 
 extern struct rand_sync_desc RAND_0;
 
@@ -57,29 +64,33 @@ void ADC_0_PORT_init(void);
 void ADC_0_CLOCK_init(void);
 void ADC_0_init(void);
 
-void I2C_SBAND_CLOCK_init(void);
-void I2C_SBAND_init(void);
-void I2C_SBAND_PORT_init(void);
-
-void I2C_MAG_GYRO_CLOCK_init(void);
-void I2C_MAG_GYRO_init(void);
-void I2C_MAG_GYRO_PORT_init(void);
-
-void I2C_CAMERA_CLOCK_init(void);
-void I2C_CAMERA_init(void);
-void I2C_CAMERA_PORT_init(void);
+void ADC_1_PORT_init(void);
+void ADC_1_CLOCK_init(void);
+void ADC_1_init(void);
 
 void SPI_MRAM_PORT_init(void);
 void SPI_MRAM_CLOCK_init(void);
 void SPI_MRAM_init(void);
 
-void SPI_DISPLAY_PORT_init(void);
-void SPI_DISPLAY_CLOCK_init(void);
-void SPI_DISPLAY_init(void);
+void SPI_Display_PORT_init(void);
+void SPI_Display_CLOCK_init(void);
+void SPI_Display_init(void);
 
-void SPI_CAMERA_PORT_init(void);
-void SPI_CAMERA_CLOCK_init(void);
-void SPI_CAMERA_init(void);
+void SPI_Camera_PORT_init(void);
+void SPI_Camera_CLOCK_init(void);
+void SPI_Camera_init(void);
+
+void I2C_SBand_CLOCK_init(void);
+void I2C_SBand_init(void);
+void I2C_SBand_PORT_init(void);
+
+void I2C_Mag_Gyro_CLOCK_init(void);
+void I2C_Mag_Gyro_init(void);
+void I2C_Mag_Gyro_PORT_init(void);
+
+void I2C_Camera_CLOCK_init(void);
+void I2C_Camera_init(void);
+void I2C_Camera_PORT_init(void);
 
 void delay_driver_init(void);
 
