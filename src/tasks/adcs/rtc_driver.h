@@ -9,5 +9,6 @@
 
 // Function declarations
 status_t init_rtc_hardware(void);
+uint32_t get_rtc_count(void);
 
 #endif // RTC_DRIVER_H

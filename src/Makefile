@@ -11,8 +11,6 @@
 ###############################################################################
 ###############################################################################
 
-
-
 ### ALL C FILES SHOULD HAVE AN OBJECT FILE LISTED HERE ###
 export OBJS :=                                              	\
 ../src/main.o                                               	\
@@ -88,11 +86,9 @@ export EXTRA_VPATH := \
 ../../src/tasks/adcs \
 ../../src/mutexes
 
-
 ###############################################################################
 ###############################################################################
 ###############################################################################
-
 
 #Technical stuff
 
@@ -127,7 +123,6 @@ else
     GIT_COMMIT_HASH := \"NONE\"
 endif
 
-
 # Compiler flags
 # Include git branch and commit hash in the build
 CFLAGS += -D'GIT_BRANCH_NAME="$(GIT_BRANCH_NAME)"' -D'GIT_COMMIT_HASH="$(GIT_COMMIT_HASH)"'
@@ -147,7 +142,6 @@ CFLAGS_DEV := -DDEVBUILD
 CFLAGS_UNITTEST := -DUNITTEST
 CFLAGS_RELEASE := -DRELEASE
 
-
 ### All these variables are exported to the child makefile, and affect its behavior ###
 export SUB_DIRS := $(shell for dir in $(EXTRA_VPATH); do echo $$dir | $(SED) 's|\.\./||g'; done)
 
@@ -156,7 +150,6 @@ export DIR_INCLUDES := $(foreach dir,$(EXTRA_VPATH),-I"$(dir)" )
 export OBJS_AS_ARGS := $(foreach obj,$(OBJS),$(patsubst ../%,%,$(obj)))
 
 export DEPS_AS_ARGS := $(patsubst %.o,%.d,$(OBJS_AS_ARGS))
-
 
 .PHONY: all dev release test clean connect update_asf flash_bootloader
 
