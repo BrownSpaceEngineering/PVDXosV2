@@ -19,12 +19,15 @@ Some setup needs to be done when building for the first time.
 We need to pipe the USB connection to the J-link debugger into WSL
 
    1. In an administrator-level PowerShell, run `usbipd list`. The output should look like: 
-   ```BUSID  VID:PID    DEVICE                                                        STATE
-      1-1    1366:1020  J-Link                                                        Not shared
-      1-2    0000:0002  Unknown USB Device (Device Descriptor Request Failed)         Not shared
-      1-4    27c6:6594  Goodix MOC Fingerprint                                        Not shared
-      2-1    0e8d:e025  MediaTek Bluetooth Adapter                                    Not shared
-      5-1    174f:11b4  Integrated Camera, Integrated IR Camera, APP Mode             Not shared```
+
+   ```
+   BUSID  VID:PID    DEVICE                                                        STATE
+   1-1    1366:1020  J-Link                                                        Not shared
+   1-2    0000:0002  Unknown USB Device (Device Descriptor Request Failed)         Not shared
+   1-4    27c6:6594  Goodix MOC Fingerprint                                        Not shared
+   2-1    0e8d:e025  MediaTek Bluetooth Adapter                                    Not shared
+   5-1    174f:11b4  Integrated Camera, Integrated IR Camera, APP Mode             Not shared
+   ```
    2. In the same PowerShell, run `usbipd bind --busid <J-link busid>`. For example, if the output of
       list were as above, we would run `usbipd bind --busid 1-1` 
    3. And finally run `usbipd attach --wsl --busid <J-link busid>`. 
