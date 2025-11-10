@@ -13,6 +13,7 @@
 
 #include "logging.h"
 #include "shell_helpers.h"
+#include "temperature_driver.h"
 #include "watchdog_task.h"
 
 shell_command_t shell_commands[] = {
@@ -22,6 +23,7 @@ shell_command_t shell_commands[] = {
     {"loglevel", shell_loglevel, help_loglevel},
     {"reboot", shell_reboot, help_reboot},
     {"display", shell_display, help_display},
+    {"temperature", shell_temperature, help_temperature},
     {NULL, NULL, NULL} // Null-terminated array
 };
 
@@ -259,4 +261,47 @@ void shell_display(char **args, int arg_count) {
 void help_display() {
     terminal_printf("Usage: display\n");
     terminal_printf("\tgjnerergjkn\n");
+}
+
+/* TEMPERATURE COMMAND */
+
+void shell_temperature(char **args, int arg_count) {
+    bool show_raw = false;
+    if (arg_count > 2) {
+        terminal_printf("Invalid usage. Try 'help temperature'\n");
+        return;
+    }
+    if (arg_count == 2) {
+        if (strcmp(args[1], "raw") == 0) {
+            show_raw = true;
+        } else {
+            terminal_printf("Invalid option '%s'. Try 'help temperature'\n", args[1]);
+            return;
+        }
+    }
+
+    status_t status = temp_sensor_init();
+    if (status != SUCCESS) {
+        terminal_printf("temperature: init failed (%d)\n", status);
+        return;
+    }
+
+    temp_sensor_sample_t sample = {0};
+    status = temp_sensor_sample(&sample);
+    if (status != SUCCESS) {
+        terminal_printf("temperature: sample failed (%d)\n", status);
+        return;
+    }
+
+    terminal_printf("Temperature: %.2f C\n", sample.temperature_c);
+    if (show_raw) {
+        terminal_printf("  PTAT: raw=%u -> %.2f C\n", sample.ptat_raw, sample.temperature_ptat_c);
+        terminal_printf("  CTAT: raw=%u -> %.2f C\n", sample.ctat_raw, sample.temperature_ctat_c);
+    }
+}
+
+void help_temperature() {
+    terminal_printf("Usage: temperature [raw]\n");
+    terminal_printf("\tSamples the onboard temperature sensor and prints the result in Celsius.\n");
+    terminal_printf("\tPass 'raw' to also display PTAT/CTAT channels and their converted estimates.\n");
 }
