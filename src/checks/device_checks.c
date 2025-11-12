@@ -4,13 +4,12 @@
  * header file for checking the state of hardware device for PVDX
  *
  * Created: 20251102 SUN
- * Updated: 20251104 TUE
+ * Updated: 20251112 TUE
  * Authors: Zach Mahan
  */
 
 #include "checks/device_checks.h"
 
-#include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
 
