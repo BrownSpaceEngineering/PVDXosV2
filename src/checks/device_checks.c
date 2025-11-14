@@ -24,7 +24,6 @@ typedef struct device_check_state {
 
 static device_check_state_t device_states[NUM_DEVICES] = {[0 ... NUM_DEVICES - 1] = {.checked = false, .valid = false}};
 
-// TODO define, also use this or a switch statement?
 static bool (*device_check_functions[NUM_DEVICES])(void) = {
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
 };
