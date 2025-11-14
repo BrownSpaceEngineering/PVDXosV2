@@ -1,6 +1,7 @@
 ifeq ($(OS),Windows_NT)
 	# Pure Windows (e.g. MSYS2/MinGW). Note that in WSL, $(OS) is *not* Windows_NT.
-	GDBCMD = gdb-multiarch
+	GDBCMD    = gdb-multiarch
+	GDBTARGET = $(shell hostname).local:2331
 else
 	# We are in a Unix-like environment (Linux or macOS or WSL). Here, $(OS) is not defined.
 	UNAME_S := $(shell uname -s)
@@ -8,15 +9,18 @@ else
 
 	ifeq ($(UNAME_S),Darwin)
 		# macOS
-		GDBCMD = gdb
+		GDBCMD    = gdb
+		GDBTARGET = localhost:2331
 	else ifeq ($(UNAME_S),Linux)
 		# Linux or WSL. Check if it's WSL by searching "microsoft" in uname -r
 		ifneq (,$(findstring microsoft,$(UNAME_R)))
 			# WSL
-			GDBCMD = gdb
+			GDBCMD    = gdb
+			GDBTARGET = localhost:2331
 		else
 			# "Pure" Linux
-			GDBCMD = gdb-multiarch
+			GDBCMD    = gdb-multiarch
+            GDBTARGET = localhost:2331
 		endif
 	else
 		$(error Unknown or unsupported OS)
@@ -54,7 +58,7 @@ connect:
 		-ex "add-symbol-file bootloader/bootloader2.elf" \
 		-ex "add-symbol-file bootloader/bootloader3.elf" \
 		-ex "set confirm on" \
-		-ex "target remote localhost:2331" \
+		-ex "target remote $(GDBTARGET)" \
 		-ex "monitor reset" \
 		-ex "break go_to_app" \
 		-ex "continue" \
@@ -71,7 +75,7 @@ connect_bl:
 		-ex "add-symbol-file bootloader/bootloader2.elf" \
 		-ex "add-symbol-file bootloader/bootloader3.elf" \
 		-ex "set confirm on" \
-		-ex "target remote localhost:2331" \
+		-ex "target remote $(GDBTARGET)" \
 		-ex "monitor reset" \
 		bootloader/bootloader1.elf
 
