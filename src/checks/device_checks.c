@@ -34,14 +34,14 @@ static bool (*device_check_functions[NUM_DEVICES])(void) = {
 bool check_all_devices_on_startup(void) {
     bool at_least_one_failed = false;
 
-    for (device_id_e device_id = 0; device_id < NUM_DEVICES; device_id++) {
+    for (device_id_t device_id = 0; device_id < NUM_DEVICES; device_id++) {
         at_least_one_failed = at_least_one_failed || !check_device(device_id);
     }
 
     return at_least_one_failed;
 }
 
-bool check_device(device_id_e device_id) {
+bool check_device(device_id_t device_id) {
     // guard against invalid device_id given
     if (device_id >= NUM_DEVICES) {
         fatal("[ERROR] Invalid device_id_e passed to `check_devices`");
@@ -60,11 +60,11 @@ bool check_device(device_id_e device_id) {
     return device_states[device_id].valid;
 }
 
-void uncheck_device(device_id_e device_id) {
+void uncheck_device(device_id_t device_id) {
     device_states[device_id].checked = false;
 }
 
-bool check_and_uncheck_device(device_id_e device_id) {
+bool check_and_uncheck_device(device_id_t device_id) {
     bool original_checked = device_states[device_id].checked;
     device_states[device_id].checked = false;
     return original_checked;

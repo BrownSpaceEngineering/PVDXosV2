@@ -111,7 +111,7 @@ typedef enum {
     EPS_ID = 7,
     DISPLAY_ID = 8,
     CAMERA_ID = 9,
-} device_id_e;
+} device_id_t;
 
 /* ---------- MISCELLANEOUS TASK TYPES ---------- */
 

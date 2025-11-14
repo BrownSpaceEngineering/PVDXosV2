@@ -25,17 +25,17 @@ bool check_all_devices_on_startup(void);
 /**
  * \brief function to check devices by indexing into the `device_states` array through a device_ide_e
  */
-bool check_device(device_id_e device_id);
+bool check_device(device_id_t device_id);
 
 /**
  * \brief simply unchecks a device so that the next check will re-run the device's check function
  */
-void uncheck_device(device_id_e device_id);
+void uncheck_device(device_id_t device_id);
 
 /**
  * \brief useful if we want to ensure the next check of the device will re-run the device's check function
  * \return initial state (true/false) of checked, potentially useful for extra information on how a device might be misbehaving
  */
-bool check_and_uncheck_device(device_id_e device_id);
+bool check_and_uncheck_device(device_id_t device_id);
 
 #endif
