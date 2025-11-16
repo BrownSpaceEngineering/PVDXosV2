@@ -45,16 +45,17 @@ uint32_t read_fifo_length(void)
 }
 
 // void capture(void) {
-//     watchdog_checkin(ARDUCAM_TASK);
-//     ARDUCAMSPIWrite(ARDUCHIP_FIFO, FIFO_CLEAR_MASK);
-//     ARDUCAMSPIWrite(ARDUCHIP_FIFO, FIFO_START_MASK);
+//     ARDUCAMSPIWrite(ARDUCHIP_FIFO, FIFO_CLEAR_MASK); // Flush the FIFO
+//     ARDUCAMSPIWrite(ARDUCHIP_FIFO, FIFO_CLEAR_MASK); // Clear the capture done flag (uses same clear mask)
+//     ARDUCAMSPIWrite(ARDUCHIP_FIFO, FIFO_START_MASK); // Start capture
+//     while (!get_bit(ARDUCHIP_TRIG, CAP_DONE_MASK));  // Wait for capture to finish
 
 //     size_t len = read_fifo_length();
 //     if (len >= 0x07ffff){
 //         info("Oversized!");
 //         return;
 //     } else if (len == 0 ){
-//         info("Too small!");
+//         info("Size is 0!");
 //         return;
 //     }
 
@@ -79,9 +80,12 @@ uint32_t read_fifo_length(void)
 
 void capture_rtt(void) {
     watchdog_checkin(ARDUCAM_TASK);
-    ARDUCAMSPIWrite(ARDUCHIP_FIFO, FIFO_CLEAR_MASK);
-    ARDUCAMSPIWrite(ARDUCHIP_FIFO, FIFO_START_MASK);
+    ARDUCAMSPIWrite(ARDUCHIP_FIFO, FIFO_CLEAR_MASK); // Flush the FIFO
+    ARDUCAMSPIWrite(ARDUCHIP_FIFO, FIFO_CLEAR_MASK); // Clear the capture done flag (uses same clear mask)
+    ARDUCAMSPIWrite(ARDUCHIP_FIFO, FIFO_START_MASK); // Start capture
+    while (!get_bit(ARDUCHIP_TRIG, CAP_DONE_MASK));   // Wait for capture to finish
 
+    // Read how many bytes were captured
     size_t len = read_fifo_length();
     if (len >= OV2640_MAX_FIFO_SIZE) {
         info("Oversized!");
@@ -114,6 +118,5 @@ void capture_rtt(void) {
     }
 
     gpio_set_pin_level(Camera_CS, 1);
-
     info("IMG_END");
 }

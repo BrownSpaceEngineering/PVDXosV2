@@ -8,6 +8,7 @@
 // Essential resource: https://github.com/ArduCAM/Arduino
 
 #include "arducam.h"
+#include "ArduCAM.h"
 #include "arducam_registers.h"
 #include "string.h"
 #include "logging.h"
@@ -21,7 +22,8 @@ uint8_t ardu_spi_tx_buffer[ARDUCAM_SPI_TX_BUF_SIZE] = { 0x00 };
 
 void init_arducam()
 {
-    i2c_m_sync_set_baudrate(&I2C_0, 0, 115200);
+    // Configure ASF I2C and SPI drivers for this device
+    i2c_m_sync_set_baudrate(&I2C_0, 0, 100000);
     i2c_m_sync_get_io_descriptor(&I2C_0, &arducam_i2c_io);
     i2c_m_sync_enable(&I2C_0);
     i2c_m_sync_set_slaveaddr(&I2C_0, ARDUCAM_ADDR >> 1, I2C_M_SEVEN);
@@ -31,30 +33,32 @@ void init_arducam()
     gpio_set_pin_direction(Camera_CS, GPIO_DIRECTION_OUT);
     gpio_set_pin_level(Camera_CS, 1);
 
-    spi_m_sync_set_baudrate(&SPI_0, 4000000);
+    spi_m_sync_set_baudrate(&SPI_0, 6000000);
     spi_m_sync_get_io_descriptor(&SPI_0, &arducam_spi_io);
     spi_m_sync_enable(&SPI_0);
-
-    uint8_t vidpid[2] = {0, 0};
-    uint8_t data[2] = { 0x00, 0x01 };
-    uint8_t config[2] = {0x01, 0x80};
-
+    
+    // Write and read a known test pattern (0x55) into ArduCHIP internal test register
     ARDUCAMSPIWrite(ARDUCHIP_TEST1, 0x55);
     int temp = ARDUCAMSPIRead(ARDUCHIP_TEST1);
     if (temp != 0x55){
-        info("Bruh");
+        warning("Camera SPI interface error!");
     }
 
+    // Save payload bytes as variables so we can pass by reference
+    uint8_t data[2] = { 0x00, 0x01 };
+    uint8_t config[2] = { 0x01, 0x80 };
+    
+    // Verify that the camera sensor is an OV2640 based on VID and PID
+    uint8_t vid = 0, pid = 0;
     ARDUCAMI2CWrite(0xFF, &data[1], 1);
-    ARDUCAMI2CRead(OV2640_CHIPID_HIGH, &vidpid[0], 1);
-    ARDUCAMI2CRead(OV2640_CHIPID_LOW, &vidpid[1], 1);
-
-    if ((vidpid[0] != 0x26) && (vidpid[1] != 0x42))
-    {
-        info("vid: %d", vidpid[0]);
-        info("pid: %d", vidpid[1]);
+    uint32_t temp1 = ARDUCAMI2CRead(OV2640_CHIPID_HIGH, &vid, 1);
+    uint32_t temp2 = ARDUCAMI2CRead(OV2640_CHIPID_LOW, &pid, 1);
+    info("I2C read return values: temp1=%lu temp2=%lu", (unsigned long)temp1, (unsigned long)temp2);
+    
+    if (vid != 0x26 || (pid != 0x41 && pid != 0x42)) {
+        info("Unexpected OV2640 ID: vid=0x%02X pid=0x%02X", vid, pid);
     }
-
+    
     ARDUCAMI2CWrite(0xFF, &config[0], 1);
     ARDUCAMI2CWrite(0x12, &config[1], 1);
 
@@ -65,8 +69,6 @@ void init_arducam()
     ARDUCAMI2CWrite(0xFF, &data[1], 1);
     ARDUCAMI2CWrite(0x15, &data[0], 1);
     ARDUCAMI2CMultiWrite(OV2640_320x240_JPEG);
-
-    while (!get_bit(ARDUCHIP_TRIG, CAP_DONE_MASK));
 
     // capture();
     capture_rtt();
