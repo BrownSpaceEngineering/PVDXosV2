@@ -1,0 +1,409 @@
+
+PVDXos_bootloader.elf:     file format elf32-littlearm
+
+Sections:
+Idx Name          Size      VMA       LMA       File off  Algn
+  0 .text         00000470  00000000  00000000  00001000  2**2
+                  CONTENTS, ALLOC, LOAD, READONLY, CODE
+  1 .relocate     00000004  2003e000  00000470  00002000  2**2
+                  CONTENTS, ALLOC, LOAD, DATA
+  2 .bkupram      00000000  47000000  47000000  00002004  2**0
+                  CONTENTS
+  3 .qspi         00000000  04000000  04000000  00002004  2**0
+                  CONTENTS
+  4 .bss          0000002c  2003e004  00000474  00002004  2**2
+                  ALLOC
+  5 .stack        00000200  2003e030  000004a0  00002004  2**0
+                  ALLOC
+  6 .ARM.attributes 0000002e  00000000  00000000  00002004  2**0
+                  CONTENTS, READONLY
+  7 .comment      00000045  00000000  00000000  00002032  2**0
+                  CONTENTS, READONLY
+  8 .debug_info   00001805  00000000  00000000  00002077  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+  9 .debug_abbrev 000005d8  00000000  00000000  0000387c  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+ 10 .debug_loclists 0000018b  00000000  00000000  00003e54  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+ 11 .debug_aranges 00000080  00000000  00000000  00003fdf  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+ 12 .debug_rnglists 00000069  00000000  00000000  0000405f  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+ 13 .debug_macro  00002bde  00000000  00000000  000040c8  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+ 14 .debug_line   0000141b  00000000  00000000  00006ca6  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+ 15 .debug_str    000ebd73  00000000  00000000  000080c1  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+ 16 .debug_frame  000000ec  00000000  00000000  000f3e34  2**2
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+
+Disassembly of section .text:
+
+00000000 <exception_table>:
+	((Ramecc *)hw)->INTENCLR.reg = mask;
+}
+
+static inline bool hri_ramecc_get_STATUS_ECCDIS_bit(const void *const hw)
+{
+	return (((Ramecc *)hw)->STATUS.reg & RAMECC_STATUS_ECCDIS) >> RAMECC_STATUS_ECCDIS_Pos;
+   0:	30 e2 03 20 91 03 00 00 8d 03 00 00 8d 03 00 00     0.. ............
+ */
+__STATIC_INLINE void __NVIC_DisableIRQ(IRQn_Type IRQn)
+{
+  if ((int32_t)(IRQn) >= 0)
+  {
+    NVIC->ICER[(((uint32_t)IRQn) >> 5UL)] = (uint32_t)(1UL << (((uint32_t)IRQn) & 0x1FUL));
+  10:	8d 03 00 00 8d 03 00 00 8d 03 00 00 00 00 00 00     ................
+	...
+	NVIC_DisableIRQ(RAMECC_IRQn);
+	NVIC_ClearPendingIRQ(RAMECC_IRQn);
+	NVIC_EnableIRQ(RAMECC_IRQn);
+
+	return ERR_NONE;
+}
+  2c:	8d 03 00 00 8d 03 00 00 00 00 00 00 8d 03 00 00     ................
+  3c:	8d 03 00 00 8d 03 00 00 8d 03 00 00 8d 03 00 00     ................
+  4c:	8d 03 00 00 8d 03 00 00 8d 03 00 00 8d 03 00 00     ................
+  5c:	8d 03 00 00 8d 03 00 00 8d 03 00 00 8d 03 00 00     ................
+  6c:	8d 03 00 00 8d 03 00 00 8d 03 00 00 8d 03 00 00     ................
+  7c:	8d 03 00 00 8d 03 00 00 8d 03 00 00 8d 03 00 00     ................
+  8c:	8d 03 00 00 8d 03 00 00 8d 03 00 00 8d 03 00 00     ................
+  9c:	8d 03 00 00 8d 03 00 00 8d 03 00 00 8d 03 00 00     ................
+  ac:	8d 03 00 00 8d 03 00 00 8d 03 00 00 8d 03 00 00     ................
+  bc:	8d 03 00 00 8d 03 00 00 8d 03 00 00 8d 03 00 00     ................
+  cc:	8d 03 00 00 8d 03 00 00 8d 03 00 00 8d 03 00 00     ................
+  dc:	8d 03 00 00 8d 03 00 00 8d 03 00 00 00 00 00 00     ................
+	...
+  f4:	55 03 00 00 8d 03 00 00 8d 03 00 00 8d 03 00 00     U...............
+ 104:	8d 03 00 00 8d 03 00 00 8d 03 00 00 8d 03 00 00     ................
+ 114:	8d 03 00 00 8d 03 00 00 8d 03 00 00 8d 03 00 00     ................
+ 124:	8d 03 00 00 8d 03 00 00 8d 03 00 00 8d 03 00 00     ................
+ 134:	8d 03 00 00 8d 03 00 00 8d 03 00 00 8d 03 00 00     ................
+ 144:	8d 03 00 00 8d 03 00 00 8d 03 00 00 8d 03 00 00     ................
+ 154:	8d 03 00 00 8d 03 00 00 8d 03 00 00 8d 03 00 00     ................
+ 164:	8d 03 00 00 8d 03 00 00 8d 03 00 00 8d 03 00 00     ................
+ 174:	8d 03 00 00 00 00 00 00 00 00 00 00 8d 03 00 00     ................
+ 184:	8d 03 00 00 8d 03 00 00 8d 03 00 00 00 00 00 00     ................
+ 194:	8d 03 00 00 8d 03 00 00 8d 03 00 00 8d 03 00 00     ................
+ 1a4:	8d 03 00 00 8d 03 00 00 8d 03 00 00 8d 03 00 00     ................
+ 1b4:	8d 03 00 00 8d 03 00 00 8d 03 00 00 8d 03 00 00     ................
+ 1c4:	8d 03 00 00 8d 03 00 00 8d 03 00 00 8d 03 00 00     ................
+ 1d4:	8d 03 00 00 8d 03 00 00 8d 03 00 00 8d 03 00 00     ................
+ 1e4:	8d 03 00 00 8d 03 00 00 8d 03 00 00 8d 03 00 00     ................
+ 1f4:	8d 03 00 00 8d 03 00 00 8d 03 00 00 8d 03 00 00     ................
+ 204:	8d 03 00 00 8d 03 00 00 8d 03 00 00 8d 03 00 00     ................
+ 214:	8d 03 00 00 8d 03 00 00 8d 03 00 00 8d 03 00 00     ................
+ 224:	8d 03 00 00 8d 03 00 00 8d 03 00 00 8d 03 00 00     ................
+ 234:	8d 03 00 00 8d 03 00 00 8d 03 00 00 8d 03 00 00     ................
+ 244:	8d 03 00 00 8d 03 00 00 8d 03 00 00 8d 03 00 00     ................
+ 254:	8d 03 00 00 8d 03 00 00 8d 03 00 00 8d 03 00 00     ................
+
+00000264 <deregister_tm_clones>:
+ 264:	4803      	ldr	r0, [pc, #12]	@ (274 <deregister_tm_clones+0x10>)
+ 266:	4b04      	ldr	r3, [pc, #16]	@ (278 <deregister_tm_clones+0x14>)
+ 268:	4283      	cmp	r3, r0
+ 26a:	d002      	beq.n	272 <deregister_tm_clones+0xe>
+ 26c:	4b03      	ldr	r3, [pc, #12]	@ (27c <deregister_tm_clones+0x18>)
+ 26e:	b103      	cbz	r3, 272 <deregister_tm_clones+0xe>
+ 270:	4718      	bx	r3
+ 272:	4770      	bx	lr
+ 274:	00000470 	.word	0x00000470
+ 278:	00000470 	.word	0x00000470
+ 27c:	00000000 	.word	0x00000000
+
+00000280 <register_tm_clones>:
+ 280:	4805      	ldr	r0, [pc, #20]	@ (298 <register_tm_clones+0x18>)
+ 282:	4b06      	ldr	r3, [pc, #24]	@ (29c <register_tm_clones+0x1c>)
+ 284:	1a1b      	subs	r3, r3, r0
+ 286:	0fd9      	lsrs	r1, r3, #31
+ 288:	eb01 01a3 	add.w	r1, r1, r3, asr #2
+ 28c:	1049      	asrs	r1, r1, #1
+ 28e:	d002      	beq.n	296 <register_tm_clones+0x16>
+ 290:	4b03      	ldr	r3, [pc, #12]	@ (2a0 <register_tm_clones+0x20>)
+ 292:	b103      	cbz	r3, 296 <register_tm_clones+0x16>
+ 294:	4718      	bx	r3
+ 296:	4770      	bx	lr
+ 298:	00000470 	.word	0x00000470
+ 29c:	00000470 	.word	0x00000470
+ 2a0:	00000000 	.word	0x00000000
+
+000002a4 <__do_global_dtors_aux>:
+ 2a4:	b510      	push	{r4, lr}
+ 2a6:	4c06      	ldr	r4, [pc, #24]	@ (2c0 <__do_global_dtors_aux+0x1c>)
+ 2a8:	7823      	ldrb	r3, [r4, #0]
+ 2aa:	b943      	cbnz	r3, 2be <__do_global_dtors_aux+0x1a>
+ 2ac:	f7ff ffda 	bl	264 <deregister_tm_clones>
+ 2b0:	4b04      	ldr	r3, [pc, #16]	@ (2c4 <__do_global_dtors_aux+0x20>)
+ 2b2:	b113      	cbz	r3, 2ba <__do_global_dtors_aux+0x16>
+ 2b4:	4804      	ldr	r0, [pc, #16]	@ (2c8 <__do_global_dtors_aux+0x24>)
+ 2b6:	f3af 8000 	nop.w
+ 2ba:	2301      	movs	r3, #1
+ 2bc:	7023      	strb	r3, [r4, #0]
+ 2be:	bd10      	pop	{r4, pc}
+ 2c0:	2003e004 	.word	0x2003e004
+ 2c4:	00000000 	.word	0x00000000
+ 2c8:	00000470 	.word	0x00000470
+
+000002cc <frame_dummy>:
+ 2cc:	b508      	push	{r3, lr}
+ 2ce:	4b05      	ldr	r3, [pc, #20]	@ (2e4 <frame_dummy+0x18>)
+ 2d0:	b11b      	cbz	r3, 2da <frame_dummy+0xe>
+ 2d2:	4905      	ldr	r1, [pc, #20]	@ (2e8 <frame_dummy+0x1c>)
+ 2d4:	4805      	ldr	r0, [pc, #20]	@ (2ec <frame_dummy+0x20>)
+ 2d6:	f3af 8000 	nop.w
+ 2da:	e8bd 4008 	ldmia.w	sp!, {r3, lr}
+ 2de:	f7ff bfcf 	b.w	280 <register_tm_clones>
+ 2e2:	bf00      	nop
+ 2e4:	00000000 	.word	0x00000000
+ 2e8:	2003e008 	.word	0x2003e008
+ 2ec:	00000470 	.word	0x00000470
+
+000002f0 <go_to_app>:
+}
+
+void go_to_app(void) {
+    // Read app's vector table (first value is SP, second value is PC)
+    long *vector_table = (long *)APP_RAM_START;
+    long desired_sp = vector_table[0];
+ 2f0:	f04f 5200 	mov.w	r2, #536870912	@ 0x20000000
+    long desired_pc = vector_table[1];
+ 2f4:	e9d2 1300 	ldrd	r1, r3, [r2]
+
+    // Set the least significant bit of the PC to indicate that the reset vector is in Thumb mode
+    desired_pc |= 0x1;
+
+    // Tell the SAMD51 where the app's vector table is
+    *((long *)SCB_VTOR) = (long)vector_table;
+ 2f8:	f04f 20e0 	mov.w	r0, #3758153728	@ 0xe000e000
+    desired_pc |= 0x1;
+ 2fc:	f043 0301 	orr.w	r3, r3, #1
+    *((long *)SCB_VTOR) = (long)vector_table;
+ 300:	f8c0 2d08 	str.w	r2, [r0, #3336]	@ 0xd08
+
+    // Set SP to desired_sp and then jump to PC using assembly
+    __asm__ volatile("mov sp, %0\n" // Move the value in desired_sp into SP
+ 304:	468d      	mov	sp, r1
+ 306:	4718      	bx	r3
+                     "bx %1"        // Branch to the address contained in desired_pc
+                     :
+                     : "r"(desired_sp), "r"(desired_pc) // Arguments to the assembly (accessed as %0 and %1 in the assembly code)
+                     :);
+ 308:	4770      	bx	lr
+	...
+
+0000030c <main>:
+int main(void) {
+ 30c:	b538      	push	{r3, r4, r5, lr}
+    while (startup_test_value != 8);
+ 30e:	4a0f      	ldr	r2, [pc, #60]	@ (34c <main+0x40>)
+ 310:	6813      	ldr	r3, [r2, #0]
+ 312:	2b08      	cmp	r3, #8
+ 314:	d1fc      	bne.n	310 <main+0x4>
+ 316:	f44f 3300 	mov.w	r3, #131072	@ 0x20000
+        dst[i] = (src[i] & src[i+APP_FLASH_STEP]) | (src[i+APP_FLASH_STEP] & src[i+2*APP_FLASH_STEP]) | (src[i+2*APP_FLASH_STEP] & src[i]);
+ 31a:	f5a3 3280 	sub.w	r2, r3, #65536	@ 0x10000
+ 31e:	f103 50ff 	add.w	r0, r3, #534773760	@ 0x1fe00000
+ 322:	f992 1000 	ldrsb.w	r1, [r2]
+ 326:	f503 3280 	add.w	r2, r3, #65536	@ 0x10000
+ 32a:	f500 10f0 	add.w	r0, r0, #1966080	@ 0x1e0000
+ 32e:	f992 4000 	ldrsb.w	r4, [r2]
+ 332:	f813 2b01 	ldrb.w	r2, [r3], #1
+ 336:	ea41 0504 	orr.w	r5, r1, r4
+ 33a:	402a      	ands	r2, r5
+ 33c:	4021      	ands	r1, r4
+ 33e:	430a      	orrs	r2, r1
+    for (long i = 0; i < RAM_SIZE; i++) {
+ 340:	f5b3 2fbc 	cmp.w	r3, #385024	@ 0x5e000
+        dst[i] = (src[i] & src[i+APP_FLASH_STEP]) | (src[i+APP_FLASH_STEP] & src[i+2*APP_FLASH_STEP]) | (src[i+2*APP_FLASH_STEP] & src[i]);
+ 344:	7002      	strb	r2, [r0, #0]
+    for (long i = 0; i < RAM_SIZE; i++) {
+ 346:	d1e8      	bne.n	31a <main+0xe>
+    go_to_app();
+ 348:	4b01      	ldr	r3, [pc, #4]	@ (350 <main+0x44>)
+ 34a:	4798      	blx	r3
+    __builtin_unreachable();
+ 34c:	2003e000 	.word	0x2003e000
+ 350:	000002f1 	.word	0x000002f1
+
+00000354 <RAMECC_Handler>:
+	return ((Ramecc *)hw)->INTFLAG.reg;
+ 354:	4a0b      	ldr	r2, [pc, #44]	@ (384 <RAMECC_Handler+0x30>)
+ 356:	7893      	ldrb	r3, [r2, #2]
+
+/**
+ * \internal RAMECC interrupt handler
+ */
+void RAMECC_Handler(void)
+{
+ 358:	b082      	sub	sp, #8
+ 35a:	b2db      	uxtb	r3, r3
+	struct _ramecc_device *dev      = (struct _ramecc_device *)&device;
+	volatile uint32_t      int_mask = hri_ramecc_read_INTFLAG_reg(RAMECC);
+ 35c:	9301      	str	r3, [sp, #4]
+
+	if (int_mask & RAMECC_INTFLAG_DUALE && dev->ramecc_cb.dual_bit_err) {
+ 35e:	9b01      	ldr	r3, [sp, #4]
+ 360:	0799      	lsls	r1, r3, #30
+ 362:	d505      	bpl.n	370 <RAMECC_Handler+0x1c>
+ 364:	4b08      	ldr	r3, [pc, #32]	@ (388 <RAMECC_Handler+0x34>)
+ 366:	681b      	ldr	r3, [r3, #0]
+ 368:	b113      	cbz	r3, 370 <RAMECC_Handler+0x1c>
+	return tmp;
+}
+
+static inline hri_ramecc_erraddr_reg_t hri_ramecc_read_ERRADDR_reg(const void *const hw)
+{
+	return ((Ramecc *)hw)->ERRADDR.reg;
+ 36a:	6850      	ldr	r0, [r2, #4]
+	} else if (int_mask & RAMECC_INTFLAG_SINGLEE && dev->ramecc_cb.single_bit_err) {
+		dev->ramecc_cb.single_bit_err((uint32_t)hri_ramecc_read_ERRADDR_reg(RAMECC));
+	} else {
+		return;
+	}
+}
+ 36c:	b002      	add	sp, #8
+		dev->ramecc_cb.single_bit_err((uint32_t)hri_ramecc_read_ERRADDR_reg(RAMECC));
+ 36e:	4718      	bx	r3
+	} else if (int_mask & RAMECC_INTFLAG_SINGLEE && dev->ramecc_cb.single_bit_err) {
+ 370:	9b01      	ldr	r3, [sp, #4]
+ 372:	07db      	lsls	r3, r3, #31
+ 374:	d504      	bpl.n	380 <RAMECC_Handler+0x2c>
+ 376:	4b04      	ldr	r3, [pc, #16]	@ (388 <RAMECC_Handler+0x34>)
+ 378:	685b      	ldr	r3, [r3, #4]
+ 37a:	b10b      	cbz	r3, 380 <RAMECC_Handler+0x2c>
+ 37c:	4a01      	ldr	r2, [pc, #4]	@ (384 <RAMECC_Handler+0x30>)
+ 37e:	e7f4      	b.n	36a <RAMECC_Handler+0x16>
+}
+ 380:	b002      	add	sp, #8
+ 382:	4770      	bx	lr
+ 384:	41020000 	.word	0x41020000
+ 388:	2003e020 	.word	0x2003e020
+
+0000038c <Dummy_Handler>:
+/**
+ * \brief Default interrupt handler for unused IRQs.
+ */
+void Dummy_Handler(void)
+{
+	while (1) {
+ 38c:	e7fe      	b.n	38c <Dummy_Handler>
+	...
+
+00000390 <Reset_Handler>:
+{
+ 390:	b508      	push	{r3, lr}
+	if (pSrc != pDest) {
+ 392:	4a14      	ldr	r2, [pc, #80]	@ (3e4 <Reset_Handler+0x54>)
+ 394:	4b14      	ldr	r3, [pc, #80]	@ (3e8 <Reset_Handler+0x58>)
+ 396:	429a      	cmp	r2, r3
+ 398:	d002      	beq.n	3a0 <Reset_Handler+0x10>
+		for (; pDest < &_erelocate;) {
+ 39a:	4914      	ldr	r1, [pc, #80]	@ (3ec <Reset_Handler+0x5c>)
+ 39c:	428b      	cmp	r3, r1
+ 39e:	d318      	bcc.n	3d2 <Reset_Handler+0x42>
+	pSrc  = &_etext;
+ 3a0:	4b13      	ldr	r3, [pc, #76]	@ (3f0 <Reset_Handler+0x60>)
+	for (pDest = &_szero; pDest < &_ezero;) {
+ 3a2:	4a14      	ldr	r2, [pc, #80]	@ (3f4 <Reset_Handler+0x64>)
+		*pDest++ = 0;
+ 3a4:	2100      	movs	r1, #0
+	for (pDest = &_szero; pDest < &_ezero;) {
+ 3a6:	4293      	cmp	r3, r2
+ 3a8:	d318      	bcc.n	3dc <Reset_Handler+0x4c>
+	SCB->VTOR = ((uint32_t)pSrc & SCB_VTOR_TBLOFF_Msk);
+ 3aa:	4a13      	ldr	r2, [pc, #76]	@ (3f8 <Reset_Handler+0x68>)
+ 3ac:	4b13      	ldr	r3, [pc, #76]	@ (3fc <Reset_Handler+0x6c>)
+ 3ae:	f022 027f 	bic.w	r2, r2, #127	@ 0x7f
+ 3b2:	609a      	str	r2, [r3, #8]
+	SCB->CPACR |= (0xFu << 20);
+ 3b4:	f8d3 2088 	ldr.w	r2, [r3, #136]	@ 0x88
+ 3b8:	f442 0270 	orr.w	r2, r2, #15728640	@ 0xf00000
+ 3bc:	f8c3 2088 	str.w	r2, [r3, #136]	@ 0x88
+  \details Acts as a special kind of Data Memory Barrier.
+           It completes when all explicit memory accesses before this instruction complete.
+ */
+__STATIC_FORCEINLINE void __DSB(void)
+{
+  __ASM volatile ("dsb 0xF":::"memory");
+ 3c0:	f3bf 8f4f 	dsb	sy
+  __ASM volatile ("isb 0xF":::"memory");
+ 3c4:	f3bf 8f6f 	isb	sy
+	__libc_init_array();
+ 3c8:	4b0d      	ldr	r3, [pc, #52]	@ (400 <Reset_Handler+0x70>)
+ 3ca:	4798      	blx	r3
+	main();
+ 3cc:	4b0d      	ldr	r3, [pc, #52]	@ (404 <Reset_Handler+0x74>)
+ 3ce:	4798      	blx	r3
+	while (1)
+ 3d0:	e7fe      	b.n	3d0 <Reset_Handler+0x40>
+			*pDest++ = *pSrc++;
+ 3d2:	f852 0b04 	ldr.w	r0, [r2], #4
+ 3d6:	f843 0b04 	str.w	r0, [r3], #4
+ 3da:	e7df      	b.n	39c <Reset_Handler+0xc>
+		*pDest++ = 0;
+ 3dc:	f843 1b04 	str.w	r1, [r3], #4
+ 3e0:	e7e1      	b.n	3a6 <Reset_Handler+0x16>
+ 3e2:	bf00      	nop
+ 3e4:	00000470 	.word	0x00000470
+ 3e8:	2003e000 	.word	0x2003e000
+ 3ec:	2003e004 	.word	0x2003e004
+ 3f0:	2003e004 	.word	0x2003e004
+ 3f4:	2003e030 	.word	0x2003e030
+ 3f8:	00000000 	.word	0x00000000
+ 3fc:	e000ed00 	.word	0xe000ed00
+ 400:	00000409 	.word	0x00000409
+ 404:	0000030d 	.word	0x0000030d
+
+00000408 <__libc_init_array>:
+ 408:	b570      	push	{r4, r5, r6, lr}
+ 40a:	4b0d      	ldr	r3, [pc, #52]	@ (440 <__libc_init_array+0x38>)
+ 40c:	4d0d      	ldr	r5, [pc, #52]	@ (444 <__libc_init_array+0x3c>)
+ 40e:	1b5b      	subs	r3, r3, r5
+ 410:	109c      	asrs	r4, r3, #2
+ 412:	2600      	movs	r6, #0
+ 414:	42a6      	cmp	r6, r4
+ 416:	d109      	bne.n	42c <__libc_init_array+0x24>
+ 418:	f000 f81a 	bl	450 <_init>
+ 41c:	4d0a      	ldr	r5, [pc, #40]	@ (448 <__libc_init_array+0x40>)
+ 41e:	4b0b      	ldr	r3, [pc, #44]	@ (44c <__libc_init_array+0x44>)
+ 420:	1b5b      	subs	r3, r3, r5
+ 422:	109c      	asrs	r4, r3, #2
+ 424:	2600      	movs	r6, #0
+ 426:	42a6      	cmp	r6, r4
+ 428:	d105      	bne.n	436 <__libc_init_array+0x2e>
+ 42a:	bd70      	pop	{r4, r5, r6, pc}
+ 42c:	f855 3b04 	ldr.w	r3, [r5], #4
+ 430:	4798      	blx	r3
+ 432:	3601      	adds	r6, #1
+ 434:	e7ee      	b.n	414 <__libc_init_array+0xc>
+ 436:	f855 3b04 	ldr.w	r3, [r5], #4
+ 43a:	4798      	blx	r3
+ 43c:	3601      	adds	r6, #1
+ 43e:	e7f2      	b.n	426 <__libc_init_array+0x1e>
+ 440:	0000045c 	.word	0x0000045c
+ 444:	0000045c 	.word	0x0000045c
+ 448:	0000045c 	.word	0x0000045c
+ 44c:	00000460 	.word	0x00000460
+
+00000450 <_init>:
+ 450:	b5f8      	push	{r3, r4, r5, r6, r7, lr}
+ 452:	bf00      	nop
+ 454:	bcf8      	pop	{r3, r4, r5, r6, r7}
+ 456:	bc08      	pop	{r3}
+ 458:	469e      	mov	lr, r3
+ 45a:	4770      	bx	lr
+
+0000045c <__frame_dummy_init_array_entry>:
+ 45c:	02cd 0000                                   ....
+
+00000460 <_fini>:
+ 460:	b5f8      	push	{r3, r4, r5, r6, r7, lr}
+ 462:	bf00      	nop
+ 464:	bcf8      	pop	{r3, r4, r5, r6, r7}
+ 466:	bc08      	pop	{r3}
+ 468:	469e      	mov	lr, r3
+ 46a:	4770      	bx	lr
+
+0000046c <__do_global_dtors_aux_fini_array_entry>:
+ 46c:	02a5 0000                                   ....

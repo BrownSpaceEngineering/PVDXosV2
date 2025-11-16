@@ -16,12 +16,12 @@
 
 #define RSTC_RCAUSE (0x40000C00UL + 0x00UL) // Reset Cause Register
 
-void bootloader(void);
+int main(void);
 void go_to_app(void);
 
 volatile int startup_test_value = 8;
 
-void bootloader(void) {
+int main(void) {
     // This loop will spin forever if startup did not copy data segment
     while (startup_test_value != 8);
 

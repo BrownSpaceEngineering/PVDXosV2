@@ -1,4 +1,10 @@
-/*
+/*                          
+  _ __      _ _   __ _    _ __   
+ | '  \    | '_| / _` |  | '  \  
+ |_|_|_|  _|_|_  \__,_|  |_|_|_| 
+_|"""""|_|"""""|_|"""""|_|"""""| 
+"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-' 
+
  * EM008LX MRAM Test - Metro Grand Central M4 (SAMD51)
  * Using Atmel START SPI driver (spi_m_sync)
  *
@@ -7,6 +13,10 @@
  * - Disables Block Protection
  * - Writes/Reads/Verifies Data
  * - Reads and decodes Status Flag Register
+
+ Considerations:
+ - using triplicated variables for important stuff
+ - block protection?
  */
 
 #include "atmel_start.h"
@@ -234,15 +244,15 @@ void testWriteRead(void) {
     }
 }
 
-void testWritesReads(uint32_t addr) {
+void testWritesReads(uint32_t addr, int salt) {
     info_impl("\n[TEST] Write/Read Multiple Addresses At Once\r\n");
 
-    const uint32_t NUM_BYTES = 10000;
+    const uint32_t NUM_BYTES = 256;
     uint8_t send_data[NUM_BYTES];
     uint8_t recv_data[NUM_BYTES];
 
     for (uint32_t i = 0; i < NUM_BYTES; i++)
-        send_data[i] = (uint8_t)(i % 256);
+        send_data[i] = (uint8_t)((i + salt) % 100);
 
     info_impl("  Writing %lu bytes to address 0x%06lX\r\n", NUM_BYTES, addr);
 
@@ -275,7 +285,10 @@ void mram_main(void) {
     testReadID();
     disableBlockProtection();
     testWriteRead();
-    testWritesReads(0x000100);
+    for (int i = 0; i < 100; i++) {
+        testWritesReads(0x000100, i+3);
+        testWritesReads(0x000300, i+7);
+    }
 
     info_impl("\nAll tests complete.\r\n");
 
