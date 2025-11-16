@@ -8,7 +8,6 @@
 // Essential resource: https://github.com/ArduCAM/Arduino
 
 #include "arducam.h"
-#include "ArduCAM.h"
 #include "arducam_registers.h"
 #include "string.h"
 #include "logging.h"
