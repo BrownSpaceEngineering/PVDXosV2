@@ -25,7 +25,18 @@ typedef struct device_check_state {
 static device_check_state_t device_states[NUM_DEVICES] = {[0 ... NUM_DEVICES - 1] = {.checked = false, .valid = false}};
 
 static bool (*device_check_functions[NUM_DEVICES])(void) = {
-    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    //    func ptr      |  device_id_t
+    // -------------------------------
+    NULL, // MAGNETOMETER_ID
+    NULL, // PHOTODIODE_ID
+    NULL, // GYROSCOPE_ID
+    NULL, // MRAM_ID
+    NULL, // MAGNETORQUERS_ID
+    NULL, // SBAND_ID
+    NULL, // UHF_ID
+    NULL, // EPS_ID
+    NULL, // DISPLAY_ID
+    NULL, // CAMERA_ID
 };
 
 // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -43,12 +54,12 @@ bool check_all_devices_on_startup(void) {
 bool check_device(device_id_t device_id) {
     // guard against invalid device_id given
     if (device_id >= NUM_DEVICES) {
-        fatal("[ERROR] Invalid device_id_e passed to `check_devices`");
+        fatal("[ERROR] Invalid device_id_t passed to `check_devices`");
         return false;
     }
     // guard against calling a null fn
     if (device_check_functions[device_id] == NULL) {
-        fatal("[ERROR] check function for device_id: %p not defined", device_check_functions[device_id]);
+        info("[ERROR] check function for device_id: %p not defined", device_check_functions[device_id]);
         return false;
     }
     // only run the check function if "checked" is false for a device

@@ -98,7 +98,7 @@ typedef enum {
  * An enum to represent the ID/tag for each hardware device
  */
 
-#define NUM_DEVICES 10 // This **must** be update to reflect the number of enums
+#define NUM_DEVICES 10 // This **must** be updated to reflect the number of enums
 typedef enum {
     // TODO define device IDs here
     MAGNETOMETER_ID = 0,
