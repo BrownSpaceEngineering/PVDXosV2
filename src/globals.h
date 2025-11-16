@@ -36,8 +36,8 @@
 // An enum to represent the different statuses that a function can return
 typedef enum {
     // Standard Responses
-    PROCESSING = 0,         // Function is still processing and will return a result later
-    NO_STATUS_RETURN,       // Function does not return a status, so don't check it
+    PROCESSING = 0,   // Function is still processing and will return a result later
+    NO_STATUS_RETURN, // Function does not return a status, so don't check it
     SUCCESS,
 
     // Error Responses
@@ -65,11 +65,11 @@ typedef enum {
     OPERATION_DISABLE_SUBTASK, // p_data: TaskHandle_t *handle
 
     // Display operations
-    OPERATION_DISPLAY_IMAGE,   // p_data: color_t *p_buffer
-    OPERATION_CLEAR_IMAGE,     // p_data: NULL
+    OPERATION_DISPLAY_IMAGE, // p_data: color_t *p_buffer
+    OPERATION_CLEAR_IMAGE,   // p_data: NULL
 
     // Magnetometer operations
-    OPERATION_READ,            // p_data: magnetometer_read_args_t *readings
+    OPERATION_READ, // p_data: magnetometer_read_args_t *readings
 
     // Photodiode operations
     OPERATION_PHOTODIODE_READ,
@@ -93,6 +93,25 @@ typedef enum {
     ACTUATOR,
     TESTING,
 } task_type_t;
+
+/*
+ * An enum to represent the ID/tag for each hardware device
+ */
+
+#define NUM_DEVICES 10 // This **must** be update to reflect the number of enums
+typedef enum {
+    // TODO define device IDs here
+    MAGNETOMETER_ID = 0,
+    PHOTODIODE_ID = 1,
+    GYROSCOPE_ID = 2,
+    MRAM_ID = 3,
+    MAGNETORQUERS_ID = 4,
+    SBAND_ID = 5,
+    UHF_ID = 6,
+    EPS_ID = 7,
+    DISPLAY_ID = 8,
+    CAMERA_ID = 9,
+} device_id_t;
 
 /* ---------- MISCELLANEOUS TASK TYPES ---------- */
 
