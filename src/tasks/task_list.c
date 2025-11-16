@@ -164,6 +164,7 @@ pvdx_task_t *const p_photodiode_task = &photodiode_task;
 pvdx_task_t *const p_shell_task = &shell_task;
 pvdx_task_t *const p_display_task = &display_task;
 pvdx_task_t *const p_heartbeat_task = &heartbeat_task;
+pvdx_task_t *const p_uart_listener_task = &uart_listener_task;
 pvdx_task_t *const task_list_null_terminator = NULL;
 
 // Global list of all tasks running on PVDXos (see `pvdx_task_t` definition in globals.h)
