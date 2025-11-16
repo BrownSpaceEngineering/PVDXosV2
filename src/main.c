@@ -53,7 +53,8 @@ int main(void) {
 
     /* ---------- INIT WATCHDOG, COMMAND_DISPATCHER, TASK_MANAGER TASKS (in that order) ---------- */
 
-    bool at_least_one_device_invalid = check_all_devices_on_startup();
+    bool at_least_one_device_failed = check_all_devices_on_startup();
+    info("AT_LEAST_ONE_DEVICE_FAILED: %d\n", at_least_one_device_failed);
 
     // Initialize a mutex wrapping the shared PVDX task list struct
     task_list_mutex = xSemaphoreCreateMutexStatic(&task_list_mutex_buffer);

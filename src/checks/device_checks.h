@@ -38,4 +38,14 @@ void uncheck_device(device_id_t device_id);
  */
 bool check_and_uncheck_device(device_id_t device_id);
 
+/**
+ * gets the string corresponding to the name of a device, primarily for debugging purposes
+ */
+const char *device_name_of(device_id_t device_id);
+
+/**
+ * checks all devices and logs their state
+ */
+void check_all_devices_and_log(void);
+
 #endif
