@@ -97,6 +97,9 @@ const char *device_name_of(device_id_t device_id) {
     return names[device_id];
 }
 
+// ------------------- check function definitions ----------------------
+// - these should wrap device drivers/hardware interaction functions
+
 bool check_display(void) {
     return init_display_hardware() == SUCCESS;
 }
