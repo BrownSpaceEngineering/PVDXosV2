@@ -27,7 +27,7 @@ all: dev
 
 # can't be called bootloader bc that's the folder name
 bootloader_target:
-	make -C bootloader
+	make -C bootloader/src
 
 dev: bootloader_target
 	make -C src dev \
@@ -68,14 +68,14 @@ connect_bl:
 	&& $(GDBCMD) \
 		-ex "set confirm off" \
 		-ex "add-symbol-file src/PVDXos.elf" \
-		-ex "add-symbol-file bootloader/bootloader2.elf" \
-		-ex "add-symbol-file bootloader/bootloader3.elf" \
+		-ex "add-symbol-file bootloader/src/bootloader2.elf" \
+		-ex "add-symbol-file bootloader/src/bootloader3.elf" \
 		-ex "set confirm on" \
 		-ex "target remote localhost:2331" \
 		-ex "monitor reset" \
-		bootloader/bootloader1.elf
+		bootloader/src/bootloader1.elf
 
 clean:
 	rm -f PVDXos.bin PVDXos.elf \
-	&& make -C bootloader clean \
+	&& make -C bootloader/src clean \
 	&& make -C src clean

@@ -11,15 +11,15 @@
 #include "utils.h"
 
 /**
- * Example of using SPI_0 to write "Hello World" using the IO abstraction.
+ * Example of using SPI_MRAM to write "Hello World" using the IO abstraction.
  */
-static uint8_t example_SPI_0[12] = "Hello World!";
+static uint8_t example_SPI_MRAM[12] = "Hello World!";
 
-void SPI_0_example(void)
+void SPI_MRAM_example(void)
 {
 	struct io_descriptor *io;
-	spi_m_sync_get_io_descriptor(&SPI_0, &io);
+	spi_m_sync_get_io_descriptor(&SPI_MRAM, &io);
 
-	spi_m_sync_enable(&SPI_0);
-	io_write(io, example_SPI_0, 12);
+	spi_m_sync_enable(&SPI_MRAM);
+	io_write(io, example_SPI_MRAM, 12);
 }

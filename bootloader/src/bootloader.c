@@ -1,3 +1,5 @@
+#include "mram.h"
+
 #define APP_FLASH_START (0x00010000) // Change based on where your app is stored
 #define APP_FLASH_STEP (0x00010000) // Step to next copy of app in flash
 #define APP_RAM_START (0x20000000)   // Starting RAM address for the app
@@ -24,6 +26,8 @@ volatile int startup_test_value = 8;
 int main(void) {
     // This loop will spin forever if startup did not copy data segment
     while (startup_test_value != 8);
+
+    mram_init();
 
     // Copy application from flash to RAM
     char *src = (char *)APP_FLASH_START;

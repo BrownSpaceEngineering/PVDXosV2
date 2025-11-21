@@ -23,11 +23,11 @@ extern "C" {
 
 #include <hal_spi_m_sync.h>
 
-extern struct spi_m_sync_descriptor SPI_0;
+extern struct spi_m_sync_descriptor SPI_MRAM;
 
-void SPI_0_PORT_init(void);
-void SPI_0_CLOCK_init(void);
-void SPI_0_init(void);
+void SPI_MRAM_PORT_init(void);
+void SPI_MRAM_CLOCK_init(void);
+void SPI_MRAM_init(void);
 
 /**
  * \brief Perform system initialization, initialize pins and clocks for

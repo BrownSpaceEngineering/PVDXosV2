@@ -1,6 +1,6 @@
-bootloader_path1 = "bootloader/bootloader1.bin"
-bootloader_path2 = "bootloader/bootloader2.bin"
-bootloader_path3 = "bootloader/bootloader3.bin"
+bootloader_path1 = "bootloader/src/bootloader1.bin"
+bootloader_path2 = "bootloader/src/bootloader2.bin"
+bootloader_path3 = "bootloader/src/bootloader3.bin"
 pvdxos_path = "src/PVDXos.bin"
 flash_path = "flash.bin"
 

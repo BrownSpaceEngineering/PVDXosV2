@@ -121,7 +121,7 @@
 // <i> Indicates whether configuration for XOSC1 is enabled or not
 // <id> enable_xosc1
 #ifndef CONF_XOSC1_CONFIG
-#define CONF_XOSC1_CONFIG 1
+#define CONF_XOSC1_CONFIG 0
 #endif
 
 // <o> Frequency <8000000-48000000>
@@ -136,7 +136,7 @@
 // <i> Indicates whether External Multipurpose Crystal Oscillator is enabled or not
 // <id> xosc1_arch_enable
 #ifndef CONF_XOSC1_ENABLE
-#define CONF_XOSC1_ENABLE 1
+#define CONF_XOSC1_ENABLE 0
 #endif
 
 // <o> Start-Up Time
@@ -234,7 +234,7 @@
 // <i> Indicates whether configuration for DFLL is enabled or not
 // <id> enable_dfll
 #ifndef CONF_DFLL_CONFIG
-#define CONF_DFLL_CONFIG 0
+#define CONF_DFLL_CONFIG 1
 #endif
 
 // <y> Reference Clock Source
@@ -261,7 +261,7 @@
 // <i> Indicates whether DFLL is enabled or not
 // <id> dfll_arch_enable
 #ifndef CONF_DFLL_ENABLE
-#define CONF_DFLL_ENABLE 0
+#define CONF_DFLL_ENABLE 1
 #endif
 
 // <q> On Demand Control
@@ -532,7 +532,7 @@
 // <i> Select the clock source.
 // <id> fdpll1_ref_clock
 #ifndef CONF_FDPLL1_GCLK
-#define CONF_FDPLL1_GCLK GCLK_GENCTRL_SRC_XOSC32K
+#define CONF_FDPLL1_GCLK GCLK_PCHCTRL_GEN_GCLK4_Val
 #endif
 
 // <h> Digital Phase Locked Loop Control
@@ -561,21 +561,21 @@
 // <i> Value of LDRFRAC is calculated using Fclk_dpll=Fckr*(LDR+1+LDRFRAC/32) formula as given in datasheet. This value is directly written in to DPLLRATIO register
 // <id> fdpll1_ldrfrac
 #ifndef CONF_FDPLL1_LDRFRAC
-#define CONF_FDPLL1_LDRFRAC 0xd
+#define CONF_FDPLL1_LDRFRAC 0x4
 #endif
 
 // <o> Loop Divider Ratio Integer Part <0x0-0x1FFF>
 // <i> Value of LDR is calculated using Fclk_dpll=Fckr*(LDR+1+LDRFRAC/32) formula as given in datasheet. This value is directly written in to DPLLRATIO register
 // <id> fdpll1_ldr
 #ifndef CONF_FDPLL1_LDR
-#define CONF_FDPLL1_LDR 0x5b7
+#define CONF_FDPLL1_LDR 0xe4d
 #endif
 
 // <o> Clock Divider <0x0-0x7FF>
 // <i> This Clock divider is only for XOSC clock input to DPLL
 // <id> fdpll1_clock_div
 #ifndef CONF_FDPLL1_DIV
-#define CONF_FDPLL1_DIV 0x0
+#define CONF_FDPLL1_DIV 0xa
 #endif
 
 // <q> DCO Filter Enable
@@ -616,7 +616,7 @@
 // <0x3=>XOSC1 clock reference
 // <id> fdpll1_arch_refclk
 #ifndef CONF_FDPLL1_REFCLK
-#define CONF_FDPLL1_REFCLK 0x1
+#define CONF_FDPLL1_REFCLK 0x0
 #endif
 
 // <q> Wake Up Fast

@@ -15,7 +15,8 @@
 
 ### ALL C FILES SHOULD HAVE AN OBJECT FILE LISTED HERE ###
 export OBJS := \
-../src/bootloader.o
+../src/bootloader.o \
+../src/mram.o
 
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###
 ### THESE ARE WRITTEN RELATIVE TO THE ./ASF/gcc/Makefile FILE ###
@@ -88,14 +89,18 @@ export DEPS_AS_ARGS := $(patsubst %.o,%.d,$(OBJS_AS_ARGS))
 
 .PHONY: all clean update_bootloader_asf
 
-export LINKER_SCRIPT := "../../src/bootloader_flash1.ld"
-
 # Default target
 all: clean #Might as well clean before compiling the release build
-	@$(MAKE) -C $(CHILD_MAKEFILE_PATH) CFLAGS=" $(CFLAGS)" \
-	&& cp -f ../ASF/gcc/PVDXos_bootloader.bin ./ \
-	&& cp -f ../ASF/gcc/PVDXos_bootloader.elf ./ \
-	&& echo " ---  Finished Building PVDXos_bootloader  --- "
+	@$(MAKE) -C $(CHILD_MAKEFILE_PATH) CFLAGS=" $(CFLAGS)" LINKER_SCRIPT="../../src/bootloader_flash1.ld" \
+	&& cp -f ../ASF/gcc/PVDXos_bootloader.bin ./bootloader1.bin \
+	&& cp -f ../ASF/gcc/PVDXos_bootloader.elf ./bootloader1.elf \
+	&& $(MAKE) -C $(CHILD_MAKEFILE_PATH) CFLAGS=" $(CFLAGS)" LINKER_SCRIPT="../../src/bootloader_flash2.ld" \
+	&& cp -f ../ASF/gcc/PVDXos_bootloader.bin ./bootloader2.bin \
+	&& cp -f ../ASF/gcc/PVDXos_bootloader.elf ./bootloader2.elf \
+	&& $(MAKE) -C $(CHILD_MAKEFILE_PATH) CFLAGS=" $(CFLAGS)" LINKER_SCRIPT="../../src/bootloader_flash3.ld" \
+	&& cp -f ../ASF/gcc/PVDXos_bootloader.bin ./bootloader3.bin \
+	&& cp -f ../ASF/gcc/PVDXos_bootloader.elf ./bootloader3.elf \
+	&& echo " ---  Finished Building PVDXos Bootloader  --- "
 
 # Clean target
 clean:
