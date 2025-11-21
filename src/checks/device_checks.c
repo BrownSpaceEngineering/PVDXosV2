@@ -16,8 +16,10 @@
 #include "display_driver.h"
 #include "globals.h"
 #include "logging.h"
+#include "magnetometer_driver.h"
 
 // forward declarations of check functions
+bool check_magnetometer(void);
 bool check_display(void);
 // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -32,16 +34,16 @@ static device_check_state_t device_states[NUM_DEVICES] = {[0 ... NUM_DEVICES - 1
 static bool (*device_check_functions[NUM_DEVICES])(void) = {
     //    func ptr      |  device_id_t
     // -------------------------------
-    NULL,           // MAGNETOMETER_ID
-    NULL,           // PHOTODIODE_ID
-    NULL,           // GYROSCOPE_ID
-    NULL,           // MRAM_ID
-    NULL,           // MAGNETORQUERS_ID
-    NULL,           // SBAND_ID
-    NULL,           // UHF_ID
-    NULL,           // EPS_ID
-    &check_display, // DISPLAY_ID
-    NULL,           // CAMERA_ID
+    &check_magnetometer, // MAGNETOMETER_ID
+    NULL,                // PHOTODIODE_ID
+    NULL,                // GYROSCOPE_ID
+    NULL,                // MRAM_ID
+    NULL,                // MAGNETORQUERS_ID
+    NULL,                // SBAND_ID
+    NULL,                // UHF_ID
+    NULL,                // EPS_ID
+    &check_display,      // DISPLAY_ID
+    NULL,                // CAMERA_ID
 };
 
 // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -99,6 +101,10 @@ const char *device_name_of(device_id_t device_id) {
 
 // ------------------- check function definitions ----------------------
 // - these should wrap device drivers/hardware interaction functions
+
+bool check_magnetometer(void) {
+    return init_rm3100() == SUCCESS;
+}
 
 bool check_display(void) {
     return init_display_hardware() == SUCCESS;
