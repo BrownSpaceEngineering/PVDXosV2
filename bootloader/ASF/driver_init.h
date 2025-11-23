@@ -28,6 +28,7 @@ extern struct spi_m_sync_descriptor SPI_MRAM;
 void SPI_MRAM_PORT_init(void);
 void SPI_MRAM_CLOCK_init(void);
 void SPI_MRAM_init(void);
+void delay_driver_init(void);
 
 /**
  * \brief Perform system initialization, initialize pins and clocks for

@@ -69,6 +69,11 @@ void SPI_MRAM_init(void)
 	SPI_MRAM_PORT_init();
 }
 
+void delay_driver_init(void)
+{
+      delay_init(SysTick);
+}
+
 void system_init(void)
 {
 	init_mcu();
@@ -200,4 +205,6 @@ void system_init(void)
 	gpio_set_pin_function(MRAM2_WP, GPIO_PIN_FUNCTION_OFF);
 
 	SPI_MRAM_init();
+
+	// delay_driver_init();
 }

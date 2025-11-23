@@ -206,8 +206,11 @@ void testWritesReads(uint32_t addr, int salt) {
     readBytes(addr, recv_data, NUM_BYTES);
 
     for (uint32_t i = 0; i < NUM_BYTES; i++) {
+        if (i == 255) 
+        delay_ms(50);
         if (recv_data[i] != send_data[i]) {
             // fatal error: test failed
+            delay_ms(50);
             return;
         }
     }
@@ -223,6 +226,7 @@ void mram_init(void) {
 
     delay_ms(50);
 
+    testReadID();
     testReadID();
     disableBlockProtection();
     for (int i = 0; i < 100; i++) {
