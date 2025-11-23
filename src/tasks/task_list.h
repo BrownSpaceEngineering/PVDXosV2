@@ -2,6 +2,7 @@
 #define TASK_LIST_H
 
 // Includes
+#include "adcs_task.h"
 #include "command_dispatcher_task.h"
 #include "display_task.h"
 #include "globals.h"
@@ -16,6 +17,7 @@
 extern pvdx_task_t *const p_watchdog_task;
 extern pvdx_task_t *const p_command_dispatcher_task;
 extern pvdx_task_t *const p_task_manager_task;
+extern pvdx_task_t *const p_adcs_task;
 extern pvdx_task_t *const p_magnetometer_task;
 extern pvdx_task_t *const p_photodiode_task;
 extern pvdx_task_t *const p_shell_task;

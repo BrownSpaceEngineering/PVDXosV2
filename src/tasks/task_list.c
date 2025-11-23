@@ -65,6 +65,24 @@ pvdx_task_t task_manager_task = {
     .task_type = OS
 };
 
+pvdx_task_t adcs_task = {
+    .name = "ADCS",
+    .enabled = false,
+    .handle = NULL,
+    .command_queue = NULL,
+    .init = init_adcs,
+    .function = main_adcs,
+    .stack_size = ADCS_TASK_STACK_SIZE,
+    .stack_buffer = adcs_mem.adcs_task_stack,
+    .pvParameters = NULL,
+    .priority = 2,
+    .task_tcb = &adcs_mem.adcs_task_tcb,
+    .watchdog_timeout_ms = 10000,
+    .last_checkin_time_ticks = 0xDEADBEEF,
+    .has_registered = false,
+    .task_type = ACTUATOR
+};
+
 pvdx_task_t magnetometer_task = {
     .name = "Magnetometer",
     .enabled = false,
@@ -159,6 +177,7 @@ pvdx_task_t heartbeat_task = {
 pvdx_task_t *const p_watchdog_task = &watchdog_task;
 pvdx_task_t *const p_command_dispatcher_task = &command_dispatcher_task;
 pvdx_task_t *const p_task_manager_task = &task_manager_task;
+pvdx_task_t *const p_adcs_task = &adcs_task;
 pvdx_task_t *const p_magnetometer_task = &magnetometer_task;
 pvdx_task_t *const p_photodiode_task = &photodiode_task;
 pvdx_task_t *const p_shell_task = &shell_task;
@@ -176,6 +195,7 @@ pvdx_task_t *task_list[] = {
     p_watchdog_task,
     p_command_dispatcher_task,
     p_task_manager_task,
+    p_adcs_task,
     p_magnetometer_task,
     p_photodiode_task,
     p_shell_task,

@@ -61,6 +61,9 @@ export OBJS :=                                              	\
                                                             	\
 ../src/tasks/task_list.o                                        \
                                                             	\
+../src/tasks/adcs/adcs_main.o									\
+../src/tasks/adcs/adcs_task.o									\
+                                                            	\
 ../src/tasks/photodiode/photodiode_main.o						\
 ../src/tasks/photodiode/photodiode_task.o						\
 ../src/tasks/photodiode/photodiode_driver.o						\
@@ -84,6 +87,7 @@ export EXTRA_VPATH := \
 ../../src/tasks/display/image_buffers \
 ../../src/tasks/task_manager \
 ../../src/tasks/command_dispatcher \
+../../src/tasks/adcs \
 ../../src/tasks/magnetometer \
 ../../src/tasks/shell \
 ../../src/tasks/photodiode \
