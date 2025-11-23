@@ -39,20 +39,12 @@ _|"""""|_|"""""|_|"""""|_|"""""|
 
 // ---------------------- SPI Helpers ----------------------
 
-static inline void mramSelect(void)   { gpio_set_pin_level(MRAM1_CS, false); }
-static inline void mramDeselect(void) { gpio_set_pin_level(MRAM1_CS, true); }
+static inline void mram_select(void)   { gpio_set_pin_level(MRAM1_CS, false); }
+static inline void mram_deselect(void) { gpio_set_pin_level(MRAM1_CS, true); }
 
-uint8_t spiXfer(uint8_t val) {
-    struct spi_xfer xfer;
-    uint8_t rx;
-    xfer.txbuf = &val;
-    xfer.rxbuf = &rx;
-    xfer.size = 1;
-    spi_m_sync_transfer(&SPI_MRAM, &xfer);
-    return rx;
-}
+void mram_fatal(void) { while (1); }
 
-void spiWrite(const uint8_t *data, uint32_t len) {
+void spi_write(const uint8_t *data, uint32_t len) {
     struct spi_xfer xfer = {
         .txbuf = (uint8_t*)data,
         .rxbuf = NULL,
@@ -61,7 +53,7 @@ void spiWrite(const uint8_t *data, uint32_t len) {
     spi_m_sync_transfer(&SPI_MRAM, &xfer);
 }
 
-void spiRead(uint8_t *data, uint32_t len) {
+void spi_read(uint8_t *data, uint32_t len) {
     struct spi_xfer xfer = {
         .txbuf = NULL,
         .rxbuf = data,
@@ -72,115 +64,75 @@ void spiRead(uint8_t *data, uint32_t len) {
 
 // ---------------------- Core MRAM Operations ----------------------
 
-void writeEnable(void) {
+void write_enable(void) {
     uint8_t cmd = CMD_WREN;
-    mramSelect();
-    spiWrite(&cmd, 1);
-    mramDeselect();
+    mram_select();
+    spi_write(&cmd, 1);
+    mram_deselect();
 }
 
 uint8_t readStatus(void) {
     uint8_t cmd = CMD_RDSR;
     uint8_t val = 0;
-    mramSelect();
-    spiWrite(&cmd, 1);
-    spiRead(&val, 1);
-    mramDeselect();
+    mram_select();
+    spi_write(&cmd, 1);
+    spi_read(&val, 1);
+    mram_deselect();
     return val;
 }
 
 void writeStatus(uint8_t value) {
     uint8_t buf[2] = {CMD_WRSR, value};
-    writeEnable();
-    mramSelect();
-    spiWrite(buf, 2);
-    mramDeselect();
+    write_enable();
+    mram_select();
+    spi_write(buf, 2);
+    mram_deselect();
 }
 
-uint8_t readByte(uint32_t address) {
+void read_bytes(uint32_t address, uint8_t *data, uint32_t size) {
     uint8_t cmd[4] = {
         CMD_READ,
         (uint8_t)(address >> 16),
         (uint8_t)(address >> 8),
         (uint8_t)(address)
     };
-    uint8_t val = 0;
-    mramSelect();
-    spiWrite(cmd, 4);
-    spiRead(&val, 1);
-    mramDeselect();
-    return val;
+    mram_select();
+    spi_write(cmd, 4);
+    spi_read(data, size);
+    mram_deselect();
 }
 
-void readBytes(uint32_t address, uint8_t *data, uint32_t size) {
-    uint8_t cmd[4] = {
-        CMD_READ,
-        (uint8_t)(address >> 16),
-        (uint8_t)(address >> 8),
-        (uint8_t)(address)
-    };
-    mramSelect();
-    spiWrite(cmd, 4);
-    spiRead(data, size);
-    mramDeselect();
-}
-
-void writeByte(uint32_t address, uint8_t data) {
-    uint8_t buf[5] = {
-        CMD_WRITE,
-        (uint8_t)(address >> 16),
-        (uint8_t)(address >> 8),
-        (uint8_t)(address),
-        data
-    };
-    writeEnable();
-    mramSelect();
-    spiWrite(buf, 5);
-    mramDeselect();
-}
-
-void writeBytes(uint32_t address, const uint8_t *data, uint32_t size) {
+void write_bytes(uint32_t address, const uint8_t *data, uint32_t size) {
     uint8_t hdr[4] = {
         CMD_WRITE,
         (uint8_t)(address >> 16),
         (uint8_t)(address >> 8),
         (uint8_t)(address)
     };
-    writeEnable();
-    mramSelect();
-    spiWrite(hdr, 4);
-    spiWrite(data, size);
-    mramDeselect();
+    write_enable();
+    mram_select();
+    spi_write(hdr, 4);
+    spi_write(data, size);
+    mram_deselect();
 }
 
-// ---------------------- Status Flag Register ----------------------
+void check_device_id(void) {
+    uint8_t cmd = CMD_RDID;
+    uint8_t id[3] = {0};
+    mram_select();
+    spi_write(&cmd, 1);
+    spi_read(id, 3);
+    mram_deselect();
 
-uint8_t readStatusFlag(void) {
-    uint8_t cmd = CMD_RDFR;
-    uint8_t flag = 0;
-    mramSelect();
-    spiWrite(&cmd, 1);
-    spiRead(&flag, 1);
-    mramDeselect();
-    return flag;
+    if (id[0] != 0x6b || id[1] != 0xbb || id[2] != 0x14) {
+        // invalid device ID
+        mram_fatal();
+    }
 }
 
 // ---------------------- Tests ----------------------
 
-void testReadID(void) {
-    uint8_t cmd = CMD_RDID;
-    uint8_t id[3] = {0};
-    mramSelect();
-    spiWrite(&cmd, 1);
-    spiRead(id, 3);
-    mramDeselect();
-
-    if ((id[0] == 0xFF && id[1] == 0xFF) || (id[0] == 0x00 && id[1] == 0x00)) {
-        // fatal error: invalid device ID
-    }
-}
-
-void disableBlockProtection(void) {
+void disable_block_protection(void) {
     uint8_t status = readStatus();
 
     if (status & 0x0C) {
@@ -190,11 +142,12 @@ void disableBlockProtection(void) {
 
     status = readStatus();
     if ((status & 0x0C) != 0) {
-        // fatal error: block protection not disabled
+        // block protection not disabled
+        mram_fatal();
     }
 }
 
-void testWritesReads(uint32_t addr, int salt) {
+void test_writes_reads(uint32_t addr, int salt) {
     const uint32_t NUM_BYTES = 256;
     uint8_t send_data[NUM_BYTES];
     uint8_t recv_data[NUM_BYTES];
@@ -202,16 +155,13 @@ void testWritesReads(uint32_t addr, int salt) {
     for (uint32_t i = 0; i < NUM_BYTES; i++)
         send_data[i] = (uint8_t)((i + salt) % 100);
 
-    writeBytes(addr, send_data, NUM_BYTES);
-    readBytes(addr, recv_data, NUM_BYTES);
+    write_bytes(addr, send_data, NUM_BYTES);
+    read_bytes(addr, recv_data, NUM_BYTES);
 
     for (uint32_t i = 0; i < NUM_BYTES; i++) {
-        if (i == 255) 
-        delay_ms(50);
         if (recv_data[i] != send_data[i]) {
-            // fatal error: test failed
-            delay_ms(50);
-            return;
+            // test failed
+            mram_fatal();
         }
     }
 }
@@ -226,12 +176,11 @@ void mram_init(void) {
 
     delay_ms(50);
 
-    testReadID();
-    testReadID();
-    disableBlockProtection();
+    check_device_id();
+    disable_block_protection();
     for (int i = 0; i < 100; i++) {
-        testWritesReads(0x000100, i+3);
-        testWritesReads(0x000300, i+7);
+        test_writes_reads(0x000900, i+3);
+        test_writes_reads(0x000f00, i+7);
     }
 
     while (1) {
