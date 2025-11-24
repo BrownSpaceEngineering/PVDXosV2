@@ -49,10 +49,6 @@ export OBJS :=                                              	\
 ../src/tasks/command_dispatcher/command_dispatcher_main.o   	\
 ../src/tasks/command_dispatcher/command_dispatcher_task.o   	\
                                                             	\
-../src/tasks/magnetometer/magnetometer_driver.o             	\
-../src/tasks/magnetometer/magnetometer_task.o               	\
-../src/tasks/magnetometer/magnetometer_main.o               	\
-                                                            	\
 ../src/tasks/shell/shell_main.o                             	\
 ../src/tasks/shell/shell_helpers.o                          	\
 ../src/tasks/shell/shell_commands.o                         	\
@@ -63,6 +59,7 @@ export OBJS :=                                              	\
 ../src/tasks/adcs/adcs_task.o									\
 ../src/tasks/adcs/photodiode_driver.o							\
 ../src/tasks/adcs/rtc_driver.o									\
+../src/tasks/adcs/magnetometer_driver.o             			\
 
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###
 ### THESE ARE WRITTEN RELATIVE TO THE ./ASF/gcc/Makefile FILE ###

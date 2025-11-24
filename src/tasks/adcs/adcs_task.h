@@ -9,6 +9,7 @@
 #include "atmel_start.h"
 #include "watchdog_task.h"
 #include "photodiode_driver.h"
+#include "magnetometer_driver.h"
 #include "rtc_driver.h"
 
 // TODO: cool ascii art
@@ -22,12 +23,6 @@
 // Constants
 #define ADCS_TASK_STACK_SIZE 1024 // Size of the stack in words (multiply by 4 to get bytes)
 
-// Photodiode system constants
-#define PHOTODIODE_COUNT 22   // Number of photodiodes (8 mux + 14 direct)
-
-#define PHOTODIODE_S0_PIN (Photodiode_MUX_S0 & 0x1Fu)
-#define PHOTODIODE_MUX_MASK (0xFu << PHOTODIODE_S0_PIN)
-
 // Placed in a struct to ensure that the TCB is placed higher than the stack in memory
 //^ This ensures that stack overflows do not corrupt the TCB (since the stack grows downwards)
 typedef struct {
@@ -37,17 +32,6 @@ typedef struct {
     StaticQueue_t adcs_task_queue;
     StaticTask_t adcs_task_tcb;
 } adcs_task_memory_t;
-
-// Photodiode data structures
-typedef struct {
-    uint16_t raw_values[PHOTODIODE_COUNT];        // Raw ADC readings (up to 22)
-    uint32_t timestamp;                               // Reading timestamp
-    bool valid;                                       // Data validity flag
-} photodiode_data_t;
-
-typedef struct {
-    photodiode_data_t *data_buffer;
-} photodiode_read_args_t;
 
 // Global memory and configuration
 extern adcs_task_memory_t adcs_mem;
