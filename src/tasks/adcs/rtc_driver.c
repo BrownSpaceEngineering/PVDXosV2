@@ -6,8 +6,9 @@
  * Created: November 9, 2025
  * Authors: Alexander Thaep
  */
-#include "adcs_task.h"
+
 #include "rtc_driver.h"
+#include "adcs_task.h"
 
 static const void *rtc_hw;
 static uint32_t rtc_count;
@@ -51,8 +52,6 @@ uint32_t get_rtc_count(void) {
     rtc_count = hri_rtcmode0_get_COUNT_reg(rtc_hw, 4294967295UL);
     return rtc_count;
 }
-
-
 
 uint32_t get_seconds(void) {
     if (!rtc_hw) {

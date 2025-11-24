@@ -1,10 +1,12 @@
 #ifndef MAGNETOMETER_DRIVER_H
 #define MAGNETOMETER_DRIVER_H
 
-#include "stdint.h"
 #include "globals.h"
+#include "rtos_start.h"
+#include "watchdog_task.h"
 #include "atmel_start.h"
-#include "logging.h"
+#include "driver_init.h"
+
 #include "string.h"
 
 #define MAX_I2C_WRITE                32
@@ -59,9 +61,9 @@
 
 #define RM3100_NOS_REG				0x0A
 
-#define CCP0	0xC8	/* 200 Cycle Count */
-#define CCP1	0x00
-#define NOS		0x01	/* Number of Samples for averaging */
+#define CCP0						0xC8	// 200 Cycle Count
+#define CCP1						0x00
+#define NOS							0x01	// Number of samples for averaging
 
 #define REQUEST 0x70 // 0b 0111 0000
 

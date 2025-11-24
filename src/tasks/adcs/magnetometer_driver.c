@@ -12,6 +12,7 @@
 #define I2C_SERCOM
 
 #include "magnetometer_driver.h"
+#include "adcs_task.h"
 
 // https://www.tri-m.com/products/pni/RM3100-User-Manual.pdf
 // https://github.com/inventorandy/atmel-samd21/blob/master/07_I2CTSYS/07_I2CTSYS/ext_tsys01.h#L15
@@ -195,10 +196,11 @@ status_t mag_read_data(int32_t *const raw_readings, float *const gain_adj_readin
     int32_t readings[3];
     int8_t m_samples[9];
 
-    // read out sensor data
-    ret_err_status(rm3100_read_reg(NULL, RM3100_QX2_REG, (uint8_t *)&m_samples, sizeof(m_samples)),
-                   "magnetometer: Read from QX2 Register failed");
-
+    if (gpio_get_pin_level(Magnetometer_DRDY) == 0) {
+        debug("magnetometer: DRDY is false; not ready to read yet...");
+        return ERROR_NOT_READY;
+    }
+    
     readings[0] = ((int8_t)m_samples[0]) * 256 * 256;
     readings[0] |= m_samples[1] * 256;
     readings[0] |= m_samples[2];
