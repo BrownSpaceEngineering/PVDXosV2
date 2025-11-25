@@ -48,6 +48,7 @@ typedef enum {
     ERROR_TASK_DISABLED,
     ERROR_BAD_TARGET,
     ERROR_SANITY_CHECK_FAILED,
+    ERROR_PROCESSING_FAILED,
     ERROR_NOT_READY,
 } status_t;
 
@@ -69,6 +70,9 @@ typedef enum {
     OPERATION_DISPLAY_IMAGE, // p_data: color_t *p_buffer
     OPERATION_CLEAR_IMAGE,   // p_data: NULL
 
+    // Magnetometer & Photodiode operations
+    OPERATION_READ,            // p_data: photomag_read_args_t *readings
+    OPERATION_PROCESS,         // p_data: TBD
 
     // TESTING
     TEST_OP, // p_data: char message[]

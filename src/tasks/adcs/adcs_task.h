@@ -39,12 +39,18 @@ extern adcs_task_memory_t adcs_mem;
 typedef struct {
     photodiode_data_t *photodiode_buffer;
     mag_data_t *mag_buffer;
-} photomag_read_args_t;
+    rtc_data_t *rtc_buffer;
+} photomagrtc_read_args_t;
 
 // Function declarations
 QueueHandle_t init_adcs(void);
 void main_adcs(void *pvParameters);
-command_t get_photomag_read_command(mag_data_t *const mag_data, photodiode_data_t *const photodiode_data);
-void exec_command_photomag(command_t *const p_cmd);
+command_t get_photomagrtc_read_command(
+    mag_data_t *const mag_data, 
+    photodiode_data_t *const photodiode_data, 
+    rtc_data_t *const rtc_data);
+command_t get_adcs_process_command(photomagrtc_read_args_t *const args);
+void exec_command_photomagrtc(command_t *const p_cmd);
+void exec_command_adcs_process(command_t *const p_cmd);
 
 #endif // ADCS_H

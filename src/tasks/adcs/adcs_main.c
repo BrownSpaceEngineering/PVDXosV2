@@ -57,7 +57,7 @@ QueueHandle_t init_adcs(void) {
 /**
  * \fn main_adcs
  *
- * \param pvParameters a void pointer to the parametres required by ADCS functions; not currently set by config
+ * \param pvParameters a void pointer to the parameters required by ADCS functions; not currently set by config
  *
  * \warning should never return
  */
@@ -77,23 +77,34 @@ void main_adcs(void *pvParameters) {
     info("magnetometer: Initialized with %d cycle count\n", INITIAL_CC);
 
     while (true) {
-        debug_impl("\n---------- Magnetometer & Photodiode Run ----------\n");
+        debug_impl("\n---------- Magnetometer & Photodiode & RTC & Processing Run ----------\n");
 
         // Block waiting for at least one command to appear in the command queue
         if (xQueueReceive(p_adcs_task->command_queue, &cmd, queue_block_time_ticks) == pdPASS) {
             // Once there is at least one command in the queue, empty the entire queue
             do {
-                debug("photo/mag: Command popped off queue. Target: %d, Operation: %d\n", cmd.target, cmd.operation);
-                exec_command_photomag(&cmd);
-
+                switch (cmd.operation) {
+                case OPERATION_READ:
+                    debug("photo/mag/rtc: Command popped off queue. Target: %d, Operation: %d\n", cmd.target, cmd.operation);
+                    exec_command_photomagrtc(&cmd);
+                    break;
+                case OPERATION_PROCESS:
+                    debug("adcs processing: Command popped off queue. Target: %d, Operation: %d\n", cmd.target, cmd.operation);
+                    exec_command_adcs_process(&cmd);
+                    break;
+                default:
+                    fatal("adcs: Invalid operation!\n");
+                    cmd.result = ERROR_SANITY_CHECK_FAILED;
+                    break;
+                }
             } while (xQueueReceive(p_adcs_task->command_queue, &cmd, 0) == pdPASS);
         }
-        debug("photo/mag: No more commands queued.\n");
+        debug("adcs: No more commands queued.\n");
 
         // Check in with the watchdog task
         if (should_checkin(current_task)) {
             enqueue_command(&cmd_checkin);
-            debug("photo/mag: Enqueued watchdog checkin command\n");
+            debug("adcs: Enqueued watchdog checkin command\n");
         }
     }
 }
