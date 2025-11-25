@@ -69,11 +69,6 @@ typedef enum {
     OPERATION_DISPLAY_IMAGE, // p_data: color_t *p_buffer
     OPERATION_CLEAR_IMAGE,   // p_data: NULL
 
-    // Magnetometer operations
-    OPERATION_READ, // p_data: magnetometer_read_args_t *readings
-
-    // Photodiode operations
-    OPERATION_PHOTODIODE_READ,
 
     // TESTING
     TEST_OP, // p_data: char message[]

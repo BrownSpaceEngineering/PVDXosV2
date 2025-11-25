@@ -16,7 +16,7 @@ adcs_task_memory_t adcs_mem;
 /**
  * \fn init_adcs
  *
- * \brief Initialises adcs command queue, before `init_task_pointer()`.
+ * \brief Initialises ADCS command queue, before `init_task_pointer()`.
  *
  * \returns QueueHandle_t, a handle to the created queue
  *
@@ -57,7 +57,7 @@ QueueHandle_t init_adcs(void) {
 /**
  * \fn main_adcs
  *
- * \param pvParameters a void pointer to the parametres required by photodiode; not currently set by config
+ * \param pvParameters a void pointer to the parametres required by ADCS functions; not currently set by config
  *
  * \warning should never return
  */
@@ -73,26 +73,27 @@ void main_adcs(void *pvParameters) {
     // Variable to hold commands popped off the queue
     command_t cmd;
 
-    info("photodiode: Initialized with %d photodiodes\n", PHOTODIODE_COUNT);
+    info("photodiodes: Initialized with %d photodiodes\n", PHOTODIODE_COUNT);
+    info("magnetometer: Initialized with %d cycle count\n", INITIAL_CC);
 
     while (true) {
-        debug("\n---------- Photodiode Task Loop ----------\n");
+        debug_impl("\n---------- Magnetometer & Photodiode Run ----------\n");
 
         // Block waiting for at least one command to appear in the command queue
         if (xQueueReceive(p_adcs_task->command_queue, &cmd, queue_block_time_ticks) == pdPASS) {
             // Once there is at least one command in the queue, empty the entire queue
             do {
-                debug("photodiode: Command popped off queue. Target: %d, Operation: %d\n", cmd.target, cmd.operation);
-                exec_command_photodiode(&cmd);
+                debug("photo/mag: Command popped off queue. Target: %d, Operation: %d\n", cmd.target, cmd.operation);
+                exec_command_photomag(&cmd);
 
             } while (xQueueReceive(p_adcs_task->command_queue, &cmd, 0) == pdPASS);
         }
-        debug("photodiode: No more commands queued.\n");
+        debug("photo/mag: No more commands queued.\n");
 
         // Check in with the watchdog task
         if (should_checkin(current_task)) {
             enqueue_command(&cmd_checkin);
-            debug("photodiode: Enqueued watchdog checkin command\n");
+            debug("photo/mag: Enqueued watchdog checkin command\n");
         }
     }
 }

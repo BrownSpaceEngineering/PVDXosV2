@@ -11,8 +11,8 @@
 #include "globals.h"
 #define I2C_SERCOM
 
-#include "magnetometer_driver.h"
 #include "adcs_task.h"
+#include "magnetometer_driver.h"
 
 // https://www.tri-m.com/products/pni/RM3100-User-Manual.pdf
 // https://github.com/inventorandy/atmel-samd21/blob/master/07_I2CTSYS/07_I2CTSYS/ext_tsys01.h#L15
@@ -32,7 +32,7 @@ static float m_gain;
  * \brief Initializes the RM3100 magnetometer sensor by setting up the I2C interface, reading
  *        the handshake and revision ID registers, and setting the cycle count and sample rate.
  *
- * \return `status_t` SUCCESS if the initialization was successful otherwise returns I2C failure
+ * \return `status_t` SUCCESS if the initialization was successful, calls fatal() otherwise
  */
 status_t init_rm3100(void) {
     // Initialize I2C
@@ -45,29 +45,20 @@ status_t init_rm3100(void) {
     uint8_t cycle_values[2] = {0, 0};
 
     // Read the revision ID and handshake registers
-    if (rm3100_read_reg(NULL, RM3100_REVID_REG, &init_values[0], 1)) {
-        warning("magnetometer: Error reading RM3100 RevID register during initialization\n");
-        return ERROR_I2C_FAILED;
-    }
-
-    if (rm3100_read_reg(NULL, RM3100_HSHAKE_REG, &init_values[1], 1)) {
-        warning("magnetometer: Error reading RM3100 handshake register during initialization\n");
-        return ERROR_I2C_FAILED;
-    }
+    fatal_on_error(rm3100_read_reg(NULL, RM3100_REVID_REG, &init_values[0], 1),
+                   "magnetometer: Error reading RM3100 RevID register during initialization");
+    fatal_on_error(rm3100_read_reg(NULL, RM3100_HSHAKE_REG, &init_values[1], 1),
+                   "magnetometer: Error reading RM3100 handshake register during initialization");
     if (init_values[0] != RM3100_REVID_VALUE) {
-        warning("magnetometer: Unexpected RM3100 RevID value during initialization\n");
-        return ERROR_I2C_FAILED;
+        fatal("magnetometer: Unexpected RM3100 RevID value during initialization");
     }
     if (init_values[1] != RM3100_HSHAKE_VALUE) {
-        warning("magnetometer: Unexpected RM3100 handshake value during initialization\n");
-        return ERROR_I2C_FAILED;
+        fatal("magnetometer: Unexpected RM3100 handshake value during initialization");
     }
 
     // Read the LROSCADJ and SLPOSCADJ registers
-    if (rm3100_read_reg(NULL, RM3100_LROSCADJ_REG, &init_values[2], 2)) {
-        warning("magnetometer: Error reading RM3100 LROSCADJ register during initialization\n");
-        return ERROR_I2C_FAILED;
-    }
+    fatal_on_error(rm3100_read_reg(NULL, RM3100_LROSCADJ_REG, &init_values[2], 2),
+                   "magnetometer: Error reading RM3100 LROSCADJ register during initialization");
     if (init_values[2] != RM3100_LROSCADJ_VALUE) {
         warning("magnetometer: Unexpected RM3100 LROSCADJ register value during initialization\n");
         return ERROR_I2C_FAILED;
@@ -81,10 +72,8 @@ status_t init_rm3100(void) {
     mag_change_cycle_count(INITIAL_CC);
 
     // Attempt to read back the cycle count we just set from one axis as a sanity check
-    if (rm3100_read_reg(NULL, RM3100_CCX1_REG, &cycle_values[0], 2)) {
-        warning("magnetometer: Error reading first part of RM3100 CCX1 cycle-count register during initialization\n");
-        return ERROR_I2C_FAILED;
-    }
+    fatal_on_error(rm3100_read_reg(NULL, RM3100_CCX1_REG, &cycle_values[0], 2),
+                   "magnetometer: Error reading first part of RM3100 CCX1 cycle-count register during initialization");
 
     m_cycle_count = cycle_values[0];
     m_cycle_count = (m_cycle_count << 8) | cycle_values[1];
@@ -185,14 +174,11 @@ status_t rm3100_write_reg(int32_t *p_bytes_written, uint8_t addr, uint8_t *data,
  *
  * \brief Reads x,y,z magnetic field data from the RM3100
  *
- * \param raw_readings If not NULL, pointer to a buffer (int32_t array of size
- *      3) to store the raw readings from the magnetometer.
- * \param gain_adj_readings If not NULL, pointer to a buffer (float array of
- *      size 3) to store the gain-adjusted readings from the magnetometer.
+ * \param data pointer to mag_data_t structure to fill
  *
  * \return `status_t` SUCCESS if the read was successful, or ERROR_READ_FAILED/ERROR_WRITE_FAILED otherwise
  */
-status_t mag_read_data(int32_t *const raw_readings, float *const gain_adj_readings) {
+status_t mag_read_data(mag_data_t *data) {
     int32_t readings[3];
     int8_t m_samples[9];
 
@@ -201,6 +187,11 @@ status_t mag_read_data(int32_t *const raw_readings, float *const gain_adj_readin
         return ERROR_NOT_READY;
     }
     
+
+    // read out sensor data
+    ret_err_status(rm3100_read_reg(NULL, RM3100_QX2_REG, (uint8_t *)&m_samples, sizeof(m_samples)),
+                   "magnetometer: Read from QX2 Register failed");
+
     readings[0] = ((int8_t)m_samples[0]) * 256 * 256;
     readings[0] |= m_samples[1] * 256;
     readings[0] |= m_samples[2];
@@ -213,18 +204,16 @@ status_t mag_read_data(int32_t *const raw_readings, float *const gain_adj_readin
     readings[2] |= m_samples[7] * 256;
     readings[2] |= m_samples[8];
 
-    if (raw_readings != NULL) {
-        raw_readings[0] = readings[0];
-        raw_readings[1] = readings[1];
-        raw_readings[2] = readings[2];
-    }
+    if (data == NULL) return ERROR_READ_FAILED;
+
+    data->raw_readings[0] = readings[0];
+    data->raw_readings[1] = readings[1];
+    data->raw_readings[2] = readings[2];
 
     // adjust the readings based on the gain
-    if (gain_adj_readings != NULL) {
-        gain_adj_readings[0] = (float)readings[0] / m_gain;
-        gain_adj_readings[1] = (float)readings[1] / m_gain;
-        gain_adj_readings[2] = (float)readings[2] / m_gain;
-    }
+    data->gain_adj_readings[0] = (float)readings[0] / m_gain;
+    data->gain_adj_readings[1] = (float)readings[1] / m_gain;
+    data->gain_adj_readings[2] = (float)readings[2] / m_gain;
 
     return SUCCESS;
 }
@@ -317,9 +306,7 @@ uint16_t mag_set_sample_rate(uint16_t sample_rate) {
         mag_modify_interrupts(RM3100_ENABLED, RM3100_DISABLED);
     }
 
-    if (rm3100_read_reg(NULL, RM3100_TMRC_REG, i2c_buffer, 1)) {
-        warning("magnetometer: Read from TMRC Register failed\n");
-    }
+    fatal_on_error(rm3100_read_reg(NULL, RM3100_TMRC_REG, i2c_buffer, 1), "magnetometer: Read from TMRC Register failed");
 
     return i2c_buffer[0];
 }
