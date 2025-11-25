@@ -2,23 +2,23 @@
 #define ADCS_H
 
 // Includes
+#include "atmel_start.h"
 #include "globals.h"
 #include "logging.h"
+#include "magnetometer_driver.h"
+#include "photodiode_driver.h"
+#include "rtc_driver.h"
 #include "queue.h"
 #include "task_list.h"
-#include "atmel_start.h"
 #include "watchdog_task.h"
-#include "photodiode_driver.h"
-#include "magnetometer_driver.h"
-#include "rtc_driver.h"
 
 // TODO: cool ascii art
-#define ADCS_ASCII_ART                                                                                                                    \
-"    _    ____   ____ ____     \n" \
-"   / \\  |  _ \\ / ___/ ___|  \n" \
-"  / _ \\ | | | | |   \\___ \\ \n" \
-" / ___ \\| |_| | |___ ___) |  \n" \
-"/_/   \\_\\____/ \\____|____/ \n" \
+#define ADCS_ASCII_ART                                                                                                                     \
+    "    _    ____   ____ ____     \n"                                                                                                     \
+    "   / \\  |  _ \\ / ___/ ___|  \n"                                                                                                     \
+    "  / _ \\ | | | | |   \\___ \\ \n"                                                                                                     \
+    " / ___ \\| |_| | |___ ___) |  \n"                                                                                                     \
+    "/_/   \\_\\____/ \\____|____/ \n"
 
 // Constants
 #define ADCS_TASK_STACK_SIZE 1024 // Size of the stack in words (multiply by 4 to get bytes)
@@ -36,11 +36,15 @@ typedef struct {
 // Global memory and configuration
 extern adcs_task_memory_t adcs_mem;
 
+typedef struct {
+    photodiode_data_t *photodiode_buffer;
+    mag_data_t *mag_buffer;
+} photomag_read_args_t;
+
 // Function declarations
 QueueHandle_t init_adcs(void);
 void main_adcs(void *pvParameters);
-void exec_command_photodiode(command_t *const p_cmd);
-status_t photodiode_read(photodiode_data_t *const data);
-command_t get_photodiode_read_command(photodiode_data_t *const data);
+command_t get_photomag_read_command(mag_data_t *const mag_data, photodiode_data_t *const photodiode_data);
+void exec_command_photomag(command_t *const p_cmd);
 
 #endif // ADCS_H

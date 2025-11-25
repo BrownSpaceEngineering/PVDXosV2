@@ -55,11 +55,11 @@ export OBJS :=                                              	\
                                                             	\
 ../src/tasks/task_list.o                                        \
                                                             	\
-../src/tasks/adcs/adcs_main.o									\
-../src/tasks/adcs/adcs_task.o									\
+../src/tasks/adcs/magnetometer_driver.o             			\
 ../src/tasks/adcs/photodiode_driver.o							\
 ../src/tasks/adcs/rtc_driver.o									\
-../src/tasks/adcs/magnetometer_driver.o             			\
+../src/tasks/adcs/adcs_main.o									\
+../src/tasks/adcs/adcs_task.o									\
 
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###
 ### THESE ARE WRITTEN RELATIVE TO THE ./ASF/gcc/Makefile FILE ###
@@ -78,7 +78,6 @@ export EXTRA_VPATH := \
 ../../src/tasks/display/image_buffers \
 ../../src/tasks/task_manager \
 ../../src/tasks/command_dispatcher \
-../../src/tasks/magnetometer \
 ../../src/tasks/shell \
 ../../src/tasks/adcs \
 ../../src/mutexes
