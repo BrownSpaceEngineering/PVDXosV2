@@ -4,7 +4,7 @@
  * Main loop of the ADCS task which handles sun sensing for ADCS and RTC timer
  *
  * Created: September 20, 2025
- * Modified: November 9, 2025
+ * Modified: November 24, 2025
  * Authors: Avinash Patel, Yi Lyo, Alexander Thaep
  */
 

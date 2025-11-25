@@ -4,6 +4,7 @@
  * Hardware driver for RTC timer used in ADCS algorithms
  *
  * Created: November 9, 2025
+ * Modified: November 24, 2025
  * Authors: Alexander Thaep
  */
 

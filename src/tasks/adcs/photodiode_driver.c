@@ -4,7 +4,7 @@
  * Hardware driver for photodiode sensors used in ADCS sun sensing.
  *
  * Created: September 20, 2025
- * Modified: November 9, 2025
+ * Modified: November 24, 2025
  * Authors: Avinash Patel, Yi Lyo, Alexander Thaep
  */
 
