@@ -2,7 +2,7 @@
  * Code for the Arducam
  * 
  * Created: Nov 17, 2024 4:26 AM
- * By: Alexander Thaep
+ * By: Alexander Thaep, Tanish Makadia, Zach Mahan
 */
 
 // Essential resource: https://github.com/ArduCAM/Arduino
@@ -67,8 +67,9 @@ void init_arducam()
     ARDUCAMI2CMultiWrite(OV2640_JPEG);
     ARDUCAMI2CWrite(0xFF, &data[1], 1);
     ARDUCAMI2CWrite(0x15, &data[0], 1);
-    ARDUCAMI2CMultiWrite(OV2640_320x240_JPEG);
+    ARDUCAMI2CMultiWrite(OV2640_1280x1024_JPEG);
 
+    // TODO: revert this back to capture() when radio is working
     // capture();
     capture_rtt();
 
