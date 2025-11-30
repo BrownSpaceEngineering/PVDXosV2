@@ -28,7 +28,7 @@ typedef struct device_check_state {
     bool valid;
 } device_check_state_t;
 
-static device_check_state_t device_states[NUM_DEVICES] = {[0 ... NUM_DEVICES - 1] = {.checked = false, .valid = false}};
+static device_check_state_t device_states[NUM_DEVICES] = {0}; // inits to {false, false} for each entry
 
 static bool (*device_check_functions[NUM_DEVICES])(void) = {
     //    func ptr      |  device_id_t
