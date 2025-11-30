@@ -4,7 +4,6 @@
  * header file for checking the state of hardware device for PVDX
  *
  * Created: 20251102 SUN
- * Updated: 20251112 TUE
  * Authors: Zach Mahan
  */
 
