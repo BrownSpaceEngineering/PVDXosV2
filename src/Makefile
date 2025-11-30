@@ -23,12 +23,12 @@ export OBJS :=                                              	\
 ../src/misc/printf/SEGGER_RTT_printf.o                      	\
                                                             	\
 ../src/misc/rtos_support/rtos_static_memory.o               	\
-../src/misc/rtos_support/rtos_stack_overflow.o              	 \
+../src/misc/rtos_support/rtos_stack_overflow.o              	\
                                                             	\
 ../src/misc/logging/logging.o                               	\
                                                             	\
 ../src/misc/exception_handlers/default_handler.o            	\
-../src/misc/exception_handlers/specific_handlers.o          	 \
+../src/misc/exception_handlers/specific_handlers.o          	\
                                                             	\
 ../src/tasks/heartbeat/heartbeat_main.o                     	\
                                                             	\
@@ -58,14 +58,18 @@ export OBJS :=                                              	\
 ../src/tasks/shell/shell_main.o                             	\
 ../src/tasks/shell/shell_helpers.o                          	\
 ../src/tasks/shell/shell_commands.o                         	\
-                                                            	\
-../src/tasks/task_list.o                                        \
-                                                            	\
+																\
 ../src/tasks/photodiode/photodiode_main.o						\
 ../src/tasks/photodiode/photodiode_task.o						\
 ../src/tasks/photodiode/photodiode_driver.o						\
+                                                            	\
+../src/tasks/arducam/arducam_main.o 							\
+../src/tasks/arducam/arducam_task.o 							\
+../src/tasks/arducam/arducam_driver.o 							\
+../src/tasks/arducam/arducam_registers.o 						\
+																\
 ../src/checks/device_checks.o 									\
-
+../src/tasks/task_list.o                                        \
 
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###
 ### THESE ARE WRITTEN RELATIVE TO THE ./ASF/gcc/Makefile FILE ###
@@ -87,6 +91,7 @@ export EXTRA_VPATH := \
 ../../src/tasks/magnetometer \
 ../../src/tasks/shell \
 ../../src/tasks/photodiode \
+../../src/tasks/arducam \
 ../../src/mutexes \
 ../../src/checks \
 

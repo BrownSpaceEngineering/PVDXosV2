@@ -7,9 +7,6 @@
  * Authors: Nathan Kim, Alexander Thaep, Siddharta Laloux, Tanish Makadia, Defne Doken, Aidan Wang
  */
 
-// IO descriptor for the RM3100
-#define I2C_SERCOM
-
 #include "magnetometer_driver.h"
 
 // https://www.tri-m.com/products/pni/RM3100-User-Manual.pdf
