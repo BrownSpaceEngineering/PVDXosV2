@@ -16,6 +16,14 @@
 
 #include "globals.h"
 
+/*
+ * ADDING A NEW DEVICE CHECK / PLEASE READ:
+ * - Add a new `check_some_device` function protype at the top of the device_checks.c src file matching the signature bool fn(void)
+ * - Fill in the definition at the bottom so that it returns true on success and otherwise false
+ * - Add the function to the table of device check functions, you most likely be replacing a `NULL` entry
+ * - Run a debug session to make sure it's working as expected
+ */
+
 /**
  * \brief to be run once on startup to check the health of each device
  * \return true when at least device has failed, else false
