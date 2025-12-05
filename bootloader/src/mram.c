@@ -32,6 +32,9 @@ _|"""""|_|"""""|_|"""""|_|"""""|
 #define CMD_WRITE 0x02
 #define CMD_RDID  0x9F
 #define CMD_RDFR  0x70  // Read Status Flag Register
+#define CMD_RDNVOL 0xB5
+#define CMD_RDVOL 0x85
+#define CMD_WRVOL 0x81
 
 // Test parameters
 #define TEST_ADDRESS 0x0000
@@ -71,7 +74,7 @@ void write_enable(void) {
     mram_deselect();
 }
 
-uint8_t readStatus(void) {
+uint8_t read_status(void) {
     uint8_t cmd = CMD_RDSR;
     uint8_t val = 0;
     mram_select();
@@ -81,7 +84,7 @@ uint8_t readStatus(void) {
     return val;
 }
 
-void writeStatus(uint8_t value) {
+void write_status(uint8_t value) {
     uint8_t buf[2] = {CMD_WRSR, value};
     write_enable();
     mram_select();
@@ -89,7 +92,7 @@ void writeStatus(uint8_t value) {
     mram_deselect();
 }
 
-void read_bytes(uint32_t address, uint8_t *data, uint32_t size) {
+void mram_read_bytes(uint32_t address, uint8_t *data, uint32_t size) {
     uint8_t cmd[4] = {
         CMD_READ,
         (uint8_t)(address >> 16),
@@ -102,7 +105,7 @@ void read_bytes(uint32_t address, uint8_t *data, uint32_t size) {
     mram_deselect();
 }
 
-void write_bytes(uint32_t address, const uint8_t *data, uint32_t size) {
+void mram_write_bytes(uint32_t address, const uint8_t *data, uint32_t size) {
     uint8_t hdr[4] = {
         CMD_WRITE,
         (uint8_t)(address >> 16),
@@ -130,17 +133,78 @@ void check_device_id(void) {
     }
 }
 
+uint8_t read_nonvol_reg(void) {
+    uint8_t cmd[4] = {
+        CMD_RDNVOL,
+        0,
+        0,
+        8
+    };
+    uint8_t reg_val = 0;
+    mram_select();
+    spi_write(cmd, 4);
+    spi_read(&reg_val, 1);
+    mram_deselect();
+
+    return reg_val;
+}
+
+uint8_t read_vol_reg(void) {
+    uint8_t cmd[4] = {
+        CMD_RDVOL,
+        0,
+        0,
+        8
+    };
+    uint8_t reg_val = 0;
+    mram_select();
+    spi_write(cmd, 4);
+    spi_read(&reg_val, 1);
+    mram_deselect();
+
+    return reg_val;
+}
+
+void write_vol_reg(uint8_t reg_val) {
+    uint8_t cmd[4] = {
+        CMD_WRVOL,
+        0,
+        0,
+        8
+    };
+    write_enable();
+    mram_select();
+    spi_write(cmd, 4);
+    spi_write(&reg_val, 1);
+    mram_deselect();
+}
+
+void set_persistent_mode(void) {
+    uint8_t reg_val = read_nonvol_reg();
+
+    if (!(reg_val & 0x03)) {
+        reg_val |= 0x03;
+        write_vol_reg(reg_val);
+    }
+
+    reg_val = read_vol_reg();
+    if (!(reg_val & 0x03)) {
+        // persistent mode not enabled
+        mram_fatal();
+    }
+}
+
 // ---------------------- Tests ----------------------
 
 void disable_block_protection(void) {
-    uint8_t status = readStatus();
+    uint8_t status = read_status();
 
     if (status & 0x0C) {
         // disable block protection
-        writeStatus(status & ~0x0C);
+        write_status(status & ~0x0C);
     }
 
-    status = readStatus();
+    status = read_status();
     if ((status & 0x0C) != 0) {
         // block protection not disabled
         mram_fatal();
@@ -148,15 +212,15 @@ void disable_block_protection(void) {
 }
 
 void test_writes_reads(uint32_t addr, int salt) {
-    const uint32_t NUM_BYTES = 256;
+    const uint32_t NUM_BYTES = 512;
     uint8_t send_data[NUM_BYTES];
     uint8_t recv_data[NUM_BYTES];
 
     for (uint32_t i = 0; i < NUM_BYTES; i++)
         send_data[i] = (uint8_t)((i + salt) % 100);
 
-    write_bytes(addr, send_data, NUM_BYTES);
-    read_bytes(addr, recv_data, NUM_BYTES);
+    mram_write_bytes(addr, send_data, NUM_BYTES);
+    mram_read_bytes(addr, recv_data, NUM_BYTES);
 
     for (uint32_t i = 0; i < NUM_BYTES; i++) {
         if (recv_data[i] != send_data[i]) {
@@ -178,8 +242,9 @@ void mram_init(void) {
 
     check_device_id();
     disable_block_protection();
+    set_persistent_mode();
     for (int i = 0; i < 100; i++) {
-        test_writes_reads(0x000900, i+3);
+        test_writes_reads(0x000980, i+3);
         test_writes_reads(0x000f00, i+7);
     }
 
