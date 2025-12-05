@@ -44,6 +44,7 @@ typedef enum {
     ERROR_READ_FAILED,
     ERROR_WRITE_FAILED,
     ERROR_SPI_TRANSFER_FAILED,
+    ERROR_I2C_FAILED,
     ERROR_TASK_DISABLED,
     ERROR_BAD_TARGET,
     ERROR_SANITY_CHECK_FAILED,
@@ -98,9 +99,8 @@ typedef enum {
  * An enum to represent the ID/tag for each hardware device
  */
 
-#define NUM_DEVICES 10 // This **must** be update to reflect the number of enums
+#define NUM_DEVICES 10 // This **must** be updated to reflect the number of enums
 typedef enum {
-    // TODO define device IDs here
     MAGNETOMETER_ID = 0,
     PHOTODIODE_ID = 1,
     GYROSCOPE_ID = 2,

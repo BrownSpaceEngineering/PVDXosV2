@@ -4,7 +4,6 @@
  * header file for checking the state of hardware device for PVDX
  *
  * Created: 20251102 SUN
- * Updated: 20251104 TUE
  * Authors: Zach Mahan
  */
 
@@ -15,6 +14,14 @@
 #include <stdint.h>
 
 #include "globals.h"
+
+/*
+ * ADDING A NEW DEVICE CHECK / PLEASE READ:
+ * - Add a new `check_some_device` function protype at the top of the device_checks.c src file matching the signature bool fn(void)
+ * - Fill in the definition at the bottom so that it returns true on success and otherwise false
+ * - Add the function to the table of device check functions, you most likely be replacing a `NULL` entry
+ * - Run a debug session to make sure it's working as expected
+ */
 
 /**
  * \brief to be run once on startup to check the health of each device
@@ -37,5 +44,10 @@ void uncheck_device(device_id_t device_id);
  * \return initial state (true/false) of checked, potentially useful for extra information on how a device might be misbehaving
  */
 bool check_and_uncheck_device(device_id_t device_id);
+
+/**
+ * gets the string corresponding to the name of a device, primarily for debugging purposes
+ */
+const char *device_name_of(device_id_t device_id);
 
 #endif

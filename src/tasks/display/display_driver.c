@@ -9,6 +9,8 @@
 
 #include "display_driver.h"
 
+#include "globals.h"
+
 // Buffer for SPI transactions
 uint8_t spi_rx_buffer[DISPLAY_SPI_BUFFER_CAPACITY] = {0x00};
 uint8_t spi_tx_buffer[DISPLAY_SPI_BUFFER_CAPACITY] = {0x00};
@@ -162,136 +164,193 @@ status_t init_display_hardware(void) {
 
     // Reset the display by setting RST to low (it should be high during normal operation)
     RST_HIGH();
-    vTaskDelay(pdMS_TO_TICKS(RESET_WAIT_INTERVAL));
+    // vTaskDelay(pdMS_TO_TICKS(RESET_WAIT_INTERVAL));
     RST_LOW();
-    vTaskDelay(pdMS_TO_TICKS(RESET_WAIT_INTERVAL));
+    // vTaskDelayTaskDelay(pdMS_TO_TICKS(RESET_WAIT_INTERVAL));
     RST_HIGH();
-    vTaskDelay(pdMS_TO_TICKS(RESET_WAIT_INTERVAL));
+    // vTaskDelay(pdMS_TO_TICKS(RESET_WAIT_INTERVAL));
 
     // Unlock command lock (just in case)
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_COMMANDLOCK;
     spi_tx_buffer[1] = SSD_1362_ARG_COMMANDLOCK_UNLOCK;
 
-    fatal_on_error(spi_transfer(false), "display hardware init: could not unlock command lock");
+    if (spi_transfer(false)) {
+        warning("display hardware init: could not unlock command lock\n");
+        return ERROR_SPI_TRANSFER_FAILED;
+    }
 
     // Put display to sleep
     xfer.size = 1;
     spi_tx_buffer[0] = SSD1362_CMD_1B_DISPLAYOFF;
 
-    fatal_on_error(spi_transfer(false), "display hardware init: could not put display to sleep");
+    if (spi_transfer(false)) {
+        warning("display hardware init: could not put display to sleep\n");
+        return ERROR_SPI_TRANSFER_FAILED;
+    }
 
     // Set active display window to the entire display
-    fatal_on_error(display_set_window(), "display hardware init: could not set active window to whole display");
+    if (display_set_window()) {
+        warning("display hardware init: could not set active window to whole display\n");
+        return ERROR_SPI_TRANSFER_FAILED;
+    }
 
     // Set contrast
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_CONTRASTMASTER;
     spi_tx_buffer[1] = SSD1362_CONTRAST_STEP;
 
-    fatal_on_error(spi_transfer(false), "display hardware init: could not set contrast");
+    if (spi_transfer(false)) {
+        warning("display hardware init: could not set contrast\n");
+        return ERROR_SPI_TRANSFER_FAILED;
+    }
 
     // Set remap
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_SETREMAP;
     spi_tx_buffer[1] = SSD1362_REMAP_VALUE;
 
-    fatal_on_error(spi_transfer(false), "display hardware init: could not set remap");
+    if (spi_transfer(false)) {
+        warning("display hardware init: could not set remap\n");
+        return ERROR_SPI_TRANSFER_FAILED;
+    }
 
     // Set display start line
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_STARTLINE;
     spi_tx_buffer[1] = 0x00;
 
-    fatal_on_error(spi_transfer(false), "display hardware init: could not set display start line");
+    if (spi_transfer(false)) {
+        warning("display hardware init: could not set display start line\n");
+        return ERROR_SPI_TRANSFER_FAILED;
+    }
 
     // Set display offset
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_DISPLAYOFFSET;
     spi_tx_buffer[1] = 0x00;
 
-    fatal_on_error(spi_transfer(false), "display hardware init: could not set display offset");
+    if (spi_transfer(false)) {
+        warning("display hardware init: could not set display offset\n");
+        return ERROR_SPI_TRANSFER_FAILED;
+    }
 
     // Set display mode
     xfer.size = 1;
     spi_tx_buffer[0] = SSD1362_CMD_1B_NORMALDISPLAY;
     // spi_tx_buffer[0] = SSD1362_CMD_ALLPIXELON; // sets all pixels to max brightness (use for debugging)
-    fatal_on_error(spi_transfer(false), "display hardware init: could not set display mode");
+    if (spi_transfer(false)) {
+        warning("display hardware init: could not set display mode\n");
+        return ERROR_SPI_TRANSFER_FAILED;
+    }
 
     // Set multiplex ratio
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_MULTIPLEX_RATIO;
     spi_tx_buffer[1] = SSD1362_MUX_RATIO;
 
-    fatal_on_error(spi_transfer(false), "display hardware init: could not set multiplex ratio");
+    if (spi_transfer(false)) {
+        warning("display hardware init: could not set multiplex ratio\n");
+        return ERROR_SPI_TRANSFER_FAILED;
+    }
 
     // Set VDD
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_SET_VDD;
     spi_tx_buffer[1] = SSD_1362_ARG_VDD_ON;
 
-    fatal_on_error(spi_transfer(false), "display hardware init: could not set VDD");
+    if (spi_transfer(false)) {
+        warning("display hardware init: could not set VDD\n");
+        return ERROR_SPI_TRANSFER_FAILED;
+    }
 
     // Set IREF
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_IREF_SELECTION;
     spi_tx_buffer[1] = SSD_1362_ARG_IREF_INTERNAL;
 
-    fatal_on_error(spi_transfer(false), "display hardware init: could not set IREF");
+    if (spi_transfer(false)) {
+        warning("display hardware init: could not set IREF\n");
+        return ERROR_SPI_TRANSFER_FAILED;
+    }
 
     // Set phase length
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_PHASE_LENGTH;
     spi_tx_buffer[1] = SSD_1362_PHASE_1_2_LENGTHS;
 
-    fatal_on_error(spi_transfer(false), "display hardware init: could not set phase length");
+    if (spi_transfer(false)) {
+        warning("display hardware init: could not set phase length\n");
+        return ERROR_SPI_TRANSFER_FAILED;
+    }
 
     // Set display clock divider
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_CLOCKDIV;
     spi_tx_buffer[1] = SSD1362_CLOCK_DIVIDER_VALUE;
 
-    fatal_on_error(spi_transfer(false), "display hardware init: could not set display clock divider");
+    if (spi_transfer(false)) {
+        warning("display hardware init: could not set display clock divider\n");
+        return ERROR_SPI_TRANSFER_FAILED;
+    }
 
     // Set pre-charge 2 period
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_PRECHARGE2;
     spi_tx_buffer[1] = SSD1362_PRECHARGE_2_TIME;
 
-    fatal_on_error(spi_transfer(false), "display hardware init: could not set pre-charge 2 periods");
+    if (spi_transfer(false)) {
+        warning("display hardware init: could not set pre-charge 2 periods\n");
+        return ERROR_SPI_TRANSFER_FAILED;
+    }
 
     // Set linear LUT
     xfer.size = 1;
     spi_tx_buffer[0] = SSD1362_CMD_1B_USELINEARLUT;
 
-    fatal_on_error(spi_transfer(false), "display hardware init: could not set linear LUT");
+    if (spi_transfer(false)) {
+        warning("display hardware init: could not set linear LUT\n");
+        return ERROR_SPI_TRANSFER_FAILED;
+    }
 
     // Set pre-charge voltage level to 0.5 * Vcc
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_PRECHARGELEVEL;
     spi_tx_buffer[1] = SSD1362_PRECHARGE_VOLTAGE_RATIO;
 
-    fatal_on_error(spi_transfer(false), "display hardware init: could not set pre-charge voltage");
+    if (spi_transfer(false)) {
+        warning("display hardware init: could not set pre-charge voltage\n");
+        return ERROR_SPI_TRANSFER_FAILED;
+    }
 
     // Set pre-charge capacitor
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_PRECHARGE_CAPACITOR;
     spi_tx_buffer[1] = SSD1362_PRECHARGE_CAPACITOR;
 
-    fatal_on_error(spi_transfer(false), "display hardware init: could not set pre-charge capacitor");
+    if (spi_transfer(false)) {
+        warning("display hardware init: could not set pre-charge capacitor\n");
+        return ERROR_SPI_TRANSFER_FAILED;
+    }
 
     // Set COM deselect voltage
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_COM_DESELECT_VOLTAGE;
     spi_tx_buffer[1] = SSD1362_DESELECT_VOLTAGE_RATIO;
 
-    fatal_on_error(spi_transfer(false), "display hardware init: could not set COM deselect voltage");
+    if (spi_transfer(false)) {
+        warning("display hardware init: could not set COM deselect voltage\n");
+        return ERROR_SPI_TRANSFER_FAILED;
+    }
 
     // Turn the display on!
     xfer.size = 1;
     spi_tx_buffer[0] = SSD1362_CMD_1B_DISPLAYON;
 
-    fatal_on_error(spi_transfer(false), "display hardware init: could not turn display on");
+    if (spi_transfer(false)) {
+        warning("display hardware init: could not turn display on\n");
+        return ERROR_SPI_TRANSFER_FAILED;
+    }
 
     // Clear the display buffer
     display_clear_buffer();
