@@ -9,6 +9,7 @@
  */
 
 #include "adcs_task.h"
+#include "logging.h"
 
 /* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
 
@@ -107,6 +108,13 @@ void exec_command_adcs_process(command_t *const p_cmd) {
     if (args == NULL) info("adcs: stuff happens here\n");
 
     // Do stuff with readings here
+
+    info("ADCS microsecond count: %lu\n", temp.microseconds_count);
+    info("ADCS seconds count: %lu\n", temp.seconds_count);
+    info("ADCS mag reading [x,y,z]: [%f,%f,%f]\n", 
+        args->mag_buffer->gain_adj_readings[0], 
+        args->mag_buffer->gain_adj_readings[1],
+        args->mag_buffer->gain_adj_readings[2]);
 
     if (rtc_status == SUCCESS) p_cmd->result = SUCCESS;
     p_cmd->result = ERROR_PROCESSING_FAILED;

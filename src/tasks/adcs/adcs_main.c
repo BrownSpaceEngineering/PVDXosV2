@@ -9,6 +9,7 @@
  */
 
 #include "adcs_task.h"
+#include "logging.h"
 
 // ADCS Task memory structures
 adcs_task_memory_t adcs_mem;
@@ -82,6 +83,7 @@ void main_adcs(void *pvParameters) {
         // Block waiting for at least one command to appear in the command queue
         if (xQueueReceive(p_adcs_task->command_queue, &cmd, queue_block_time_ticks) == pdPASS) {
             // Once there is at least one command in the queue, empty the entire queue
+            info("adcs: performing command\n");
             do {
                 switch (cmd.operation) {
                 case OPERATION_READ:

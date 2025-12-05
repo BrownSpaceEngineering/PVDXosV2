@@ -81,6 +81,14 @@ int main(void) {
         }
     }
 
+    // Initialize all sensor integrity tasks
+    for (pvdx_task_t **curr_task = task_list; *curr_task != NULL; curr_task++) {
+        if ((*curr_task)->task_type == SENSOR) {
+            init_task_pointer(*curr_task);
+            info("%s initialized\n", (*curr_task)->name);
+        }
+    }
+
     /* ---------- COSMIC MONKEY TASK ---------- */
 
 #if defined(UNITTEST) || defined(DEVBUILD)

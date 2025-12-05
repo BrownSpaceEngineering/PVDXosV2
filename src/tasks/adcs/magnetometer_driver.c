@@ -15,6 +15,8 @@
 #include "adcs_task.h"
 #include "magnetometer_driver.h"
 
+#define SIMULATED_MAGNETOMETER
+
 // https://www.tri-m.com/products/pni/RM3100-User-Manual.pdf
 // https://github.com/inventorandy/atmel-samd21/blob/master/07_I2CTSYS/07_I2CTSYS/ext_tsys01.h#L15
 // https://os.mbed.com/users/ddelsuc/code/RM3100BB_Sample_Code/
@@ -36,6 +38,9 @@ static float m_gain;
  * \return `status_t` SUCCESS if the initialization was successful, calls fatal() otherwise
  */
 status_t init_rm3100(void) {
+    #ifdef SIMULATED_MAGNETOMETER
+    return SUCCESS;
+    #endif
     // Initialize I2C
     i2c_m_sync_set_baudrate(&I2C_MAG_GYRO, 0, 115200);
     i2c_m_sync_get_io_descriptor(&I2C_MAG_GYRO, &rm3100_io);
@@ -180,6 +185,14 @@ status_t rm3100_write_reg(int32_t *p_bytes_written, uint8_t addr, uint8_t *data,
  * \return `status_t` SUCCESS if the read was successful, or ERROR_READ_FAILED/ERROR_WRITE_FAILED otherwise
  */
 status_t mag_read_data(mag_data_t *data) {
+    #ifdef SIMULATED_MAGNETOMETER
+    data->gain_adj_readings[0] = 0.7f;
+    data->gain_adj_readings[1] = 0.4f;
+    data->gain_adj_readings[2] = 0.1f;
+
+    return SUCCESS;
+    #endif
+
     int32_t readings[3];
     int8_t m_samples[9];
 
