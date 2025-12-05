@@ -19,9 +19,7 @@ _|"""""|_|"""""|_|"""""|_|"""""|
  - block protection?
  */
 
-#include "atmel_start.h"
-#include "hal_gpio.h"
-#include "hal_delay.h"
+#include "mram.h"
 
 // MRAM Commands (we should cross check)
 #define CMD_WREN  0x06
@@ -243,12 +241,12 @@ void mram_init(void) {
     check_device_id();
     disable_block_protection();
     set_persistent_mode();
-    for (int i = 0; i < 100; i++) {
-        test_writes_reads(0x000980, i+3);
-        test_writes_reads(0x000f00, i+7);
-    }
+    // for (int i = 0; i < 100; i++) {
+    //     test_writes_reads(0x000980, i+3);
+    //     test_writes_reads(0x000f00, i+7);
+    // }
 
-    while (1) {
-        delay_ms(1000);
-    }
+    // while (1) {
+    //     delay_ms(1000);
+    // }
 }

@@ -38,7 +38,7 @@ int main(void) {
     info_impl("[+] Built from branch: %s\n", GIT_BRANCH_NAME);
     info_impl("[+] Built from commit: %s\n", GIT_COMMIT_HASH);
 
-    mram_main();
+    // mram_main();
 
     // Bootloader sets a magic number in backup RAM to indicate that it has run successfully
     uint32_t *p_magic_number = (uint32_t *)BOOTLOADER_MAGIC_NUMBER_ADDRESS;
