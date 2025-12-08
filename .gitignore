@@ -21,6 +21,9 @@
 *.lss
 /debug
 
+# Build
+/build-docs
+
 # Ignore cscope and ctags files
 cscope.*
 tags
