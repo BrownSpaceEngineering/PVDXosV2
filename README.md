@@ -178,5 +178,5 @@ sudo apt install doxygen
 doxygen Doxyfile
 ```
 - Download the `Live Server` extension on VSCode
-    - Open the `build-docs/index.html` file by right clicking -> `Open with Live Server`
+    - Open the `build-docs/html/index.html` file by right clicking -> `Open with Live Server`
     - A tab in your browser will open with the full docs page
