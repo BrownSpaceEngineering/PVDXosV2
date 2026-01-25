@@ -173,6 +173,7 @@ sudo dnf install doxygen
 # debian/ubuntu
 sudo apt install doxygen
 ```
+- [Manual Doxygen download](https://www.doxygen.nl/download.html)
 - Build the docs with doxygen:
 ```bash
 doxygen Doxyfile
