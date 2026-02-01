@@ -14,9 +14,13 @@ extern "C" {
 
 void ADC_0_example(void);
 
+void ADC_1_example(void);
+
+void TIMER_0_example(void);
+
 void I2C_SBAND_example(void);
 
-void I2C_MAG_GYRO_example(void);
+void I2C_MAGNETOMETER_GYRO_example(void);
 
 void I2C_CAMERA_example(void);
 

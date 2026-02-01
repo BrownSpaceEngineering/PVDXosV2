@@ -117,15 +117,15 @@ void early_warning_callback_watchdog(void) {
     // This function gets called when the watchdog is almost out of time
     // TODO: Test if this works
     // This is also fine to leave blank
-    gpio_set_pin_level(LED_Orange1, false);
+    gpio_set_pin_level(LED_ORANGE1, false);
     vTaskDelay(pdMS_TO_TICKS(100));
-    gpio_set_pin_level(LED_Orange2, false);
+    gpio_set_pin_level(LED_ORANGE2, false);
     vTaskDelay(pdMS_TO_TICKS(100));
     gpio_set_pin_level(LED_RED, true);
     vTaskDelay(pdMS_TO_TICKS(400));
-    gpio_set_pin_level(LED_Orange1, true);
+    gpio_set_pin_level(LED_ORANGE1, true);
     vTaskDelay(pdMS_TO_TICKS(33));
-    gpio_set_pin_level(LED_Orange2, true);
+    gpio_set_pin_level(LED_ORANGE2, true);
     vTaskDelay(pdMS_TO_TICKS(33));
     gpio_set_pin_level(LED_RED, false);
     vTaskDelay(pdMS_TO_TICKS(300));

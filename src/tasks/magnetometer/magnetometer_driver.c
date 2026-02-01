@@ -31,10 +31,10 @@ static float m_gain;
  */
 status_t init_rm3100(void) {
     // Initialize I2C
-    i2c_m_sync_set_baudrate(&I2C_MAG_GYRO, 0, 115200);
-    i2c_m_sync_get_io_descriptor(&I2C_MAG_GYRO, &rm3100_io);
-    i2c_m_sync_enable(&I2C_MAG_GYRO);
-    i2c_m_sync_set_slaveaddr(&I2C_MAG_GYRO, RM3100_ADDRESS, I2C_M_SEVEN);
+    i2c_m_sync_set_baudrate(&I2C_MAGNETOMETER_GYRO, 0, 115200);
+    i2c_m_sync_get_io_descriptor(&I2C_MAGNETOMETER_GYRO, &rm3100_io);
+    i2c_m_sync_enable(&I2C_MAGNETOMETER_GYRO);
+    i2c_m_sync_set_slaveaddr(&I2C_MAGNETOMETER_GYRO, RM3100_ADDRESS, I2C_M_SEVEN);
 
     uint8_t init_values[4] = {0, 0, 0, 0};
     uint8_t cycle_values[2] = {0, 0};

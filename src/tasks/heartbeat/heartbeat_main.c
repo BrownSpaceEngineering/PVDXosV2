@@ -32,8 +32,8 @@ void main_heartbeat(void *pvParameters) {
 // NOTE: false is on for some reason on the orange LEDs
 // In release build, make sure orange LEDs are off
 #if defined(RELEASE)
-    gpio_set_pin_level(LED_Orange1, true);
-    gpio_set_pin_level(LED_Orange2, true);
+    gpio_set_pin_level(LED_ORANGE1, true);
+    gpio_set_pin_level(LED_ORANGE2, true);
 #endif
 
     while (true) {
@@ -45,15 +45,15 @@ void main_heartbeat(void *pvParameters) {
 
 // Devbuild heartbeat pattern (Smoothly turning on and off LEDs in a line)
 #if defined(DEVBUILD)
-        gpio_set_pin_level(LED_Orange1, false);
+        gpio_set_pin_level(LED_ORANGE1, false);
         vTaskDelay(pdMS_TO_TICKS(100));
-        gpio_set_pin_level(LED_Orange2, false);
+        gpio_set_pin_level(LED_ORANGE2, false);
         vTaskDelay(pdMS_TO_TICKS(100));
         gpio_set_pin_level(LED_RED, true);
         vTaskDelay(pdMS_TO_TICKS(400));
-        gpio_set_pin_level(LED_Orange1, true);
+        gpio_set_pin_level(LED_ORANGE1, true);
         vTaskDelay(pdMS_TO_TICKS(33));
-        gpio_set_pin_level(LED_Orange2, true);
+        gpio_set_pin_level(LED_ORANGE2, true);
         vTaskDelay(pdMS_TO_TICKS(33));
         gpio_set_pin_level(LED_RED, false);
         vTaskDelay(pdMS_TO_TICKS(300));
@@ -61,12 +61,12 @@ void main_heartbeat(void *pvParameters) {
 
 // Testing heartbeat pattern (Blinking LEDs in an oscillating pattern [ON/OFF/ON] -> [OFF/ON/OFF])
 #if defined(UNITTEST)
-        gpio_set_pin_level(LED_Orange1, false);
-        gpio_set_pin_level(LED_Orange2, true);
+        gpio_set_pin_level(LED_ORANGE1, false);
+        gpio_set_pin_level(LED_ORANGE2, true);
         gpio_set_pin_level(LED_RED, true);
         vTaskDelay(pdMS_TO_TICKS(500));
-        gpio_set_pin_level(LED_Orange1, true);
-        gpio_set_pin_level(LED_Orange2, false);
+        gpio_set_pin_level(LED_ORANGE1, true);
+        gpio_set_pin_level(LED_ORANGE2, false);
         gpio_set_pin_level(LED_RED, false);
         vTaskDelay(pdMS_TO_TICKS(500));
 #endif
