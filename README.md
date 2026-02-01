@@ -1,6 +1,6 @@
 # PVDXos
 
-The real-time operating system for Brown Space Engineering's second satellite, Perovskite Visuals and Degredation eXperiment (PVDX).
+The real-time operating system for Brown Space Engineering's second satellite, Perovskite Visuals and Degradation eXperiment (PVDX).
 
 ![PVDXos Diagram](pvdxos.png)
 
