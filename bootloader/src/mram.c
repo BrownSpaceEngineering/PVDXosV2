@@ -21,29 +21,46 @@ _|"""""|_|"""""|_|"""""|_|"""""|
 
 #include "mram.h"
 
-// MRAM Commands (we should cross check)
-#define CMD_WREN  0x06
-#define CMD_WRDI  0x04
-#define CMD_RDSR  0x05
-#define CMD_WRSR  0x01
-#define CMD_READ  0x03
-#define CMD_WRITE 0x02
-#define CMD_RDID  0x9F
-#define CMD_RDFR  0x70  // Read Status Flag Register
-#define CMD_RDNVOL 0xB5
-#define CMD_RDVOL 0x85
-#define CMD_WRVOL 0x81
+// MRAM Command Bytes
+#define CMD_WREN    0x06    // Write Enable
+#define CMD_RDSR    0x05    // Read Status Register
+#define CMD_WRSR    0x01    // Write Status Register
+#define CMD_READ    0x03    // Read Data
+#define CMD_WRITE   0x02    // Write Data
+#define CMD_RDID    0x9F    // Read Device ID
+#define CMD_RDNVOL  0xB5    // Read Nonvolatile Register
+#define CMD_RDVOL   0x85    // Read Volatile Register
+#define CMD_WRVOL   0x81    // Write Volatile Register
 
-// Test parameters
-#define TEST_ADDRESS 0x0000
-#define TEST_DATA    0xA5
+#define PMM_REG     8       // Persistent Memory Mode register
 
 // ---------------------- SPI Helpers ----------------------
 
-static inline void mram_select(void)   { gpio_set_pin_level(MRAM1_CS, false); }
-static inline void mram_deselect(void) { gpio_set_pin_level(MRAM1_CS, true); }
-
 void mram_fatal(void) { while (1); }
+
+static inline void mram_select(uint8_t mram) {
+    if (mram == 1) {
+        gpio_set_pin_level(MRAM1_CS, false);
+    } else if (mram == 2) {
+        gpio_set_pin_level(MRAM2_CS, false);
+    } else if (mram == 3) {
+        gpio_set_pin_level(MRAM3_CS, false);
+    } else {
+        mram_fatal();
+    }
+}
+
+static inline void mram_deselect(uint8_t mram) {
+    if (mram == 1) {
+        gpio_set_pin_level(MRAM1_CS, true);
+    } else if (mram == 2) {
+        gpio_set_pin_level(MRAM2_CS, true);
+    } else if (mram == 3) {
+        gpio_set_pin_level(MRAM3_CS, true);
+    } else {
+        mram_fatal();
+    }
+}
 
 void spi_write(const uint8_t *data, uint32_t len) {
     struct spi_xfer xfer = {
@@ -63,151 +80,160 @@ void spi_read(uint8_t *data, uint32_t len) {
     spi_m_sync_transfer(&SPI_MRAM, &xfer);
 }
 
-// ---------------------- Core MRAM Operations ----------------------
+// ---------------------- MRAM Commands ----------------------
 
-void write_enable(void) {
+void write_enable(uint8_t mram) {
     uint8_t cmd = CMD_WREN;
-    mram_select();
+    mram_select(mram);
     spi_write(&cmd, 1);
-    mram_deselect();
+    mram_deselect(mram);
 }
 
-uint8_t read_status(void) {
+uint8_t read_status(uint8_t mram) {
     uint8_t cmd = CMD_RDSR;
     uint8_t val = 0;
-    mram_select();
+    mram_select(mram);
     spi_write(&cmd, 1);
     spi_read(&val, 1);
-    mram_deselect();
+    mram_deselect(mram);
     return val;
 }
 
-void write_status(uint8_t value) {
+void write_status(uint8_t mram, uint8_t value) {
     uint8_t buf[2] = {CMD_WRSR, value};
-    write_enable();
-    mram_select();
+    write_enable(mram);
+    mram_select(mram);
     spi_write(buf, 2);
-    mram_deselect();
+    mram_deselect(mram);
 }
 
-void mram_read_bytes(uint32_t address, uint8_t *data, uint32_t size) {
+void read_bytes(uint8_t mram, uint32_t address, uint8_t *data, uint32_t size) {
     uint8_t cmd[4] = {
         CMD_READ,
         (uint8_t)(address >> 16),
         (uint8_t)(address >> 8),
         (uint8_t)(address)
     };
-    mram_select();
+    mram_select(mram);
     spi_write(cmd, 4);
     spi_read(data, size);
-    mram_deselect();
+    mram_deselect(mram);
 }
 
-void mram_write_bytes(uint32_t address, const uint8_t *data, uint32_t size) {
+void write_bytes(uint8_t mram, uint32_t address, const uint8_t *data, uint32_t size) {
     uint8_t hdr[4] = {
         CMD_WRITE,
         (uint8_t)(address >> 16),
         (uint8_t)(address >> 8),
         (uint8_t)(address)
     };
-    write_enable();
-    mram_select();
+    write_enable(mram);
+    mram_select(mram);
     spi_write(hdr, 4);
     spi_write(data, size);
-    mram_deselect();
+    mram_deselect(mram);
 }
 
-void check_device_id(void) {
+uint8_t read_nonvol_reg(uint8_t mram, uint8_t reg) {
+    uint8_t cmd[4] = {
+        CMD_RDNVOL,
+        0,
+        0,
+        reg
+    };
+    uint8_t reg_val = 0;
+    mram_select(mram);
+    spi_write(cmd, 4);
+    spi_read(&reg_val, 1);
+    mram_deselect(mram);
+    return reg_val;
+}
+
+uint8_t read_vol_reg(uint8_t mram, uint8_t reg) {
+    uint8_t cmd[4] = {
+        CMD_RDVOL,
+        0,
+        0,
+        reg
+    };
+    uint8_t reg_val = 0;
+    mram_select(mram);
+    spi_write(cmd, 4);
+    spi_read(&reg_val, 1);
+    mram_deselect(mram);
+    return reg_val;
+}
+
+void write_vol_reg(uint8_t mram, uint8_t reg, uint8_t reg_val) {
+    uint8_t cmd[4] = {
+        CMD_WRVOL,
+        0,
+        0,
+        reg
+    };
+    write_enable(mram);
+    mram_select(mram);
+    spi_write(cmd, 4);
+    spi_write(&reg_val, 1);
+    mram_deselect(mram);
+}
+
+
+// ---------------------- Core Operations ----------------------
+
+void check_device_id(uint8_t mram) {
     uint8_t cmd = CMD_RDID;
     uint8_t id[3] = {0};
-    mram_select();
+    mram_select(mram);
     spi_write(&cmd, 1);
     spi_read(id, 3);
-    mram_deselect();
+    mram_deselect(mram);
 
-    if (id[0] != 0x6b || id[1] != 0xbb || id[2] != 0x14) {
+    if (id[0] != 0x6B || id[1] != 0xBB || id[2] != 0x14) {
         // invalid device ID
         mram_fatal();
     }
 }
 
-uint8_t read_nonvol_reg(void) {
-    uint8_t cmd[4] = {
-        CMD_RDNVOL,
-        0,
-        0,
-        8
-    };
-    uint8_t reg_val = 0;
-    mram_select();
-    spi_write(cmd, 4);
-    spi_read(&reg_val, 1);
-    mram_deselect();
+void disable_block_protection(uint8_t mram) {
+    uint8_t status = read_status(mram);
 
-    return reg_val;
+    if (status & 0x0C) {
+        // disable block protection
+        write_status(mram, status & ~0x0C);
+    }
+
+    status = read_status(mram);
+    if ((status & 0x0C) != 0) {
+        // block protection not disabled
+        mram_fatal();
+    }
 }
 
-uint8_t read_vol_reg(void) {
-    uint8_t cmd[4] = {
-        CMD_RDVOL,
-        0,
-        0,
-        8
-    };
-    uint8_t reg_val = 0;
-    mram_select();
-    spi_write(cmd, 4);
-    spi_read(&reg_val, 1);
-    mram_deselect();
-
-    return reg_val;
-}
-
-void write_vol_reg(uint8_t reg_val) {
-    uint8_t cmd[4] = {
-        CMD_WRVOL,
-        0,
-        0,
-        8
-    };
-    write_enable();
-    mram_select();
-    spi_write(cmd, 4);
-    spi_write(&reg_val, 1);
-    mram_deselect();
-}
-
-void set_persistent_mode(void) {
-    uint8_t reg_val = read_nonvol_reg();
+void set_persistent_mode(uint8_t mram) {
+    uint8_t reg_val = read_nonvol_reg(mram, PMM_REG);
 
     if (!(reg_val & 0x03)) {
         reg_val |= 0x03;
-        write_vol_reg(reg_val);
+        write_vol_reg(mram, PMM_REG, reg_val);
     }
 
-    reg_val = read_vol_reg();
+    reg_val = read_vol_reg(mram, PMM_REG);
     if (!(reg_val & 0x03)) {
         // persistent mode not enabled
         mram_fatal();
     }
 }
 
-// ---------------------- Tests ----------------------
-
-void disable_block_protection(void) {
-    uint8_t status = read_status();
-
-    if (status & 0x0C) {
-        // disable block protection
-        write_status(status & ~0x0C);
-    }
-
-    status = read_status();
-    if ((status & 0x0C) != 0) {
-        // block protection not disabled
-        mram_fatal();
-    }
+void mram_read_bytes(uint32_t address, uint8_t *data, uint32_t size) {
+    // triplicate read...
 }
+
+void mram_write_bytes(uint32_t address, const uint8_t *data, uint32_t size) {
+    // triplicate write...
+}
+
+// ---------------------- Test ----------------------
 
 void test_writes_reads(uint32_t addr, int salt) {
     const uint32_t NUM_BYTES = 512;
@@ -235,12 +261,17 @@ void mram_init(void) {
     spi_m_sync_enable(&SPI_MRAM);
 
     gpio_set_pin_level(MRAM1_CS, true);
+    gpio_set_pin_level(MRAM2_CS, true);
+    gpio_set_pin_level(MRAM3_CS, true);
 
     delay_ms(50);
 
-    check_device_id();
-    disable_block_protection();
-    set_persistent_mode();
+    for (uint8_t mram = 1; mram <= 3; mram++) {
+        check_device_id(mram);
+        disable_block_protection(mram);
+        set_persistent_mode(mram);
+    }
+
     // for (int i = 0; i < 100; i++) {
     //     test_writes_reads(0x000980, i+3);
     //     test_writes_reads(0x000f00, i+7);
