@@ -14,6 +14,7 @@
 #include "checks/device_checks.h"
 #include "globals.h"
 #include "logging.h"
+#include "tests/test.h"
 
 cosmic_monkey_task_arguments_t cm_args = {0};
 
@@ -41,8 +42,6 @@ int main(void) {
     info("[+] Built from branch: %s\n", GIT_BRANCH_NAME);
     info("[+] Built from commit: %s\n", GIT_COMMIT_HASH);
 
-    test_log("test");
-
     // Bootloader sets a magic number in backup RAM to indicate that it has run successfully
     uint32_t *p_magic_number = (uint32_t *)BOOTLOADER_MAGIC_NUMBER_ADDRESS;
     uint32_t magic_number = *p_magic_number;
@@ -57,6 +56,11 @@ int main(void) {
 
     bool at_least_one_device_failed = check_all_devices_on_startup();
     info("AT_LEAST_ONE_DEVICE_FAILED: %d\n", at_least_one_device_failed);
+
+/* -------------------------------------- TESTS ---------------------------------------------- */
+#ifdef UNITTEST
+    tests_run();
+#endif
 
     // Initialize a mutex wrapping the shared PVDX task list struct
     task_list_mutex = xSemaphoreCreateMutexStatic(&task_list_mutex_buffer);

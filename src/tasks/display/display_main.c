@@ -15,7 +15,7 @@ display_task_memory_t display_mem;
 /**
  * \fn main_display
  *
- * \param pvParameters a void pointer to the parametres required by the display; 
+ * \param pvParameters a void pointer to the parametres required by the display;
  *      not currently set by config
  *
  * \warning should never return
@@ -33,7 +33,7 @@ void main_display(void *pvParameters) {
     command_t cmd;
 
     while (true) {
-        debug_impl("\n---------- Display Task Loop ----------\n");
+        debug("\n---------- Display Task Loop ----------\n");
 
         (void)queue_block_time_ticks;
         // Execute all commands contained in the queue

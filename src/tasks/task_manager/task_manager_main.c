@@ -17,11 +17,11 @@ StaticSemaphore_t task_list_mutex_buffer;
 
 /**
  * \fn main_task_manager
- * 
- * \param pvParameters a void pointer to the parametres required by the task 
+ *
+ * \param pvParameters a void pointer to the parametres required by the task
  *      manager; not currently set by config
  *
- * \warning should never return 
+ * \warning should never return
  */
 void main_task_manager(void *pvParameters) {
     info("task-manager: Task Started!\n");
@@ -41,7 +41,7 @@ void main_task_manager(void *pvParameters) {
     command_t cmd;
 
     while (true) {
-        debug_impl("\n---------- Task Manager Task Loop ----------\n");
+        debug("\n---------- Task Manager Task Loop ----------\n");
 
         // Execute all commands contained in the queue
         if (xQueueReceive(p_task_manager_task->command_queue, &cmd, queue_block_time_ticks) == pdPASS) {

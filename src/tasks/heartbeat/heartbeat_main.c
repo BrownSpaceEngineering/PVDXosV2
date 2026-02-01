@@ -16,7 +16,7 @@ heartbeat_task_memory_t heartbeat_mem;
 /**
  * \fn main_heartbeat
  *
- * \param pvParameters a void pointer to the parametres required by the 
+ * \param pvParameters a void pointer to the parametres required by the
  *      heartbeat task; not currently set by config
  *
  * \warning should never return
@@ -37,7 +37,7 @@ void main_heartbeat(void *pvParameters) {
 #endif
 
     while (true) {
-        debug_impl("\n---------- Heartbeat Task Loop ----------\n");
+        debug("\n---------- Heartbeat Task Loop ----------\n");
 
         // Print the current time
         const uint32_t current_time = xTaskGetTickCount();
