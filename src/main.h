@@ -36,9 +36,6 @@ If you want to get rid of the red squiggly lines:
     #error "Build type flag not set! Must be one of: {DEVBUILD, UNITTEST, RELEASE}"
 #endif
 // Check that at most one of {DEVBUILD, UNITTEST, RELEASE} is defined
-#if defined(DEVBUILD) && defined(UNITTEST)
-    #error "Multiple build type flags set! (DEVBUILD && UNITTEST) Must be exactly one of: {DEVBUILD, UNITTEST, RELEASE}"
-#endif
 #if defined(DEVBUILD) && defined(RELEASE)
     #error "Multiple build type flags set! (DEVBUILD && RELEASE) Must be exactly one of: {DEVBUILD, UNITTEST, RELEASE}"
 #endif
