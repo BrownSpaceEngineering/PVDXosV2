@@ -5,7 +5,7 @@ SEARCH_DIR(.)
 /* Memory Spaces Definitions */
 MEMORY
 {
-  rom      (rx)  : ORIGIN = 0x00000000, LENGTH = 0x00003000
+  rom      (rx)  : ORIGIN = 0x00000000, LENGTH = 0x00002FFF
   ram      (rwx) : ORIGIN = 0x2003D000, LENGTH = 0x00002000
   bkupram  (rwx) : ORIGIN = 0x47000000, LENGTH = 0x00002000
   qspi     (rwx) : ORIGIN = 0x04000000, LENGTH = 0x01000000

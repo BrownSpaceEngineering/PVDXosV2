@@ -91,13 +91,13 @@ export DEPS_AS_ARGS := $(patsubst %.o,%.d,$(OBJS_AS_ARGS))
 
 # Default target
 all: clean #Might as well clean before compiling the release build
-	@$(MAKE) -C $(CHILD_MAKEFILE_PATH) CFLAGS=" $(CFLAGS)" LINKER_SCRIPT="../../src/bootloader_flash1.ld" \
+	@$(MAKE) -C $(CHILD_MAKEFILE_PATH) CFLAGS=" $(CFLAGS) -DBOOTLOADER_1" LINKER_SCRIPT="../../src/bootloader_flash1.ld" \
 	&& cp -f ../ASF/gcc/PVDXos_bootloader.bin ./bootloader1.bin \
 	&& cp -f ../ASF/gcc/PVDXos_bootloader.elf ./bootloader1.elf \
-	&& $(MAKE) -C $(CHILD_MAKEFILE_PATH) CFLAGS=" $(CFLAGS)" LINKER_SCRIPT="../../src/bootloader_flash2.ld" \
+	&& $(MAKE) -C $(CHILD_MAKEFILE_PATH) CFLAGS=" $(CFLAGS) -DBOOTLOADER_2" LINKER_SCRIPT="../../src/bootloader_flash2.ld" \
 	&& cp -f ../ASF/gcc/PVDXos_bootloader.bin ./bootloader2.bin \
 	&& cp -f ../ASF/gcc/PVDXos_bootloader.elf ./bootloader2.elf \
-	&& $(MAKE) -C $(CHILD_MAKEFILE_PATH) CFLAGS=" $(CFLAGS)" LINKER_SCRIPT="../../src/bootloader_flash3.ld" \
+	&& $(MAKE) -C $(CHILD_MAKEFILE_PATH) CFLAGS=" $(CFLAGS) -DBOOTLOADER_3" LINKER_SCRIPT="../../src/bootloader_flash3.ld" \
 	&& cp -f ../ASF/gcc/PVDXos_bootloader.bin ./bootloader3.bin \
 	&& cp -f ../ASF/gcc/PVDXos_bootloader.elf ./bootloader3.elf \
 	&& echo " ---  Finished Building PVDXos Bootloader  --- "
