@@ -35,7 +35,7 @@ void main_command_dispatcher(void *pvParameters) {
     command_t cmd;
 
     while (true) {
-        debug_impl("\n---------- Command Dispatcher Task Loop ----------\n");
+        debug("\n---------- Command Dispatcher Task Loop ----------\n");
 
         // Block waiting for at least one command to appear in the command queue
         if (xQueueReceive(p_command_dispatcher_task->command_queue, &cmd, queue_block_time_ticks) == pdPASS) {

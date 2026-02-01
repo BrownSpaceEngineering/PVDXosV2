@@ -13,12 +13,15 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "logging.h"
+#include "utils_assert.h"
+
 void spp_packet_view_init(spp_packet_view_t *packet, void *data, uint16_t apid, uint8_t secondary_header_flag, uint8_t packet_type,
                           uint8_t sequence_flags, uint16_t packet_seq_count_or_name, uint16_t data_length) {
     packet->data = data;
     packet->header.version_number = SPP_VERSION_NUMBER;
     packet->header.packet_type = packet_type;
-    packet->header.application_process_identifier = apid;
+    packet->header.application_process_id = apid;
     packet->header.secondary_header_flag = secondary_header_flag;
     packet->header.sequence_flags = sequence_flags;
     packet->header.sequence_count = packet_seq_count_or_name;
@@ -30,7 +33,7 @@ spp_packet_t spp_packet_create_header_only(uint16_t apid, uint8_t secondary_head
     spp_packet_t packet = {.header.version_number = SPP_VERSION_NUMBER,
 
                            .header.packet_type = packet_type,
-                           .header.application_process_identifier = apid,
+                           .header.application_process_id = apid,
                            .header.secondary_header_flag = secondary_header_flag,
                            .header.sequence_flags = sequence_flags,
                            .header.sequence_count = packet_seq_count_or_name,
@@ -43,7 +46,7 @@ spp_packet_t spp_packet_create_zero_init(uint16_t apid, uint8_t secondary_header
     spp_packet_t packet = {.header.version_number = SPP_VERSION_NUMBER,
 
                            .header.packet_type = packet_type,
-                           .header.application_process_identifier = apid,
+                           .header.application_process_id = apid,
                            .header.secondary_header_flag = secondary_header_flag,
                            .header.sequence_flags = sequence_flags,
                            .header.sequence_count = packet_seq_count_or_name,

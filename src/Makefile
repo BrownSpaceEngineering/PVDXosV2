@@ -65,6 +65,9 @@ export OBJS :=                                              	\
 ../src/tasks/photodiode/photodiode_task.o						\
 ../src/tasks/photodiode/photodiode_driver.o						\
 ../src/checks/device_checks.o 									\
+																\
+../src/tasks/radio/spp.o 									    \
+../src/tests/test.o                                             \
 
 
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###
@@ -87,8 +90,10 @@ export EXTRA_VPATH := \
 ../../src/tasks/magnetometer \
 ../../src/tasks/shell \
 ../../src/tasks/photodiode \
+../../src/tasks/radio \
 ../../src/mutexes \
 ../../src/checks \
+../../src/tests \
 
 
 ###############################################################################
@@ -146,7 +151,7 @@ CFLAGS += -Wno-unused-parameter #Because some ASF functions have unused paramete
 
 # Build-specific flags
 CFLAGS_DEV := -DDEVBUILD
-CFLAGS_UNITTEST := -DUNITTEST
+CFLAGS_UNITTEST := -DUNITTEST -DDEVBUILD -Wno-unused-variable 
 CFLAGS_RELEASE := -DRELEASE
 
 

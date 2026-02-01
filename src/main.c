@@ -14,6 +14,7 @@
 #include "checks/device_checks.h"
 #include "globals.h"
 #include "logging.h"
+#include "tests/test.h"
 
 cosmic_monkey_task_arguments_t cm_args = {0};
 
@@ -34,12 +35,12 @@ int main(void) {
     atmel_start_init();
     PVDX_init();
     // info_impl(RTT_CTRL_RESET RTT_CTRL_CLEAR); // Reset the terminal
-    info_impl("--- Atmel & Hardware Initialization Complete ---\n");
-    info_impl("[+] Build Type: %s\n", BUILD_TYPE);
-    info_impl("[+] Build Date: %s\n", BUILD_DATE);
-    info_impl("[+] Build Time: %s\n", BUILD_TIME);
-    info_impl("[+] Built from branch: %s\n", GIT_BRANCH_NAME);
-    info_impl("[+] Built from commit: %s\n", GIT_COMMIT_HASH);
+    info("--- Atmel & Hardware Initialization Complete ---\n");
+    info("[+] Build Type: %s\n", BUILD_TYPE);
+    info("[+] Build Date: %s\n", BUILD_DATE);
+    info("[+] Build Time: %s\n", BUILD_TIME);
+    info("[+] Built from branch: %s\n", GIT_BRANCH_NAME);
+    info("[+] Built from commit: %s\n", GIT_COMMIT_HASH);
 
     // Bootloader sets a magic number in backup RAM to indicate that it has run successfully
     uint32_t *p_magic_number = (uint32_t *)BOOTLOADER_MAGIC_NUMBER_ADDRESS;
@@ -53,8 +54,12 @@ int main(void) {
 
     /* ---------- INIT WATCHDOG, COMMAND_DISPATCHER, TASK_MANAGER TASKS (in that order) ---------- */
 
-    bool at_least_one_device_failed = check_all_devices_on_startup();
-    info("AT_LEAST_ONE_DEVICE_FAILED: %d\n", at_least_one_device_failed);
+    info("AT_LEAST_ONE_DEVICE_FAILED: %d\n", check_all_devices_on_startup());
+
+/* -------------------------------------- TESTS ---------------------------------------------- */
+#ifdef UNITTEST
+    tests_run();
+#endif
 
     // Initialize a mutex wrapping the shared PVDX task list struct
     task_list_mutex = xSemaphoreCreateMutexStatic(&task_list_mutex_buffer);
