@@ -542,6 +542,20 @@ void system_init(void)
 
 	gpio_set_pin_function(DISPLAY_DC, GPIO_PIN_FUNCTION_OFF);
 
+	// GPIO on PB19
+
+	gpio_set_pin_level(CAMERA_CS,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   true);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(CAMERA_CS, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(CAMERA_CS, GPIO_PIN_FUNCTION_OFF);
+
 	// GPIO on PC04
 
 	gpio_set_pin_level(MRAM1_CS,

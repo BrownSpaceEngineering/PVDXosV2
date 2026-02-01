@@ -1780,6 +1780,13 @@ pads:
     mode: Digital output
     user_label: DISPLAY_SCK
     configuration: null
+  CAMERA_CS:
+    name: PB19
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB19
+    mode: Digital output
+    user_label: CAMERA_CS
+    configuration:
+      pad_initial_level: High
   CAMERA_SCL:
     name: PA22
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA22
