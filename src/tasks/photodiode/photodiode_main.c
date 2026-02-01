@@ -34,7 +34,7 @@ void main_photodiode(void *pvParameters) {
     info("photodiode: Initialized with %d photodiodes\n", PHOTODIODE_COUNT);
 
     while (true) {
-        debug_impl("\n---------- Photodiode Task Loop ----------\n");
+        debug("\n---------- Photodiode Task Loop ----------\n");
 
         // Block waiting for at least one command to appear in the command queue
         if (xQueueReceive(p_photodiode_task->command_queue, &cmd, queue_block_time_ticks) == pdPASS) {

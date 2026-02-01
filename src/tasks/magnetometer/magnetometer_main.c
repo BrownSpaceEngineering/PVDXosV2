@@ -1,6 +1,6 @@
 /**
  * magnetometer_main.c
- * 
+ *
  * Main loop of the satellite's RM3100 Magnetometer sensor RTOS task
  *
  * Created: Feb 20, 2025
@@ -15,7 +15,7 @@ magnetometer_task_memory_t magnetometer_mem;
 /**
  * \fn main_magnetometer
  *
- * \param pvParameters a void pointer to the parametres required by the 
+ * \param pvParameters a void pointer to the parametres required by the
  *      magnetometer task; not currently set by config
  *
  * \warning should never return
@@ -33,7 +33,7 @@ void main_magnetometer(void *pvParameters) {
     command_t cmd;
 
     while (true) {
-        debug_impl("\n---------- Magnetometer Task Loop ----------\n");
+        debug("\n---------- Magnetometer Task Loop ----------\n");
 
         // Execute all commands contained in the queue
         if (xQueueReceive(p_magnetometer_task->command_queue, &cmd, queue_block_time_ticks) == pdPASS) {

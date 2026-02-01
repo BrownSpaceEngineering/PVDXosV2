@@ -50,7 +50,7 @@ typedef struct spp_primary_packet_header {
     // packet identification
     uint8_t packet_type : 1;
     uint8_t secondary_header_flag : 1;
-    uint16_t application_process_identifier : 11; // "APID", indicates source, destination, or type
+    uint16_t application_process_id : 11; // "APID", indicates source, destination, or type
     // packet sequence ctrl (2 bytes):
     uint8_t sequence_flags : 2;
     uint16_t sequence_count : 14; // gives numerical ordering for packets
@@ -123,4 +123,5 @@ spp_packet_view_t spp_packet_view_from(spp_packet_t *packet);
  * help to clear/zero a packet_views's data
  */
 void spp_packet_view_clear_data(spp_packet_view_t view);
+
 #endif // !RADIO_SPP_H

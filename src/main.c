@@ -18,6 +18,7 @@
 #include "checks/device_checks.h"
 #include "globals.h"
 #include "logging.h"
+#include "tests/test.h"
 
 cosmic_monkey_task_arguments_t cm_args = {0};
 
@@ -78,6 +79,11 @@ int main(void) {
 
     bool at_least_one_device_failed = check_all_devices_on_startup();
     info("AT_LEAST_ONE_DEVICE_FAILED: %d\n", at_least_one_device_failed);
+
+/* -------------------------------------- TESTS ---------------------------------------------- */
+#ifdef UNITTEST
+    tests_run();
+#endif
 
     // Initialize a mutex wrapping the shared PVDX task list struct
     task_list_mutex = xSemaphoreCreateMutexStatic(&task_list_mutex_buffer);

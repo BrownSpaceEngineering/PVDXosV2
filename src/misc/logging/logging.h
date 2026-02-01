@@ -36,7 +36,7 @@ DEBUG: Detailed information about the system for debugging (e.g. length of array
     #define info(msg, ...) info_impl(RTT_CTRL_TEXT_BRIGHT_WHITE "[INFO|%s:%d]: " msg RTT_CTRL_RESET, __FILENAME__, __LINE__, ##__VA_ARGS__)
     #ifdef UNITTEST
         #define test_log(msg, ...)                                                                                                         \
-            debug_impl(RTT_CTRL_TEXT_WHITE "[UNITTEST|%s:%d]: " msg RTT_CTRL_RESET, __FILENAME__, __LINE__, ##__VA_ARGS__)
+            debug_impl(RTT_CTRL_TEXT_WHITE "[TEST|%s:%d]: " msg RTT_CTRL_RESET, __FILENAME__, __LINE__, ##__VA_ARGS__)
         #define debug(msg, ...)
     #else
         #define test_log(msg, ...)

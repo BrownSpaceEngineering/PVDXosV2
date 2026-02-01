@@ -65,8 +65,10 @@ export OBJS :=                                              	\
 ../src/tasks/photodiode/photodiode_task.o						\
 ../src/tasks/photodiode/photodiode_driver.o						\
 																\
-../src/checks/device_checks.o 									\
+../src/tasks/radio/spp.o 									    \
+../src/tests/test.o                                             \
 																\
+../src/checks/device_checks.o 									\
                                                             	\
 ../src/mram.o													\
 ../src/reflash.o												\
@@ -93,8 +95,10 @@ export EXTRA_VPATH := \
 ../../src/tasks/magnetometer \
 ../../src/tasks/shell \
 ../../src/tasks/photodiode \
+../../src/tasks/radio \
 ../../src/mutexes \
 ../../src/checks \
+../../src/tests \
 
 
 ###############################################################################

@@ -16,7 +16,7 @@ QueueHandle_t watchdog_command_queue_handle;
 /**
  * \fn main_watchdog
  *
- * \param pvParameters a void pointer to the parametres required by the 
+ * \param pvParameters a void pointer to the parametres required by the
  *      watchdog; not currently set by config
  *
  * \returns should never return
@@ -33,7 +33,7 @@ void main_watchdog(void *pvParameters) {
     // Varible to hold commands popped off the queue
     command_t cmd;
     while (true) {
-        debug_impl("\n---------- Watchdog Task Loop ----------\n");
+        debug("\n---------- Watchdog Task Loop ----------\n");
 
         // Iterate through the running times and check if any tasks have not checked in within the allowed time
         const uint32_t current_time_ticks = xTaskGetTickCount();
@@ -74,7 +74,7 @@ void main_watchdog(void *pvParameters) {
             enqueue_command(&cmd_checkin);
             debug("watchdog: Enqueued watchdog checkin command\n");
         }
-        
+
         // Guarantee other tasks get time to run
         vTaskDelay(pdMS_TO_TICKS(100));
     }
