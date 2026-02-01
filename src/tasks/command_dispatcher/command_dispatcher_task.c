@@ -12,6 +12,8 @@
 
 #include "command_dispatcher_task.h"
 
+#include "task_list.h"
+
 /* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
 
 // NOTE: No dispatchable functions for the command dispatcher task. Its sole purpose is to
@@ -49,8 +51,7 @@ QueueHandle_t init_command_dispatcher(void) {
  */
 void enqueue_command(command_t *const p_cmd) {
     if (xQueueSendToBack(p_command_dispatcher_task->command_queue, p_cmd, 0) != pdTRUE) {
-        pvdx_task_t *calling_task = get_current_task();
-        fatal("%s task failed to enqueue command onto Command Dispatcher queue!\n", calling_task->name);
+        fatal("%s task failed to enqueue command onto Command Dispatcher queue!\n", get_current_task()->name);
     }
 }
 
