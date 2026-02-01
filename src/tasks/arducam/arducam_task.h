@@ -8,6 +8,8 @@
 #include "watchdog_task.h"
 #include "arducam_registers.h"
 
+#define CAMERA_RTT_OUTPUT_CHANNEL 2
+
 // FreeRTOS Task structs
 // Memory for the arducam task
 #define ARDUCAM_TASK_STACK_SIZE 1024 // Size of the stack in words (multiply by 4 to get bytes)

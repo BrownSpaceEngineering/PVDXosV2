@@ -36,8 +36,8 @@ status_t init_arducam_hardware(void) {
     i2c_m_sync_enable(&I2C_CAMERA);
     i2c_m_sync_set_slaveaddr(&I2C_CAMERA, ARDUCAM_ADDR >> 1, I2C_M_SEVEN);
 
-    gpio_set_pin_direction(Camera_CS, GPIO_DIRECTION_OUT);
-    gpio_set_pin_level(Camera_CS, 1);
+    gpio_set_pin_direction(CAMERA_CS, GPIO_DIRECTION_OUT);
+    gpio_set_pin_level(CAMERA_CS, 1);
 
     spi_m_sync_set_baudrate(&SPI_CAMERA, 6000000);
     spi_m_sync_get_io_descriptor(&SPI_CAMERA, &arducam_spi_io);
@@ -137,17 +137,17 @@ uint32_t arducam_i2c_read(uint8_t addr, uint8_t *readBuf, uint16_t size) {
 }
 
 int32_t arducam_spi_write(uint8_t addr, uint8_t data) {
-    gpio_set_pin_level(Camera_CS, 0);
+    gpio_set_pin_level(CAMERA_CS, 0);
 
     uint8_t value[2] = {addr | 0x80, data};  // Set MSB high for write operation
     int32_t response = io_write(arducam_spi_io, value, 2);
 
-    gpio_set_pin_level(Camera_CS, 1);
+    gpio_set_pin_level(CAMERA_CS, 1);
     return response;
 }
 
 int8_t arducam_spi_read(uint8_t addr) {
-    gpio_set_pin_level(Camera_CS, 0);
+    gpio_set_pin_level(CAMERA_CS, 0);
 
     uint8_t tx_data = addr & 0x7F;  // Set MSB low for read operation
     uint8_t rx_data = 0;
@@ -155,7 +155,7 @@ int8_t arducam_spi_read(uint8_t addr) {
     io_write(arducam_spi_io, &tx_data, 1);
     io_read(arducam_spi_io, &rx_data, 1);
 
-    gpio_set_pin_level(Camera_CS, 1);
+    gpio_set_pin_level(CAMERA_CS, 1);
     return rx_data;
 }
 
@@ -194,7 +194,7 @@ void capture(void) {
     }
 
     // Select SPI peripheral device
-    gpio_set_pin_level(Camera_CS, 0);
+    gpio_set_pin_level(CAMERA_CS, 0);
 
     // Start burst read
     uint8_t cmd = BURST_FIFO_READ;
@@ -217,7 +217,7 @@ void capture(void) {
     }
 
     // Deselect SPI peripheral device
-    gpio_set_pin_level(Camera_CS, 1);
+    gpio_set_pin_level(CAMERA_CS, 1);
 }
 
 void capture_rtt(void) {
@@ -245,7 +245,7 @@ void capture_rtt(void) {
     info("IMG_BEGIN len=%u", (unsigned)len);
 
     // Select SPI peripheral device
-    gpio_set_pin_level(Camera_CS, 0);
+    gpio_set_pin_level(CAMERA_CS, 0);
 
     // Start burst read
     uint8_t cmd = BURST_FIFO_READ;
@@ -270,7 +270,7 @@ void capture_rtt(void) {
     }
 
     // Deselect SPI peripheral device
-    gpio_set_pin_level(Camera_CS, 1);
+    gpio_set_pin_level(CAMERA_CS, 1);
 
     // WARNING: If you edit the info() calls, then you must also update open_rtt_channels_arducam_debug()
     // within scripts/rtt_logs.py (specifically the regex parsing), otherwise things will break.

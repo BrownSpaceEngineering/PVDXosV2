@@ -7,6 +7,7 @@
  * Authors: Alexander Thaep, Tanish Makadia, Zach Mahan
  */
 
+#include "arducam_driver.h"
 #include "arducam_task.h"
 
 // Arducam Task memory structures

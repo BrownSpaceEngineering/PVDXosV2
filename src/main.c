@@ -14,12 +14,18 @@
 cosmic_monkey_task_arguments_t cm_args = {0};
 
 static status_t PVDX_init(void) {
-    // Segger Buffer 0 is pre-configured at compile time according to segger documentation
-    // Config the logging output channel (assuming it's not zero)
-    if (LOGGING_RTT_OUTPUT_CHANNEL != 0) {
-        SEGGER_RTT_ConfigUpBuffer(LOGGING_RTT_OUTPUT_CHANNEL, "Log Output", SEGGER_RTT_LOG_BUFFER, SEGGER_RTT_LOG_BUFFER_SIZE,
-                                  SEGGER_RTT_MODE_NO_BLOCK_SKIP);
-    }
+    // WARNING: Segger RTT channel 0 is pre-configured at compile time according to Segger documentation
+    // Attempting to use channel 0 may result in errors.
+
+    // Logging output channel (ch. 1)
+    SEGGER_RTT_ConfigUpBuffer(LOGGING_RTT_OUTPUT_CHANNEL, "Log Output", SEGGER_RTT_LOG_BUFFER, SEGGER_RTT_LOG_BUFFER_SIZE,
+                              SEGGER_RTT_MODE_NO_BLOCK_SKIP);
+
+    // Image streaming channel (ch. 2)
+    static uint8_t RTT_IMAGE_BUFFER[4096];
+    SEGGER_RTT_ConfigUpBuffer(CAMERA_RTT_OUTPUT_CHANNEL, "Image", RTT_IMAGE_BUFFER, sizeof(RTT_IMAGE_BUFFER),
+                              SEGGER_RTT_MODE_BLOCK_IF_FIFO_FULL);
+
     return SUCCESS;
 }
 

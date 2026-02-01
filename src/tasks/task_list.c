@@ -139,7 +139,7 @@ pvdx_task_t display_task = {
 
 pvdx_task_t arducam_task = {
     .name = "Arducam",
-    .enabled = false,
+    .enabled = true,
     .handle = NULL,
     .command_queue = NULL,
     .init = init_arducam,
