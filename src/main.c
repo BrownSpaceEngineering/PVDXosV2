@@ -54,8 +54,7 @@ int main(void) {
 
     /* ---------- INIT WATCHDOG, COMMAND_DISPATCHER, TASK_MANAGER TASKS (in that order) ---------- */
 
-    bool at_least_one_device_failed = check_all_devices_on_startup();
-    info("AT_LEAST_ONE_DEVICE_FAILED: %d\n", at_least_one_device_failed);
+    info("AT_LEAST_ONE_DEVICE_FAILED: %d\n", check_all_devices_on_startup());
 
 /* -------------------------------------- TESTS ---------------------------------------------- */
 #ifdef UNITTEST
