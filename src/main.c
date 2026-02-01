@@ -34,12 +34,14 @@ int main(void) {
     atmel_start_init();
     PVDX_init();
     // info_impl(RTT_CTRL_RESET RTT_CTRL_CLEAR); // Reset the terminal
-    info_impl("--- Atmel & Hardware Initialization Complete ---\n");
-    info_impl("[+] Build Type: %s\n", BUILD_TYPE);
-    info_impl("[+] Build Date: %s\n", BUILD_DATE);
-    info_impl("[+] Build Time: %s\n", BUILD_TIME);
-    info_impl("[+] Built from branch: %s\n", GIT_BRANCH_NAME);
-    info_impl("[+] Built from commit: %s\n", GIT_COMMIT_HASH);
+    info("--- Atmel & Hardware Initialization Complete ---\n");
+    info("[+] Build Type: %s\n", BUILD_TYPE);
+    info("[+] Build Date: %s\n", BUILD_DATE);
+    info("[+] Build Time: %s\n", BUILD_TIME);
+    info("[+] Built from branch: %s\n", GIT_BRANCH_NAME);
+    info("[+] Built from commit: %s\n", GIT_COMMIT_HASH);
+
+    test_log("test");
 
     // Bootloader sets a magic number in backup RAM to indicate that it has run successfully
     uint32_t *p_magic_number = (uint32_t *)BOOTLOADER_MAGIC_NUMBER_ADDRESS;

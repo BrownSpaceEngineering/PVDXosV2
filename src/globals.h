@@ -152,13 +152,11 @@ typedef struct {
 /* ---------- BUILD CONSTANTS ---------- */
 
 // Defines for printing out the build version
-#if defined(DEVBUILD)
-    #define BUILD_TYPE "Development Build"
-#endif
 #if defined(UNITTEST)
     #define BUILD_TYPE "Unit Test Build"
-#endif
-#if defined(RELEASE)
+#elif defined(DEVBUILD)
+    #define BUILD_TYPE "Development Build"
+#elif defined(RELEASE)
     #define BUILD_TYPE "Release Build"
 #endif
 
