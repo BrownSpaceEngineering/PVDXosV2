@@ -8,11 +8,14 @@
 #include "watchdog_task.h"
 #include "arducam_registers.h"
 
-#define CAMERA_RTT_OUTPUT_CHANNEL 2
-
 // FreeRTOS Task structs
 // Memory for the arducam task
 #define ARDUCAM_TASK_STACK_SIZE 1024 // Size of the stack in words (multiply by 4 to get bytes)
+
+// Separate RTT channel for streaming camera image bytes for debugging
+#define RTT_CAMERA_OUTPUT_CHANNEL 2
+#define SEGGER_RTT_IMAGE_BUFFER_SIZE 4096
+extern uint8_t SEGGER_RTT_IMAGE_BUFFER[SEGGER_RTT_IMAGE_BUFFER_SIZE];
 
 // Placed in a struct to ensure that the TCB is placed higher than the stack in memory
 //^ This ensures that stack overflows do not corrupt the TCB (since the stack grows downwards)

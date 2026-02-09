@@ -78,22 +78,7 @@ status_t init_arducam_hardware(void) {
     arducam_i2c_write(0x15, &data[0], 1);
     arducam_i2c_multi_write(OV2640_1280x1024_JPEG);
 
-    // SEGGER RTT Config (for debug use to offload images without a working radio driver)
-    // ----------------------------------------------------------------------------------
-    // RTT Channel 0 is pre-configured at compile time according to segger documentation
-    // Log output channel (if it's not the default of zero)
-    #if defined(LOGGING_RTT_OUTPUT_CHANNEL) && (LOGGING_RTT_OUTPUT_CHANNEL != 0)
-        SEGGER_RTT_ConfigUpBuffer(
-            LOGGING_RTT_OUTPUT_CHANNEL, "Log Output", SEGGER_RTT_LOG_BUFFER, SEGGER_RTT_LOG_BUFFER_SIZE, SEGGER_RTT_MODE_NO_BLOCK_SKIP
-        );
-    #endif
-    // Image streaming channel (channel 2)
-    static uint8_t RTT_IMAGE_BUFFER[4096];
-    SEGGER_RTT_ConfigUpBuffer(
-        2, "Image", RTT_IMAGE_BUFFER, sizeof(RTT_IMAGE_BUFFER), SEGGER_RTT_MODE_BLOCK_IF_FIFO_FULL
-    );
-    // ----------------------------------------------------------------------------------
-
+    // This is hijacking the init function for debugging/testing. Should delete because you probably don't want to take a picture on init.
     // capture();
     capture_rtt(); // For debugging
 
@@ -238,10 +223,8 @@ void capture_rtt(void) {
         return;
     }
 
-    // Make channel 2 block so we don't lose image bytes if host is slow
     // WARNING: If you edit the info() calls, then you must also update open_rtt_channels_arducam_debug()
     // within scripts/rtt_logs.py (specifically the regex parsing), otherwise things will break.
-    SEGGER_RTT_SetFlagsUpBuffer(2, SEGGER_RTT_MODE_BLOCK_IF_FIFO_FULL);
     info("IMG_BEGIN len=%u", (unsigned)len);
 
     // Select SPI peripheral device
@@ -264,7 +247,7 @@ void capture_rtt(void) {
         size_t will_copy = (len < bufferSize) ? len : bufferSize;
         ardu_xfer.size = will_copy;
         spi_m_sync_transfer(&SPI_CAMERA, &ardu_xfer);
-        SEGGER_RTT_Write(2, ardu_spi_rx_buffer, (unsigned)will_copy);
+        SEGGER_RTT_Write(RTT_CAMERA_OUTPUT_CHANNEL, ardu_spi_rx_buffer, (unsigned)will_copy);
         len -= will_copy;
         watchdog_checkin(p_arducam_task);
     }

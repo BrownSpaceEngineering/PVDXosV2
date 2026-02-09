@@ -48,9 +48,6 @@ void main_arducam(void *pvParameters) {
         }
         debug("arducam: No more commands queued.\n");
 
-        // TODO: Add any periodic tasks here (e.g. capture image periodically if needed)
-        // For now, we just wait for commands.
-
         // Check in with the watchdog task
         if (should_checkin(current_task)) {
             enqueue_command(&cmd_checkin);

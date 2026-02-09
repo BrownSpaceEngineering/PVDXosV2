@@ -5,7 +5,7 @@
 #include "globals.h"
 
 #define LOGGING_RTT_OUTPUT_CHANNEL 1
-
+#define SEGGER_RTT_LOG_BUFFER_SIZE 2048
 extern uint8_t SEGGER_RTT_LOG_BUFFER[SEGGER_RTT_LOG_BUFFER_SIZE];
 
 /*
