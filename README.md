@@ -37,7 +37,7 @@ following steps is thus prepended either by \[🪟WIN\] or \[🐧WSL\] to indica
 3. \[🪟WIN\] Download the 64-bit DEB SEGGER [J-link installer](https://www.segger.com/downloads/jlink/). 
 
    Once you've downloaded the installer, move it from your Windows Downloads folder to your WSL home directory, accessible
-   from the File Explorer. 
+   from the File Explorer. Look for the highlighted directory on the File Manager sidebar. 
 
    ![Look for the highlighted directory on the File Manager sidebar](./misc/WSL_home_dir.png)
 
@@ -54,12 +54,13 @@ following steps is thus prepended either by \[🪟WIN\] or \[🐧WSL\] to indica
 
 6. \[🐧WSL\] Install the SEGGER J-Link tools from the command-line: 
    
-   - `sudo apt install /path/to/j-link/installer`
+   - `sudo apt install ~/JLink_Linux_V{version number}_x86_64.deb`
 
 7. \[🐧WSL\] Add the installed J-link tools to your default `PATH`: 
 
    - Run `nano ~/.bash_profile`
-   - Add the lines ```PATH_TO_SEGGER_JLINK="/opt/SEGGER/JLink"
+   - Add the lines 
+   ```PATH_TO_SEGGER_JLINK="/opt/SEGGER/JLink"
       PATH_TO_SEGGER_RTOS_PLUGIN="/opt/SEGGER/JLink_V884/GDBServer"
 
       export PATH="$PATH:$PATH_TO_SEGGER_JLINK:$PATH_TO_SEGGER_RTOS_PLUGIN"``` at the bottom of the file
