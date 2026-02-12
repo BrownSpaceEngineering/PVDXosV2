@@ -11,11 +11,13 @@
 #include "shell_task.h"
 #include "task_manager_task.h"
 #include "watchdog_task.h"
+#include "linalg_task.h"
 
 // Extern defs of task pointers which can be accessed throughout the PVDXos codebase
 extern pvdx_task_t *const p_watchdog_task;
 extern pvdx_task_t *const p_command_dispatcher_task;
 extern pvdx_task_t *const p_task_manager_task;
+extern pvdx_task_t *const p_linalg_task;
 extern pvdx_task_t *const p_magnetometer_task;
 extern pvdx_task_t *const p_photodiode_task;
 extern pvdx_task_t *const p_shell_task;

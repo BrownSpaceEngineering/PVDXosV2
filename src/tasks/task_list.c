@@ -155,6 +155,24 @@ pvdx_task_t heartbeat_task = {
     .task_type = OS // ACTUATOR
 };
 
+pvdx_task_t linalg_task = {
+    .name = "Linalg",
+    .enabled = true,
+    .handle = NULL,
+    .command_queue = NULL,
+    .init = NULL,
+    .function = main_linalg,
+    .stack_size = LINALG_TASK_STACK_SIZE,
+    .stack_buffer = linalg_mem.linalg_task_stack,
+    .pvParameters = NULL,
+    .priority = 2,
+    .task_tcb = &linalg_mem.linalg_task_tcb,
+    .watchdog_timeout_ms = 10000,
+    .last_checkin_time_ticks = 0xDEADBEEF,
+    .has_registered = false,
+    .task_type = TESTING
+};
+
 // and define their constant pointers
 pvdx_task_t *const p_watchdog_task = &watchdog_task;
 pvdx_task_t *const p_command_dispatcher_task = &command_dispatcher_task;
@@ -164,6 +182,7 @@ pvdx_task_t *const p_photodiode_task = &photodiode_task;
 pvdx_task_t *const p_shell_task = &shell_task;
 pvdx_task_t *const p_display_task = &display_task;
 pvdx_task_t *const p_heartbeat_task = &heartbeat_task;
+pvdx_task_t *const p_linalg_task = &linalg_task;
 pvdx_task_t *const task_list_null_terminator = NULL;
 
 // Global list of all tasks running on PVDXos (see `pvdx_task_t` definition in globals.h)
@@ -181,6 +200,7 @@ pvdx_task_t *task_list[] = {
     p_shell_task,
     p_display_task,
     p_heartbeat_task,
+    p_linalg_task,
     task_list_null_terminator,
 };
 
