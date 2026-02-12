@@ -6,76 +6,8 @@ The real-time operating system for Brown Space Engineering's second satellite, P
 
 # Project Setup and Toolchain Installation Guide
 
-## Building and Running:
-
-> **Note:** If you're using a factory-new devboard that you've just unboxed, please follow [these instructions](#setting-up-a-brand-new-metro-m4-grand-central-devboard) first before continuing. If you've received a working devboard from another team member, you can continue.
-
-### Windows
-
-#### Pre-Build Setup: 
-
-Some setup needs to be done when building for the first time. 
-
-We need to pipe the USB connection to the J-link debugger into WSL
-
-   1. In an administrator-level PowerShell, run `usbipd list`. The output should look like: 
-
-   ```
-   BUSID  VID:PID    DEVICE                                                        STATE
-   1-1    1366:1020  J-Link                                                        Not shared
-   1-2    0000:0002  Unknown USB Device (Device Descriptor Request Failed)         Not shared
-   1-4    27c6:6594  Goodix MOC Fingerprint                                        Not shared
-   2-1    0e8d:e025  MediaTek Bluetooth Adapter                                    Not shared
-   5-1    174f:11b4  Integrated Camera, Integrated IR Camera, APP Mode             Not shared
-   ```
-   2. In the same PowerShell, run `usbipd bind --busid <J-link busid>`. For example, if the output of
-      list were as above, we would run `usbipd bind --busid 1-1` 
-   3. And finally run `usbipd attach --wsl --busid <J-link busid>`. 
-   
-You should now be able to access the J-link over USB in WSL. You can verify this by running `lsusb` in your 
-WSL terminal. The output should include a line like `Bus 001 Device 003: ID 1366:1020 SEGGER J-Link` 
-
-#### Building. 
-
-Before building, make sure you have completed all steps in the Pre-Build Setup. 
-
-1. \[🪟WIN\] Attach your J-Link to WSL by running `usbipd attach --wsl --busid <J-link busid>` in an 
-administrator-level PowerShell
-
-2. \[🐧WSL\] In a WSL terminal, start a J-Link GDB server: 
-
-   - `JLinkGDBServer -select USB=0 -device ATSAMD51P20A -endian little -if SWD -speed 4000 -noir -noLocalhostOnly -nologtofile -port 2331 -SWOPort 2332 -TelnetPort 2333`
-
-3. \[🐧WSL\] In a separate WSL terminal, run `make clean all` to delete the previous executable and compile a new version. 
-
-4. \[🐧WSL\] In the same terminal as step 3, connect to the GDB server by running `make connect`. 
-
-   The code will automatically pause at the top of the 'main' function. Set any breakpoints you need, and then continue running the program with 'c'. 
-
-5. \[🐧WSL\] 
-
-
-
-### Mac/Linux
-
-1. **Start the SEGGER GDB Server:**
-
-   - run `JLinkGDBServer` from the SEGGER folder containing all the J-Link tools.
-   - Before clicking 'OK', make sure the target is set to `ATSAMD51P20A`, and the interface is set to `SWD`
-   - WINDOWS/WSL ONLY: The "Localhost Only" checkbox must be unchecked.
-   - Ensure the J-Link server is on port 2331 for GDB connections.
-
-2. **Build, Connect and Run:**
-   - Use `make clean all connect` to build the project, connect to the board and auto-flash/run the program. If you just want to connect without re-building, run `make connect`. If you just wish to build, run `make clean all`.
-   - The code will automatically pause at the top of the 'main' function. Set any breakpoints you need, and then continue running the program with 'c'
-   - To connect to the PVDXos Shell, use Telnet to establish a connection to localhost:19021. `nc localhost 19021` to connect with netcat on a Mac/Linux terminal
-   - If using PuTTY, go to 'Terminal' and check the box for 'Implicit CR in every LF' so that line endings work correctly
-   - Log output can be viewed by running `python3 scripts/rtt_logs.py` in a separate terminal window. This will also record logs to the `/logs` folder.
-   - If the script fails to run, you may need to install 'pylink-square' (`pip install pylink-square`)
-   - Alternatively, you can try running `python3 scripts/rtt_splitscreen.py` for both the PVDXos Shell and log output in the same terminal window, but this might not work!
-
 ## Toolchain Installation
-
+---
 ### Windows
 
 PVDXos uses GCC (GNU C Compiler) to create an executable. GCC can't be ported to Windows, so we need to virtualise a Linux environment 
@@ -185,6 +117,72 @@ following steps is thus prepended either by \[🪟WIN\] or \[🐧WSL\] to indica
    - Set 'format on save mode' to 'modifications'.
 
 ---
+
+## Building and Running:
+
+> **Note:** If you're using a factory-new devboard that you've just unboxed, please follow [these instructions](#setting-up-a-brand-new-metro-m4-grand-central-devboard) first before continuing. If you've received a working devboard from another team member, you can continue.
+
+### Windows
+
+#### Pre-Build Setup: 
+
+Some setup needs to be done when building for the first time. 
+
+We need to pipe the USB connection to the J-link debugger into WSL
+
+   1. In an administrator-level PowerShell, run `usbipd list`. The output should look like: 
+
+   ```
+   BUSID  VID:PID    DEVICE                                                        STATE
+   1-1    1366:1020  J-Link                                                        Not shared
+   1-2    0000:0002  Unknown USB Device (Device Descriptor Request Failed)         Not shared
+   1-4    27c6:6594  Goodix MOC Fingerprint                                        Not shared
+   2-1    0e8d:e025  MediaTek Bluetooth Adapter                                    Not shared
+   5-1    174f:11b4  Integrated Camera, Integrated IR Camera, APP Mode             Not shared
+   ```
+   2. In the same PowerShell, run `usbipd bind --busid <J-link busid>`. For example, if the output of
+      list were as above, we would run `usbipd bind --busid 1-1` 
+   3. And finally run `usbipd attach --wsl --busid <J-link busid>`. 
+   
+You should now be able to access the J-link over USB in WSL. You can verify this by running `lsusb` in your 
+WSL terminal. The output should include a line like `Bus 001 Device 003: ID 1366:1020 SEGGER J-Link` 
+
+#### Building. 
+
+Before building, make sure you have completed all steps in the Pre-Build Setup. 
+
+1. \[🪟WIN\] Attach your J-Link to WSL by running `usbipd attach --wsl --busid <J-link busid>` in an 
+administrator-level PowerShell
+
+2. \[🐧WSL\] In a WSL terminal, start a J-Link GDB server: 
+
+   - `JLinkGDBServer -select USB=0 -device ATSAMD51P20A -endian little -if SWD -speed 4000 -noir -noLocalhostOnly -nologtofile -port 2331 -SWOPort 2332 -TelnetPort 2333`
+
+3. \[🐧WSL\] In a separate WSL terminal, run `make clean all` to delete the previous executable and compile a new version. 
+
+4. \[🐧WSL\] In the same terminal as step 3, connect to the GDB server by running `make connect`. 
+
+   The code will automatically pause at the top of the 'main' function. Set any breakpoints you need, and then continue running the program with 'c'. 
+
+
+### Mac/Linux
+
+1. **Start the SEGGER GDB Server:**
+
+   - run `JLinkGDBServer` from the SEGGER folder containing all the J-Link tools.
+   - Before clicking 'OK', make sure the target is set to `ATSAMD51P20A`, and the interface is set to `SWD`
+   - WINDOWS/WSL ONLY: The "Localhost Only" checkbox must be unchecked.
+   - Ensure the J-Link server is on port 2331 for GDB connections.
+
+2. **Build, Connect and Run:**
+   - Use `make clean all connect` to build the project, connect to the board and auto-flash/run the program. If you just want to connect without re-building, run `make connect`. If you just wish to build, run `make clean all`.
+   - The code will automatically pause at the top of the 'main' function. Set any breakpoints you need, and then continue running the program with 'c'
+   - To connect to the PVDXos Shell, use Telnet to establish a connection to localhost:19021. `nc localhost 19021` to connect with netcat on a Mac/Linux terminal
+   - If using PuTTY, go to 'Terminal' and check the box for 'Implicit CR in every LF' so that line endings work correctly
+   - Log output can be viewed by running `python3 scripts/rtt_logs.py` in a separate terminal window. This will also record logs to the `/logs` folder.
+   - If the script fails to run, you may need to install 'pylink-square' (`pip install pylink-square`)
+   - Alternatively, you can try running `python3 scripts/rtt_splitscreen.py` for both the PVDXos Shell and log output in the same terminal window, but this might not work!
+
 
 ## Setting Up a Brand New Metro M4 Grand Central Devboard
 
