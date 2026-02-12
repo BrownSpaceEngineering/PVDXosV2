@@ -13,7 +13,7 @@
 #define ARDUCAM_TASK_STACK_SIZE 1024 // Size of the stack in words (multiply by 4 to get bytes)
 
 // Separate RTT channel for streaming camera image bytes for debugging
-#define RTT_CAMERA_OUTPUT_CHANNEL 2
+#define CAMERA_RTT_OUTPUT_CHANNEL 2
 #define SEGGER_RTT_IMAGE_BUFFER_SIZE 4096
 extern uint8_t SEGGER_RTT_IMAGE_BUFFER[SEGGER_RTT_IMAGE_BUFFER_SIZE];
 

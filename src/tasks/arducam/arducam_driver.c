@@ -247,7 +247,7 @@ void capture_rtt(void) {
         size_t will_copy = (len < bufferSize) ? len : bufferSize;
         ardu_xfer.size = will_copy;
         spi_m_sync_transfer(&SPI_CAMERA, &ardu_xfer);
-        SEGGER_RTT_Write(RTT_CAMERA_OUTPUT_CHANNEL, ardu_spi_rx_buffer, (unsigned)will_copy);
+        SEGGER_RTT_Write(CAMERA_RTT_OUTPUT_CHANNEL, ardu_spi_rx_buffer, (unsigned)will_copy);
         len -= will_copy;
         watchdog_checkin(p_arducam_task);
     }

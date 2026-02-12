@@ -10,6 +10,8 @@
 #include "arducam_task.h"
 #include "arducam_driver.h"
 
+uint8_t SEGGER_RTT_IMAGE_BUFFER[SEGGER_RTT_IMAGE_BUFFER_SIZE];
+
 /* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
 
 // TODO: Add dispatchable functions here (e.g. capture_image)
