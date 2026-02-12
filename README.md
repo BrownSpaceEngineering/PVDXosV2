@@ -39,20 +39,20 @@ WSL terminal. The output should include a line like `Bus 001 Device 003: ID 1366
 
 Before building, make sure you have completed all steps in the Pre-Build Setup. 
 
-1. \[WIN\] Attach your J-Link to WSL by running `usbipd attach --wsl --busid <J-link busid>` in an 
+1. \[🪟WIN\] Attach your J-Link to WSL by running `usbipd attach --wsl --busid <J-link busid>` in an 
 administrator-level PowerShell
 
-2. \[WSL\] In a WSL terminal, start a J-Link GDB server: 
+2. \[🐧WSL\] In a WSL terminal, start a J-Link GDB server: 
 
    - `JLinkGDBServer -select USB=0 -device ATSAMD51P20A -endian little -if SWD -speed 4000 -noir -noLocalhostOnly -nologtofile -port 2331 -SWOPort 2332 -TelnetPort 2333`
 
-3. \[WSL\] In a separate WSL terminal, run `make clean all` to delete the previous executable and compile a new version. 
+3. \[🐧WSL\] In a separate WSL terminal, run `make clean all` to delete the previous executable and compile a new version. 
 
-4. \[WSL\] In the same terminal as step 3, connect to the GDB server by running `make connect`. 
+4. \[🐧WSL\] In the same terminal as step 3, connect to the GDB server by running `make connect`. 
 
    The code will automatically pause at the top of the 'main' function. Set any breakpoints you need, and then continue running the program with 'c'. 
 
-5. \[WSL\] 
+5. \[🐧WSL\] 
 
 
 
@@ -82,40 +82,46 @@ PVDXos uses GCC (GNU C Compiler) to create an executable. GCC can't be ported to
 for our toolchain. The standard solution is to use WSL (Windows Subsystem for Linux). 
 
 As such, each instruction needs to be executed either in a Windows environment, or in the virtualised Linux environment. Each of the 
-following steps is thus prepended either by \[WIN\] or \[WSL\] to indicate which environment to run it in. 
+following steps is thus prepended either by \[🪟WIN\] or \[🐧WSL\] to indicate which environment to run it in. 
 
-1. \[WIN\] Install Windows Subsystem for Linux (WSL):
+1. \[🪟WIN\] Install Windows Subsystem for Linux (WSL):
 
    - Run `wsl --install` in PowerShell (as Administrator).
    - Follow prompts and restart your computer as required.
 
-2. \[WSL\] Clone the repository into the WSL filesystem. This is important for performance during compilation.
+2. \[🪟WIN\] Install [`usbipd`](https://github.com/dorssel/usbipd-win/releases) to pass USB connections through to WSL
 
-3. \[WSL\] Install ARM toolchain for Linux:
+3. \[🪟WIN\] Download the 64-bit DEB SEGGER [J-link installer](https://www.segger.com/downloads/jlink/). 
+
+   Once you've downloaded the installer, move it from your Windows Downloads folder to your WSL home directory, accessible
+   from the File Explorer
+
+4. \[🐧WSL\] Install ARM toolchain for Linux:
 
    - `sudo apt install gcc-arm-none-eabi`
 
-4. \[WSL\] Install GDB Multiarch and other build tools:
+5. \[🐧WSL\] Install GDB Multiarch and other build tools:
 
    - `sudo apt install gdb-multiarch`
    - `sudo apt install build-essential`
    - `sudo apt install clang-format`
    - `sudo apt install usbutils`
 
-5. \[WIN\] Install [`usbipd`](https://github.com/dorssel/usbipd-win/releases) to pass USB connections through to WSL
-
-6. \[WIN\] Download the 64-bit DEB SEGGER [J-link installer](https://www.segger.com/downloads/jlink/). 
-
-   Once you've downloaded the installer, move it from your Windows Downloads folder to your WSL home directory.  
-
-7. \[WSL\] Install the SEGGER J-Link tools from the command-line: 
+6. \[🐧WSL\] Install the SEGGER J-Link tools from the command-line: 
    
    - `sudo apt install /path/to/j-link/installer`
 
-8. \[WSL\] Add the installed J-link tools to your default `PATH`: 
+7. \[🐧WSL\] Add the installed J-link tools to your default `PATH`: 
 
    - Run `nano ~/.bash_profile`
-   - Add the line `export PATH="$PATH:/opt/SEGGER/JLink"` at the bottom of the file
+   - Add the lines ```PATH_TO_SEGGER_JLINK="/opt/SEGGER/JLink"
+      PATH_TO_SEGGER_RTOS_PLUGIN="/opt/SEGGER/JLink_V884/GDBServer"
+
+      export PATH="$PATH:$PATH_TO_SEGGER_JLINK:$PATH_TO_SEGGER_RTOS_PLUGIN"``` at the bottom of the file
+
+8. \[🐧WSL\] Clone this repository into the WSL filesystem. This is important for performance during compilation.
+
+   - `git clone https://github.com/BrownSpaceEngineering/PVDXosV2.git`
 
 9. (Optional) Configure VSCode to use clang-format for formatting:
 
