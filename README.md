@@ -26,7 +26,9 @@ following steps is thus prepended either by \[🪟WIN\] or \[🐧WSL\] to indica
 3. \[🪟WIN\] Download the 64-bit DEB SEGGER [J-link installer](https://www.segger.com/downloads/jlink/). 
 
    Once you've downloaded the installer, move it from your Windows Downloads folder to your WSL home directory, accessible
-   from the File Explorer
+   from the File Explorer. 
+
+   ![Look for the highlighted directory on the File Manager sidebar](./misc/WSL_home_dir.png)
 
 4. \[🐧WSL\] Install ARM toolchain for Linux:
 
@@ -135,10 +137,8 @@ We need to pipe the USB connection to the J-link debugger into WSL
    ```
    BUSID  VID:PID    DEVICE                                                        STATE
    1-1    1366:1020  J-Link                                                        Not shared
-   1-2    0000:0002  Unknown USB Device (Device Descriptor Request Failed)         Not shared
-   1-4    27c6:6594  Goodix MOC Fingerprint                                        Not shared
-   2-1    0e8d:e025  MediaTek Bluetooth Adapter                                    Not shared
-   5-1    174f:11b4  Integrated Camera, Integrated IR Camera, APP Mode             Not shared
+   2-1    af8b:85c3  MediaTek Bluetooth Adapter                                    Not shared
+   5-1    83de:864a  Integrated Camera, Integrated IR Camera, APP Mode             Not shared
    ```
    2. In the same PowerShell, run `usbipd bind --busid <J-link busid>`. For example, if the output of
       list were as above, we would run `usbipd bind --busid 1-1` 
