@@ -6,13 +6,13 @@ SEARCH_DIR(.)
 MEMORY
 {
   rom      (rx)  : ORIGIN = 0x00000000, LENGTH = 0x00002FFF
-  ram      (rwx) : ORIGIN = 0x2003D000, LENGTH = 0x00002000
+  ram      (rwx) : ORIGIN = 0x2003B000, LENGTH = 0x00004000
   bkupram  (rwx) : ORIGIN = 0x47000000, LENGTH = 0x00002000
   qspi     (rwx) : ORIGIN = 0x04000000, LENGTH = 0x01000000
 }
 
 /* The stack size used by the application. NOTE: you need to adjust according to your application. */
-STACK_SIZE = 0x1000;
+STACK_SIZE = 0x2000;
 
 /* Section Definitions */
 SECTIONS

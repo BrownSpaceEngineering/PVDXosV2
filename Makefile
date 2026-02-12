@@ -51,8 +51,8 @@ connect:
 	&& $(GDBCMD) \
 		-ex "set confirm off" \
 		-ex "add-symbol-file src/PVDXos.elf" \
-		-ex "add-symbol-file bootloader/bootloader2.elf" \
-		-ex "add-symbol-file bootloader/bootloader3.elf" \
+		-ex "add-symbol-file bootloader/src/bootloader2.elf" \
+		-ex "add-symbol-file bootloader/src/bootloader3.elf" \
 		-ex "set confirm on" \
 		-ex "target remote localhost:2331" \
 		-ex "monitor reset" \
@@ -60,7 +60,7 @@ connect:
 		-ex "continue" \
 		-ex "break main" \
 		-ex "continue" \
-		bootloader/bootloader1.elf
+		bootloader/src/bootloader1.elf
 
 # connect for debugging bootloader
 connect_bl:

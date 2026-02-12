@@ -225,12 +225,30 @@ void set_persistent_mode(uint8_t mram) {
     }
 }
 
+#define PAGE_SIZE 256
+
+// it assume the size is a multiple of PAGE_SIZE
 void mram_read_bytes(uint32_t address, uint8_t *data, uint32_t size) {
     // triplicate read...
+    uint32_t npages = size / PAGE_SIZE;
+
+    uint8_t read_data[3][PAGE_SIZE];
+    for (uint32_t page = 0; page < npages; page++) {
+        for (uint8_t mram_idx = 1; mram_idx <= 3; mram_idx++) {
+            read_bytes(mram_idx, page, read_data[mram_idx-1], PAGE_SIZE);
+        }
+
+        for (uint16_t read = 0; read < PAGE_SIZE; read++) {
+            data[read + PAGE_SIZE*page] = (read_data[0][read] & read_data[1][read]) | (read_data[2][read] & read_data[1][read]) | (read_data[0][read] & read_data[2][read]);
+        }
+        
+    }
 }
 
 void mram_write_bytes(uint32_t address, const uint8_t *data, uint32_t size) {
-    // triplicate write...
+    for (uint8_t mram = 1; mram <= 3; mram++) {
+        write_bytes(mram, address, data, size);
+    }
 }
 
 // ---------------------- Test ----------------------
