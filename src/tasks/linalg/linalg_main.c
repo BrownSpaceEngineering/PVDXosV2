@@ -5,14 +5,13 @@
  * Authors:
  */
 
-// Save the current diagnostic state
-#pragma GCC diagnostic push 
-// Turn off the specific warning
-#pragma GCC diagnostic ignored "-Wunused-function" 
-#pragma GCC diagnostic ignored "-Waddress"
-
 #include "linalg_task.h"
-#include "../../../lapack/EmbeddedLapack/src/LinearAlgebra/declareFunctions.h"
+
+#define row_a 1
+#define row_c 1
+#define column_b 1
+#define L 20
+
 
 linalg_task_memory_t linalg_mem;
 
@@ -30,7 +29,6 @@ void debug_matrix(double* A, int row, int column) {
 
 }
 
-
 /**
  * \fn main_linalg
  *
@@ -39,41 +37,23 @@ void debug_matrix(double* A, int row, int column) {
  * \warning should never return
  */
 void main_linalg(void *pvParameters) {
-    info("linalg: Task Started!\n");
 
-    // Obtain a pointer to the current task within the global task list
+    double A[4] = {1., 2., 3., 4.}; 
+    double B[4] = {5., 6., 7., 8.}; 
+    double C[4] = {0.}; 
+
+    mul(A, B, false, C, 2, 2, 2); 
+    debug_matrix(C, 2, 2); 
+
+	
+	// Obtain a pointer to the current task within the global task list
     pvdx_task_t *const current_task = get_current_task();
     // Cache the watchdog checkin command to avoid creating it every iteration
     command_t cmd_checkin = get_watchdog_checkin_command(current_task);
-    // Calculate the maximum time this task should block (and thus be unable to check in with the watchdog)
+    // Calculate the maximum time the command dispatcher should block (and thus be unable to check in with the watchdog)
     const TickType_t queue_block_time_ticks = get_command_queue_block_time_ticks(current_task);
     // Varible to hold commands popped off the queue
     command_t cmd;
-
-    double A[2*2] = {1, 2, 3, 4};
-    double B[2*2] = {5, 6, 7, 8};
-    double C[2*2]; 
-    double C_elementwise[2*2] = {5, 12, 21, 32}; 
-    double C_expected[2*2] = {19, 22, 43, 50};
-
-    double det_a_true = -2;
-    double det_a = det(A, 2);
-    debug("det(A) = %f, should be %f\n", det_a, det_a_true);
-    double det_b_true = -2;
-    double det_b = det(B, 2);
-    debug("det(B) = %f, should be %f\n", det_b, det_b_true);
-
-    mul(A, B, false, C, 2, 2, 2);
-    debug("C = A*B:\n");
-    debug_matrix(C, 2, 2);
-    debug("C should be:\n");
-    debug_matrix(C_expected, 2, 2);
-
-    mul(A, B, true, C, 2, 2, 2);
-    debug("C = A.*B:\n");
-    debug_matrix(C, 2, 2);
-    debug("C should be:\n");
-    debug_matrix(C_elementwise, 2, 2);
 
     while (true) {
         debug_impl("\n---------- linalg Task Loop ----------\n");
@@ -97,7 +77,3 @@ void main_linalg(void *pvParameters) {
         debug("linalg: Enqueued watchdog checkin command\n");
     }
 }
-
-
-// Restore the previous diagnostic state (re-enables the warning)
-#pragma GCC diagnostic pop 

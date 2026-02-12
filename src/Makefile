@@ -12,9 +12,57 @@
 ###############################################################################
 
 
+PATH_TO_CCONTROL = /home/siddl/CControl/build/
+PATH_TO_CCONTROL_INCLUDES = /home/siddl/CControl/src/
 
 ### ALL C FILES SHOULD HAVE AN OBJECT FILE LISTED HERE ###
 export OBJS :=                                              	\
+../src/linalg/LinearAlgebra/add.o 								\
+../src/linalg/LinearAlgebra/chol.o 								\
+../src/linalg/LinearAlgebra/cofact.o 								\
+../src/linalg/LinearAlgebra/copy.o 								\
+../src/linalg/LinearAlgebra/cut.o 								\
+../src/linalg/LinearAlgebra/det.o 								\
+../src/linalg/LinearAlgebra/diag.o 								\
+../src/linalg/LinearAlgebra/diagpower.o 							\
+../src/linalg/LinearAlgebra/dot.o 								\
+../src/linalg/LinearAlgebra/eabs.o 								\
+../src/linalg/LinearAlgebra/eig.o 								\
+../src/linalg/LinearAlgebra/eye.o 								\
+../src/linalg/LinearAlgebra/hankel.o 								\
+../src/linalg/LinearAlgebra/horzcat.o 							\
+../src/linalg/LinearAlgebra/insert.o 								\
+../src/linalg/LinearAlgebra/inv.o									\
+../src/linalg/LinearAlgebra/linprog.o 							\
+../src/linalg/LinearAlgebra/linsolve.o 							\
+../src/linalg/LinearAlgebra/lu.o 									\
+../src/linalg/LinearAlgebra/maxvector.o 							\
+../src/linalg/LinearAlgebra/mdiag.o 								\
+../src/linalg/LinearAlgebra/minvector.o 							\
+../src/linalg/LinearAlgebra/move.o 								\
+../src/linalg/LinearAlgebra/mpower.o 								\
+../src/linalg/LinearAlgebra/mul.o 								\
+../src/linalg/LinearAlgebra/norm.o 								\
+../src/linalg/LinearAlgebra/ones.o 								\
+../src/linalg/LinearAlgebra/pinv.o 								\
+../src/linalg/LinearAlgebra/power.o 								\
+../src/linalg/LinearAlgebra/print.o 								\
+../src/linalg/LinearAlgebra/qr.o 									\
+../src/linalg/LinearAlgebra/rank.o 								\
+../src/linalg/LinearAlgebra/repmat.o 								\
+../src/linalg/LinearAlgebra/scale.o 								\
+../src/linalg/LinearAlgebra/sqrte.o 								\
+../src/linalg/LinearAlgebra/sub.o 								\
+../src/linalg/LinearAlgebra/sumrows.o 							\
+../src/linalg/LinearAlgebra/svd.o 								\
+../src/linalg/LinearAlgebra/toeplitz.o 							\
+../src/linalg/LinearAlgebra/tran.o 								\
+../src/linalg/LinearAlgebra/tril.o 								\
+../src/linalg/LinearAlgebra/triu.o 								\
+../src/linalg/LinearAlgebra/vec.o 								\
+../src/linalg/LinearAlgebra/vertcat.o 							\
+../src/linalg/LinearAlgebra/zeros.o 								\
+																\
 ../src/main.o                                               	\
                                                             	\
 ../src/mutexes/mutexes.o                                    	\
@@ -23,12 +71,12 @@ export OBJS :=                                              	\
 ../src/misc/printf/SEGGER_RTT_printf.o                      	\
                                                             	\
 ../src/misc/rtos_support/rtos_static_memory.o               	\
-../src/misc/rtos_support/rtos_stack_overflow.o              	 \
+../src/misc/rtos_support/rtos_stack_overflow.o              	\
                                                             	\
 ../src/misc/logging/logging.o                               	\
                                                             	\
 ../src/misc/exception_handlers/default_handler.o            	\
-../src/misc/exception_handlers/specific_handlers.o          	 \
+../src/misc/exception_handlers/specific_handlers.o          	\
                                                             	\
 ../src/tasks/heartbeat/heartbeat_main.o                     	\
                                                             	\
@@ -50,6 +98,9 @@ export OBJS :=                                              	\
                                                             	\
 ../src/tasks/command_dispatcher/command_dispatcher_main.o   	\
 ../src/tasks/command_dispatcher/command_dispatcher_task.o   	\
+                                                            	\
+../src/tasks/linalg/linalg_main.o 								\
+../src/tasks/linalg/linalg_task.o 								\
                                                             	\
 ../src/tasks/magnetometer/magnetometer_driver.o             	\
 ../src/tasks/magnetometer/magnetometer_task.o               	\
@@ -73,6 +124,7 @@ export OBJS :=                                              	\
 ../src/mram.o													\
 ../src/reflash.o												\
 # ^^^ to be fixed when mram becomes a task/bootloader guy
+																
 
 
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###
@@ -99,6 +151,11 @@ export EXTRA_VPATH := \
 ../../src/mutexes \
 ../../src/checks \
 ../../src/tests \
+../../src/tasks/linalg \
+../../src/linalg \
+../../src/linalg/Lapack \
+../../src/linalg/LinearAlgebra \
+# $(PATH_TO_CCONTROL_INCLUDES)
 
 
 ###############################################################################
@@ -151,6 +208,9 @@ CFLAGS += -Wdangling-else -Wtautological-compare
 CFLAGS += -fwrapv # Enable fwrapv (wrap on overflow of signed integers) just to be safe
 CFLAGS += -fsigned-char # Ensure that char is signed as your average c programmer might expect -- it's actually default unsigned on arm!
 
+# Linking to Ccontrol 
+# CFLAGS += -L$(PATH_TO_CCONTROL) -lCControl
+
 # Disable warnings for unused parameters due to ASF functions having unused parameters
 CFLAGS += -Wno-unused-parameter #Because some ASF functions have unused parameters, supress this warning
 
@@ -158,7 +218,6 @@ CFLAGS += -Wno-unused-parameter #Because some ASF functions have unused paramete
 CFLAGS_DEV := -DDEVBUILD
 CFLAGS_UNITTEST := -DUNITTEST -DDEVBUILD -Wno-unused-variable 
 CFLAGS_RELEASE := -DRELEASE
-
 
 ### All these variables are exported to the child makefile, and affect its behavior ###
 export SUB_DIRS := $(shell for dir in $(EXTRA_VPATH); do echo $$dir | $(SED) 's|\.\./||g'; done)
