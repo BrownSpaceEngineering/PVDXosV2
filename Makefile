@@ -13,7 +13,7 @@ else
 		# Linux or WSL. Check if it's WSL by searching "microsoft" in uname -r
 		ifneq (,$(findstring microsoft,$(UNAME_R)))
 			# WSL
-			GDBCMD = gdb
+			GDBCMD = gdb-multiarch
 		else
 			# "Pure" Linux
 			GDBCMD = gdb-multiarch
