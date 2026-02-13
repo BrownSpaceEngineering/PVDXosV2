@@ -181,3 +181,11 @@ doxygen Doxyfile
 - Download the `Live Server` extension on VSCode
     - Open the `build-docs/html/index.html` file by right clicking -> `Open with Live Server`
     - A tab in your browser will open with the full docs page
+
+
+# Acknoledgements
+
+Many thanks to Daniel Martenson, whose [EmbeddedLapack](https://github.com/DanielMartensson/EmbeddedLapack)
+and [CControl](https://github.com/DanielMartensson/CControl) projects 
+were the basis for the linear algebra subroutines used to implement 
+our ADCS systems. 

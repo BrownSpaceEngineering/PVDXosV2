@@ -8,6 +8,7 @@
 #include "globals.h"
 #include "logging.h"
 #include "mutexes.h"
+#include "task_list.h"
 
 // Constants
 #define TASK_MANAGER_TASK_STACK_SIZE 1024 // Size of the stack in words (multiply by 4 to get bytes)

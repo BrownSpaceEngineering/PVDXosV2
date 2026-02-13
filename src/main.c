@@ -16,6 +16,20 @@
 #include "logging.h"
 #include "tests/test.h"
 
+#include "linalg_task.h"
+
+
+void debug_matrix(double* A, int row, int column) {
+	for(int i = 0; i < row; i++){
+		for(int j = 0; j < column; j++){
+			debug("%0.18f ", *(A++));
+		}
+		debug("\n");
+	}
+	debug("\n");
+
+}
+
 cosmic_monkey_task_arguments_t cm_args = {0};
 
 static status_t PVDX_init(void) {
@@ -79,25 +93,32 @@ int main(void) {
         }
     }
 
+    double A[4] = {1., 2., 3., 4.}; 
+    double B[4] = {5., 6., 7., 8.}; 
+    double C[4] = {0.}; 
+
+    mul(A, B, false, C, 2, 2, 2); 
+    debug_matrix(C, 2, 2); 
+
     /* ---------- COSMIC MONKEY TASK ---------- */
 
-#if defined(UNITTEST) || defined(DEVBUILD)
-    #if defined(UNITTEST)
-    cm_args.frequency = 10;
-    #endif
-    #if defined(DEVBUILD)
-    cm_args.frequency = 1; // Bitflips per second
-    #endif
+// #if defined(UNITTEST) || defined(DEVBUILD)
+//     #if defined(UNITTEST)
+//     cm_args.frequency = 10;
+//     #endif
+//     #if defined(DEVBUILD)
+//     cm_args.frequency = 1; // Bitflips per second
+//     #endif
 
-    TaskHandle_t cosmic_monkey_task_handle =
-        xTaskCreateStatic(main_cosmic_monkey, "CosmicMonkey", COSMIC_MONKEY_TASK_STACK_SIZE, (void *)&cm_args, 1,
-                          cosmic_monkey_mem.cosmic_monkey_task_stack, &cosmic_monkey_mem.cosmic_monkey_task_tcb);
-    if (cosmic_monkey_task_handle == NULL) {
-        warning("Cosmic Monkey Task Creation Failed!\n");
-    } else {
-        info("Cosmic Monkey Task initialized\n");
-    }
-#endif // Cosmic Monkey
+//     TaskHandle_t cosmic_monkey_task_handle =
+//         xTaskCreateStatic(main_cosmic_monkey, "CosmicMonkey", COSMIC_MONKEY_TASK_STACK_SIZE, (void *)&cm_args, 1,
+//                           cosmic_monkey_mem.cosmic_monkey_task_stack, &cosmic_monkey_mem.cosmic_monkey_task_tcb);
+//     if (cosmic_monkey_task_handle == NULL) {
+//         warning("Cosmic Monkey Task Creation Failed!\n");
+//     } else {
+//         info("Cosmic Monkey Task initialized\n");
+//     }
+// #endif // Cosmic Monkey
 
     /* ---------- START FREERTOS SCHEDULER ---------- */
 
