@@ -70,6 +70,10 @@ export OBJS :=                                              	\
 																\
 ../src/checks/device_checks.o 									\
 ../src/tasks/task_list.o                                        \
+																\
+../src/tasks/radio/spp.o 									    \
+../src/tests/test.o                                             \
+
 
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###
 ### THESE ARE WRITTEN RELATIVE TO THE ./ASF/gcc/Makefile FILE ###
@@ -92,8 +96,10 @@ export EXTRA_VPATH := \
 ../../src/tasks/shell \
 ../../src/tasks/photodiode \
 ../../src/tasks/arducam \
+../../src/tasks/radio \
 ../../src/mutexes \
 ../../src/checks \
+../../src/tests \
 
 
 ###############################################################################
@@ -151,7 +157,7 @@ CFLAGS += -Wno-unused-parameter #Because some ASF functions have unused paramete
 
 # Build-specific flags
 CFLAGS_DEV := -DDEVBUILD
-CFLAGS_UNITTEST := -DUNITTEST
+CFLAGS_UNITTEST := -DUNITTEST -DDEVBUILD -Wno-unused-variable 
 CFLAGS_RELEASE := -DRELEASE
 
 

@@ -80,7 +80,7 @@ status_t init_arducam_hardware(void) {
 
     // This is hijacking the init function for debugging/testing. Should delete because you probably don't want to take a picture on init.
     // capture();
-    capture_rtt(); // For debugging
+    // capture_rtt(); // For debugging
 
     return SUCCESS;
 }

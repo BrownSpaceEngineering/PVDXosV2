@@ -34,23 +34,22 @@ DEBUG: Detailed information about the system for debugging (e.g. length of array
     #define event(msg, ...)                                                                                                                \
         event_impl(RTT_CTRL_TEXT_BRIGHT_WHITE "[EVENT|%s:%d]: " msg RTT_CTRL_RESET, __FILENAME__, __LINE__, ##__VA_ARGS__)
     #define info(msg, ...) info_impl(RTT_CTRL_TEXT_BRIGHT_WHITE "[INFO|%s:%d]: " msg RTT_CTRL_RESET, __FILENAME__, __LINE__, ##__VA_ARGS__)
-    #define debug(msg, ...) debug_impl(RTT_CTRL_TEXT_WHITE "[DEBUG|%s:%d]: " msg RTT_CTRL_RESET, __FILENAME__, __LINE__, ##__VA_ARGS__)
-    #define fatal_on_error(status, msg) do {    \
-        if (status != SUCCESS) {                \
-            fatal(msg);                         \
-        }                                       \
-    } while (0)
-    #define ret_err_status(status, msg) do {            \
-        status_t s = status;                            \
-        if (s != SUCCESS) { warning(msg); return s; }   \
-    } while (0) 
+    #ifdef UNITTEST
+        #define test_log(msg, ...)                                                                                                         \
+            debug_impl(RTT_CTRL_TEXT_WHITE "[TEST|%s:%d]: " msg RTT_CTRL_RESET, __FILENAME__, __LINE__, ##__VA_ARGS__)
+        #define debug(msg, ...)
+    #else
+        #define test_log(msg, ...)
+        #define debug(msg, ...) debug_impl(RTT_CTRL_TEXT_WHITE "[DEBUG|%s:%d]: " msg RTT_CTRL_RESET, __FILENAME__, __LINE__, ##__VA_ARGS__)
+    #endif
 #else
     /* Other build types (such as release or unittest) don't need filenames or line numbers */
-    #define fatal(msg, ...) fatal_impl(RTT_CTRL_TEXT_BRIGHT_RED "[FATAL]: " msg RTT_CTRL_RESET, ##__VA_ARGS__)
-    #define warning(msg, ...) warning_impl(RTT_CTRL_TEXT_BRIGHT_RED "[WARNING]: " msg RTT_CTRL_RESET, ##__VA_ARGS__)
-    #define event(msg, ...) event_impl(RTT_CTRL_TEXT_BRIGHT_WHITE "[EVENT]: " msg, ##__VA_ARGS__)
-    #define info(msg, ...) info_impl(RTT_CTRL_TEXT_BRIGHT_WHITE "[INFO]: " msg, ##__VA_ARGS__)
-    #define debug(msg, ...) debug_impl(RTT_CTRL_TEXT_WHITE "[DEBUG]: " msg RTT_CTRL_RESET, ##__VA_ARGS__)
+    #define fatal(msg, ...)
+    #define warning(msg, ...)
+    #define event(msg, ...)
+    #define info(msg, ...)
+    #define debug(msg, ...)
+    #define test_log(msg, ...)
 #endif
 
 void fatal_impl(const char *string, ...);
@@ -61,5 +60,20 @@ void debug_impl(const char *string, ...);
 
 void set_log_level(log_level_t level);
 log_level_t get_log_level();
+
+#define fatal_on_error(status, msg)                                                                                                        \
+    do {                                                                                                                                   \
+        if (status != SUCCESS) {                                                                                                           \
+            fatal(msg);                                                                                                                    \
+        }                                                                                                                                  \
+    } while (0)
+#define ret_err_status(status, msg)                                                                                                        \
+    do {                                                                                                                                   \
+        status_t s = status;                                                                                                               \
+        if (s != SUCCESS) {                                                                                                                \
+            warning(msg);                                                                                                                  \
+            return s;                                                                                                                      \
+        }                                                                                                                                  \
+    } while (0)
 
 #endif /* LOGGING_H */
