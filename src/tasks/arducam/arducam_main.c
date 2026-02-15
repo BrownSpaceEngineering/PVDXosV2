@@ -22,10 +22,7 @@ arducam_task_memory_t arducam_mem;
  * \warning should never return
  */
 void main_arducam(void *pvParameters) {
-    info("arducam: Task Started!\n");
-
-    // Initialize the arducam hardware
-    init_arducam();
+    info("arducam: Task Started!\n"); 
 
     // Obtain a pointer to the current task within the global task list
     pvdx_task_t *const current_task = get_current_task();
