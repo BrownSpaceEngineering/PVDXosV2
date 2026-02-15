@@ -62,6 +62,19 @@ connect:
 		-ex "continue" \
 		bootloader/bootloader1.elf
 
+connect_tasks: 
+	JLinkExe -CommanderScript flash.jlink \
+	&& $(GDBCMD) \
+		-ex "set confirm off" \
+		-ex "add-symbol-file src/PVDXos.elf" \
+		-ex "add-symbol-file bootloader/bootloader2.elf" \
+		-ex "add-symbol-file bootloader/bootloader3.elf" \
+		-ex "set confirm on" \
+		-ex "target remote localhost:2331" \
+		-ex "monitor reset" \
+		-ex "break main" \
+		bootloader/bootloader1.elf
+
 # connect for debugging bootloader
 connect_bl:
 	JLinkExe -CommanderScript flash.jlink \

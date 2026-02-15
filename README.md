@@ -48,14 +48,12 @@ following steps is thus prepended either by \[🪟WIN\] or \[🐧WSL\] to indica
 7. \[🐧WSL\] Add the installed J-link tools to your default `PATH`: 
 
    - Run `nano ~/.bash_profile`
-   - Add the lines 
+   - Add these lines at the bottom of the file: 
    ```
    PATH_TO_SEGGER_JLINK="/opt/SEGGER/JLink"
    PATH_TO_SEGGER_RTOS_PLUGIN="/opt/SEGGER/JLink_V884/GDBServer"
 
    export PATH="$PATH:$PATH_TO_SEGGER_JLINK:$PATH_TO_SEGGER_RTOS_PLUGIN"``` 
-      
-   at the bottom of the file
 
 8. \[🐧WSL\] Clone this repository into the WSL filesystem. This is important for performance during compilation.
 
