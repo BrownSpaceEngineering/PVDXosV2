@@ -26,7 +26,7 @@ void go_to_app(void);
 
 volatile int startup_test_value = 8;
 
-#define MRAM_OS_WRITE
+// #define MRAM_OS_WRITE
 
 int main(void) {
     // This loop will spin forever if startup did not copy data segment

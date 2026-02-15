@@ -34,6 +34,8 @@ _|"""""|_|"""""|_|"""""|_|"""""|
 
 #define PMM_REG     8       // Persistent Memory Mode register
 
+#define COSMIC_MRAM
+
 // ---------------------- SPI Helpers ----------------------
 
 void mram_fatal(void) { while (1); }
@@ -118,6 +120,15 @@ void read_bytes(uint8_t mram, uint32_t address, uint8_t *data, uint32_t size) {
     spi_write(cmd, 4);
     spi_read(data, size);
     mram_deselect(mram);
+
+#ifdef COSMIC_MRAM
+    // mess up first mram
+    if (mram == 0) {
+        for (uint32_t i = 0; i < size; i += 3) {
+            data[i] += 1;
+        }
+    }
+#endif
 }
 
 void write_bytes(uint8_t mram, uint32_t address, const uint8_t *data, uint32_t size) {
