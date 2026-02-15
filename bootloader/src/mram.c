@@ -34,7 +34,7 @@ _|"""""|_|"""""|_|"""""|_|"""""|
 
 #define PMM_REG     8       // Persistent Memory Mode register
 
-#define COSMIC_MRAM
+// #define COSMIC_MRAM
 
 // ---------------------- SPI Helpers ----------------------
 
@@ -123,7 +123,7 @@ void read_bytes(uint8_t mram, uint32_t address, uint8_t *data, uint32_t size) {
 
 #ifdef COSMIC_MRAM
     // mess up first mram
-    if (mram == 0) {
+    if (mram == 1) {
         for (uint32_t i = 0; i < size; i += 3) {
             data[i] += 1;
         }
@@ -236,6 +236,12 @@ void set_persistent_mode(uint8_t mram) {
     }
 }
 
+void mram_write_bytes(uint32_t address, const uint8_t *data, uint32_t size) {
+    for (uint8_t mram = 1; mram <= 3; mram++) {
+        write_bytes(mram, address, data, size);
+    }
+}
+
 #define PAGE_SIZE 256
 
 void mram_read_bytes(uint32_t address, uint8_t *data, uint32_t size) {
@@ -250,17 +256,20 @@ void mram_read_bytes(uint32_t address, uint8_t *data, uint32_t size) {
             read_bytes(mram_idx, address + PAGE_SIZE * page, read_data[mram_idx - 1], PAGE_SIZE);
         }
 
+        bool any_error = false;
         for (uint16_t read_idx = 0; read_idx < PAGE_SIZE; read_idx++) {
             data[read_idx + PAGE_SIZE * page] = (read_data[0][read_idx] & read_data[1][read_idx]) |
                 (read_data[2][read_idx] & read_data[1][read_idx]) |
                 (read_data[0][read_idx] & read_data[2][read_idx]);
-        }
-    }
-}
 
-void mram_write_bytes(uint32_t address, const uint8_t *data, uint32_t size) {
-    for (uint8_t mram = 1; mram <= 3; mram++) {
-        write_bytes(mram, address, data, size);
+            if (read_data[0][read_idx] != read_data[1][read_idx] || read_data[0][read_idx] != read_data[2][read_idx]) {
+                any_error = true;
+            }
+        }
+
+        if (any_error) {
+            mram_write_bytes(address + PAGE_SIZE * page, data + PAGE_SIZE * page, PAGE_SIZE);
+        }
     }
 }
 
