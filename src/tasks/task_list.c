@@ -157,10 +157,10 @@ pvdx_task_t heartbeat_task = {
 
 pvdx_task_t linalg_task = {
     .name = "Linalg",
-    .enabled = true,
+    .enabled = false,
     .handle = NULL,
     .command_queue = NULL,
-    .init = NULL,
+    .init = init_linalg,
     .function = main_linalg,
     .stack_size = LINALG_TASK_STACK_SIZE,
     .stack_buffer = linalg_mem.linalg_task_stack,

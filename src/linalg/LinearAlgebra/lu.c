@@ -27,10 +27,10 @@ void lu(double* A, double* L, double* U, double* P, int row, int column) {
 	integer LDA = row;
 	integer IPIV[max(row, column)];
 	double IPIV_d[max(row, column)];
-	integer INFO;
+	integer INFO_LU;
 
 	// Solve!
-	dgetrf_(&M, &N, A_, &LDA, IPIV, &INFO, IPIV_d); // I've change the dgetrf so it will return a IPIV vector of doubles, due to memory loss.
+	dgetrf_(&M, &N, A_, &LDA, IPIV, &INFO_LU, IPIV_d); // I've change the dgetrf so it will return a IPIV vector of doubles, due to memory loss.
 
 	// Important
 	tran(A_, column, row);

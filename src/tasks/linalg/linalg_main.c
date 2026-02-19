@@ -15,20 +15,6 @@
 
 linalg_task_memory_t linalg_mem;
 
-// /*
-//  * Print a matrix A, with the dimension row x column
-//  */
-// void debug_matrix(double* A, int row, int column) {
-// 	for(int i = 0; i < row; i++){
-// 		for(int j = 0; j < column; j++){
-// 			debug("%0.18f ", *(A++));
-// 		}
-// 		debug("\n");
-// 	}
-// 	debug("\n");
-
-// }
-
 /**
  * \fn main_linalg
  *
@@ -37,14 +23,6 @@ linalg_task_memory_t linalg_mem;
  * \warning should never return
  */
 void main_linalg(void *pvParameters) {
-
-    double A[4] = {1., 2., 3., 4.}; 
-    double B[4] = {5., 6., 7., 8.}; 
-    double C[4] = {0.}; 
-
-    mul(A, B, false, C, 2, 2, 2); 
-    // debug_matrix(C, 2, 2); 
-
 	
 	// Obtain a pointer to the current task within the global task list
     pvdx_task_t *const current_task = get_current_task();

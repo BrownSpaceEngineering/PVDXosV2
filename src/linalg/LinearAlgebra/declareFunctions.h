@@ -17,10 +17,13 @@
 #include <stdio.h>
 #include <math.h>
 #include <float.h>	// required for DBL_EPSILON
+#include <stdbool.h>
+
+#include "logging.h"
 
 
 // This is for qpOASES - If you want red output results or not
-#define SHOW_QP_OUTPUT FALSE
+// #define SHOW_QP_OUTPUT FALSE
 
 
 /*
@@ -86,5 +89,14 @@ void insert(double* A, double* B, int row_a, int column_a, int column_b, int sta
 void move(double* A, int row, int column, int down, int right);
 // void quadprog(double* H, double* g, double* A, double* ulb_vec, double* uub_vec,  double* ylb_vec, double* yub_vec, int* nWSR, double* u, int columnH, int rowA);
 void linprog(double* c, double* A, double* b, double* x, int row_a, int column_a, uint8_t max_or_min, int iteration_limit);
+bool f_eps_close(float a, float b, float epsilon);
+bool f_eps_close_default(float a, float b);
+bool f_eps_close_matrix(float* A, float* B, int row, int column, float epsilon);
+bool f_eps_close_matrix_default(float* A, float* B, int row, int column);
+bool dbl_eps_close(double a, double b, double epsilon);
+bool dbl_eps_close_default(double a, double b);
+bool dbl_eps_close_matrix(double* A, double* B, int row, int column, double epsilon);
+bool dbl_eps_close_matrix_default(double* A, double* B, int row, int column);
+void debug_matrix(double* A, int row, int column);
 
 #endif /* LINEARALGEBRA_DECLAREFUNCTIONS_H_ */

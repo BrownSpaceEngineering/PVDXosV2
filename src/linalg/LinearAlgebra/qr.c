@@ -22,10 +22,10 @@ void qr(double* A, double* Q, double* R, int row, int column){
 	memset(TAU, 0, column*sizeof(double));
 	doublereal WORK[column];
 	memset(WORK, 0, column*sizeof(double));
-	integer INFO;
+	integer INFO_QR;
 
 	// Solve nowc code
-	dgeqr2_(&M, &N, A_, &LDA, TAU, WORK, &INFO);
+	dgeqr2_(&M, &N, A_, &LDA, TAU, WORK, &INFO_QR);
 
 	// Take transpose of A_ - again
 	tran(A_, column, row);

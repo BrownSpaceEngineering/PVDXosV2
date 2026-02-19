@@ -70,6 +70,7 @@ void enqueue_command(command_t *const p_cmd) {
  */
 status_t dispatch_command(command_t *const p_cmd) {
     // Check if the task is non-NULL
+    // TODO: make this check exhaustive 
     if (p_cmd->target == NULL) {
         return ERROR_BAD_TARGET;
     }

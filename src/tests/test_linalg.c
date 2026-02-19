@@ -1,15 +1,17 @@
 /**
- * linalg_helpers.c
- *
- * Created: February 08, 2026
- * Authors:
+ * test_linalg.c
+ * 
+ * Unit tests to check the correctness of linalg functions. 
+ * 
+ * Created: Friday, 13th February 2026
+ * Authors: Siddharta Laloux
  */
 
-#include "linalg_task.h"
-
-/* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
+#include "test_linalg.h"
 
 void test_matrix_product(void) {
+
+    test_log("----- testing matrix product -----\n");
 
     // test case for 2*2 matrix product
     double A[4] = {1., 2., 3., 4.}; 
@@ -18,12 +20,12 @@ void test_matrix_product(void) {
     double C_expected[4] = {19., 22., 43., 50.};
 
     mul(A, B, false, C, 2, 2, 2); 
-    debug_matrix(C, 2, 2); 
+    test_log_matrix(C, 2, 2); 
 
     if (dbl_eps_close_matrix(C, C_expected, 2, 2, DBL_EPSILON)) {
-        debug("2 * 2 matrix product test passed!\n");
+        test_log("2 * 2 matrix product test passed!\n");
     } else {
-        debug("2 * 2 matrix product test failed!\n");
+        test_log("2 * 2 matrix product test failed!\n");
     }
 
     // 4*4 identity matrix test
@@ -35,9 +37,9 @@ void test_matrix_product(void) {
     mul(identity, identity, false, large_result, 4, 4, 4);
 
     if (dbl_eps_close_matrix(identity, large_result, 4, 4, DBL_EPSILON)) {
-        debug("Identity matrix squared test passed!\n");
+        test_log("Identity matrix squared test passed!\n");
     } else {
-        debug("Identity matrix squared test failed!\n");
+        test_log("Identity matrix squared test failed!\n");
     }
 
     double A_large[4*4] = {1., 2., 3., 4.,
@@ -48,17 +50,17 @@ void test_matrix_product(void) {
     mul(A_large, identity, false, large_result, 4, 4, 4);
 
     if (dbl_eps_close_matrix(A_large, large_result, 4, 4, DBL_EPSILON)) {
-        debug("Identity post-multiplication test passed!\n");
+        test_log("Identity post-multiplication test passed!\n");
     } else {
-        debug("Identity post-multiplication test failed!\n");
+        test_log("Identity post-multiplication test failed!\n");
     }
 
     mul(identity, A_large, false, large_result, 4, 4, 4);
 
     if (dbl_eps_close_matrix(A_large, large_result, 4, 4, DBL_EPSILON)) {
-        debug("Identity pre-multiplication test passed!\n");
+        test_log("Identity pre-multiplication test passed!\n");
     } else {
-        debug("Identity pre-multiplication test failed!\n");
+        test_log("Identity pre-multiplication test failed!\n");
     }
 
     double B_large[4*4] = {5.24829, 6.21496, 3.27374, 3.49223,
@@ -80,52 +82,8 @@ void test_matrix_product(void) {
     mul(B_large, C_large, false, large_result, 4, 4, 4);
 
     if (dbl_eps_close_matrix(large_result, large_multiplication_expected, 4, 4, DBL_EPSILON)) {
-        debug("Large matrix product test passed!\n");
+        test_log("Large matrix product test passed!\n");
     } else {
-        debug("Large matrix product test failed!\n");
-    }
-}
-
-
-/* ---------- NON-DISPATCHABLE FUNCTIONS (do not go through the command dispatcher) ---------- */
-
-/**
- * \fn init_linalg
- *
- * \brief Initialises linalg command queue, before `init_task_pointer()`.
- *
- * \returns QueueHandle_t, a handle to the created queue
- *
- * \see `init_task_pointer()` for usage of functions of the type `init_<TASK>()`
- */
-QueueHandle_t init_linalg(void) {
-    QueueHandle_t linalg_command_queue_handle = xQueueCreateStatic(
-        COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE, linalg_mem.linalg_command_queue_buffer,
-        &linalg_mem.linalg_task_queue);
-
-    if (linalg_command_queue_handle == NULL) {
-        fatal("Failed to create command queue!\n");
-    }
-
-    return linalg_command_queue_handle;
-}
-
-/**
- * \fn exec_command_linalg
- * 
- * \brief Executes function corresponding to the command
- * 
- * \param p_cmd a pointer to a command forwarded to linalg
- */
-void exec_command_linalg(command_t *const p_cmd) {
-    if (p_cmd->target != p_linalg_task) {
-        fatal("linalg: command target is not linalg! target: %d operation: %d\n", p_cmd->target, p_cmd->operation);
-    }
-
-    switch (p_cmd->operation) {
-        default:
-            fatal("linalg: Invalid operation!\n");
-            p_cmd->result = ERROR_SANITY_CHECK_FAILED; // TODO: appropriate status?
-            break;
+        test_log("Large matrix product test failed!\n");
     }
 }

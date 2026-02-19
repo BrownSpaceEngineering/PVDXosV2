@@ -17,7 +17,7 @@ void svd(double* A, double* U, double* S, double* V, int row, int column) {
 	integer LDA = row;
 	integer LDU = row;
 	integer LDVT = column;
-	integer INFO;
+	integer INFO_SVD;
 	integer LWORK;
 	doublereal WKOPT;
 	doublereal S_[column];
@@ -30,13 +30,13 @@ void svd(double* A, double* U, double* S, double* V, int row, int column) {
 
 	// Find optimal solution
 	LWORK = -1;
-	dgesvd_("All", "All", &M, &N, A_, &LDA, S_, U, &LDU, V, &LDVT, &WKOPT, &LWORK, &INFO);
+	dgesvd_("All", "All", &M, &N, A_, &LDA, S_, U, &LDU, V, &LDVT, &WKOPT, &LWORK, &INFO_SVD);
 	LWORK = WKOPT;
 	doublereal WORK[LWORK];
 	memset(WORK, 0, LWORK * sizeof(double));
 
 	// Solve
-	dgesvd_("All", "All", &M, &N, A_, &LDA, S_, U, &LDU, V, &LDVT, WORK, &LWORK, &INFO);
+	dgesvd_("All", "All", &M, &N, A_, &LDA, S_, U, &LDU, V, &LDVT, WORK, &LWORK, &INFO_SVD);
 
 	// Ok! Solve done! Now do transpose of U;
 	tran(U, row, row);
