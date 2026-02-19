@@ -24,10 +24,10 @@ void linsolve(double* A, double* X, double* B, int row, int column_b) {
 	doublereal B_[row*column_b];
 	memcpy(B_, B, row*column_b*sizeof(double));
 	tran(B_, row, column_b); // Important to take the transpose because it's FORTRAN we calling via C
-	integer INFO;
+	integer INFO_LINSOLVE;
 
 	// Call dgesv from FORTRAN
-	dgesv_(&N, &NRHS, A_, &LDA, IPIV, B_, &LDB, &INFO);
+	dgesv_(&N, &NRHS, A_, &LDA, IPIV, B_, &LDB, &INFO_LINSOLVE);
 
 	// Copy the solution
 	memcpy(X, B_, row*column_b*sizeof(double));

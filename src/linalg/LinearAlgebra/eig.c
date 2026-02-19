@@ -28,7 +28,7 @@ void eig(double* A, double* Ereal, double* Eimag, double* Vreal_left,
 	integer LDA = row;
 	integer LDVL = row;
 	integer LDVR = row;
-	integer INFO;
+	integer INFO_EIG;
 	integer LWORK;
 	doublereal wkopt;
 	doublereal WORK[row * row];
@@ -44,12 +44,12 @@ void eig(double* A, double* Ereal, double* Eimag, double* Vreal_left,
 
 	LWORK = -1; // This will load values
 	dgeev_("V", "V", &N, A_, &LDA, WR, WI, VL, &LDVL, VR, &LDVR, &wkopt, &LWORK,
-			&INFO);
+			&INFO_EIG);
 	LWORK = (int) wkopt;
 
 	/* Solve eigenproblem */
 	dgeev_("V", "V", &N, A_, &LDA, WR, WI, VL, &LDVL, VR, &LDVR, WORK, &LWORK,
-			&INFO);
+			&INFO_EIG);
 
 	tran(VL, N, N);
 	tran(VR, N, N);

@@ -32,6 +32,11 @@ void main_display(void *pvParameters) {
     // Varible to hold commands popped off the queue
     command_t cmd;
 
+    // Initialize the display hardware
+    status_t status = init_display_hardware();
+
+    fatal_on_error(status, "Failed to initialize display hardware!\n");
+
     while (true) {
         debug("\n---------- Display Task Loop ----------\n");
 
