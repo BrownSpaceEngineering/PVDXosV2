@@ -145,12 +145,12 @@ void EIC_15_Handler(void) {
 void FREQM_Handler(void) {
     PVDX_default_handler();
 }
-void NVMCTRL_0_Handler(void) {
-    PVDX_default_handler();
-}
-void NVMCTRL_1_Handler(void) {
-    PVDX_default_handler();
-}
+// void NVMCTRL_0_Handler(void) {
+//     PVDX_default_handler();
+// }
+// void NVMCTRL_1_Handler(void) {
+//     PVDX_default_handler();
+// }
 void DMAC_0_Handler(void) {
     PVDX_default_handler();
 }

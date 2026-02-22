@@ -14,6 +14,8 @@ extern "C" {
 
 void ADC_0_example(void);
 
+void FLASH_0_example(void);
+
 void I2C_SBAND_example(void);
 
 void I2C_MAG_GYRO_example(void);

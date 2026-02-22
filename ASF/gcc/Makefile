@@ -52,6 +52,7 @@ hpl/cmcc \
 hpl/gclk \
 hpl/pm \
 hpl/sercom \
+hpl/nvmctrl \
 hpl/core
 
 # List the object files
@@ -68,6 +69,7 @@ hpl/core/hpl_core_m4.o \
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/stream_buffer.o \
 hal/utils/src/utils_syscalls.o \
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/portable/MemMang/heap_1.o \
+hpl/nvmctrl/hpl_nvmctrl.o \
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/queue.o \
 hal/src/hal_spi_m_sync.o \
 hal/src/hal_i2c_m_sync.o \
@@ -84,6 +86,7 @@ hal/src/hal_rand_sync.o \
 hpl/trng/hpl_trng.o \
 hpl/mclk/hpl_mclk.o \
 hpl/ramecc/hpl_ramecc.o \
+hal/src/hal_flash.o \
 hal/src/hal_init.o \
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/rtos_port.o \
 rtos_start.o \
@@ -93,14 +96,14 @@ examples/driver_examples.o \
 driver_init.o \
 hal/src/hal_adc_sync.o \
 hpl/sercom/hpl_sercom.o \
+hal/src/hal_atomic.o \
 hal/src/hal_gpio.o \
 hal/utils/src/utils_event.o \
 hal/src/hal_sleep.o \
 hal/src/hal_cache.o \
-hpl/cmcc/hpl_cmcc.o \
 samd51a/gcc/gcc/startup_samd51.o \
 atmel_start.o \
-hal/src/hal_atomic.o \
+hpl/cmcc/hpl_cmcc.o \
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/tasks.o \
 hpl/adc/hpl_adc.o
 
@@ -117,6 +120,7 @@ OBJS_AS_ARGS +=  \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/stream_buffer.o" \
 "hal/utils/src/utils_syscalls.o" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/portable/MemMang/heap_1.o" \
+"hpl/nvmctrl/hpl_nvmctrl.o" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/queue.o" \
 "hal/src/hal_spi_m_sync.o" \
 "hal/src/hal_i2c_m_sync.o" \
@@ -133,6 +137,7 @@ OBJS_AS_ARGS +=  \
 "hpl/trng/hpl_trng.o" \
 "hpl/mclk/hpl_mclk.o" \
 "hpl/ramecc/hpl_ramecc.o" \
+"hal/src/hal_flash.o" \
 "hal/src/hal_init.o" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/rtos_port.o" \
 "rtos_start.o" \
@@ -142,14 +147,14 @@ OBJS_AS_ARGS +=  \
 "driver_init.o" \
 "hal/src/hal_adc_sync.o" \
 "hpl/sercom/hpl_sercom.o" \
+"hal/src/hal_atomic.o" \
 "hal/src/hal_gpio.o" \
 "hal/utils/src/utils_event.o" \
 "hal/src/hal_sleep.o" \
 "hal/src/hal_cache.o" \
-"hpl/cmcc/hpl_cmcc.o" \
 "samd51a/gcc/gcc/startup_samd51.o" \
 "atmel_start.o" \
-"hal/src/hal_atomic.o" \
+"hpl/cmcc/hpl_cmcc.o" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/tasks.o" \
 "hpl/adc/hpl_adc.o"
 
@@ -166,6 +171,7 @@ DIR_INCLUDES +=  \
 -I"../hpl/dmac" \
 -I"../hpl/gclk" \
 -I"../hpl/mclk" \
+-I"../hpl/nvmctrl" \
 -I"../hpl/osc32kctrl" \
 -I"../hpl/oscctrl" \
 -I"../hpl/pm" \
@@ -204,6 +210,7 @@ DEPS_AS_ARGS +=  \
 "samd51a/gcc/system_samd51.d" \
 "hal/src/hal_i2c_m_sync.d" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/timers.d" \
+"hpl/nvmctrl/hpl_nvmctrl.d" \
 "hal/src/hal_spi_m_sync.d" \
 "hal/src/hal_wdt.d" \
 "hpl/cmcc/hpl_cmcc.d" \
@@ -213,6 +220,7 @@ DEPS_AS_ARGS +=  \
 "hal/src/hal_delay.d" \
 "hpl/core/hpl_init.d" \
 "hpl/pm/hpl_pm.d" \
+"hal/src/hal_flash.d" \
 "hpl/gclk/hpl_gclk.d" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/rtos_port.d" \
 "hal/src/hal_init.d" \

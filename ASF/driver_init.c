@@ -19,6 +19,8 @@ struct spi_m_sync_descriptor SPI_CAMERA;
 
 struct adc_sync_descriptor ADC_0;
 
+struct flash_descriptor FLASH_0;
+
 struct i2c_m_sync_desc I2C_SBAND;
 
 struct i2c_m_sync_desc I2C_MAG_GYRO;
@@ -49,6 +51,18 @@ void ADC_0_init(void)
 	ADC_0_CLOCK_init();
 	ADC_0_PORT_init();
 	adc_sync_init(&ADC_0, ADC1, (void *)NULL);
+}
+
+void FLASH_0_CLOCK_init(void)
+{
+
+	hri_mclk_set_AHBMASK_NVMCTRL_bit(MCLK);
+}
+
+void FLASH_0_init(void)
+{
+	FLASH_0_CLOCK_init();
+	flash_init(&FLASH_0, NVMCTRL);
 }
 
 void I2C_SBAND_PORT_init(void)
@@ -663,6 +677,8 @@ void system_init(void)
 	gpio_set_pin_function(Magnetometer_DRDY, GPIO_PIN_FUNCTION_OFF);
 
 	ADC_0_init();
+
+	FLASH_0_init();
 
 	I2C_SBAND_init();
 

@@ -23,6 +23,8 @@ extern "C" {
 
 #include <hal_adc_sync.h>
 
+#include <hal_flash.h>
+
 #include <hal_i2c_m_sync.h>
 
 #include <hal_i2c_m_sync.h>
@@ -40,6 +42,8 @@ extern "C" {
 
 extern struct adc_sync_descriptor ADC_0;
 
+extern struct flash_descriptor FLASH_0;
+
 extern struct i2c_m_sync_desc I2C_SBAND;
 
 extern struct i2c_m_sync_desc I2C_MAG_GYRO;
@@ -56,6 +60,9 @@ extern struct wdt_descriptor WDT_0;
 void ADC_0_PORT_init(void);
 void ADC_0_CLOCK_init(void);
 void ADC_0_init(void);
+
+void FLASH_0_init(void);
+void FLASH_0_CLOCK_init(void);
 
 void I2C_SBAND_CLOCK_init(void);
 void I2C_SBAND_init(void);
