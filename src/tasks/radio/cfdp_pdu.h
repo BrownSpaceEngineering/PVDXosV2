@@ -82,8 +82,8 @@ typedef struct cfdp_data_view {
 } cfdp_data_view_t;
 
 typedef struct cfdp_transaction_id {
-    uint64_t entity_id;
-    uint64_t seq_num;
+    uint32_t entity_id;
+    uint32_t seq_num;
 } cfdp_transaction_id_t;
 
 /*
@@ -176,7 +176,7 @@ static inline void cfdp_view_init_empty(cfdp_data_view_t *view) {
 }
 
 static inline uint64_t cfdp_view_to_uint(const cfdp_data_view_t *view) {
-    uint64_t result = 0;
+    uint32_t result = 0;
     for (uint8_t i = 0; i < view->len && i < 8; i++) {
         result = (result << 8) | view->data[i];
     }
