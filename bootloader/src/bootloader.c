@@ -1,9 +1,10 @@
 #include "mram.h"
 
-#define APP_FLASH_START (0x00010000) // Change based on where your app is stored
-#define APP_FLASH_STEP (0x00010000)  // Step to next copy of app in flash
+#define APP_FLASH_START (0x00020000) // Change based on where your app is stored
+#define APP_FLASH_STEP (0x00020000)  // Step to next copy of app in flash
+
 #define APP_RAM_START (0x20000000)   // Starting RAM address for the app
-#define RAM_SIZE (0x30000)           // Size of the app in bytes
+#define APP_SIZE (0x20000)           // Size of the app in bytes
 
 #define SCS_BASE (0xE000E000UL)
 #define SCB_BASE (SCS_BASE + 0x0D00UL)
@@ -27,6 +28,7 @@ void go_to_app(void);
 volatile int startup_test_value = 8;
 
 // #define MRAM_OS_WRITE
+// #define MRAM_OS_READ
 
 int main(void) {
     // This loop will spin forever if startup did not copy data segment
@@ -65,23 +67,30 @@ int main(void) {
             :);
     }
 
+#if defined(MRAM_OS_WRITE) || defined(MRAM_OS_READ)
     mram_init();
+#endif
+
+    char *app_flash_src = (char *)APP_FLASH_START;
+    char *app_dst = (char *)APP_RAM_START;
 
 #ifdef MRAM_OS_WRITE
     // Copy application from flash to RAM
-    char *src = (char *)APP_FLASH_START;
 
-    mram_write_bytes(0x100, (uint8_t *)src, RAM_SIZE);
+    mram_write_bytes(0x100, (uint8_t *)app_flash_src, APP_SIZE);
 #endif
 
-    char *dst = (char *)APP_RAM_START;
-    // for (long i = 0; i < RAM_SIZE; i++) {
-    //     // dst[i] = src[i];
-    //     // take the majority (if at least one AND pair evaluates to 1 then it should be 1)
-    //     dst[i] = (src[i] & src[i+APP_FLASH_STEP]) | (src[i+APP_FLASH_STEP] & src[i+2*APP_FLASH_STEP]) | (src[i+2*APP_FLASH_STEP] &
-    //     src[i]);
-    // }
-    mram_read_bytes(0x100, (uint8_t *)dst, RAM_SIZE);
+#ifdef MRAM_OS_READ
+    mram_read_bytes(0x100, (uint8_t *)app_dst, APP_SIZE);
+#else
+    for (long i = 0; i < APP_SIZE; i++) {
+        // dst[i] = src[i];
+        // take the majority (if at least one AND pair evaluates to 1 then it should be 1)
+        app_dst[i] = (app_flash_src[i] & app_flash_src[i+APP_FLASH_STEP]) |
+            (app_flash_src[i+APP_FLASH_STEP] & app_flash_src[i+2*APP_FLASH_STEP]) |
+            (app_flash_src[i+2*APP_FLASH_STEP] & app_flash_src[i]);
+    }
+#endif
 
     go_to_app();
     __builtin_unreachable();
