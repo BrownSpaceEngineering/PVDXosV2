@@ -67,6 +67,7 @@ export OBJS :=                                              	\
 ../src/checks/device_checks.o 									\
 																\
 ../src/tasks/radio/spp.o 									    \
+../src/tasks/radio/cfdp_pdu.o									\
 ../src/tests/test.o                                             \
 
 
