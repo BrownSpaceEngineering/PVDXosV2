@@ -17,25 +17,25 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   ALLOC
   6 .ARM.attributes 0000002e  00000000  00000000  00003004  2**0
                   CONTENTS, READONLY
-  7 .comment      00000046  00000000  00000000  00003032  2**0
+  7 .comment      00000045  00000000  00000000  00003032  2**0
                   CONTENTS, READONLY
-  8 .debug_info   0001951a  00000000  00000000  00003078  2**0
+  8 .debug_info   000194ff  00000000  00000000  00003077  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
-  9 .debug_abbrev 00002ef1  00000000  00000000  0001c592  2**0
+  9 .debug_abbrev 00002f04  00000000  00000000  0001c576  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 10 .debug_loclists 00006613  00000000  00000000  0001f483  2**0
+ 10 .debug_loclists 00006623  00000000  00000000  0001f47a  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 11 .debug_aranges 000009d0  00000000  00000000  00025a96  2**0
+ 11 .debug_aranges 000009d0  00000000  00000000  00025a9d  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 12 .debug_rnglists 00000def  00000000  00000000  00026466  2**0
+ 12 .debug_rnglists 00000e19  00000000  00000000  0002646d  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 13 .debug_macro  00036396  00000000  00000000  00027255  2**0
+ 13 .debug_macro  00036396  00000000  00000000  00027286  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 14 .debug_line   0001117d  00000000  00000000  0005d5eb  2**0
+ 14 .debug_line   0001113c  00000000  00000000  0005d61c  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 15 .debug_str    000f8b24  00000000  00000000  0006e768  2**0
+ 15 .debug_str    000f8b40  00000000  00000000  0006e758  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 16 .debug_frame  000016a0  00000000  00000000  0016728c  2**2
+ 16 .debug_frame  00001690  00000000  00000000  00167298  2**2
                   CONTENTS, READONLY, DEBUGGING, OCTETS
 
 Disassembly of section .text:
@@ -2238,17 +2238,18 @@ static uint8_t _sercom_get_hardware_index(const void *const hw)
     6d60:	00006ff4 	.word	0x00006ff4
 
 00006d64 <_spi_sync_enable>:
- *  \param[in] hw Pointer to the hardware register base.
+	return ((Sercom *)hw)->SPI.SYNCBUSY.reg & reg;
+    6d64:	69c2      	ldr	r2, [r0, #28]
  *
  * \return Enabling status
  */
 static int32_t _spi_sync_enable(void *const hw)
 {
-    6d64:	b508      	push	{r3, lr}
-	return ((Sercom *)hw)->SPI.SYNCBUSY.reg & reg;
-    6d66:	69c2      	ldr	r2, [r0, #28]
 	if (hri_sercomspi_is_syncing(hw, SERCOM_SPI_SYNCBUSY_SWRST)) {
-    6d68:	f012 0201 	ands.w	r2, r2, #1
+    6d66:	f012 0201 	ands.w	r2, r2, #1
+{
+    6d6a:	b508      	push	{r3, lr}
+	if (hri_sercomspi_is_syncing(hw, SERCOM_SPI_SYNCBUSY_SWRST)) {
     6d6c:	d108      	bne.n	6d80 <_spi_sync_enable+0x1c>
 	((Sercom *)hw)->SPI.CTRLA.reg |= SERCOM_SPI_CTRLA_ENABLE;
     6d6e:	6803      	ldr	r3, [r0, #0]
