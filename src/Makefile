@@ -66,6 +66,7 @@ export OBJS :=                                              	\
 ../src/tasks/photodiode/photodiode_driver.o						\
                                                             	\
 ../src/mram.o													\
+../src/reflash.o												\
 # ^^^ to be fixed when mram becomes a task/bootloader guy
 
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###

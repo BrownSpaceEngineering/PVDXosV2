@@ -11,6 +11,7 @@
 
 #include "main.h"
 #include "mram.h"
+#include "reflash.h"
 
 cosmic_monkey_task_arguments_t cm_args = {0};
 
@@ -37,6 +38,8 @@ int main(void) {
     info_impl("[+] Build Time: %s\n", BUILD_TIME);
     info_impl("[+] Built from branch: %s\n", GIT_BRANCH_NAME);
     info_impl("[+] Built from commit: %s\n", GIT_COMMIT_HASH);
+
+    // reflash_bootloaders();
 
     // mram_main();
 
