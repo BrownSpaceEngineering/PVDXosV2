@@ -44,7 +44,7 @@ DEBUG: Detailed information about the system for debugging (e.g. length of array
     #endif
 #else
     /* Other build types (such as release or unittest) don't need filenames or line numbers */
-    #define fatal(msg, ...)
+    #define fatal(msg, ...) fatal_no_log_impl()
     #define warning(msg, ...)
     #define event(msg, ...)
     #define info(msg, ...)
@@ -53,6 +53,7 @@ DEBUG: Detailed information about the system for debugging (e.g. length of array
 #endif
 
 void fatal_impl(const char *string, ...);
+void fatal_no_log_impl(void);
 void warning_impl(const char *string, ...);
 void event_impl(const char *string, ...);
 void info_impl(char *string, ...);
