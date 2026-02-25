@@ -60,7 +60,7 @@ int cfdp_pdu_metadata_parse(const uint8_t *raw,
                        raw[4];
 
     uint8_t src_len = raw[5];
-    if (len < 6 + src_len + 1) return -1;
+    if ((uint8_t)len < 6 + src_len + 1) return -1;
     out->source_id = (src_len > 0) ? raw[6] : 0;
 
     size_t dest_offset = 6 + src_len;
