@@ -6,7 +6,9 @@
  * the FreeRTOS scheduler.
  *
  * Created: November 20, 2023
- * Authors: Oren Kohavi, Siddharta Laloux, Tanish Makadia, Yi Liu, Defne Doken, Aidan Wang, Ignacio Blancas Rodriguez
+ * Modified: November 9, 2025
+ * Authors: Oren Kohavi, Siddharta Laloux, Tanish Makadia, Yi Liu, 
+ *          Defne Doken, Aidan Wang, Ignacio Blancas Rodriguez, Alexander Thaep
  */
 
 #include "main.h"
@@ -74,6 +76,14 @@ int main(void) {
     // Initialize all OS integrity tasks
     for (pvdx_task_t **curr_task = task_list; *curr_task != NULL; curr_task++) {
         if ((*curr_task)->task_type == OS) {
+            init_task_pointer(*curr_task);
+            info("%s initialized\n", (*curr_task)->name);
+        }
+    }
+
+    // Initialize all sensor integrity tasks
+    for (pvdx_task_t **curr_task = task_list; *curr_task != NULL; curr_task++) {
+        if ((*curr_task)->task_type == SENSOR) {
             init_task_pointer(*curr_task);
             info("%s initialized\n", (*curr_task)->name);
         }

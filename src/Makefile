@@ -11,7 +11,6 @@
 ###############################################################################
 ###############################################################################
 
-
 ### ALL C FILES SHOULD HAVE AN OBJECT FILE LISTED HERE ###
 export OBJS :=                                              	\
 ../src/linalg/LinearAlgebra/add.o 								\
@@ -97,25 +96,22 @@ export OBJS :=                                              	\
 ../src/tasks/command_dispatcher/command_dispatcher_main.o   	\
 ../src/tasks/command_dispatcher/command_dispatcher_task.o   	\
                                                             	\
-../src/tasks/magnetometer/magnetometer_driver.o             	\
-../src/tasks/magnetometer/magnetometer_task.o               	\
-../src/tasks/magnetometer/magnetometer_main.o               	\
-                                                            	\
 ../src/tasks/shell/shell_main.o                             	\
 ../src/tasks/shell/shell_helpers.o                          	\
 ../src/tasks/shell/shell_commands.o                         	\
                                                             	\
 ../src/tasks/task_list.o                                        \
                                                             	\
-../src/tasks/photodiode/photodiode_main.o						\
-../src/tasks/photodiode/photodiode_task.o						\
-../src/tasks/photodiode/photodiode_driver.o						\
 ../src/checks/device_checks.o 									\
 																\
-../src/tasks/radio/spp.o 									    \
+../src/tasks/radio/spp.o 										\
 ../src/tests/test.o                                             \
-																
-
+																\
+../src/tasks/adcs/magnetometer_driver.o							\
+../src/tasks/adcs/photodiode_driver.o							\
+../src/tasks/adcs/rtc_driver.o									\
+../src/tasks/adcs/adcs_main.o									\
+../src/tasks/adcs/adcs_task.o									\
 
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###
 ### THESE ARE WRITTEN RELATIVE TO THE ./ASF/gcc/Makefile FILE ###
@@ -134,23 +130,19 @@ export EXTRA_VPATH := \
 ../../src/tasks/display/image_buffers \
 ../../src/tasks/task_manager \
 ../../src/tasks/command_dispatcher \
-../../src/tasks/magnetometer \
 ../../src/tasks/shell \
-../../src/tasks/photodiode \
 ../../src/tasks/radio \
-../../src/mutexes \
 ../../src/checks \
 ../../src/tests \
 ../../src/linalg \
 ../../src/linalg/Lapack \
 ../../src/linalg/LinearAlgebra \
-# $(PATH_TO_CCONTROL_INCLUDES)
-
+../../src/tasks/adcs \
+../../src/mutexes
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
-
 
 #Technical stuff
 
@@ -185,7 +177,6 @@ else
     GIT_COMMIT_HASH := \"NONE\"
 endif
 
-
 # Compiler flags
 # Include git branch and commit hash in the build
 CFLAGS += -D'GIT_BRANCH_NAME="$(GIT_BRANCH_NAME)"' -D'GIT_COMMIT_HASH="$(GIT_COMMIT_HASH)"'
@@ -216,7 +207,6 @@ export DIR_INCLUDES := $(foreach dir,$(EXTRA_VPATH),-I"$(dir)" )
 export OBJS_AS_ARGS := $(foreach obj,$(OBJS),$(patsubst ../%,%,$(obj)))
 
 export DEPS_AS_ARGS := $(patsubst %.o,%.d,$(OBJS_AS_ARGS))
-
 
 .PHONY: all dev release test clean connect update_asf flash_bootloader
 
