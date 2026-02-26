@@ -8,7 +8,6 @@
  * Authors: Avinash Patel, Yi Lyo, Alexander Thaep
  */
 
-// #include "adcs_task.h"
 #include "photodiode_driver.h"
 
 /**

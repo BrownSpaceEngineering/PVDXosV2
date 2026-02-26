@@ -8,11 +8,6 @@
  * Authors: Nathan Kim, Alexander Thaep, Siddharta Laloux, Tanish Makadia, Defne Doken, Aidan Wang
  */
 
-// IO descriptor for the RM3100
-#include "globals.h"
-#define I2C_SERCOM
-
-#include "adcs_task.h"
 #include "magnetometer_driver.h"
 
 #define SIMULATED_MAGNETOMETER
@@ -200,7 +195,6 @@ status_t mag_read_data(mag_data_t *data) {
         debug("magnetometer: DRDY is false; not ready to read yet...");
         return ERROR_NOT_READY;
     }
-    
 
     // read out sensor data
     ret_err_status(rm3100_read_reg(NULL, RM3100_QX2_REG, (uint8_t *)&m_samples, sizeof(m_samples)),
