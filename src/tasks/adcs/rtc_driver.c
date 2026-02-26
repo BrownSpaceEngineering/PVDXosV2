@@ -8,7 +8,6 @@
  * Authors: Alexander Thaep
  */
 
-#include "adcs_task.h"
 #include "rtc_driver.h"
 
 static const void *rtc_hw;

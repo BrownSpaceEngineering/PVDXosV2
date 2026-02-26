@@ -102,13 +102,13 @@ export OBJS :=                                              	\
                                                             	\
 ../src/tasks/task_list.o                                        \
                                                             	\
-../src/checks/device_checks.o 					\
-								\
-../src/tasks/radio/spp.o 					\
+../src/checks/device_checks.o 									\
+																\
+../src/tasks/radio/spp.o 										\
 ../src/tests/test.o                                             \
-								
-./src/tasks/adcs/adcs_main.o									\
-../src/tasks/adcs/adcs_task.o									\
+																\
+../src/tasks/adcs/magnetometer_driver.o							\
+../src/tasks/adcs/photodiode_driver.o							\
 ../src/tasks/adcs/rtc_driver.o									\
 ../src/tasks/adcs/adcs_main.o									\
 ../src/tasks/adcs/adcs_task.o									\
@@ -133,7 +133,6 @@ export EXTRA_VPATH := \
 ../../src/tasks/shell \
 ../../src/tasks/photodiode \
 ../../src/tasks/radio \
-../../src/mutexes \
 ../../src/checks \
 ../../src/tests \
 ../../src/linalg \

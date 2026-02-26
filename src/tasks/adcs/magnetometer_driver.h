@@ -2,11 +2,11 @@
 #define MAGNETOMETER_DRIVER_H
 
 #include "atmel_start.h"
+#include "logging.h"
 #include "driver_init.h"
 #include "globals.h"
 #include "rtos_start.h"
-#include "string.h"
-#include "watchdog_task.h"
+#include <string.h>
 
 #define MAX_I2C_WRITE 32
 

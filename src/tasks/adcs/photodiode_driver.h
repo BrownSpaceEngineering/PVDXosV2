@@ -4,6 +4,8 @@
 #include "globals.h"
 #include "logging.h"
 #include "rtos_start.h"
+#include "atmel_start.h"
+#include <inttypes.h>
 
 // Photodiode system constants
 #define PHOTODIODE_COUNT 22 // Number of photodiodes (8 mux + 14 direct)
