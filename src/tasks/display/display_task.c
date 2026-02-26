@@ -105,10 +105,6 @@ void exec_command_display(command_t *const p_cmd) {
  * \returns the command queue for the display
  */
 QueueHandle_t init_display(void) {
-    // Initialize the display hardware
-    status_t status = init_display_hardware();
-
-    fatal_on_error(status, "Failed to initialize display hardware!\n");
 
     // Initialize the display command queue
     QueueHandle_t display_command_queue_handle = xQueueCreateStatic(

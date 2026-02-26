@@ -275,10 +275,6 @@ $(OUTPUT_FILE_PATH): $(OBJS)
 	
 
 # Compiler targets
-
-
-
-
 %.o: %.c
 	@echo Building file: $<
 	@echo ARM/GNU C Compiler

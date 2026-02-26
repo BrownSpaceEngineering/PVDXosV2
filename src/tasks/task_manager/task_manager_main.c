@@ -39,6 +39,19 @@ void main_task_manager(void *pvParameters) {
     const TickType_t queue_block_time_ticks = get_command_queue_block_time_ticks(current_task);
     // Varible to hold commands popped off the queue
     command_t cmd;
+    
+    command_t initialise_all_tasks = {
+        .target = p_task_manager_task, 
+        .operation = OPERATION_INIT_SUBTASKS, 
+        .p_data = NULL, 
+        .len = 0, 
+        .result = NO_STATUS_RETURN,
+        .callback = NULL, 
+    }; 
+
+    command_t *const p_initialise_all_tasks = &initialise_all_tasks; 
+
+    enqueue_command(p_initialise_all_tasks); 
 
     while (true) {
         debug("\n---------- Task Manager Task Loop ----------\n");
