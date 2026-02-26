@@ -12,9 +12,6 @@
 ###############################################################################
 
 
-PATH_TO_CCONTROL = /home/siddl/CControl/build/
-PATH_TO_CCONTROL_INCLUDES = /home/siddl/CControl/src/
-
 ### ALL C FILES SHOULD HAVE AN OBJECT FILE LISTED HERE ###
 export OBJS :=                                              	\
 ../src/linalg/LinearAlgebra/add.o 								\
@@ -117,9 +114,6 @@ export OBJS :=                                              	\
 																\
 ../src/tasks/radio/spp.o 									    \
 ../src/tests/test.o                                             \
-																\
-../src/tasks/linalg/linalg_main.o 								\
-../src/tasks/linalg/linalg_task.o 								\
 																
 
 
@@ -147,7 +141,6 @@ export EXTRA_VPATH := \
 ../../src/mutexes \
 ../../src/checks \
 ../../src/tests \
-../../src/tasks/linalg \
 ../../src/linalg \
 ../../src/linalg/Lapack \
 ../../src/linalg/LinearAlgebra \
