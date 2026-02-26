@@ -1,10 +1,10 @@
 /*
- * Code generated from Atmel Start.
- *
- * This file will be overwritten when reconfiguring your Atmel Start project.
- * Please copy examples or other code you want to keep to a separate file
- * to avoid losing it when reconfiguring.
- */
+* Code generated from Atmel Start.
+*
+* This file will be overwritten when reconfiguring your Atmel Start project.
+* Please copy examples or other code you want to keep to a separate file
+* to avoid losing it when reconfiguring.
+*/
 
 #include "driver_examples.h"
 
@@ -12,8 +12,8 @@
 #include "utils.h"
 
 /**
- * Example of using ADC_0 to generate waveform.
- */
+* Example of using ADC_0 to generate waveform.
+*/
 void ADC_0_example(void) {
     uint8_t buffer[2];
 
@@ -24,39 +24,36 @@ void ADC_0_example(void) {
     }
 }
 
-void I2C_SBAND_example(void)
-{
-	struct io_descriptor *I2C_SBAND_io;
+void I2C_SBAND_example(void) {
+    struct io_descriptor *I2C_SBAND_io;
 
-	i2c_m_sync_get_io_descriptor(&I2C_SBAND, &I2C_SBAND_io);
-	i2c_m_sync_enable(&I2C_SBAND);
-	i2c_m_sync_set_slaveaddr(&I2C_SBAND, 0x12, I2C_M_SEVEN);
-	io_write(I2C_SBAND_io, (uint8_t *)"Hello World!", 12);
+    i2c_m_sync_get_io_descriptor(&I2C_SBAND, &I2C_SBAND_io);
+    i2c_m_sync_enable(&I2C_SBAND);
+    i2c_m_sync_set_slaveaddr(&I2C_SBAND, 0x12, I2C_M_SEVEN);
+    io_write(I2C_SBAND_io, (uint8_t *)"Hello World!", 12);
 }
 
-void I2C_MAG_GYRO_example(void)
-{
-	struct io_descriptor *I2C_MAG_GYRO_io;
+void I2C_MAGNETOMETER_GYRO_example(void) {
+    struct io_descriptor *I2C_MAGNETOMETER_GYRO_io;
 
-	i2c_m_sync_get_io_descriptor(&I2C_MAG_GYRO, &I2C_MAG_GYRO_io);
-	i2c_m_sync_enable(&I2C_MAG_GYRO);
-	i2c_m_sync_set_slaveaddr(&I2C_MAG_GYRO, 0x12, I2C_M_SEVEN);
-	io_write(I2C_MAG_GYRO_io, (uint8_t *)"Hello World!", 12);
+    i2c_m_sync_get_io_descriptor(&I2C_MAGNETOMETER_GYRO, &I2C_MAGNETOMETER_GYRO_io);
+    i2c_m_sync_enable(&I2C_MAGNETOMETER_GYRO);
+    i2c_m_sync_set_slaveaddr(&I2C_MAGNETOMETER_GYRO, 0x12, I2C_M_SEVEN);
+    io_write(I2C_MAGNETOMETER_GYRO_io, (uint8_t *)"Hello World!", 12);
 }
 
-void I2C_CAMERA_example(void)
-{
-	struct io_descriptor *I2C_CAMERA_io;
+void I2C_CAMERA_example(void) {
+    struct io_descriptor *I2C_CAMERA_io;
 
-	i2c_m_sync_get_io_descriptor(&I2C_CAMERA, &I2C_CAMERA_io);
-	i2c_m_sync_enable(&I2C_CAMERA);
-	i2c_m_sync_set_slaveaddr(&I2C_CAMERA, 0x12, I2C_M_SEVEN);
-	io_write(I2C_CAMERA_io, (uint8_t *)"Hello World!", 12);
+    i2c_m_sync_get_io_descriptor(&I2C_CAMERA, &I2C_CAMERA_io);
+    i2c_m_sync_enable(&I2C_CAMERA);
+    i2c_m_sync_set_slaveaddr(&I2C_CAMERA, 0x12, I2C_M_SEVEN);
+    io_write(I2C_CAMERA_io, (uint8_t *)"Hello World!", 12);
 }
 
 /**
- * Example of using SPI_MRAM to write "Hello World" using the IO abstraction.
- */
+* Example of using SPI_MRAM to write "Hello World" using the IO abstraction.
+*/
 static uint8_t example_SPI_MRAM[13] = "Hello World!";
 
 void SPI_MRAM_example(void) {
@@ -68,8 +65,8 @@ void SPI_MRAM_example(void) {
 }
 
 /**
- * Example of using SPI_DISPLAY to write "Hello World" using the IO abstraction.
- */
+* Example of using SPI_DISPLAY to write "Hello World" using the IO abstraction.
+*/
 static uint8_t example_SPI_DISPLAY[13] = "Hello World!";
 
 void SPI_DISPLAY_example(void) {
@@ -81,8 +78,8 @@ void SPI_DISPLAY_example(void) {
 }
 
 /**
- * Example of using SPI_CAMERA to write "Hello World" using the IO abstraction.
- */
+* Example of using SPI_CAMERA to write "Hello World" using the IO abstraction.
+*/
 static uint8_t example_SPI_CAMERA[13] = "Hello World!";
 
 void SPI_CAMERA_example(void) {
@@ -93,43 +90,13 @@ void SPI_CAMERA_example(void) {
     io_write(io, example_SPI_CAMERA, 12);
 }
 
-void I2C_SBAND_example(void)
-{
-	struct io_descriptor *I2C_SBAND_io;
-
-	i2c_m_sync_get_io_descriptor(&I2C_SBAND, &I2C_SBAND_io);
-	i2c_m_sync_enable(&I2C_SBAND);
-	i2c_m_sync_set_slaveaddr(&I2C_SBAND, 0x12, I2C_M_SEVEN);
-	io_write(I2C_SBAND_io, (uint8_t *)"Hello World!", 12);
-}
-
-void I2C_MAGNETOMETER_GYRO_example(void)
-{
-	struct io_descriptor *I2C_MAGNETOMETER_GYRO_io;
-
-	i2c_m_sync_get_io_descriptor(&I2C_MAGNETOMETER_GYRO, &I2C_MAGNETOMETER_GYRO_io);
-	i2c_m_sync_enable(&I2C_MAGNETOMETER_GYRO);
-	i2c_m_sync_set_slaveaddr(&I2C_MAGNETOMETER_GYRO, 0x12, I2C_M_SEVEN);
-	io_write(I2C_MAGNETOMETER_GYRO_io, (uint8_t *)"Hello World!", 12);
-}
-
-void I2C_CAMERA_example(void)
-{
-	struct io_descriptor *I2C_CAMERA_io;
-
-	i2c_m_sync_get_io_descriptor(&I2C_CAMERA, &I2C_CAMERA_io);
-	i2c_m_sync_enable(&I2C_CAMERA);
-	i2c_m_sync_set_slaveaddr(&I2C_CAMERA, 0x12, I2C_M_SEVEN);
-	io_write(I2C_CAMERA_io, (uint8_t *)"Hello World!", 12);
-}
-
 void delay_example(void) {
     delay_ms(5000);
 }
 
 /**
- * Example of using RAND_0 to generate waveform.
- */
+* Example of using RAND_0 to generate waveform.
+*/
 void RAND_0_example(void) {
     uint32_t random_n[4];
     rand_sync_enable(&RAND_0);
@@ -147,8 +114,8 @@ void RAND_0_example(void) {
 }
 
 /**
- * Example of using WDT_0.
- */
+* Example of using WDT_0.
+*/
 void WDT_0_example(void) {
     uint32_t clk_rate;
     uint16_t timeout_period;
