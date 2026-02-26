@@ -78,9 +78,7 @@ status_t init_arducam_hardware(void) {
     arducam_i2c_write(0x15, &data[0], 1);
     arducam_i2c_multi_write(OV2640_1280x1024_JPEG);
 
-    // This is hijacking the init function for debugging/testing. Should delete because you probably don't want to take a picture on init.
-    // capture();
-    // capture_rtt(); // For debugging
+    capture();
 
     return SUCCESS;
 }
