@@ -12,9 +12,6 @@
 ###############################################################################
 
 
-PATH_TO_CCONTROL = /home/siddl/CControl/build/
-PATH_TO_CCONTROL_INCLUDES = /home/siddl/CControl/src/
-
 ### ALL C FILES SHOULD HAVE AN OBJECT FILE LISTED HERE ###
 export OBJS :=                                              	\
 ../src/linalg/LinearAlgebra/add.o 								\
@@ -100,9 +97,6 @@ export OBJS :=                                              	\
 ../src/tasks/command_dispatcher/command_dispatcher_main.o   	\
 ../src/tasks/command_dispatcher/command_dispatcher_task.o   	\
                                                             	\
-../src/tasks/linalg/linalg_main.o 								\
-../src/tasks/linalg/linalg_task.o 								\
-                                                            	\
 ../src/tasks/magnetometer/magnetometer_driver.o             	\
 ../src/tasks/magnetometer/magnetometer_task.o               	\
 ../src/tasks/magnetometer/magnetometer_main.o               	\
@@ -152,7 +146,6 @@ export EXTRA_VPATH := \
 ../../src/mutexes \
 ../../src/checks \
 ../../src/tests \
-../../src/tasks/linalg \
 ../../src/linalg \
 ../../src/linalg/Lapack \
 ../../src/linalg/LinearAlgebra \
