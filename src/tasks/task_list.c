@@ -65,42 +65,6 @@ pvdx_task_t task_manager_task = {
     .task_type = OS
 };
 
-pvdx_task_t magnetometer_task = {
-    .name = "Magnetometer",
-    .enabled = false,
-    .handle = NULL,
-    .command_queue = NULL,
-    .init = init_magnetometer,
-    .function = main_magnetometer,
-    .stack_size = MAGNETOMETER_TASK_STACK_SIZE,
-    .stack_buffer = magnetometer_mem.magnetometer_task_stack,
-    .pvParameters = NULL,
-    .priority = 2,
-    .task_tcb = &magnetometer_mem.magnetometer_task_tcb,
-    .watchdog_timeout_ms = 10000,
-    .last_checkin_time_ticks = 0xDEADBEEF,
-    .has_registered = false,
-    .task_type = SENSOR
-};
-
-pvdx_task_t photodiode_task = {
-    .name = "Photodiode",
-    .enabled = false,
-    .handle = NULL,
-    .command_queue = NULL,
-    .init = init_photodiode,
-    .function = main_photodiode,
-    .stack_size = PHOTODIODE_TASK_STACK_SIZE,
-    .stack_buffer = photodiode_mem.photodiode_task_stack,
-    .pvParameters = NULL,
-    .priority = 2,
-    .task_tcb = &photodiode_mem.photodiode_task_tcb,
-    .watchdog_timeout_ms = 5000,
-    .last_checkin_time_ticks = 0xDEADBEEF,
-    .has_registered = false,
-    .task_type = SENSOR
-};
-
 pvdx_task_t shell_task = {
     .name = "Shell",
     .enabled = false,
@@ -159,8 +123,6 @@ pvdx_task_t heartbeat_task = {
 pvdx_task_t *const p_watchdog_task = &watchdog_task;
 pvdx_task_t *const p_command_dispatcher_task = &command_dispatcher_task;
 pvdx_task_t *const p_task_manager_task = &task_manager_task;
-pvdx_task_t *const p_magnetometer_task = &magnetometer_task;
-pvdx_task_t *const p_photodiode_task = &photodiode_task;
 pvdx_task_t *const p_shell_task = &shell_task;
 pvdx_task_t *const p_display_task = &display_task;
 pvdx_task_t *const p_heartbeat_task = &heartbeat_task;
@@ -176,8 +138,6 @@ pvdx_task_t *task_list[] = {
     p_watchdog_task,
     p_command_dispatcher_task,
     p_task_manager_task,
-    p_magnetometer_task,
-    p_photodiode_task,
     p_shell_task,
     p_display_task,
     p_heartbeat_task,
