@@ -39,19 +39,9 @@ int main(void) {
     info_impl("[+] Built from branch: %s\n", GIT_BRANCH_NAME);
     info_impl("[+] Built from commit: %s\n", GIT_COMMIT_HASH);
 
-    // reflash_bootloaders();
-
-    // mram_main();
-
-    // Bootloader sets a magic number in backup RAM to indicate that it has run successfully
-    uint32_t *p_magic_number = (uint32_t *)BOOTLOADER_MAGIC_NUMBER_ADDRESS;
-    uint32_t magic_number = *p_magic_number;
-    *p_magic_number = 0; // Clear the magic number so that this value doesn't linger
-    if (magic_number == BOOTLOADER_MAGIC_NUMBER_VALUE) {
-        info_impl("[+] Bootloader executed normally\n");
-    } else {
-        warning_impl("[!] Abnormal bootloader behavior (Magic Number: %x)\n", magic_number);
-    }
+#ifdef MRAM_OS_READ
+    reflash_bootloaders();
+#endif
 
     /* ---------- INIT WATCHDOG, COMMAND_DISPATCHER, TASK_MANAGER TASKS (in that order) ---------- */
 

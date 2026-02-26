@@ -1,39 +1,22 @@
 #include "mram.h"
 
-#define APP_FLASH_START (0x00020000) // Change based on where your app is stored
-#define APP_FLASH_STEP (0x00020000)  // Step to next copy of app in flash
+#define FLASH_OS_BASE_ADDRESS (0x00020000)  // Address of OS in flash (after bootloaders)
+                                            // Note: in final version, OS copies will only be in MRAM
+                                            // so this will be unused!
 
-#define APP_RAM_START (0x20000000)   // Starting RAM address for the app
-#define APP_SIZE (0x20000)           // Size of the app in bytes
+#define RAM_OS_BASE_ADDRESS (0x20000000)    // Where to load OS into RAM
+#define BOOTLOADER_SIZE (0x3000)            // Size of each bootloader in the chain
 
 #define SCS_BASE (0xE000E000UL)
 #define SCB_BASE (SCS_BASE + 0x0D00UL)
-#define SCB_VTOR (SCB_BASE + 0x08)  // VTOR: Vector Table Offset Register (where the processor will reset from)
-#define SCB_AIRCR (SCB_BASE + 0x0C) // AIRCR Contains SYSRESETREQ bit to request a system reset
+#define SCB_VTOR (SCB_BASE + 0x08)          // VTOR: Vector Table Offset Register
 
-// #define SCB_VTOR_TBLOFF_Msk (0xFFFFFF80UL) // Mask off the last 7 bits (128 bytes alignment)
-
-#define SCB_AIRCR_VECTKEY_Pos 16U
-#define SCB_AIRCR_SYSRESETREQ_Pos 2U
-#define SCB_AIRCR_SYSRESETREQ_Msk (1UL << SCB_AIRCR_SYSRESETREQ_Pos)
-
-#define RSTC_RCAUSE (0x40000C00UL + 0x00UL) // Reset Cause Register
-
-#define BOOTLOADER_SIZE 0x3000
-#define BOOTLOADER_INITIAL_SP 0x2003FFFC
+#define RSTC_RCAUSE (0x40000C00UL)          // Reset Cause Register
 
 int main(void);
 void go_to_app(void);
 
-volatile int startup_test_value = 8;
-
-// #define MRAM_OS_WRITE
-// #define MRAM_OS_READ
-
 int main(void) {
-    // This loop will spin forever if startup did not copy data segment
-    while (startup_test_value != 8);
-
     uint8_t bootloader_index = 255;
 #ifdef BOOTLOADER_1
     bootloader_index = 0;
@@ -58,12 +41,13 @@ int main(void) {
         // If checksum fails on the last bootloader, there is nowhere to jump so panic
         while (bootloader_index == 2);
 
+        uint32_t next_sp = *(uint32_t *)((bootloader_index + 1) * BOOTLOADER_SIZE);
         uint32_t next_pc = *(uint32_t *)((bootloader_index + 1) * BOOTLOADER_SIZE + 0x0004);
         __asm__ volatile(
             "mov sp, %0\n" // Move the value in desired_sp into SP
             "bx %1"        // Branch to the address contained in desired_pc
             :
-            : "r"(BOOTLOADER_INITIAL_SP), "r"(next_pc) // Arguments to the assembly (accessed as %0 and %1 in the assembly code)
+            : "r"(next_sp), "r"(next_pc) // Arguments to the assembly (accessed as %0 and %1 in the assembly code)
             :);
     }
 
@@ -71,24 +55,19 @@ int main(void) {
     mram_init();
 #endif
 
-    char *app_flash_src = (char *)APP_FLASH_START;
-    char *app_dst = (char *)APP_RAM_START;
+    char *os_flash_src = (char *)FLASH_OS_BASE_ADDRESS;
+    char *os_dst = (char *)RAM_OS_BASE_ADDRESS;
 
 #ifdef MRAM_OS_WRITE
-    // Copy application from flash to RAM
-
-    mram_write_bytes(0x100, (uint8_t *)app_flash_src, APP_SIZE);
+    mram_write_bytes(MRAM_OS_BASE_ADDRESS, (uint8_t *)os_flash_src, MRAM_OS_SIZE);
+    mram_write_bytes(MRAM_FLASH_BASE_ADDRESS, (uint8_t *)0x00000000, MRAM_FLASH_SIZE);
 #endif
 
 #ifdef MRAM_OS_READ
-    mram_read_bytes(0x100, (uint8_t *)app_dst, APP_SIZE);
+    mram_read_bytes(MRAM_OS_BASE_ADDRESS, (uint8_t *)os_dst, MRAM_OS_SIZE);
 #else
-    for (long i = 0; i < APP_SIZE; i++) {
-        // dst[i] = src[i];
-        // take the majority (if at least one AND pair evaluates to 1 then it should be 1)
-        app_dst[i] = (app_flash_src[i] & app_flash_src[i+APP_FLASH_STEP]) |
-            (app_flash_src[i+APP_FLASH_STEP] & app_flash_src[i+2*APP_FLASH_STEP]) |
-            (app_flash_src[i+2*APP_FLASH_STEP] & app_flash_src[i]);
+    for (long i = 0; i < MRAM_OS_SIZE; i++) {
+        os_dst[i] = os_flash_src[i];
     }
 #endif
 
@@ -98,7 +77,7 @@ int main(void) {
 
 void go_to_app(void) {
     // Read app's vector table (first value is SP, second value is PC)
-    long *vector_table = (long *)APP_RAM_START;
+    long *vector_table = (long *)RAM_OS_BASE_ADDRESS;
     long desired_sp = vector_table[0];
     long desired_pc = vector_table[1];
 
