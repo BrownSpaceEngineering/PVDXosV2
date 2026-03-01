@@ -15,9 +15,13 @@
 
 #define RSTC_RCAUSE (0x40000C00UL)  // Reset Cause Register
 
+#include "SEGGER_RTT.h"
 #include "checks/device_checks.h"
+#include "cosmic_monkey_task.h"
 #include "globals.h"
 #include "logging.h"
+#include "rtos_start.h"
+#include "task_list.h"
 #include "tests/test.h"
 
 cosmic_monkey_task_arguments_t cm_args = {0};

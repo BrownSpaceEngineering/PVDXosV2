@@ -5,13 +5,6 @@
 #include <driver_init.h>
 #include <hal_adc_sync.h>
 
-#include "SEGGER_RTT.h"
-#include "cosmic_monkey_task.h"
-#include "globals.h"
-#include "logging.h"
-#include "rtos_start.h"
-#include "task_list.h"
-
 /*
 Standard definitions for main.c
 */
