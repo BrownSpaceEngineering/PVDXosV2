@@ -89,15 +89,34 @@ export DEPS_AS_ARGS := $(patsubst %.o,%.d,$(OBJS_AS_ARGS))
 
 .PHONY: all clean update_bootloader_asf
 
+# Base addresses and sizes
+ROM_BASE   = 0x08000000
+ROM_STEP   = 0x4000      # 16KB per bootloader
+RAM_BASE   = 0x20000000
+RAM_STEP   = 0x1000      # 4KB per bootloader
+
 # Default target
-all: clean #Might as well clean before compiling the release build
-	@for i in $$(seq 1 3); do \
-		echo $$i \
-		&& $(MAKE) -C $(CHILD_MAKEFILE_PATH) CFLAGS=" $(CFLAGS) -DBOOTLOADER_$$i" LINKER_SCRIPT="../../src/bootloader_flash$$i.ld" \
+# all: clean #Might as well clean before compiling the release build
+# 	@for i in $$(seq 1 3); do \
+# 		echo $$i \
+# 		&& $(MAKE) -C $(CHILD_MAKEFILE_PATH) CFLAGS=" $(CFLAGS) -DBOOTLOADER_$$i" LINKER_SCRIPT="../../src/bootloader_flash$$i.ld" \
+# 		&& cp -f ../ASF/gcc/PVDXos_bootloader.bin ./bootloader$$i.bin \
+# 		&& cp -f ../ASF/gcc/PVDXos_bootloader.elf ./bootloader$$i.elf; \
+# 	done \
+# 	&& echo " ---  Finished Building PVDXos Bootloader  --- "
+
+all: clean
+	@for i in $$(seq 1 20); do \
+		echo "Building Bootloader $$i..."; \
+		ROM_ADDR=$$(printf "0x%X" $$(($(ROM_BASE) + ($$i-1) * $(ROM_STEP)))); \
+		RAM_ADDR=$$(printf "0x%X" $$(($(RAM_BASE) + ($$i-1) * $(RAM_STEP)))); \
+		$(MAKE) -C $(CHILD_MAKEFILE_PATH) CFLAGS="$(CFLAGS) -DBOOTLOADER_$$i" LINKER_SCRIPT="../../src/bootloader_flash.ld" \
+			LDFLAGS="-Wl,--defsym,ROM_START=$$ROM_ADDR -Wl,--defsym,ROM_SIZE=$(ROM_STEP) \
+			         -Wl,--defsym,RAM_START=$$RAM_ADDR -Wl,--defsym,RAM_SIZE=$(RAM_STEP)" \
 		&& cp -f ../ASF/gcc/PVDXos_bootloader.bin ./bootloader$$i.bin \
 		&& cp -f ../ASF/gcc/PVDXos_bootloader.elf ./bootloader$$i.elf; \
-	done \
-	&& echo " ---  Finished Building PVDXos Bootloader  --- "
+	done
+	@echo " --- Finished Building 20 PVDXos Bootloaders --- "
 
 # Clean target
 clean:
