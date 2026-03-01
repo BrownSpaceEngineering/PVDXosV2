@@ -8,6 +8,7 @@ void test_spp(void);
 
 void tests_run(void) {
     test_spp();
+    test_matrix_product();
 }
 
 #ifdef UNITTEST

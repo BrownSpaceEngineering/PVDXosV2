@@ -40,7 +40,7 @@ QueueHandle_t init_[lower](void) {
  * 
  * \param p_cmd a pointer to a command forwarded to [lower]
  */
-void exec_command_task_manager(command_t *const p_cmd) {
+void exec_command_[lower](command_t *const p_cmd) {
     if (p_cmd->target != p_[lower]_task) {
         fatal("[lower]: command target is not [lower]! target: %d operation: %d\n", p_cmd->target, p_cmd->operation);
     }

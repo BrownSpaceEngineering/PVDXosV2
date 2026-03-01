@@ -17,15 +17,14 @@
 extern pvdx_task_t *const p_watchdog_task;
 extern pvdx_task_t *const p_command_dispatcher_task;
 extern pvdx_task_t *const p_task_manager_task;
+extern pvdx_task_t *const p_linalg_task;
 extern pvdx_task_t *const p_magnetometer_task;
 extern pvdx_task_t *const p_photodiode_task;
 extern pvdx_task_t *const p_shell_task;
 extern pvdx_task_t *const p_display_task;
 extern pvdx_task_t *const p_arducam_task;
 extern pvdx_task_t *const p_heartbeat_task;
-extern pvdx_task_t *const p_test_one_task;
-extern pvdx_task_t *const p_test_two_task;
-extern pvdx_task_t *const task_list[];
+extern pvdx_task_t *task_list[];
 
 pvdx_task_t *get_current_task(void);
 TickType_t get_command_queue_block_time_ticks(pvdx_task_t *const task);
