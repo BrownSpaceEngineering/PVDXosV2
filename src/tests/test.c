@@ -23,22 +23,22 @@ void test_spp(void) {
     test_log("full packet size (max w/ internal buffer): %d\n", sizeof(packet));
 
     test_log("apid: %x\n", packet.header.application_process_id);
-    ASSERT(packet.header.application_process_id == 0xBB && "apid\n");
+    PVDX_ASSERT_MSG(packet.header.application_process_id == 0xBB, "apid\n");
 
     test_log("secondary_header_flag: %x\n", packet.header.secondary_header_flag);
-    ASSERT(packet.header.secondary_header_flag == 0 && "secondary_header_flag\n");
+    PVDX_ASSERT_MSG(packet.header.secondary_header_flag == 0, "secondary_header_flag\n");
 
     test_log("packet_type: %x\n", packet.header.packet_type);
-    ASSERT(packet.header.packet_type == 1 && "packet_type\n");
+    PVDX_ASSERT_MSG(packet.header.packet_type == 1, "packet_type\n");
 
     test_log("sequence_flags: %x\n", packet.header.sequence_flags);
-    ASSERT(packet.header.sequence_flags == 0b10 && "sequence_flags\n");
+    PVDX_ASSERT_MSG(packet.header.sequence_flags == 0b10, "sequence_flags\n");
 
     test_log("packet_seq_count_or_name: %x\n", packet.header.sequence_count);
-    ASSERT(packet.header.sequence_count == 0b0011111111111111 && "packet_seq_count_or_name\n");
+    PVDX_ASSERT_MSG(packet.header.sequence_count == 0b0011111111111111, "packet_seq_count_or_name\n");
 
     test_log("data_length: %x\n", packet.header.data_length);
-    ASSERT(packet.header.data_length == 0xAA && "data_length");
+    PVDX_ASSERT_MSG(packet.header.data_length == 0xAA, "data_length");
 }
 
 void test_matrix_product(void) {
@@ -54,7 +54,7 @@ void test_matrix_product(void) {
     // log_matrix(C, 2, 2);
 
     if (dbl_eps_close_matrix(C, C_expected, 2, 2, DBL_EPSILON)) {
-        test_log("2 * 2 matrix product test passed!\n");
+        test_log("1 * 2 matrix product test passed!\n");
     } else {
         test_log("2 * 2 matrix product test failed!\n");
     }
