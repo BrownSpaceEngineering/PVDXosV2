@@ -2,6 +2,7 @@ import platform
 import pylink # pip install pylink-square
 import os
 import datetime
+import re
 
 
 def open_rtt_channels(logfile = None):
