@@ -8,7 +8,11 @@
  */
 #include <inttypes.h>
 #include "photodiode_driver.h"
-#include "photodiode_task.h"
+
+// Photodiode system constants
+#define PHOTODIODE_COUNT 22   // Number of photodiodes (8 mux + 14 direct)
+#define PHOTODIODE_S0_PIN (Photodiode_MUX_S0 & 0x1Fu)
+#define PHOTODIODE_MUX_MASK (0xFu << PHOTODIODE_S0_PIN)
 
 /**
  * \fn init_photodiode_hardware
@@ -78,6 +82,43 @@ status_t set_multiplexer_outputs(int_fast8_t output) {
     current_output = output;
 
     debug("photodiode_driver: MUX output set to " PRIxFAST8 "\n", output);
+
+    return SUCCESS;
+}
+
+
+/**
+ * \fn photodiode_read
+ *
+ * \brief Reads photodiode values and calculates sun vector
+ *
+ * \param data pointer to photodiode_data_t structure to fill
+ *
+ * \returns status_t SUCCESS if reading was successful
+ */
+status_t photodiode_read(photodiode_data_t *const data) {
+    if (!data) {
+        return ERROR_SANITY_CHECK_FAILED;
+    }
+
+    debug("photodiode: Reading photodiode values\n");
+
+    // Read raw ADC values
+    uint16_t raw_values[PHOTODIODE_COUNT];
+    status_t result = read_photodiodes(raw_values);
+
+    if (result != SUCCESS) {
+        warning("photodiode: ADC read failed\n");
+        return result;
+    }
+
+    // Copy raw values to data structure
+    for (int i = 0; i < PHOTODIODE_COUNT; i++) {
+        data->raw_values[i] = raw_values[i];
+    }
+
+    data->timestamp = xTaskGetTickCount();
+    data->valid = true;
 
     return SUCCESS;
 }

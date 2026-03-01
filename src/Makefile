@@ -75,17 +75,20 @@ export OBJS :=                                              	\
                                                             	\
 ../src/misc/exception_handlers/default_handler.o            	\
 ../src/misc/exception_handlers/specific_handlers.o          	\
+																\
+../src/drivers/display/display_driver.o                       	\
+../src/drivers/magnetometer/magnetometer_driver.o           	\
+../src/drivers/photodiode/photodiode_driver.o               	\
+../src/drivers/watchdog/watchdog_driver.o                     	\
                                                             	\
 ../src/tasks/heartbeat/heartbeat_main.o                     	\
                                                             	\
-../src/tasks/watchdog/watchdog_driver.o                     	\
 ../src/tasks/watchdog/watchdog_task.o                       	\
 ../src/tasks/watchdog/watchdog_main.o                       	\
                                                             	\
 ../src/tasks/cosmic_monkey/cosmic_monkey_main.o             	\
 ../src/tasks/cosmic_monkey/cosmic_monkey_task.o             	\
                                                             	\
-../src/tasks/display/display_driver.o                       	\
 ../src/tasks/display/display_task.o                         	\
 ../src/tasks/display/display_main.o                         	\
 ../src/tasks/display/image_buffers/image_buffer_BrownLogo.o 	\
@@ -97,19 +100,12 @@ export OBJS :=                                              	\
 ../src/tasks/command_dispatcher/command_dispatcher_main.o   	\
 ../src/tasks/command_dispatcher/command_dispatcher_task.o   	\
                                                             	\
-../src/tasks/magnetometer/magnetometer_driver.o             	\
-../src/tasks/magnetometer/magnetometer_task.o               	\
-../src/tasks/magnetometer/magnetometer_main.o               	\
-                                                            	\
 ../src/tasks/shell/shell_main.o                             	\
 ../src/tasks/shell/shell_helpers.o                          	\
 ../src/tasks/shell/shell_commands.o                         	\
                                                             	\
 ../src/tasks/task_list.o                                        \
                                                             	\
-../src/tasks/photodiode/photodiode_main.o						\
-../src/tasks/photodiode/photodiode_task.o						\
-../src/tasks/photodiode/photodiode_driver.o						\
 ../src/checks/device_checks.o 									\
 																\
 ../src/tasks/radio/spp.o 									    \
@@ -126,6 +122,12 @@ export EXTRA_VPATH := \
 ../../src/misc/rtos_support \
 ../../src/misc/logging \
 ../../src/misc/exception_handlers \
+../../src/drivers \
+../../src/drivers/display \
+../../src/drivers/magnetometer \
+../../src/drivers/magnetorquer \
+../../src/drivers/photodiode \
+../../src/drivers/watchdog \
 ../../src/tasks \
 ../../src/tasks/watchdog \
 ../../src/tasks/heartbeat \
@@ -134,9 +136,7 @@ export EXTRA_VPATH := \
 ../../src/tasks/display/image_buffers \
 ../../src/tasks/task_manager \
 ../../src/tasks/command_dispatcher \
-../../src/tasks/magnetometer \
 ../../src/tasks/shell \
-../../src/tasks/photodiode \
 ../../src/tasks/radio \
 ../../src/mutexes \
 ../../src/checks \
