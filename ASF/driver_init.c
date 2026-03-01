@@ -12,16 +12,22 @@
 #include <hal_init.h>
 
 #include <hpl_adc_base.h>
+#include <hpl_adc_base.h>
+#include <hpl_rtc_base.h>
 
+struct timer_descriptor      TIMER_0;
 struct spi_m_sync_descriptor SPI_MRAM;
 struct spi_m_sync_descriptor SPI_DISPLAY;
 struct spi_m_sync_descriptor SPI_CAMERA;
+struct spi_m_sync_descriptor SPI_MAGNETOMETER_GYRO;
+struct spi_m_sync_descriptor SPI_SBAND;
+struct spi_m_sync_descriptor SPI_UHF;
 
 struct adc_sync_descriptor ADC_0;
 
-struct i2c_m_sync_desc I2C_SBAND;
+struct adc_sync_descriptor ADC_1;
 
-struct i2c_m_sync_desc I2C_MAG_GYRO;
+struct i2c_m_sync_desc I2C_SBAND;
 
 struct i2c_m_sync_desc I2C_CAMERA;
 
@@ -33,139 +39,185 @@ void ADC_0_PORT_init(void)
 {
 
 	// Disable digital pin circuitry
+	gpio_set_pin_direction(PA02, GPIO_DIRECTION_OFF);
+
+	gpio_set_pin_function(PA02, PINMUX_PA02B_ADC0_AIN0);
+
+	// Disable digital pin circuitry
+	gpio_set_pin_direction(PA03, GPIO_DIRECTION_OFF);
+
+	gpio_set_pin_function(PA03, PINMUX_PA03B_ADC0_AIN1);
+
+	// Disable digital pin circuitry
 	gpio_set_pin_direction(PB08, GPIO_DIRECTION_OFF);
 
-	gpio_set_pin_function(PB08, PINMUX_PB08B_ADC1_AIN0);
+	gpio_set_pin_function(PB08, PINMUX_PB08B_ADC0_AIN2);
+
+	// Disable digital pin circuitry
+	gpio_set_pin_direction(PB09, GPIO_DIRECTION_OFF);
+
+	gpio_set_pin_function(PB09, PINMUX_PB09B_ADC0_AIN3);
+
+	// Disable digital pin circuitry
+	gpio_set_pin_direction(PA04, GPIO_DIRECTION_OFF);
+
+	gpio_set_pin_function(PA04, PINMUX_PA04B_ADC0_AIN4);
+
+	// Disable digital pin circuitry
+	gpio_set_pin_direction(PA05, GPIO_DIRECTION_OFF);
+
+	gpio_set_pin_function(PA05, PINMUX_PA05B_ADC0_AIN5);
+
+	// Disable digital pin circuitry
+	gpio_set_pin_direction(PA06, GPIO_DIRECTION_OFF);
+
+	gpio_set_pin_function(PA06, PINMUX_PA06B_ADC0_AIN6);
+
+	// Disable digital pin circuitry
+	gpio_set_pin_direction(PA07, GPIO_DIRECTION_OFF);
+
+	gpio_set_pin_function(PA07, PINMUX_PA07B_ADC0_AIN7);
+
+	// Disable digital pin circuitry
+	gpio_set_pin_direction(PA08, GPIO_DIRECTION_OFF);
+
+	gpio_set_pin_function(PA08, PINMUX_PA08B_ADC0_AIN8);
+
+	// Disable digital pin circuitry
+	gpio_set_pin_direction(PA09, GPIO_DIRECTION_OFF);
+
+	gpio_set_pin_function(PA09, PINMUX_PA09B_ADC0_AIN9);
+
+	// Disable digital pin circuitry
+	gpio_set_pin_direction(PA10, GPIO_DIRECTION_OFF);
+
+	gpio_set_pin_function(PA10, PINMUX_PA10B_ADC0_AIN10);
+
+	// Disable digital pin circuitry
+	gpio_set_pin_direction(PA11, GPIO_DIRECTION_OFF);
+
+	gpio_set_pin_function(PA11, PINMUX_PA11B_ADC0_AIN11);
+
+	// Disable digital pin circuitry
+	gpio_set_pin_direction(PB00, GPIO_DIRECTION_OFF);
+
+	gpio_set_pin_function(PB00, PINMUX_PB00B_ADC0_AIN12);
+
+	// Disable digital pin circuitry
+	gpio_set_pin_direction(PB01, GPIO_DIRECTION_OFF);
+
+	gpio_set_pin_function(PB01, PINMUX_PB01B_ADC0_AIN13);
+
+	// Disable digital pin circuitry
+	gpio_set_pin_direction(PB02, GPIO_DIRECTION_OFF);
+
+	gpio_set_pin_function(PB02, PINMUX_PB02B_ADC0_AIN14);
+
+	// Disable digital pin circuitry
+	gpio_set_pin_direction(PB03, GPIO_DIRECTION_OFF);
+
+	gpio_set_pin_function(PB03, PINMUX_PB03B_ADC0_AIN15);
 }
 
 void ADC_0_CLOCK_init(void)
 {
-	hri_mclk_set_APBDMASK_ADC1_bit(MCLK);
-	hri_gclk_write_PCHCTRL_reg(GCLK, ADC1_GCLK_ID, CONF_GCLK_ADC1_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+	hri_mclk_set_APBDMASK_ADC0_bit(MCLK);
+	hri_gclk_write_PCHCTRL_reg(GCLK, ADC0_GCLK_ID, CONF_GCLK_ADC0_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
 }
 
 void ADC_0_init(void)
 {
 	ADC_0_CLOCK_init();
 	ADC_0_PORT_init();
-	adc_sync_init(&ADC_0, ADC1, (void *)NULL);
+	adc_sync_init(&ADC_0, ADC0, (void *)NULL);
 }
 
-void I2C_SBAND_PORT_init(void)
+void ADC_1_PORT_init(void)
 {
 
-	gpio_set_pin_pull_mode(SBAND_SDA,
-	                       // <y> Pull configuration
-	                       // <id> pad_pull_config
-	                       // <GPIO_PULL_OFF"> Off
-	                       // <GPIO_PULL_UP"> Pull-up
-	                       // <GPIO_PULL_DOWN"> Pull-down
-	                       GPIO_PULL_OFF);
+	// Disable digital pin circuitry
+	gpio_set_pin_direction(PC02, GPIO_DIRECTION_OFF);
 
-	gpio_set_pin_function(SBAND_SDA, PINMUX_PA09D_SERCOM2_PAD0);
+	gpio_set_pin_function(PC02, PINMUX_PC02B_ADC1_AIN4);
 
-	gpio_set_pin_pull_mode(SBAND_SCL,
-	                       // <y> Pull configuration
-	                       // <id> pad_pull_config
-	                       // <GPIO_PULL_OFF"> Off
-	                       // <GPIO_PULL_UP"> Pull-up
-	                       // <GPIO_PULL_DOWN"> Pull-down
-	                       GPIO_PULL_OFF);
+	// Disable digital pin circuitry
+	gpio_set_pin_direction(PC03, GPIO_DIRECTION_OFF);
 
-	gpio_set_pin_function(SBAND_SCL, PINMUX_PA08D_SERCOM2_PAD1);
+	gpio_set_pin_function(PC03, PINMUX_PC03B_ADC1_AIN5);
+
+	// Disable digital pin circuitry
+	gpio_set_pin_direction(PB04, GPIO_DIRECTION_OFF);
+
+	gpio_set_pin_function(PB04, PINMUX_PB04B_ADC1_AIN6);
+
+	// Disable digital pin circuitry
+	gpio_set_pin_direction(PB05, GPIO_DIRECTION_OFF);
+
+	gpio_set_pin_function(PB05, PINMUX_PB05B_ADC1_AIN7);
+
+	// Disable digital pin circuitry
+	gpio_set_pin_direction(PB06, GPIO_DIRECTION_OFF);
+
+	gpio_set_pin_function(PB06, PINMUX_PB06B_ADC1_AIN8);
+
+	// Disable digital pin circuitry
+	gpio_set_pin_direction(PB07, GPIO_DIRECTION_OFF);
+
+	gpio_set_pin_function(PB07, PINMUX_PB07B_ADC1_AIN9);
+
+	// Disable digital pin circuitry
+	gpio_set_pin_direction(PC00, GPIO_DIRECTION_OFF);
+
+	gpio_set_pin_function(PC00, PINMUX_PC00B_ADC1_AIN10);
+
+	// Disable digital pin circuitry
+	gpio_set_pin_direction(PC01, GPIO_DIRECTION_OFF);
+
+	gpio_set_pin_function(PC01, PINMUX_PC01B_ADC1_AIN11);
+
+	// Disable digital pin circuitry
+	gpio_set_pin_direction(PC30, GPIO_DIRECTION_OFF);
+
+	gpio_set_pin_function(PC30, PINMUX_PC30B_ADC1_AIN12);
+
+	// Disable digital pin circuitry
+	gpio_set_pin_direction(PC31, GPIO_DIRECTION_OFF);
+
+	gpio_set_pin_function(PC31, PINMUX_PC31B_ADC1_AIN13);
+
+	// Disable digital pin circuitry
+	gpio_set_pin_direction(PD00, GPIO_DIRECTION_OFF);
+
+	gpio_set_pin_function(PD00, PINMUX_PD00B_ADC1_AIN14);
+
+	// Disable digital pin circuitry
+	gpio_set_pin_direction(PD01, GPIO_DIRECTION_OFF);
+
+	gpio_set_pin_function(PD01, PINMUX_PD01B_ADC1_AIN15);
 }
 
-void I2C_SBAND_CLOCK_init(void)
+void ADC_1_CLOCK_init(void)
 {
-	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM2_GCLK_ID_CORE, CONF_GCLK_SERCOM2_CORE_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
-	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM2_GCLK_ID_SLOW, CONF_GCLK_SERCOM2_SLOW_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
-
-	hri_mclk_set_APBBMASK_SERCOM2_bit(MCLK);
+	hri_mclk_set_APBDMASK_ADC1_bit(MCLK);
+	hri_gclk_write_PCHCTRL_reg(GCLK, ADC1_GCLK_ID, CONF_GCLK_ADC1_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
 }
 
-void I2C_SBAND_init(void)
+void ADC_1_init(void)
 {
-	I2C_SBAND_CLOCK_init();
-	i2c_m_sync_init(&I2C_SBAND, SERCOM2);
-	I2C_SBAND_PORT_init();
+	ADC_1_CLOCK_init();
+	ADC_1_PORT_init();
+	adc_sync_init(&ADC_1, ADC1, (void *)NULL);
 }
 
-void I2C_MAG_GYRO_PORT_init(void)
+/**
+ * \brief Timer initialization function
+ *
+ * Enables Timer peripheral, clocks and initializes Timer driver
+ */
+static void TIMER_0_init(void)
 {
-
-	gpio_set_pin_pull_mode(Magnetometer_Gyro_SDA,
-	                       // <y> Pull configuration
-	                       // <id> pad_pull_config
-	                       // <GPIO_PULL_OFF"> Off
-	                       // <GPIO_PULL_UP"> Pull-up
-	                       // <GPIO_PULL_DOWN"> Pull-down
-	                       GPIO_PULL_OFF);
-
-	gpio_set_pin_function(Magnetometer_Gyro_SDA, PINMUX_PA17D_SERCOM3_PAD0);
-
-	gpio_set_pin_pull_mode(Magnetometer_Gyro_SCL,
-	                       // <y> Pull configuration
-	                       // <id> pad_pull_config
-	                       // <GPIO_PULL_OFF"> Off
-	                       // <GPIO_PULL_UP"> Pull-up
-	                       // <GPIO_PULL_DOWN"> Pull-down
-	                       GPIO_PULL_OFF);
-
-	gpio_set_pin_function(Magnetometer_Gyro_SCL, PINMUX_PA16D_SERCOM3_PAD1);
-}
-
-void I2C_MAG_GYRO_CLOCK_init(void)
-{
-	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM3_GCLK_ID_CORE, CONF_GCLK_SERCOM3_CORE_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
-	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM3_GCLK_ID_SLOW, CONF_GCLK_SERCOM3_SLOW_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
-
-	hri_mclk_set_APBBMASK_SERCOM3_bit(MCLK);
-}
-
-void I2C_MAG_GYRO_init(void)
-{
-	I2C_MAG_GYRO_CLOCK_init();
-	i2c_m_sync_init(&I2C_MAG_GYRO, SERCOM3);
-	I2C_MAG_GYRO_PORT_init();
-}
-
-void I2C_CAMERA_PORT_init(void)
-{
-
-	gpio_set_pin_pull_mode(Camera_SDA,
-	                       // <y> Pull configuration
-	                       // <id> pad_pull_config
-	                       // <GPIO_PULL_OFF"> Off
-	                       // <GPIO_PULL_UP"> Pull-up
-	                       // <GPIO_PULL_DOWN"> Pull-down
-	                       GPIO_PULL_OFF);
-
-	gpio_set_pin_function(Camera_SDA, PINMUX_PA13D_SERCOM4_PAD0);
-
-	gpio_set_pin_pull_mode(Camera_SCL,
-	                       // <y> Pull configuration
-	                       // <id> pad_pull_config
-	                       // <GPIO_PULL_OFF"> Off
-	                       // <GPIO_PULL_UP"> Pull-up
-	                       // <GPIO_PULL_DOWN"> Pull-down
-	                       GPIO_PULL_OFF);
-
-	gpio_set_pin_function(Camera_SCL, PINMUX_PA12D_SERCOM4_PAD1);
-}
-
-void I2C_CAMERA_CLOCK_init(void)
-{
-	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM4_GCLK_ID_CORE, CONF_GCLK_SERCOM4_CORE_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
-	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM4_GCLK_ID_SLOW, CONF_GCLK_SERCOM4_SLOW_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
-
-	hri_mclk_set_APBDMASK_SERCOM4_bit(MCLK);
-}
-
-void I2C_CAMERA_init(void)
-{
-	I2C_CAMERA_CLOCK_init();
-	i2c_m_sync_init(&I2C_CAMERA, SERCOM4);
-	I2C_CAMERA_PORT_init();
+	hri_mclk_set_APBAMASK_RTC_bit(MCLK);
+	timer_init(&TIMER_0, RTC, _rtc_get_timer());
 }
 
 void SPI_MRAM_PORT_init(void)
@@ -181,7 +233,7 @@ void SPI_MRAM_PORT_init(void)
 	// Set pin direction to output
 	gpio_set_pin_direction(MRAM_MOSI, GPIO_DIRECTION_OUT);
 
-	gpio_set_pin_function(MRAM_MOSI, PINMUX_PB16C_SERCOM5_PAD0);
+	gpio_set_pin_function(MRAM_MOSI, PINMUX_PB24C_SERCOM0_PAD0);
 
 	gpio_set_pin_level(MRAM_SCK,
 	                   // <y> Initial level
@@ -193,7 +245,7 @@ void SPI_MRAM_PORT_init(void)
 	// Set pin direction to output
 	gpio_set_pin_direction(MRAM_SCK, GPIO_DIRECTION_OUT);
 
-	gpio_set_pin_function(MRAM_SCK, PINMUX_PB17C_SERCOM5_PAD1);
+	gpio_set_pin_function(MRAM_SCK, PINMUX_PB25C_SERCOM0_PAD1);
 
 	// Set pin direction to input
 	gpio_set_pin_direction(MRAM_MISO, GPIO_DIRECTION_IN);
@@ -206,10 +258,273 @@ void SPI_MRAM_PORT_init(void)
 	                       // <GPIO_PULL_DOWN"> Pull-down
 	                       GPIO_PULL_OFF);
 
-	gpio_set_pin_function(MRAM_MISO, PINMUX_PB18C_SERCOM5_PAD2);
+	gpio_set_pin_function(MRAM_MISO, PINMUX_PC18D_SERCOM0_PAD2);
 }
 
 void SPI_MRAM_CLOCK_init(void)
+{
+	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM0_GCLK_ID_CORE, CONF_GCLK_SERCOM0_CORE_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM0_GCLK_ID_SLOW, CONF_GCLK_SERCOM0_SLOW_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+
+	hri_mclk_set_APBAMASK_SERCOM0_bit(MCLK);
+}
+
+void SPI_MRAM_init(void)
+{
+	SPI_MRAM_CLOCK_init();
+	spi_m_sync_init(&SPI_MRAM, SERCOM0);
+	SPI_MRAM_PORT_init();
+}
+
+void SPI_DISPLAY_PORT_init(void)
+{
+
+	gpio_set_pin_level(DISPLAY_MOSI,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   false);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(DISPLAY_MOSI, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(DISPLAY_MOSI, PINMUX_PA00D_SERCOM1_PAD0);
+
+	gpio_set_pin_level(DISPLAY_SCK,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   false);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(DISPLAY_SCK, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(DISPLAY_SCK, PINMUX_PA01D_SERCOM1_PAD1);
+
+	// Set pin direction to input
+	gpio_set_pin_direction(DISPLAY_MISO, GPIO_DIRECTION_IN);
+
+	gpio_set_pin_pull_mode(DISPLAY_MISO,
+	                       // <y> Pull configuration
+	                       // <id> pad_pull_config
+	                       // <GPIO_PULL_OFF"> Off
+	                       // <GPIO_PULL_UP"> Pull-up
+	                       // <GPIO_PULL_DOWN"> Pull-down
+	                       GPIO_PULL_OFF);
+
+	gpio_set_pin_function(DISPLAY_MISO, PINMUX_PA18C_SERCOM1_PAD2);
+}
+
+void SPI_DISPLAY_CLOCK_init(void)
+{
+	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM1_GCLK_ID_CORE, CONF_GCLK_SERCOM1_CORE_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM1_GCLK_ID_SLOW, CONF_GCLK_SERCOM1_SLOW_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+
+	hri_mclk_set_APBAMASK_SERCOM1_bit(MCLK);
+}
+
+void SPI_DISPLAY_init(void)
+{
+	SPI_DISPLAY_CLOCK_init();
+	spi_m_sync_init(&SPI_DISPLAY, SERCOM1);
+	SPI_DISPLAY_PORT_init();
+}
+
+void SPI_CAMERA_PORT_init(void)
+{
+
+	gpio_set_pin_level(CAMERA_MOSI,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   false);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(CAMERA_MOSI, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(CAMERA_MOSI, PINMUX_PB26C_SERCOM2_PAD0);
+
+	gpio_set_pin_level(CAMERA_SCK,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   false);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(CAMERA_SCK, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(CAMERA_SCK, PINMUX_PB27C_SERCOM2_PAD1);
+
+	// Set pin direction to input
+	gpio_set_pin_direction(CAMERA_MISO, GPIO_DIRECTION_IN);
+
+	gpio_set_pin_pull_mode(CAMERA_MISO,
+	                       // <y> Pull configuration
+	                       // <id> pad_pull_config
+	                       // <GPIO_PULL_OFF"> Off
+	                       // <GPIO_PULL_UP"> Pull-up
+	                       // <GPIO_PULL_DOWN"> Pull-down
+	                       GPIO_PULL_OFF);
+
+	gpio_set_pin_function(CAMERA_MISO, PINMUX_PA14C_SERCOM2_PAD2);
+}
+
+void SPI_CAMERA_CLOCK_init(void)
+{
+	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM2_GCLK_ID_CORE, CONF_GCLK_SERCOM2_CORE_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM2_GCLK_ID_SLOW, CONF_GCLK_SERCOM2_SLOW_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+
+	hri_mclk_set_APBBMASK_SERCOM2_bit(MCLK);
+}
+
+void SPI_CAMERA_init(void)
+{
+	SPI_CAMERA_CLOCK_init();
+	spi_m_sync_init(&SPI_CAMERA, SERCOM2);
+	SPI_CAMERA_PORT_init();
+}
+
+void I2C_SBAND_PORT_init(void)
+{
+
+	gpio_set_pin_pull_mode(SBAND_SDA,
+	                       // <y> Pull configuration
+	                       // <id> pad_pull_config
+	                       // <GPIO_PULL_OFF"> Off
+	                       // <GPIO_PULL_UP"> Pull-up
+	                       // <GPIO_PULL_DOWN"> Pull-down
+	                       GPIO_PULL_OFF);
+
+	gpio_set_pin_function(SBAND_SDA, PINMUX_PA17D_SERCOM3_PAD0);
+
+	gpio_set_pin_pull_mode(SBAND_SCL,
+	                       // <y> Pull configuration
+	                       // <id> pad_pull_config
+	                       // <GPIO_PULL_OFF"> Off
+	                       // <GPIO_PULL_UP"> Pull-up
+	                       // <GPIO_PULL_DOWN"> Pull-down
+	                       GPIO_PULL_OFF);
+
+	gpio_set_pin_function(SBAND_SCL, PINMUX_PA16D_SERCOM3_PAD1);
+}
+
+void I2C_SBAND_CLOCK_init(void)
+{
+	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM3_GCLK_ID_CORE, CONF_GCLK_SERCOM3_CORE_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM3_GCLK_ID_SLOW, CONF_GCLK_SERCOM3_SLOW_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+
+	hri_mclk_set_APBBMASK_SERCOM3_bit(MCLK);
+}
+
+void I2C_SBAND_init(void)
+{
+	I2C_SBAND_CLOCK_init();
+	i2c_m_sync_init(&I2C_SBAND, SERCOM3);
+	I2C_SBAND_PORT_init();
+}
+
+void SPI_MAGNETOMETER_GYRO_PORT_init(void)
+{
+
+	gpio_set_pin_level(MAGNETOMETER_GYRO_MOSI,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   false);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(MAGNETOMETER_GYRO_MOSI, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(MAGNETOMETER_GYRO_MOSI, PINMUX_PA13D_SERCOM4_PAD0);
+
+	gpio_set_pin_level(MAGNETOMETER_GYRO_SCK,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   false);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(MAGNETOMETER_GYRO_SCK, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(MAGNETOMETER_GYRO_SCK, PINMUX_PA12D_SERCOM4_PAD1);
+
+	// Set pin direction to input
+	gpio_set_pin_direction(MAGNETOMETER_GYRO_MISO, GPIO_DIRECTION_IN);
+
+	gpio_set_pin_pull_mode(MAGNETOMETER_GYRO_MISO,
+	                       // <y> Pull configuration
+	                       // <id> pad_pull_config
+	                       // <GPIO_PULL_OFF"> Off
+	                       // <GPIO_PULL_UP"> Pull-up
+	                       // <GPIO_PULL_DOWN"> Pull-down
+	                       GPIO_PULL_OFF);
+
+	gpio_set_pin_function(MAGNETOMETER_GYRO_MISO, PINMUX_PB14C_SERCOM4_PAD2);
+}
+
+void SPI_MAGNETOMETER_GYRO_CLOCK_init(void)
+{
+	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM4_GCLK_ID_CORE, CONF_GCLK_SERCOM4_CORE_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM4_GCLK_ID_SLOW, CONF_GCLK_SERCOM4_SLOW_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+
+	hri_mclk_set_APBDMASK_SERCOM4_bit(MCLK);
+}
+
+void SPI_MAGNETOMETER_GYRO_init(void)
+{
+	SPI_MAGNETOMETER_GYRO_CLOCK_init();
+	spi_m_sync_init(&SPI_MAGNETOMETER_GYRO, SERCOM4);
+	SPI_MAGNETOMETER_GYRO_PORT_init();
+}
+
+void SPI_SBAND_PORT_init(void)
+{
+
+	gpio_set_pin_level(SBAND_MOSI,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   false);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(SBAND_MOSI, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(SBAND_MOSI, PINMUX_PB16C_SERCOM5_PAD0);
+
+	gpio_set_pin_level(SBAND_SCK,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   false);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(SBAND_SCK, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(SBAND_SCK, PINMUX_PB17C_SERCOM5_PAD1);
+
+	// Set pin direction to input
+	gpio_set_pin_direction(SBAND_MISO, GPIO_DIRECTION_IN);
+
+	gpio_set_pin_pull_mode(SBAND_MISO,
+	                       // <y> Pull configuration
+	                       // <id> pad_pull_config
+	                       // <GPIO_PULL_OFF"> Off
+	                       // <GPIO_PULL_UP"> Pull-up
+	                       // <GPIO_PULL_DOWN"> Pull-down
+	                       GPIO_PULL_OFF);
+
+	gpio_set_pin_function(SBAND_MISO, PINMUX_PB18C_SERCOM5_PAD2);
+}
+
+void SPI_SBAND_CLOCK_init(void)
 {
 	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM5_GCLK_ID_CORE, CONF_GCLK_SERCOM5_CORE_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
 	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM5_GCLK_ID_SLOW, CONF_GCLK_SERCOM5_SLOW_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
@@ -217,44 +532,17 @@ void SPI_MRAM_CLOCK_init(void)
 	hri_mclk_set_APBDMASK_SERCOM5_bit(MCLK);
 }
 
-void SPI_MRAM_init(void)
+void SPI_SBAND_init(void)
 {
-	SPI_MRAM_CLOCK_init();
-	spi_m_sync_init(&SPI_MRAM, SERCOM5);
-	SPI_MRAM_PORT_init();
+	SPI_SBAND_CLOCK_init();
+	spi_m_sync_init(&SPI_SBAND, SERCOM5);
+	SPI_SBAND_PORT_init();
 }
 
-void SPI_DISPLAY_PORT_init(void)
+void I2C_CAMERA_PORT_init(void)
 {
 
-	gpio_set_pin_level(Display_MOSI,
-	                   // <y> Initial level
-	                   // <id> pad_initial_level
-	                   // <false"> Low
-	                   // <true"> High
-	                   false);
-
-	// Set pin direction to output
-	gpio_set_pin_direction(Display_MOSI, GPIO_DIRECTION_OUT);
-
-	gpio_set_pin_function(Display_MOSI, PINMUX_PD09D_SERCOM6_PAD0);
-
-	gpio_set_pin_level(Display_SCK,
-	                   // <y> Initial level
-	                   // <id> pad_initial_level
-	                   // <false"> Low
-	                   // <true"> High
-	                   false);
-
-	// Set pin direction to output
-	gpio_set_pin_direction(Display_SCK, GPIO_DIRECTION_OUT);
-
-	gpio_set_pin_function(Display_SCK, PINMUX_PD08D_SERCOM6_PAD1);
-
-	// Set pin direction to input
-	gpio_set_pin_direction(Display_MISO, GPIO_DIRECTION_IN);
-
-	gpio_set_pin_pull_mode(Display_MISO,
+	gpio_set_pin_pull_mode(CAMERA_SDA,
 	                       // <y> Pull configuration
 	                       // <id> pad_pull_config
 	                       // <GPIO_PULL_OFF"> Off
@@ -262,10 +550,20 @@ void SPI_DISPLAY_PORT_init(void)
 	                       // <GPIO_PULL_DOWN"> Pull-down
 	                       GPIO_PULL_OFF);
 
-	gpio_set_pin_function(Display_MISO, PINMUX_PD10D_SERCOM6_PAD2);
+	gpio_set_pin_function(CAMERA_SDA, PINMUX_PD09D_SERCOM6_PAD0);
+
+	gpio_set_pin_pull_mode(CAMERA_SCL,
+	                       // <y> Pull configuration
+	                       // <id> pad_pull_config
+	                       // <GPIO_PULL_OFF"> Off
+	                       // <GPIO_PULL_UP"> Pull-up
+	                       // <GPIO_PULL_DOWN"> Pull-down
+	                       GPIO_PULL_OFF);
+
+	gpio_set_pin_function(CAMERA_SCL, PINMUX_PD08D_SERCOM6_PAD1);
 }
 
-void SPI_DISPLAY_CLOCK_init(void)
+void I2C_CAMERA_CLOCK_init(void)
 {
 	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM6_GCLK_ID_CORE, CONF_GCLK_SERCOM6_CORE_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
 	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM6_GCLK_ID_SLOW, CONF_GCLK_SERCOM6_SLOW_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
@@ -273,17 +571,17 @@ void SPI_DISPLAY_CLOCK_init(void)
 	hri_mclk_set_APBDMASK_SERCOM6_bit(MCLK);
 }
 
-void SPI_DISPLAY_init(void)
+void I2C_CAMERA_init(void)
 {
-	SPI_DISPLAY_CLOCK_init();
-	spi_m_sync_init(&SPI_DISPLAY, SERCOM6);
-	SPI_DISPLAY_PORT_init();
+	I2C_CAMERA_CLOCK_init();
+	i2c_m_sync_init(&I2C_CAMERA, SERCOM6);
+	I2C_CAMERA_PORT_init();
 }
 
-void SPI_CAMERA_PORT_init(void)
+void SPI_UHF_PORT_init(void)
 {
 
-	gpio_set_pin_level(Camera_MOSI,
+	gpio_set_pin_level(UHF_MOSI,
 	                   // <y> Initial level
 	                   // <id> pad_initial_level
 	                   // <false"> Low
@@ -291,11 +589,11 @@ void SPI_CAMERA_PORT_init(void)
 	                   false);
 
 	// Set pin direction to output
-	gpio_set_pin_direction(Camera_MOSI, GPIO_DIRECTION_OUT);
+	gpio_set_pin_direction(UHF_MOSI, GPIO_DIRECTION_OUT);
 
-	gpio_set_pin_function(Camera_MOSI, PINMUX_PB30C_SERCOM7_PAD0);
+	gpio_set_pin_function(UHF_MOSI, PINMUX_PC12C_SERCOM7_PAD0);
 
-	gpio_set_pin_level(Camera_SCK,
+	gpio_set_pin_level(UHF_SCK,
 	                   // <y> Initial level
 	                   // <id> pad_initial_level
 	                   // <false"> Low
@@ -303,14 +601,14 @@ void SPI_CAMERA_PORT_init(void)
 	                   false);
 
 	// Set pin direction to output
-	gpio_set_pin_direction(Camera_SCK, GPIO_DIRECTION_OUT);
+	gpio_set_pin_direction(UHF_SCK, GPIO_DIRECTION_OUT);
 
-	gpio_set_pin_function(Camera_SCK, PINMUX_PC13C_SERCOM7_PAD1);
+	gpio_set_pin_function(UHF_SCK, PINMUX_PC13C_SERCOM7_PAD1);
 
 	// Set pin direction to input
-	gpio_set_pin_direction(Camera_MISO, GPIO_DIRECTION_IN);
+	gpio_set_pin_direction(UHF_MISO, GPIO_DIRECTION_IN);
 
-	gpio_set_pin_pull_mode(Camera_MISO,
+	gpio_set_pin_pull_mode(UHF_MISO,
 	                       // <y> Pull configuration
 	                       // <id> pad_pull_config
 	                       // <GPIO_PULL_OFF"> Off
@@ -318,10 +616,10 @@ void SPI_CAMERA_PORT_init(void)
 	                       // <GPIO_PULL_DOWN"> Pull-down
 	                       GPIO_PULL_OFF);
 
-	gpio_set_pin_function(Camera_MISO, PINMUX_PA30C_SERCOM7_PAD2);
+	gpio_set_pin_function(UHF_MISO, PINMUX_PD10C_SERCOM7_PAD2);
 }
 
-void SPI_CAMERA_CLOCK_init(void)
+void SPI_UHF_CLOCK_init(void)
 {
 	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM7_GCLK_ID_CORE, CONF_GCLK_SERCOM7_CORE_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
 	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM7_GCLK_ID_SLOW, CONF_GCLK_SERCOM7_SLOW_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
@@ -329,11 +627,11 @@ void SPI_CAMERA_CLOCK_init(void)
 	hri_mclk_set_APBDMASK_SERCOM7_bit(MCLK);
 }
 
-void SPI_CAMERA_init(void)
+void SPI_UHF_init(void)
 {
-	SPI_CAMERA_CLOCK_init();
-	spi_m_sync_init(&SPI_CAMERA, SERCOM7);
-	SPI_CAMERA_PORT_init();
+	SPI_UHF_CLOCK_init();
+	spi_m_sync_init(&SPI_UHF, SERCOM7);
+	SPI_UHF_PORT_init();
 }
 
 void delay_driver_init(void)
@@ -367,7 +665,21 @@ void system_init(void)
 {
 	init_mcu();
 
-	// GPIO on PB01
+	// GPIO on PA15
+
+	gpio_set_pin_level(LED_ORANGE2,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   true);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(LED_ORANGE2, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(LED_ORANGE2, GPIO_PIN_FUNCTION_OFF);
+
+	// GPIO on PA19
 
 	gpio_set_pin_level(LED_RED,
 	                   // <y> Initial level
@@ -381,9 +693,9 @@ void system_init(void)
 
 	gpio_set_pin_function(LED_RED, GPIO_PIN_FUNCTION_OFF);
 
-	// GPIO on PB12
+	// GPIO on PB10
 
-	gpio_set_pin_level(Display_RST,
+	gpio_set_pin_level(MRAM3_CS,
 	                   // <y> Initial level
 	                   // <id> pad_initial_level
 	                   // <false"> Low
@@ -391,13 +703,41 @@ void system_init(void)
 	                   true);
 
 	// Set pin direction to output
-	gpio_set_pin_direction(Display_RST, GPIO_DIRECTION_OUT);
+	gpio_set_pin_direction(MRAM3_CS, GPIO_DIRECTION_OUT);
 
-	gpio_set_pin_function(Display_RST, GPIO_PIN_FUNCTION_OFF);
+	gpio_set_pin_function(MRAM3_CS, GPIO_PIN_FUNCTION_OFF);
+
+	// GPIO on PB11
+
+	gpio_set_pin_level(MRAM3_RST,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   true);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(MRAM3_RST, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(MRAM3_RST, GPIO_PIN_FUNCTION_OFF);
+
+	// GPIO on PB12
+
+	gpio_set_pin_level(MRAM1_WP,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   true);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(MRAM1_WP, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(MRAM1_WP, GPIO_PIN_FUNCTION_OFF);
 
 	// GPIO on PB13
 
-	gpio_set_pin_level(Display_DC,
+	gpio_set_pin_level(MRAM2_WP,
 	                   // <y> Initial level
 	                   // <id> pad_initial_level
 	                   // <false"> Low
@@ -405,13 +745,13 @@ void system_init(void)
 	                   true);
 
 	// Set pin direction to output
-	gpio_set_pin_direction(Display_DC, GPIO_DIRECTION_OUT);
+	gpio_set_pin_direction(MRAM2_WP, GPIO_DIRECTION_OUT);
 
-	gpio_set_pin_function(Display_DC, GPIO_PIN_FUNCTION_OFF);
+	gpio_set_pin_function(MRAM2_WP, GPIO_PIN_FUNCTION_OFF);
 
-	// GPIO on PB20
+	// GPIO on PB15
 
-	gpio_set_pin_level(Display_CS,
+	gpio_set_pin_level(MRAM3_WP,
 	                   // <y> Initial level
 	                   // <id> pad_initial_level
 	                   // <false"> Low
@@ -419,23 +759,9 @@ void system_init(void)
 	                   true);
 
 	// Set pin direction to output
-	gpio_set_pin_direction(Display_CS, GPIO_DIRECTION_OUT);
+	gpio_set_pin_direction(MRAM3_WP, GPIO_DIRECTION_OUT);
 
-	gpio_set_pin_function(Display_CS, GPIO_PIN_FUNCTION_OFF);
-
-	// GPIO on PB21
-
-	gpio_set_pin_level(Camera_CS,
-	                   // <y> Initial level
-	                   // <id> pad_initial_level
-	                   // <false"> Low
-	                   // <true"> High
-	                   true);
-
-	// Set pin direction to output
-	gpio_set_pin_direction(Camera_CS, GPIO_DIRECTION_OUT);
-
-	gpio_set_pin_function(Camera_CS, GPIO_PIN_FUNCTION_OFF);
+	gpio_set_pin_function(MRAM3_WP, GPIO_PIN_FUNCTION_OFF);
 
 	// GPIO on PC04
 
@@ -495,164 +821,10 @@ void system_init(void)
 
 	// GPIO on PC10
 
-	gpio_set_pin_level(MRAM3_RST,
-	                   // <y> Initial level
-	                   // <id> pad_initial_level
-	                   // <false"> Low
-	                   // <true"> High
-	                   true);
-
-	// Set pin direction to output
-	gpio_set_pin_direction(MRAM3_RST, GPIO_DIRECTION_OUT);
-
-	gpio_set_pin_function(MRAM3_RST, GPIO_PIN_FUNCTION_OFF);
-
-	// GPIO on PC11
-
-	gpio_set_pin_level(MRAM3_CS,
-	                   // <y> Initial level
-	                   // <id> pad_initial_level
-	                   // <false"> Low
-	                   // <true"> High
-	                   true);
-
-	// Set pin direction to output
-	gpio_set_pin_direction(MRAM3_CS, GPIO_DIRECTION_OUT);
-
-	gpio_set_pin_function(MRAM3_CS, GPIO_PIN_FUNCTION_OFF);
-
-	// GPIO on PC12
-
-	gpio_set_pin_level(MRAM3_WP,
-	                   // <y> Initial level
-	                   // <id> pad_initial_level
-	                   // <false"> Low
-	                   // <true"> High
-	                   true);
-
-	// Set pin direction to output
-	gpio_set_pin_direction(MRAM3_WP, GPIO_DIRECTION_OUT);
-
-	gpio_set_pin_function(MRAM3_WP, GPIO_PIN_FUNCTION_OFF);
-
-	// GPIO on PC14
-
-	gpio_set_pin_level(MRAM1_WP,
-	                   // <y> Initial level
-	                   // <id> pad_initial_level
-	                   // <false"> Low
-	                   // <true"> High
-	                   true);
-
-	// Set pin direction to output
-	gpio_set_pin_direction(MRAM1_WP, GPIO_DIRECTION_OUT);
-
-	gpio_set_pin_function(MRAM1_WP, GPIO_PIN_FUNCTION_OFF);
-
-	// GPIO on PC15
-
-	gpio_set_pin_level(MRAM2_WP,
-	                   // <y> Initial level
-	                   // <id> pad_initial_level
-	                   // <false"> Low
-	                   // <true"> High
-	                   true);
-
-	// Set pin direction to output
-	gpio_set_pin_direction(MRAM2_WP, GPIO_DIRECTION_OUT);
-
-	gpio_set_pin_function(MRAM2_WP, GPIO_PIN_FUNCTION_OFF);
-
-	// GPIO on PC18
-
-	gpio_set_pin_level(Photodiode_MUX_S0,
-	                   // <y> Initial level
-	                   // <id> pad_initial_level
-	                   // <false"> Low
-	                   // <true"> High
-	                   true);
-
-	// Set pin direction to output
-	gpio_set_pin_direction(Photodiode_MUX_S0, GPIO_DIRECTION_OUT);
-
-	gpio_set_pin_function(Photodiode_MUX_S0, GPIO_PIN_FUNCTION_OFF);
-
-	// GPIO on PC19
-
-	gpio_set_pin_level(Photodiode_MUX_S1,
-	                   // <y> Initial level
-	                   // <id> pad_initial_level
-	                   // <false"> Low
-	                   // <true"> High
-	                   true);
-
-	// Set pin direction to output
-	gpio_set_pin_direction(Photodiode_MUX_S1, GPIO_DIRECTION_OUT);
-
-	gpio_set_pin_function(Photodiode_MUX_S1, GPIO_PIN_FUNCTION_OFF);
-
-	// GPIO on PC20
-
-	gpio_set_pin_level(Photodiode_MUX_S2,
-	                   // <y> Initial level
-	                   // <id> pad_initial_level
-	                   // <false"> Low
-	                   // <true"> High
-	                   true);
-
-	// Set pin direction to output
-	gpio_set_pin_direction(Photodiode_MUX_S2, GPIO_DIRECTION_OUT);
-
-	gpio_set_pin_function(Photodiode_MUX_S2, GPIO_PIN_FUNCTION_OFF);
-
-	// GPIO on PC21
-
-	gpio_set_pin_level(Photodiode_MUX_EN,
-	                   // <y> Initial level
-	                   // <id> pad_initial_level
-	                   // <false"> Low
-	                   // <true"> High
-	                   true);
-
-	// Set pin direction to output
-	gpio_set_pin_direction(Photodiode_MUX_EN, GPIO_DIRECTION_OUT);
-
-	gpio_set_pin_function(Photodiode_MUX_EN, GPIO_PIN_FUNCTION_OFF);
-
-	// GPIO on PC30
-
-	gpio_set_pin_level(LED_Orange1,
-	                   // <y> Initial level
-	                   // <id> pad_initial_level
-	                   // <false"> Low
-	                   // <true"> High
-	                   true);
-
-	// Set pin direction to output
-	gpio_set_pin_direction(LED_Orange1, GPIO_DIRECTION_OUT);
-
-	gpio_set_pin_function(LED_Orange1, GPIO_PIN_FUNCTION_OFF);
-
-	// GPIO on PC31
-
-	gpio_set_pin_level(LED_Orange2,
-	                   // <y> Initial level
-	                   // <id> pad_initial_level
-	                   // <false"> Low
-	                   // <true"> High
-	                   true);
-
-	// Set pin direction to output
-	gpio_set_pin_direction(LED_Orange2, GPIO_DIRECTION_OUT);
-
-	gpio_set_pin_function(LED_Orange2, GPIO_PIN_FUNCTION_OFF);
-
-	// GPIO on PD21
-
 	// Set pin direction to input
-	gpio_set_pin_direction(Magnetometer_DRDY, GPIO_DIRECTION_IN);
+	gpio_set_pin_direction(MAGNETOMETER_DRDY, GPIO_DIRECTION_IN);
 
-	gpio_set_pin_pull_mode(Magnetometer_DRDY,
+	gpio_set_pin_pull_mode(MAGNETOMETER_DRDY,
 	                       // <y> Pull configuration
 	                       // <id> pad_pull_config
 	                       // <GPIO_PULL_OFF"> Off
@@ -660,21 +832,169 @@ void system_init(void)
 	                       // <GPIO_PULL_DOWN"> Pull-down
 	                       GPIO_PULL_DOWN);
 
-	gpio_set_pin_function(Magnetometer_DRDY, GPIO_PIN_FUNCTION_OFF);
+	gpio_set_pin_function(MAGNETOMETER_DRDY, GPIO_PIN_FUNCTION_OFF);
+
+	// GPIO on PC11
+
+	gpio_set_pin_level(DISPLAY_CS,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   true);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(DISPLAY_CS, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(DISPLAY_CS, GPIO_PIN_FUNCTION_OFF);
+
+	// GPIO on PC14
+
+	gpio_set_pin_level(CAMERA_CS,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   true);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(CAMERA_CS, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(CAMERA_CS, GPIO_PIN_FUNCTION_OFF);
+
+	// GPIO on PC15
+
+	gpio_set_pin_level(LED_ORANGE1,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   true);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(LED_ORANGE1, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(LED_ORANGE1, GPIO_PIN_FUNCTION_OFF);
+
+	// GPIO on PC16
+
+	gpio_set_pin_level(UHF_CS,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   true);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(UHF_CS, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(UHF_CS, GPIO_PIN_FUNCTION_OFF);
+
+	// GPIO on PC17
+
+	gpio_set_pin_level(UHF_RST,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   true);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(UHF_RST, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(UHF_RST, GPIO_PIN_FUNCTION_OFF);
+
+	// GPIO on PC19
+
+	gpio_set_pin_level(MAGNETOMETER_CS,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   true);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(MAGNETOMETER_CS, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(MAGNETOMETER_CS, GPIO_PIN_FUNCTION_OFF);
+
+	// GPIO on PC20
+
+	gpio_set_pin_level(GYRO_CS,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   true);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(GYRO_CS, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(GYRO_CS, GPIO_PIN_FUNCTION_OFF);
+
+	// GPIO on PC21
+
+	gpio_set_pin_level(GYRO_EXTRESN,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   false);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(GYRO_EXTRESN, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(GYRO_EXTRESN, GPIO_PIN_FUNCTION_OFF);
+
+	// GPIO on PD11
+
+	gpio_set_pin_level(DISPLAY_RST,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   true);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(DISPLAY_RST, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(DISPLAY_RST, GPIO_PIN_FUNCTION_OFF);
+
+	// GPIO on PD12
+
+	gpio_set_pin_level(DISPLAY_DC,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   true);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(DISPLAY_DC, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(DISPLAY_DC, GPIO_PIN_FUNCTION_OFF);
 
 	ADC_0_init();
 
-	I2C_SBAND_init();
+	ADC_1_init();
 
-	I2C_MAG_GYRO_init();
-
-	I2C_CAMERA_init();
+	TIMER_0_init();
 
 	SPI_MRAM_init();
 
 	SPI_DISPLAY_init();
 
 	SPI_CAMERA_init();
+
+	I2C_SBAND_init();
+
+	SPI_MAGNETOMETER_GYRO_init();
+
+	SPI_SBAND_init();
+
+	I2C_CAMERA_init();
+
+	SPI_UHF_init();
 
 	delay_driver_init();
 

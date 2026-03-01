@@ -1,11 +1,11 @@
 /**
  * specific_handlers.c
- * 
- * This file provides implementations for various interrupt handlers 
- * for the Cortex-M4 core and peripheral modules. Each handler either 
- * invokes the default handler (`PVDX_default_handler`) or provides 
+ *
+ * This file provides implementations for various interrupt handlers
+ * for the Cortex-M4 core and peripheral modules. Each handler either
+ * invokes the default handler (`PVDX_default_handler`) or provides
  * a placeholder for future customization of specific interrupt logic.
- * 
+ *
  * Created: April 5, 2024
  * Author: Oren Kohavi
  */
@@ -89,9 +89,6 @@ void SUPC_1_Handler(void) {
     PVDX_default_handler();
 }
 void WDT_Handler(void) {
-    PVDX_default_handler();
-}
-void RTC_Handler(void) {
     PVDX_default_handler();
 }
 void EIC_0_Handler(void) {

@@ -40,6 +40,8 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <atmel_start.h>
+#include <driver_init.h>
 
 
 /**

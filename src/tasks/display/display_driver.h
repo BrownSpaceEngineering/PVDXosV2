@@ -69,12 +69,12 @@
 
 // Functions for setting the reset, data/command, and chip-select pins on the
 // display to high or low voltage
-#define RST_LOW() gpio_set_pin_level(Display_RST, 0)
-#define RST_HIGH() gpio_set_pin_level(Display_RST, 1)
-#define DC_LOW() gpio_set_pin_level(Display_DC, 0)
-#define DC_HIGH() gpio_set_pin_level(Display_DC, 1)
-#define CS_LOW() gpio_set_pin_level(Display_CS, 0)
-#define CS_HIGH() gpio_set_pin_level(Display_CS, 1)
+#define RST_LOW() gpio_set_pin_level(DISPLAY_RST, 0)
+#define RST_HIGH() gpio_set_pin_level(DISPLAY_RST, 1)
+#define DC_LOW() gpio_set_pin_level(DISPLAY_DC, 0)
+#define DC_HIGH() gpio_set_pin_level(DISPLAY_DC, 1)
+#define CS_LOW() gpio_set_pin_level(DISPLAY_CS, 0)
+#define CS_HIGH() gpio_set_pin_level(DISPLAY_CS, 1)
 
 // Duration to wait between display initialization steps
 #define RESET_WAIT_INTERVAL 100
@@ -89,9 +89,9 @@ typedef uint8_t color_t;  // 4 bits per pixel (16 greyscale levels)
 // Variables
 extern color_t display_buffer[(SSD1362_WIDTH / 2) * SSD1362_HEIGHT]; // pixels are 4 bits, so 2 consecutive pixels per byte
 
-void display_set_buffer(const color_t *const p_buffer); 
-void display_clear_buffer(void); 
-status_t display_update(void); 
+void display_set_buffer(const color_t *const p_buffer);
+void display_clear_buffer(void);
+status_t display_update(void);
 status_t init_display_hardware(void);
 
 #endif // DISPLAY_DRIVER_H

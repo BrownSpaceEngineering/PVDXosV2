@@ -39,14 +39,12 @@
 
 #include <stdint.h>
 
-#include "globals.h"
-
 void hw_EXTRESN_High(void) {
-    // TODO: Implement setting EXTRESN pin high
+    gpio_set_pin_level(GYRO_EXTRESN, true);
 }
 
 void hw_EXTRESN_Low(void) {
-    // TODO: Implement setting EXTRESN pin low
+    gpio_set_pin_level(GYRO_EXTRESN, false);
 }
 
 void hw_delay(uint32_t ms) {
@@ -54,33 +52,34 @@ void hw_delay(uint32_t ms) {
 }
 
 uint64_t hw_SPI48_Send_Request(uint64_t Request) {
-    // TODO: Implement for SAMD51
+    uint64_t ReceivedData = 0;
+    uint8_t txBuffer[6];
+    uint8_t rxBuffer[6];
+    uint8_t index;
+    uint8_t size = 6;   // 48-bit SPI-transfer consists of 6 bytes
 
-    // uint64_t ReceivedData = 0;
-    // uint16_t txBuffer[3];
-    // uint16_t rxBuffer[3];
-    // uint8_t index;
-    // uint8_t size = 3;   // 48-bit SPI-transfer consists of three 16-bit transfers.
+    // Split Request qword (MOSI data) to tx buffer (MSB first)
+    for (index = 0; index < size; index++) {
+        txBuffer[index] = (Request >> ((size - index - 1) * 8)) & 0xFF;
+    }
 
-    // // Split Request qword (MOSI data) to tx buffer.
-    // for (index = 0; index < size; index++)
-    // {
-    //     txBuffer[size - index - 1] = (Request >> (index << 4)) & 0xFFFF;
-    // }
+    // Configure SPI transfer structure
+    struct spi_xfer xfer;
+    xfer.txbuf = txBuffer;
+    xfer.rxbuf = rxBuffer;
+    xfer.size = size;
 
-    // // Send tx buffer and receive rx buffer simultaneously.
-    // hw_CS_Low();
-    // HAL_SPI_TransmitReceive(&hspi1, (uint8_t*)txBuffer, (uint8_t*)rxBuffer, size, 10);
-    // hw_CS_High();
+    // Send tx buffer and receive rx buffer simultaneously
+    gpio_set_pin_level(GYRO_CS, false);  // CS Low
+    spi_m_sync_transfer(&SPI_MAGNETOMETER_GYRO, &xfer);
+    gpio_set_pin_level(GYRO_CS, true);   // CS High
 
-    // // Create ReceivedData qword from received rx buffer (MISO data).
-    // for (index = 0; index < size; index++)
-    // {
-    // 	ReceivedData |= (uint64_t)rxBuffer[index] << ((size - index - 1) << 4);
-    // }
+    // Create ReceivedData qword from received rx buffer (MISO data)
+    for (index = 0; index < size; index++) {
+        ReceivedData |= (uint64_t)rxBuffer[index] << ((size - index - 1) * 8);
+    }
 
-    // return ReceivedData;
-    return 0;
+    return ReceivedData;
 }
 
 /**
