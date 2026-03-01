@@ -102,6 +102,9 @@ export OBJS :=                                              	\
                                                             	\
 ../src/tasks/task_list.o                                        \
                                                             	\
+																\
+../src/tasks/adcs/SCH1.o										\
+																\
 ../src/checks/device_checks.o 									\
 																\
 ../src/tasks/radio/spp.o 										\
@@ -132,6 +135,8 @@ export EXTRA_VPATH := \
 ../../src/tasks/command_dispatcher \
 ../../src/tasks/shell \
 ../../src/tasks/radio \
+../../src/tasks/adcs \
+../../src/mutexes \
 ../../src/checks \
 ../../src/tests \
 ../../src/linalg \
