@@ -33,7 +33,7 @@ void fatal_impl(const char *string, ...) {
     warning_impl("FATAL ERROR OCCURRED! RESTARTING SYSTEM...\n");
     vTaskDelay(pdMS_TO_TICKS(1000)); // Wait for the message to be printed
 
-    // TODO: Gracefully shut down the system before kicking the watchdog
+    // Force reboot
     kick_watchdog();
 
     // This line should never be reached, but we include it to adhere to the va_list contract
@@ -41,7 +41,7 @@ void fatal_impl(const char *string, ...) {
 }
 
 void fatal_no_log_impl(void) {
-    // TODO: Gracefully shut down the system before kicking the watchdog
+    // Force reboot
     kick_watchdog();
 }
 
