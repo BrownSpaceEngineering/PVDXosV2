@@ -78,7 +78,10 @@ status_t init_arducam_hardware(void) {
     arducam_i2c_write(0x15, &data[0], 1);
     arducam_i2c_multi_write(OV2640_1280x1024_JPEG);
 
-    capture();
+    // ----- REMOVE THIS (only for testing right now) -----
+    // capture();
+    capture_rtt();
+    // ----------------------------------------------------
 
     return SUCCESS;
 }
