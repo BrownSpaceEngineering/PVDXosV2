@@ -10,6 +10,76 @@
 
 #include "adcs_task.h"
 #include "logging.h"
+#include "device_checks.h"
+
+
+/* ---------- DATA MANAGEMENT ------------------------ */
+
+photodiode_data_t photodiode_data_buffer[2]; // Buffer to hold the last 2 photodiode readings
+mag_data_t mag_data_buffer[2]; // Buffer to hold the last 2 magnetometer readings
+gyro_data_t gyro_data_buffer[2]; // Buffer to hold the last 2 gyro readings
+
+status_t update_photodiode_data(photodiode_data_t *persistent_photo_data, size_t count ) {
+    // first move previous photodiode data backwards in the array
+    for (size_t i = count - 1; i > 0; i--) {
+        persistent_photo_data[i] = persistent_photo_data[i - 1];
+    }
+    
+    status_t result = photodiode_read(&persistent_photo_data[0]);
+    
+    if (result != SUCCESS) {
+        warning("adcs task: photodiode read failed\n");
+        // at this point we should check the device, as we've potentially run into a fault 
+        // uncheck device to force check function to run
+        uncheck_device(PHOTODIODE_ID);
+        bool photo_status = check_device(PHOTODIODE_ID);
+
+        if (!photo_status) {
+            warning("adcs task: photodiode device check failed after read failure\n");
+            // TODO: queue sth to task manage to update state variable. 
+        }
+    }
+}
+
+status_t update_magnetometer_data(mag_data_t *persistent_readings, size_t n_reads) {
+    // Push previous readings one step forwards
+    for (size_t i = n_reads - 1; i > 0; i--) {
+        persistent_readings[i] = persistent_readings[i - 1];
+    }   
+    
+    status_t data_read = mag_read_data(&persistent_readings[0]);
+    if (data_read != SUCCESS) {
+        // First we uncheck the magnetometer
+        uncheck_device(MAGNETOMETER_ID);
+        bool mag_status = check_device(MAGNETOMETER_ID);
+        
+        if (!mag_status) {
+            warning("adcs task: magnetometer device check failed after read failure\n");
+            // TODO: Update status with magnetometer failure
+        }
+    }
+}
+
+status_t update_gyro_data(gyro_data_t *persistent_gyro_data, size_t count ) {
+    // first move previous gyro data backwards in the array
+    for (size_t i = count - 1; i > 0; i--) {
+        persistent_gyro_data[i] = persistent_gyro_data[i - 1];
+    }
+    
+    status_t result = gyro_read(&persistent_gyro_data[0]);
+    
+    if (result != SUCCESS) {
+        warning("adcs task: gyro read failed\n");
+        // at this point we should check the device, as we've potentially run into a fault 
+        uncheck_device(GYROSCOPE_ID);
+        bool gyro_status = check_device(GYROSCOPE_ID);
+
+        if (!gyro_status) {
+            warning("adcs task: gyro device check failed after read failure\n");
+            // TODO: queue sth to task manage to update state variable. 
+        }
+    }
+}
 
 /* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
 

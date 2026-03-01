@@ -117,3 +117,8 @@ status_t set_multiplexer_outputs(int_fast8_t output) {
 
     return SUCCESS;
 }
+
+bool check_photodiode(void) {
+    // TODO: will this actally work? 
+    return init_photodiode_hardware() == SUCCESS;
+}; 

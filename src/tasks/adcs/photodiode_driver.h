@@ -24,5 +24,6 @@ typedef struct {
 status_t init_photodiode_hardware(void);
 status_t read_photodiodes(uint16_t *values);
 status_t photodiode_read(photodiode_data_t *const data);
+status_t check_photodiode(void);
 
 #endif // PHOTODIODE_DRIVER_H
