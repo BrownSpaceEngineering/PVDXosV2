@@ -8,6 +8,7 @@
 #include "magnetometer_driver.h"
 #include "photodiode_driver.h"
 #include "rtc_driver.h"
+#include "SCH1.h"
 #include "queue.h"
 #include "task_list.h"
 #include "watchdog_task.h"

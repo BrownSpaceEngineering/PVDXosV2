@@ -17,7 +17,7 @@
 
 photodiode_data_t photodiode_data_buffer[2]; // Buffer to hold the last 2 photodiode readings
 mag_data_t mag_data_buffer[2]; // Buffer to hold the last 2 magnetometer readings
-gyro_data_t gyro_data_buffer[2]; // Buffer to hold the last 2 gyro readings
+SCH1_result_t gyro_data_buffer[2]; // Buffer to hold the last 2 gyro readings
 
 status_t update_photodiode_data(photodiode_data_t *persistent_photo_data, size_t count ) {
     // first move previous photodiode data backwards in the array
@@ -60,13 +60,13 @@ status_t update_magnetometer_data(mag_data_t *persistent_readings, size_t n_read
     }
 }
 
-status_t update_gyro_data(gyro_data_t *persistent_gyro_data, size_t count ) {
+status_t update_gyro_data(SCH1_result_t *persistent_gyro_data, size_t count ) {
     // first move previous gyro data backwards in the array
     for (size_t i = count - 1; i > 0; i--) {
         persistent_gyro_data[i] = persistent_gyro_data[i - 1];
     }
     
-    status_t result = gyro_read(&persistent_gyro_data[0]);
+    status_t result = SCH1_read(&persistent_gyro_data[0]);
     
     if (result != SUCCESS) {
         warning("adcs task: gyro read failed\n");

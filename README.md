@@ -183,7 +183,7 @@ doxygen Doxyfile
     - A tab in your browser will open with the full docs page
 
 
-# Acknoledgements
+# Acknowledgements
 
 Many thanks to Daniel Martenson, whose [EmbeddedLapack](https://github.com/DanielMartensson/EmbeddedLapack)
 and [CControl](https://github.com/DanielMartensson/CControl) projects 

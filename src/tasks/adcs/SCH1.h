@@ -294,7 +294,7 @@ typedef struct _SCH1_raw_data {
     int32_t Acc3_raw[3];
     int32_t Temp_raw;
     bool frame_error;
-} SCH1_raw_data;
+} SCH1_raw_data_t;
 
 
 // SCH1 scaled measurement results
@@ -305,7 +305,7 @@ typedef struct _SCH1_result {
     float Acc2[3];
     float Acc3[3];
     float Temp;
-} SCH1_result;
+} SCH1_result_t;
 
 
 // SCH1 status data
@@ -320,7 +320,7 @@ typedef struct _SCH1_status {
     uint16_t Acc_X;
     uint16_t Acc_Y;
     uint16_t Acc_Z;
-} SCH1_status;
+} SCH1_status_t;
 
 
 // SCH1 filters
@@ -328,7 +328,7 @@ typedef struct _SCH1_filter {
     uint16_t Rate12;
     uint16_t Acc12;
     uint16_t Acc3;
-} SCH1_filter;
+} SCH1_filter_t;
 
 
 // SCH1 sensitivities
@@ -338,14 +338,14 @@ typedef struct _SCH1_sensitivity {
     uint16_t Acc1;
     uint16_t Acc2;
     uint16_t Acc3;
-} SCH1_sensitivity;
+} SCH1_sensitivity_t;
 
 
 // SCH1 decimation
 typedef struct _SCH1_decimation {
     uint16_t Rate2;
     uint16_t Acc2;
-} SCH1_decimation;
+} SCH1_decimation_t;
 
 
 // Measurement axes
@@ -360,10 +360,10 @@ enum
 /**
  * Function prototypes
  */
-int         SCH1_init(SCH1_filter sFilter, SCH1_sensitivity sSensitivity, SCH1_decimation sDecimation, bool enableDRY);
-void        SCH1_getData(SCH1_raw_data *data);
-int         SCH1_getStatus(SCH1_status *Status);
-void        SCH1_convert_data(SCH1_raw_data *data_in, SCH1_result *data_out);
+int         SCH1_init(SCH1_filter_t sFilter, SCH1_sensitivity_t sSensitivity, SCH1_decimation_t sDecimation, bool enableDRY);
+void        SCH1_getData(SCH1_raw_data_t *data);
+int         SCH1_getStatus(SCH1_status_t *Status);
+void        SCH1_convert_data(SCH1_raw_data_t *data_in, SCH1_result_t *data_out);
 bool        SCH1_check_48bit_frame_error(uint64_t *data, int size);
 uint64_t    SCH1_sendRequest(uint64_t Request);
 
@@ -392,7 +392,7 @@ int         SCH1_setDRY(int8_t polarity, bool enable);
 void        SCH1_sendSPIreset(void);
 bool        SCH1_checkCRC8(uint64_t SPIframe);
 bool        SCH1_checkCRC3(uint32_t SPIframe);
-bool        SCH1_verifyStatus(SCH1_status *Status);
+bool        SCH1_verifyStatus(SCH1_status_t *Status);
 
 char        *SCH1_getSnbr(void);
 void        SCH1_reset(void);
