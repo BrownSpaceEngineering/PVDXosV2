@@ -26,11 +26,6 @@ uint8_t SEGGER_RTT_IMAGE_BUFFER[SEGGER_RTT_IMAGE_BUFFER_SIZE];
  * \returns the command queue for the arducam
  */
 QueueHandle_t init_arducam(void) {
-    // Initialize the arducam hardware
-    status_t status = init_arducam_hardware();
-
-    fatal_on_error(status, "Failed to initialize arducam hardware!\n");
-
     // Initialize the arducam command queue
     QueueHandle_t arducam_command_queue_handle = xQueueCreateStatic(
         COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE, arducam_mem.arducam_command_queue_buffer, &arducam_mem.arducam_task_queue);

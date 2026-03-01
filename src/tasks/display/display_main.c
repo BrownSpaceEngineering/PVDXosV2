@@ -34,7 +34,6 @@ void main_display(void *pvParameters) {
 
     // Initialize the display hardware
     status_t status = init_display_hardware();
-
     fatal_on_error(status, "Failed to initialize display hardware!\n");
 
     while (true) {

@@ -33,6 +33,10 @@ void main_arducam(void *pvParameters) {
     // Varible to hold commands popped off the queue
     command_t cmd;
 
+    // Initialize the arducam hardware
+    status_t status = init_arducam_hardware();
+    fatal_on_error(status, "Failed to initialize arducam hardware!\n");
+
     while (true) {
         debug_impl("\n---------- Arducam Task Loop ----------\n");
 
