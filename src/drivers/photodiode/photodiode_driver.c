@@ -11,8 +11,6 @@
 
 // Photodiode system constants
 #define PHOTODIODE_COUNT 22   // Number of photodiodes (8 mux + 14 direct)
-#define PHOTODIODE_S0_PIN (Photodiode_MUX_S0 & 0x1Fu)
-#define PHOTODIODE_MUX_MASK (0xFu << PHOTODIODE_S0_PIN)
 
 /**
  * \fn init_photodiode_hardware
@@ -49,39 +47,6 @@ status_t read_photodiodes(uint16_t *values) {
     debug("photodiode_driver: Reading photodiode ADC values\n");
 
     // TODO: Read values from ADCs
-
-    return SUCCESS;
-}
-
-/**
- * \fn set_multiplexer_outputs
- *
- * \brief Set multiplexer outputs to enable/disable and select channel
- *
- * \param output Output to write. The three least significant bits determine
- *      channel, the fourth bit determines enable pin. Note the enable pin is
- *      active low. Thus, if output is between 0 and 7 inclusive, then the
- *      multiplexer is enabled and the appropriate channel is selected. If
- *      output is between 8 and 15 inclusive, then the multiplexer is disabled.
- *      Values outside this range are not permitted and will result in
- *      ERROR_SANITY_CHECK_FAILED being returned.
- *
- * \returns status_t SUCCESS if output write was successful,
- *                   ERROR_SANITY_CHECK_FAILED if output is invalid
- */
-status_t set_multiplexer_outputs(int_fast8_t output) {
-    if (output & (~0xF)) { // Only the four least significant bits should be set
-        return ERROR_SANITY_CHECK_FAILED;
-    }
-    static int_fast8_t current_output = 0xF;
-
-    debug("photodiode_driver: Setting multiplexer output to " PRIxFAST8 "\n", output);
-
-    int_fast8_t toggles_needed = output ^ current_output;
-    PORT->Group[GPIO_PORTC].OUTTGL.reg = toggles_needed << PHOTODIODE_S0_PIN;
-    current_output = output;
-
-    debug("photodiode_driver: MUX output set to " PRIxFAST8 "\n", output);
 
     return SUCCESS;
 }

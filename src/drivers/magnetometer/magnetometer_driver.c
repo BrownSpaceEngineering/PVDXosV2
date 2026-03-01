@@ -362,7 +362,7 @@ status_t mag_change_cycle_count(uint16_t newCC) {
  *         pin is set to false (indicating that data is not ready to be read).
  */
 status_t magnetometer_read(int32_t *const raw_readings, float *const gain_adj_readings) {
-    if (gpio_get_pin_level(Magnetometer_DRDY) == 0) {
+    if (gpio_get_pin_level(MAGNETOMETER_DRDY) == 0) {
         debug("magnetometer: DRDY is false; not ready to read yet...");
         return ERROR_NOT_READY;
     }
