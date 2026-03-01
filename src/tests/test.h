@@ -9,8 +9,6 @@
 #ifndef TESTS_TEST_H
 #define TESTS_TEST_H
 
-#include "test_linalg.h"
-
 void tests_run(void);
 
 #endif
