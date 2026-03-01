@@ -3,83 +3,83 @@ PVDXos_bootloader.elf:     file format elf32-littlearm
 
 Sections:
 Idx Name          Size      VMA       LMA       File off  Algn
-  0 .text         00000488  00006000  00006000  00001000  2**2
+  0 .text         00000478  00006000  00006000  00001000  2**2
                   CONTENTS, ALLOC, LOAD, READONLY, CODE
-  1 .relocate     00000004  2003d000  00006488  00002000  2**2
-                  CONTENTS, ALLOC, LOAD, DATA
-  2 .bkupram      00000000  47000000  47000000  00002004  2**0
+  1 .relocate     00000000  2003d000  2003d000  00001478  2**0
                   CONTENTS
-  3 .qspi         00000000  04000000  04000000  00002004  2**0
+  2 .bkupram      00000000  47000000  47000000  00001478  2**0
                   CONTENTS
-  4 .bss          0000002c  2003d004  0000648c  00002004  2**2
+  3 .qspi         00000000  04000000  04000000  00001478  2**0
+                  CONTENTS
+  4 .bss          0000002c  2003d000  2003d000  00002000  2**2
                   ALLOC
-  5 .stack        00001000  2003d030  000064b8  00002004  2**0
+  5 .stack        00001004  2003d02c  2003d02c  00002000  2**0
                   ALLOC
-  6 .ARM.attributes 0000002e  00000000  00000000  00002004  2**0
+  6 .ARM.attributes 0000002e  00000000  00000000  00001478  2**0
                   CONTENTS, READONLY
-  7 .comment      00000046  00000000  00000000  00002032  2**0
+  7 .comment      00000046  00000000  00000000  000014a6  2**0
                   CONTENTS, READONLY
-  8 .debug_info   000018d0  00000000  00000000  00002078  2**0
+  8 .debug_info   000018ef  00000000  00000000  000014ec  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
-  9 .debug_abbrev 000005ef  00000000  00000000  00003948  2**0
+  9 .debug_abbrev 00000627  00000000  00000000  00002ddb  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 10 .debug_loclists 000001cb  00000000  00000000  00003f37  2**0
+ 10 .debug_loclists 000001be  00000000  00000000  00003402  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 11 .debug_aranges 00000080  00000000  00000000  00004102  2**0
+ 11 .debug_aranges 00000080  00000000  00000000  000035c0  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 12 .debug_rnglists 00000069  00000000  00000000  00004182  2**0
+ 12 .debug_rnglists 00000075  00000000  00000000  00003640  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 13 .debug_macro  00025766  00000000  00000000  000041eb  2**0
+ 13 .debug_macro  0002575e  00000000  00000000  000036b5  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 14 .debug_line   00001f63  00000000  00000000  00029951  2**0
+ 14 .debug_line   00001f4c  00000000  00000000  00028e13  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 15 .debug_str    000ed23a  00000000  00000000  0002b8b4  2**0
+ 15 .debug_str    000ed257  00000000  00000000  0002ad5f  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 16 .debug_frame  000000ec  00000000  00000000  00118af0  2**2
+ 16 .debug_frame  00000110  00000000  00000000  00117fb8  2**2
                   CONTENTS, READONLY, DEBUGGING, OCTETS
 
 Disassembly of section .text:
 
 00006000 <exception_table>:
-    6000:	30 e0 03 20 a9 63 00 00 a5 63 00 00 a5 63 00 00     0.. .c...c...c..
-    6010:	a5 63 00 00 a5 63 00 00 a5 63 00 00 00 00 00 00     .c...c...c......
+    6000:	30 e0 03 20 7d 63 00 00 79 63 00 00 79 63 00 00     0.. }c..yc..yc..
+    6010:	79 63 00 00 79 63 00 00 79 63 00 00 00 00 00 00     yc..yc..yc......
 	...
-    602c:	a5 63 00 00 a5 63 00 00 00 00 00 00 a5 63 00 00     .c...c.......c..
-    603c:	a5 63 00 00 a5 63 00 00 a5 63 00 00 a5 63 00 00     .c...c...c...c..
-    604c:	a5 63 00 00 a5 63 00 00 a5 63 00 00 a5 63 00 00     .c...c...c...c..
-    605c:	a5 63 00 00 a5 63 00 00 a5 63 00 00 a5 63 00 00     .c...c...c...c..
-    606c:	a5 63 00 00 a5 63 00 00 a5 63 00 00 a5 63 00 00     .c...c...c...c..
-    607c:	a5 63 00 00 a5 63 00 00 a5 63 00 00 a5 63 00 00     .c...c...c...c..
-    608c:	a5 63 00 00 a5 63 00 00 a5 63 00 00 a5 63 00 00     .c...c...c...c..
-    609c:	a5 63 00 00 a5 63 00 00 a5 63 00 00 a5 63 00 00     .c...c...c...c..
-    60ac:	a5 63 00 00 a5 63 00 00 a5 63 00 00 a5 63 00 00     .c...c...c...c..
-    60bc:	a5 63 00 00 a5 63 00 00 a5 63 00 00 a5 63 00 00     .c...c...c...c..
-    60cc:	a5 63 00 00 a5 63 00 00 a5 63 00 00 a5 63 00 00     .c...c...c...c..
-    60dc:	a5 63 00 00 a5 63 00 00 a5 63 00 00 00 00 00 00     .c...c...c......
+    602c:	79 63 00 00 79 63 00 00 00 00 00 00 79 63 00 00     yc..yc......yc..
+    603c:	79 63 00 00 79 63 00 00 79 63 00 00 79 63 00 00     yc..yc..yc..yc..
+    604c:	79 63 00 00 79 63 00 00 79 63 00 00 79 63 00 00     yc..yc..yc..yc..
+    605c:	79 63 00 00 79 63 00 00 79 63 00 00 79 63 00 00     yc..yc..yc..yc..
+    606c:	79 63 00 00 79 63 00 00 79 63 00 00 79 63 00 00     yc..yc..yc..yc..
+    607c:	79 63 00 00 79 63 00 00 79 63 00 00 79 63 00 00     yc..yc..yc..yc..
+    608c:	79 63 00 00 79 63 00 00 79 63 00 00 79 63 00 00     yc..yc..yc..yc..
+    609c:	79 63 00 00 79 63 00 00 79 63 00 00 79 63 00 00     yc..yc..yc..yc..
+    60ac:	79 63 00 00 79 63 00 00 79 63 00 00 79 63 00 00     yc..yc..yc..yc..
+    60bc:	79 63 00 00 79 63 00 00 79 63 00 00 79 63 00 00     yc..yc..yc..yc..
+    60cc:	79 63 00 00 79 63 00 00 79 63 00 00 79 63 00 00     yc..yc..yc..yc..
+    60dc:	79 63 00 00 79 63 00 00 79 63 00 00 00 00 00 00     yc..yc..yc......
 	...
-    60f4:	6d 63 00 00 a5 63 00 00 a5 63 00 00 a5 63 00 00     mc...c...c...c..
-    6104:	a5 63 00 00 a5 63 00 00 a5 63 00 00 a5 63 00 00     .c...c...c...c..
-    6114:	a5 63 00 00 a5 63 00 00 a5 63 00 00 a5 63 00 00     .c...c...c...c..
-    6124:	a5 63 00 00 a5 63 00 00 a5 63 00 00 a5 63 00 00     .c...c...c...c..
-    6134:	a5 63 00 00 a5 63 00 00 a5 63 00 00 a5 63 00 00     .c...c...c...c..
-    6144:	a5 63 00 00 a5 63 00 00 a5 63 00 00 a5 63 00 00     .c...c...c...c..
-    6154:	a5 63 00 00 a5 63 00 00 a5 63 00 00 a5 63 00 00     .c...c...c...c..
-    6164:	a5 63 00 00 a5 63 00 00 a5 63 00 00 a5 63 00 00     .c...c...c...c..
-    6174:	a5 63 00 00 00 00 00 00 00 00 00 00 a5 63 00 00     .c...........c..
-    6184:	a5 63 00 00 a5 63 00 00 a5 63 00 00 00 00 00 00     .c...c...c......
-    6194:	a5 63 00 00 a5 63 00 00 a5 63 00 00 a5 63 00 00     .c...c...c...c..
-    61a4:	a5 63 00 00 a5 63 00 00 a5 63 00 00 a5 63 00 00     .c...c...c...c..
-    61b4:	a5 63 00 00 a5 63 00 00 a5 63 00 00 a5 63 00 00     .c...c...c...c..
-    61c4:	a5 63 00 00 a5 63 00 00 a5 63 00 00 a5 63 00 00     .c...c...c...c..
-    61d4:	a5 63 00 00 a5 63 00 00 a5 63 00 00 a5 63 00 00     .c...c...c...c..
-    61e4:	a5 63 00 00 a5 63 00 00 a5 63 00 00 a5 63 00 00     .c...c...c...c..
-    61f4:	a5 63 00 00 a5 63 00 00 a5 63 00 00 a5 63 00 00     .c...c...c...c..
-    6204:	a5 63 00 00 a5 63 00 00 a5 63 00 00 a5 63 00 00     .c...c...c...c..
-    6214:	a5 63 00 00 a5 63 00 00 a5 63 00 00 a5 63 00 00     .c...c...c...c..
-    6224:	a5 63 00 00 a5 63 00 00 a5 63 00 00 a5 63 00 00     .c...c...c...c..
-    6234:	a5 63 00 00 a5 63 00 00 a5 63 00 00 a5 63 00 00     .c...c...c...c..
-    6244:	a5 63 00 00 a5 63 00 00 a5 63 00 00 a5 63 00 00     .c...c...c...c..
-    6254:	a5 63 00 00 a5 63 00 00 a5 63 00 00 a5 63 00 00     .c...c...c...c..
+    60f4:	41 63 00 00 79 63 00 00 79 63 00 00 79 63 00 00     Ac..yc..yc..yc..
+    6104:	79 63 00 00 79 63 00 00 79 63 00 00 79 63 00 00     yc..yc..yc..yc..
+    6114:	79 63 00 00 79 63 00 00 79 63 00 00 79 63 00 00     yc..yc..yc..yc..
+    6124:	79 63 00 00 79 63 00 00 79 63 00 00 79 63 00 00     yc..yc..yc..yc..
+    6134:	79 63 00 00 79 63 00 00 79 63 00 00 79 63 00 00     yc..yc..yc..yc..
+    6144:	79 63 00 00 79 63 00 00 79 63 00 00 79 63 00 00     yc..yc..yc..yc..
+    6154:	79 63 00 00 79 63 00 00 79 63 00 00 79 63 00 00     yc..yc..yc..yc..
+    6164:	79 63 00 00 79 63 00 00 79 63 00 00 79 63 00 00     yc..yc..yc..yc..
+    6174:	79 63 00 00 00 00 00 00 00 00 00 00 79 63 00 00     yc..........yc..
+    6184:	79 63 00 00 79 63 00 00 79 63 00 00 00 00 00 00     yc..yc..yc......
+    6194:	79 63 00 00 79 63 00 00 79 63 00 00 79 63 00 00     yc..yc..yc..yc..
+    61a4:	79 63 00 00 79 63 00 00 79 63 00 00 79 63 00 00     yc..yc..yc..yc..
+    61b4:	79 63 00 00 79 63 00 00 79 63 00 00 79 63 00 00     yc..yc..yc..yc..
+    61c4:	79 63 00 00 79 63 00 00 79 63 00 00 79 63 00 00     yc..yc..yc..yc..
+    61d4:	79 63 00 00 79 63 00 00 79 63 00 00 79 63 00 00     yc..yc..yc..yc..
+    61e4:	79 63 00 00 79 63 00 00 79 63 00 00 79 63 00 00     yc..yc..yc..yc..
+    61f4:	79 63 00 00 79 63 00 00 79 63 00 00 79 63 00 00     yc..yc..yc..yc..
+    6204:	79 63 00 00 79 63 00 00 79 63 00 00 79 63 00 00     yc..yc..yc..yc..
+    6214:	79 63 00 00 79 63 00 00 79 63 00 00 79 63 00 00     yc..yc..yc..yc..
+    6224:	79 63 00 00 79 63 00 00 79 63 00 00 79 63 00 00     yc..yc..yc..yc..
+    6234:	79 63 00 00 79 63 00 00 79 63 00 00 79 63 00 00     yc..yc..yc..yc..
+    6244:	79 63 00 00 79 63 00 00 79 63 00 00 79 63 00 00     yc..yc..yc..yc..
+    6254:	79 63 00 00 79 63 00 00 79 63 00 00 79 63 00 00     yc..yc..yc..yc..
 
 00006264 <deregister_tm_clones>:
     6264:	4803      	ldr	r0, [pc, #12]	@ (6274 <deregister_tm_clones+0x10>)
@@ -90,8 +90,8 @@ Disassembly of section .text:
     626e:	b103      	cbz	r3, 6272 <deregister_tm_clones+0xe>
     6270:	4718      	bx	r3
     6272:	4770      	bx	lr
-    6274:	00006488 	.word	0x00006488
-    6278:	00006488 	.word	0x00006488
+    6274:	00006478 	.word	0x00006478
+    6278:	00006478 	.word	0x00006478
     627c:	00000000 	.word	0x00000000
 
 00006280 <register_tm_clones>:
@@ -106,8 +106,8 @@ Disassembly of section .text:
     6292:	b103      	cbz	r3, 6296 <register_tm_clones+0x16>
     6294:	4718      	bx	r3
     6296:	4770      	bx	lr
-    6298:	00006488 	.word	0x00006488
-    629c:	00006488 	.word	0x00006488
+    6298:	00006478 	.word	0x00006478
+    629c:	00006478 	.word	0x00006478
     62a0:	00000000 	.word	0x00000000
 
 000062a4 <__do_global_dtors_aux>:
@@ -123,9 +123,9 @@ Disassembly of section .text:
     62ba:	2301      	movs	r3, #1
     62bc:	7023      	strb	r3, [r4, #0]
     62be:	bd10      	pop	{r4, pc}
-    62c0:	2003d004 	.word	0x2003d004
+    62c0:	2003d000 	.word	0x2003d000
     62c4:	00000000 	.word	0x00000000
-    62c8:	00006488 	.word	0x00006488
+    62c8:	00006478 	.word	0x00006478
 
 000062cc <frame_dummy>:
     62cc:	b508      	push	{r3, lr}
@@ -138,15 +138,15 @@ Disassembly of section .text:
     62de:	f7ff bfcf 	b.w	6280 <register_tm_clones>
     62e2:	bf00      	nop
     62e4:	00000000 	.word	0x00000000
-    62e8:	2003d008 	.word	0x2003d008
-    62ec:	00006488 	.word	0x00006488
+    62e8:	2003d004 	.word	0x2003d004
+    62ec:	00006478 	.word	0x00006478
 
 000062f0 <go_to_app>:
 }
 
 void go_to_app(void) {
     // Read app's vector table (first value is SP, second value is PC)
-    long *vector_table = (long *)APP_RAM_START;
+    long *vector_table = (long *)RAM_OS_BASE_ADDRESS;
     long desired_sp = vector_table[0];
     62f0:	f04f 5200 	mov.w	r2, #536870912	@ 0x20000000
     long desired_pc = vector_table[1];
@@ -177,225 +177,227 @@ void go_to_app(void) {
 
 0000630c <main>:
 int main(void) {
-    630c:	b538      	push	{r3, r4, r5, lr}
-    while (startup_test_value != 8);
-    630e:	4a15      	ldr	r2, [pc, #84]	@ (6364 <main+0x58>)
-    6310:	6813      	ldr	r3, [r2, #0]
-    6312:	2b08      	cmp	r3, #8
-    6314:	d1fc      	bne.n	6310 <main+0x4>
-    6316:	f44f 42c0 	mov.w	r2, #24576	@ 0x6000
+    630c:	b508      	push	{r3, lr}
+    630e:	f44f 42c0 	mov.w	r2, #24576	@ 0x6000
     uint32_t checksum = 0;
-    631a:	2300      	movs	r3, #0
+    6312:	2300      	movs	r3, #0
         checksum += cur_bootloader_start[i];
-    631c:	f812 1b01 	ldrb.w	r1, [r2], #1
+    6314:	f812 1b01 	ldrb.w	r1, [r2], #1
     for (uint32_t i = 0; i < BOOTLOADER_SIZE; i++) {
-    6320:	f5b2 4f10 	cmp.w	r2, #36864	@ 0x9000
+    6318:	f5b2 4f10 	cmp.w	r2, #36864	@ 0x9000
         checksum += cur_bootloader_start[i];
-    6324:	440b      	add	r3, r1
+    631c:	440b      	add	r3, r1
     for (uint32_t i = 0; i < BOOTLOADER_SIZE; i++) {
-    6326:	d1f9      	bne.n	631c <main+0x10>
+    631e:	d1f9      	bne.n	6314 <main+0x8>
     checksum %= 256;
-    6328:	b2db      	uxtb	r3, r3
+    6320:	b2db      	uxtb	r3, r3
     if (checksum != 0) {
-    632a:	b103      	cbz	r3, 632e <main+0x22>
+    6322:	b103      	cbz	r3, 6326 <main+0x1a>
         while (bootloader_index == 2);
-    632c:	e7fe      	b.n	632c <main+0x20>
-    632e:	f44f 2380 	mov.w	r3, #262144	@ 0x40000
-        app_dst[i] = (app_flash_src[i] & app_flash_src[i+APP_FLASH_STEP]) |
-    6332:	f5a3 3200 	sub.w	r2, r3, #131072	@ 0x20000
-    6336:	f103 50ff 	add.w	r0, r3, #534773760	@ 0x1fe00000
-    633a:	f992 1000 	ldrsb.w	r1, [r2]
-            (app_flash_src[i+APP_FLASH_STEP] & app_flash_src[i+2*APP_FLASH_STEP]) |
-    633e:	f503 3200 	add.w	r2, r3, #131072	@ 0x20000
-        app_dst[i] = (app_flash_src[i] & app_flash_src[i+APP_FLASH_STEP]) |
-    6342:	f500 10e0 	add.w	r0, r0, #1835008	@ 0x1c0000
-            (app_flash_src[i+APP_FLASH_STEP] & app_flash_src[i+2*APP_FLASH_STEP]) |
-    6346:	f992 4000 	ldrsb.w	r4, [r2]
-        app_dst[i] = (app_flash_src[i] & app_flash_src[i+APP_FLASH_STEP]) |
-    634a:	f813 2b01 	ldrb.w	r2, [r3], #1
-    634e:	ea41 0504 	orr.w	r5, r1, r4
-    6352:	402a      	ands	r2, r5
-    6354:	4021      	ands	r1, r4
-    6356:	430a      	orrs	r2, r1
-    for (long i = 0; i < APP_SIZE; i++) {
-    6358:	f5b3 2fc0 	cmp.w	r3, #393216	@ 0x60000
-        app_dst[i] = (app_flash_src[i] & app_flash_src[i+APP_FLASH_STEP]) |
-    635c:	7002      	strb	r2, [r0, #0]
-    for (long i = 0; i < APP_SIZE; i++) {
-    635e:	d1e8      	bne.n	6332 <main+0x26>
+    6324:	e7fe      	b.n	6324 <main+0x18>
+        app_dst[i] = app_flash_src[i];
+    6326:	f44f 3200 	mov.w	r2, #131072	@ 0x20000
+    632a:	4b03      	ldr	r3, [pc, #12]	@ (6338 <main+0x2c>)
+    632c:	4611      	mov	r1, r2
+    632e:	f04f 5000 	mov.w	r0, #536870912	@ 0x20000000
+    6332:	4798      	blx	r3
     go_to_app();
-    6360:	4b01      	ldr	r3, [pc, #4]	@ (6368 <main+0x5c>)
-    6362:	4798      	blx	r3
+    6334:	4b01      	ldr	r3, [pc, #4]	@ (633c <main+0x30>)
+    6336:	4798      	blx	r3
     __builtin_unreachable();
-    6364:	2003d000 	.word	0x2003d000
-    6368:	000062f1 	.word	0x000062f1
+    6338:	0000643d 	.word	0x0000643d
+    633c:	000062f1 	.word	0x000062f1
 
-0000636c <RAMECC_Handler>:
+00006340 <RAMECC_Handler>:
 	return tmp;
 }
 
 static inline hri_ramecc_intflag_reg_t hri_ramecc_read_INTFLAG_reg(const void *const hw)
 {
 	return ((Ramecc *)hw)->INTFLAG.reg;
-    636c:	4a0b      	ldr	r2, [pc, #44]	@ (639c <RAMECC_Handler+0x30>)
-    636e:	7893      	ldrb	r3, [r2, #2]
+    6340:	4a0b      	ldr	r2, [pc, #44]	@ (6370 <RAMECC_Handler+0x30>)
+    6342:	7893      	ldrb	r3, [r2, #2]
 
 /**
  * \internal RAMECC interrupt handler
  */
 void RAMECC_Handler(void)
 {
-    6370:	b082      	sub	sp, #8
-    6372:	b2db      	uxtb	r3, r3
+    6344:	b082      	sub	sp, #8
+    6346:	b2db      	uxtb	r3, r3
 	struct _ramecc_device *dev      = (struct _ramecc_device *)&device;
 	volatile uint32_t      int_mask = hri_ramecc_read_INTFLAG_reg(RAMECC);
-    6374:	9301      	str	r3, [sp, #4]
+    6348:	9301      	str	r3, [sp, #4]
 
 	if (int_mask & RAMECC_INTFLAG_DUALE && dev->ramecc_cb.dual_bit_err) {
-    6376:	9b01      	ldr	r3, [sp, #4]
-    6378:	0799      	lsls	r1, r3, #30
-    637a:	d505      	bpl.n	6388 <RAMECC_Handler+0x1c>
-    637c:	4b08      	ldr	r3, [pc, #32]	@ (63a0 <RAMECC_Handler+0x34>)
-    637e:	681b      	ldr	r3, [r3, #0]
-    6380:	b113      	cbz	r3, 6388 <RAMECC_Handler+0x1c>
+    634a:	9b01      	ldr	r3, [sp, #4]
+    634c:	0799      	lsls	r1, r3, #30
+    634e:	d505      	bpl.n	635c <RAMECC_Handler+0x1c>
+    6350:	4b08      	ldr	r3, [pc, #32]	@ (6374 <RAMECC_Handler+0x34>)
+    6352:	681b      	ldr	r3, [r3, #0]
+    6354:	b113      	cbz	r3, 635c <RAMECC_Handler+0x1c>
 	return tmp;
 }
 
 static inline hri_ramecc_erraddr_reg_t hri_ramecc_read_ERRADDR_reg(const void *const hw)
 {
 	return ((Ramecc *)hw)->ERRADDR.reg;
-    6382:	6850      	ldr	r0, [r2, #4]
+    6356:	6850      	ldr	r0, [r2, #4]
 	} else if (int_mask & RAMECC_INTFLAG_SINGLEE && dev->ramecc_cb.single_bit_err) {
 		dev->ramecc_cb.single_bit_err((uint32_t)hri_ramecc_read_ERRADDR_reg(RAMECC));
 	} else {
 		return;
 	}
 }
-    6384:	b002      	add	sp, #8
+    6358:	b002      	add	sp, #8
 		dev->ramecc_cb.single_bit_err((uint32_t)hri_ramecc_read_ERRADDR_reg(RAMECC));
-    6386:	4718      	bx	r3
+    635a:	4718      	bx	r3
 	} else if (int_mask & RAMECC_INTFLAG_SINGLEE && dev->ramecc_cb.single_bit_err) {
-    6388:	9b01      	ldr	r3, [sp, #4]
-    638a:	07db      	lsls	r3, r3, #31
-    638c:	d504      	bpl.n	6398 <RAMECC_Handler+0x2c>
-    638e:	4b04      	ldr	r3, [pc, #16]	@ (63a0 <RAMECC_Handler+0x34>)
-    6390:	685b      	ldr	r3, [r3, #4]
-    6392:	b10b      	cbz	r3, 6398 <RAMECC_Handler+0x2c>
-    6394:	4a01      	ldr	r2, [pc, #4]	@ (639c <RAMECC_Handler+0x30>)
-    6396:	e7f4      	b.n	6382 <RAMECC_Handler+0x16>
+    635c:	9b01      	ldr	r3, [sp, #4]
+    635e:	07db      	lsls	r3, r3, #31
+    6360:	d504      	bpl.n	636c <RAMECC_Handler+0x2c>
+    6362:	4b04      	ldr	r3, [pc, #16]	@ (6374 <RAMECC_Handler+0x34>)
+    6364:	685b      	ldr	r3, [r3, #4]
+    6366:	b10b      	cbz	r3, 636c <RAMECC_Handler+0x2c>
+    6368:	4a01      	ldr	r2, [pc, #4]	@ (6370 <RAMECC_Handler+0x30>)
+    636a:	e7f4      	b.n	6356 <RAMECC_Handler+0x16>
 }
-    6398:	b002      	add	sp, #8
-    639a:	4770      	bx	lr
-    639c:	41020000 	.word	0x41020000
-    63a0:	2003d020 	.word	0x2003d020
+    636c:	b002      	add	sp, #8
+    636e:	4770      	bx	lr
+    6370:	41020000 	.word	0x41020000
+    6374:	2003d01c 	.word	0x2003d01c
 
-000063a4 <Dummy_Handler>:
+00006378 <Dummy_Handler>:
 /**
  * \brief Default interrupt handler for unused IRQs.
  */
 void Dummy_Handler(void)
 {
 	while (1) {
-    63a4:	e7fe      	b.n	63a4 <Dummy_Handler>
+    6378:	e7fe      	b.n	6378 <Dummy_Handler>
 	...
 
-000063a8 <Reset_Handler>:
+0000637c <Reset_Handler>:
 {
-    63a8:	b508      	push	{r3, lr}
+    637c:	b508      	push	{r3, lr}
 	if (pSrc != pDest) {
-    63aa:	4a14      	ldr	r2, [pc, #80]	@ (63fc <Reset_Handler+0x54>)
-    63ac:	4b14      	ldr	r3, [pc, #80]	@ (6400 <Reset_Handler+0x58>)
-    63ae:	429a      	cmp	r2, r3
-    63b0:	d002      	beq.n	63b8 <Reset_Handler+0x10>
+    637e:	4a14      	ldr	r2, [pc, #80]	@ (63d0 <Reset_Handler+0x54>)
+    6380:	4b14      	ldr	r3, [pc, #80]	@ (63d4 <Reset_Handler+0x58>)
+    6382:	429a      	cmp	r2, r3
+    6384:	d002      	beq.n	638c <Reset_Handler+0x10>
 		for (; pDest < &_erelocate;) {
-    63b2:	4914      	ldr	r1, [pc, #80]	@ (6404 <Reset_Handler+0x5c>)
-    63b4:	428b      	cmp	r3, r1
-    63b6:	d318      	bcc.n	63ea <Reset_Handler+0x42>
+    6386:	4914      	ldr	r1, [pc, #80]	@ (63d8 <Reset_Handler+0x5c>)
+    6388:	428b      	cmp	r3, r1
+    638a:	d318      	bcc.n	63be <Reset_Handler+0x42>
 	pSrc  = &_etext;
-    63b8:	4b13      	ldr	r3, [pc, #76]	@ (6408 <Reset_Handler+0x60>)
+    638c:	4b13      	ldr	r3, [pc, #76]	@ (63dc <Reset_Handler+0x60>)
 	for (pDest = &_szero; pDest < &_ezero;) {
-    63ba:	4a14      	ldr	r2, [pc, #80]	@ (640c <Reset_Handler+0x64>)
+    638e:	4a14      	ldr	r2, [pc, #80]	@ (63e0 <Reset_Handler+0x64>)
 		*pDest++ = 0;
-    63bc:	2100      	movs	r1, #0
+    6390:	2100      	movs	r1, #0
 	for (pDest = &_szero; pDest < &_ezero;) {
-    63be:	4293      	cmp	r3, r2
-    63c0:	d318      	bcc.n	63f4 <Reset_Handler+0x4c>
+    6392:	4293      	cmp	r3, r2
+    6394:	d318      	bcc.n	63c8 <Reset_Handler+0x4c>
 	SCB->VTOR = ((uint32_t)pSrc & SCB_VTOR_TBLOFF_Msk);
-    63c2:	4a13      	ldr	r2, [pc, #76]	@ (6410 <Reset_Handler+0x68>)
-    63c4:	4b13      	ldr	r3, [pc, #76]	@ (6414 <Reset_Handler+0x6c>)
-    63c6:	f022 027f 	bic.w	r2, r2, #127	@ 0x7f
-    63ca:	609a      	str	r2, [r3, #8]
+    6396:	4a13      	ldr	r2, [pc, #76]	@ (63e4 <Reset_Handler+0x68>)
+    6398:	4b13      	ldr	r3, [pc, #76]	@ (63e8 <Reset_Handler+0x6c>)
+    639a:	f022 027f 	bic.w	r2, r2, #127	@ 0x7f
+    639e:	609a      	str	r2, [r3, #8]
 	SCB->CPACR |= (0xFu << 20);
-    63cc:	f8d3 2088 	ldr.w	r2, [r3, #136]	@ 0x88
-    63d0:	f442 0270 	orr.w	r2, r2, #15728640	@ 0xf00000
-    63d4:	f8c3 2088 	str.w	r2, [r3, #136]	@ 0x88
+    63a0:	f8d3 2088 	ldr.w	r2, [r3, #136]	@ 0x88
+    63a4:	f442 0270 	orr.w	r2, r2, #15728640	@ 0xf00000
+    63a8:	f8c3 2088 	str.w	r2, [r3, #136]	@ 0x88
   \details Acts as a special kind of Data Memory Barrier.
            It completes when all explicit memory accesses before this instruction complete.
  */
 __STATIC_FORCEINLINE void __DSB(void)
 {
   __ASM volatile ("dsb 0xF":::"memory");
-    63d8:	f3bf 8f4f 	dsb	sy
+    63ac:	f3bf 8f4f 	dsb	sy
   __ASM volatile ("isb 0xF":::"memory");
-    63dc:	f3bf 8f6f 	isb	sy
+    63b0:	f3bf 8f6f 	isb	sy
 	__libc_init_array();
-    63e0:	4b0d      	ldr	r3, [pc, #52]	@ (6418 <Reset_Handler+0x70>)
-    63e2:	4798      	blx	r3
+    63b4:	4b0d      	ldr	r3, [pc, #52]	@ (63ec <Reset_Handler+0x70>)
+    63b6:	4798      	blx	r3
 	main();
-    63e4:	4b0d      	ldr	r3, [pc, #52]	@ (641c <Reset_Handler+0x74>)
-    63e6:	4798      	blx	r3
+    63b8:	4b0d      	ldr	r3, [pc, #52]	@ (63f0 <Reset_Handler+0x74>)
+    63ba:	4798      	blx	r3
 	while (1)
-    63e8:	e7fe      	b.n	63e8 <Reset_Handler+0x40>
+    63bc:	e7fe      	b.n	63bc <Reset_Handler+0x40>
 			*pDest++ = *pSrc++;
-    63ea:	f852 0b04 	ldr.w	r0, [r2], #4
-    63ee:	f843 0b04 	str.w	r0, [r3], #4
-    63f2:	e7df      	b.n	63b4 <Reset_Handler+0xc>
+    63be:	f852 0b04 	ldr.w	r0, [r2], #4
+    63c2:	f843 0b04 	str.w	r0, [r3], #4
+    63c6:	e7df      	b.n	6388 <Reset_Handler+0xc>
 		*pDest++ = 0;
-    63f4:	f843 1b04 	str.w	r1, [r3], #4
-    63f8:	e7e1      	b.n	63be <Reset_Handler+0x16>
-    63fa:	bf00      	nop
-    63fc:	00006488 	.word	0x00006488
-    6400:	2003d000 	.word	0x2003d000
-    6404:	2003d004 	.word	0x2003d004
-    6408:	2003d004 	.word	0x2003d004
-    640c:	2003d030 	.word	0x2003d030
-    6410:	00006000 	.word	0x00006000
-    6414:	e000ed00 	.word	0xe000ed00
-    6418:	00006421 	.word	0x00006421
-    641c:	0000630d 	.word	0x0000630d
+    63c8:	f843 1b04 	str.w	r1, [r3], #4
+    63cc:	e7e1      	b.n	6392 <Reset_Handler+0x16>
+    63ce:	bf00      	nop
+    63d0:	00006478 	.word	0x00006478
+    63d4:	2003d000 	.word	0x2003d000
+    63d8:	2003d000 	.word	0x2003d000
+    63dc:	2003d000 	.word	0x2003d000
+    63e0:	2003d02c 	.word	0x2003d02c
+    63e4:	00006000 	.word	0x00006000
+    63e8:	e000ed00 	.word	0xe000ed00
+    63ec:	000063f5 	.word	0x000063f5
+    63f0:	0000630d 	.word	0x0000630d
 
-00006420 <__libc_init_array>:
-    6420:	b570      	push	{r4, r5, r6, lr}
-    6422:	4b0d      	ldr	r3, [pc, #52]	@ (6458 <__libc_init_array+0x38>)
-    6424:	4d0d      	ldr	r5, [pc, #52]	@ (645c <__libc_init_array+0x3c>)
-    6426:	1b5b      	subs	r3, r3, r5
-    6428:	109c      	asrs	r4, r3, #2
-    642a:	2600      	movs	r6, #0
-    642c:	42a6      	cmp	r6, r4
-    642e:	d109      	bne.n	6444 <__libc_init_array+0x24>
-    6430:	f000 f81a 	bl	6468 <_init>
-    6434:	4d0a      	ldr	r5, [pc, #40]	@ (6460 <__libc_init_array+0x40>)
-    6436:	4b0b      	ldr	r3, [pc, #44]	@ (6464 <__libc_init_array+0x44>)
-    6438:	1b5b      	subs	r3, r3, r5
-    643a:	109c      	asrs	r4, r3, #2
-    643c:	2600      	movs	r6, #0
-    643e:	42a6      	cmp	r6, r4
-    6440:	d105      	bne.n	644e <__libc_init_array+0x2e>
-    6442:	bd70      	pop	{r4, r5, r6, pc}
-    6444:	f855 3b04 	ldr.w	r3, [r5], #4
-    6448:	4798      	blx	r3
-    644a:	3601      	adds	r6, #1
-    644c:	e7ee      	b.n	642c <__libc_init_array+0xc>
-    644e:	f855 3b04 	ldr.w	r3, [r5], #4
-    6452:	4798      	blx	r3
-    6454:	3601      	adds	r6, #1
-    6456:	e7f2      	b.n	643e <__libc_init_array+0x1e>
-    6458:	00006474 	.word	0x00006474
-    645c:	00006474 	.word	0x00006474
-    6460:	00006474 	.word	0x00006474
-    6464:	00006478 	.word	0x00006478
+000063f4 <__libc_init_array>:
+    63f4:	b570      	push	{r4, r5, r6, lr}
+    63f6:	4b0d      	ldr	r3, [pc, #52]	@ (642c <__libc_init_array+0x38>)
+    63f8:	4d0d      	ldr	r5, [pc, #52]	@ (6430 <__libc_init_array+0x3c>)
+    63fa:	1b5b      	subs	r3, r3, r5
+    63fc:	109c      	asrs	r4, r3, #2
+    63fe:	2600      	movs	r6, #0
+    6400:	42a6      	cmp	r6, r4
+    6402:	d109      	bne.n	6418 <__libc_init_array+0x24>
+    6404:	f000 f828 	bl	6458 <_init>
+    6408:	4d0a      	ldr	r5, [pc, #40]	@ (6434 <__libc_init_array+0x40>)
+    640a:	4b0b      	ldr	r3, [pc, #44]	@ (6438 <__libc_init_array+0x44>)
+    640c:	1b5b      	subs	r3, r3, r5
+    640e:	109c      	asrs	r4, r3, #2
+    6410:	2600      	movs	r6, #0
+    6412:	42a6      	cmp	r6, r4
+    6414:	d105      	bne.n	6422 <__libc_init_array+0x2e>
+    6416:	bd70      	pop	{r4, r5, r6, pc}
+    6418:	f855 3b04 	ldr.w	r3, [r5], #4
+    641c:	4798      	blx	r3
+    641e:	3601      	adds	r6, #1
+    6420:	e7ee      	b.n	6400 <__libc_init_array+0xc>
+    6422:	f855 3b04 	ldr.w	r3, [r5], #4
+    6426:	4798      	blx	r3
+    6428:	3601      	adds	r6, #1
+    642a:	e7f2      	b.n	6412 <__libc_init_array+0x1e>
+    642c:	00006464 	.word	0x00006464
+    6430:	00006464 	.word	0x00006464
+    6434:	00006464 	.word	0x00006464
+    6438:	00006468 	.word	0x00006468
 
-00006468 <_init>:
+0000643c <memcpy>:
+    643c:	440a      	add	r2, r1
+    643e:	4291      	cmp	r1, r2
+    6440:	f100 33ff 	add.w	r3, r0, #4294967295	@ 0xffffffff
+    6444:	d100      	bne.n	6448 <memcpy+0xc>
+    6446:	4770      	bx	lr
+    6448:	b510      	push	{r4, lr}
+    644a:	f811 4b01 	ldrb.w	r4, [r1], #1
+    644e:	f803 4f01 	strb.w	r4, [r3, #1]!
+    6452:	4291      	cmp	r1, r2
+    6454:	d1f9      	bne.n	644a <memcpy+0xe>
+    6456:	bd10      	pop	{r4, pc}
+
+00006458 <_init>:
+    6458:	b5f8      	push	{r3, r4, r5, r6, r7, lr}
+    645a:	bf00      	nop
+    645c:	bcf8      	pop	{r3, r4, r5, r6, r7}
+    645e:	bc08      	pop	{r3}
+    6460:	469e      	mov	lr, r3
+    6462:	4770      	bx	lr
+
+00006464 <__frame_dummy_init_array_entry>:
+    6464:	62cd 0000                                   .b..
+
+00006468 <_fini>:
     6468:	b5f8      	push	{r3, r4, r5, r6, r7, lr}
     646a:	bf00      	nop
     646c:	bcf8      	pop	{r3, r4, r5, r6, r7}
@@ -403,16 +405,5 @@ __STATIC_FORCEINLINE void __DSB(void)
     6470:	469e      	mov	lr, r3
     6472:	4770      	bx	lr
 
-00006474 <__frame_dummy_init_array_entry>:
-    6474:	62cd 0000                                   .b..
-
-00006478 <_fini>:
-    6478:	b5f8      	push	{r3, r4, r5, r6, r7, lr}
-    647a:	bf00      	nop
-    647c:	bcf8      	pop	{r3, r4, r5, r6, r7}
-    647e:	bc08      	pop	{r3}
-    6480:	469e      	mov	lr, r3
-    6482:	4770      	bx	lr
-
-00006484 <__do_global_dtors_aux_fini_array_entry>:
-    6484:	62a5 0000                                   .b..
+00006474 <__do_global_dtors_aux_fini_array_entry>:
+    6474:	62a5 0000                                   .b..

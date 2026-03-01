@@ -18,6 +18,7 @@
 # Debug files
 *.d
 *.map
+*.lss
 /debug
 
 # Ignore cscope and ctags files
