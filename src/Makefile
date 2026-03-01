@@ -80,6 +80,8 @@ export OBJS :=                                              	\
 ../src/drivers/magnetometer/magnetometer_driver.o           	\
 ../src/drivers/photodiode/photodiode_driver.o               	\
 ../src/drivers/watchdog/watchdog_driver.o                     	\
+../src/drivers/arducam/arducam_driver.o                         \
+../src/drivers/arducam/arducam_registers.o 						\
                                                             	\
 ../src/tasks/heartbeat/heartbeat_main.o                     	\
                                                             	\
@@ -106,8 +108,6 @@ export OBJS :=                                              	\
                                                             	\
 ../src/tasks/arducam/arducam_main.o 							\
 ../src/tasks/arducam/arducam_task.o 							\
-../src/tasks/arducam/arducam_driver.o 							\
-../src/tasks/arducam/arducam_registers.o 						\
 																\
 ../src/checks/device_checks.o 									\
 ../src/tasks/task_list.o                                        \
@@ -132,6 +132,7 @@ export EXTRA_VPATH := \
 ../../src/drivers/magnetorquer \
 ../../src/drivers/photodiode \
 ../../src/drivers/watchdog \
+../../src/drivers/arducam \
 ../../src/tasks \
 ../../src/tasks/watchdog \
 ../../src/tasks/heartbeat \
