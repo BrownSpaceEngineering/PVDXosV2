@@ -14,6 +14,7 @@
 #include <queue.h>
 #include <stdbool.h>
 #include <task.h>
+#include <stdint.h>
 
 /* ---------- LOGGING CONSTANTS ---------- */
 
@@ -118,6 +119,19 @@ typedef enum {
 typedef QueueHandle_t (*init_function)(void);
 
 /* ---------- STRUCTS ---------- */
+
+// integer and float 3d vector types. 
+typedef struct {
+    int32_t x; 
+    int32_t y;
+    int32_t z;
+} int32_3d_t; 
+
+typedef struct {
+    float x;
+    float y;
+    float z;
+} float_3d_t;
 
 // A struct defining a task's lifecycle in the PVDXos RTOS
 typedef struct {

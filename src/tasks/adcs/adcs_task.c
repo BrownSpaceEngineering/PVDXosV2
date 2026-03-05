@@ -39,15 +39,19 @@ status_t update_photodiode_data(photodiode_data_t *persistent_photo_data, size_t
             // TODO: queue sth to task manage to update state variable. 
         }
     }
+
+    return SUCCESS; 
 }
 
 status_t update_magnetometer_data(mag_data_t *persistent_readings, size_t n_reads) {
+    mag_raw_reading_t raw_readings;
+    
     // Push previous readings one step forwards
     for (size_t i = n_reads - 1; i > 0; i--) {
         persistent_readings[i] = persistent_readings[i - 1];
     }   
-    
-    status_t data_read = mag_read_data(&persistent_readings[0]);
+
+    status_t data_read = magnetometer_read(&raw_readings, &persistent_readings[0]);
     if (data_read != SUCCESS) {
         // First we uncheck the magnetometer
         uncheck_device(MAGNETOMETER_ID);
@@ -58,6 +62,8 @@ status_t update_magnetometer_data(mag_data_t *persistent_readings, size_t n_read
             // TODO: Update status with magnetometer failure
         }
     }
+
+    return SUCCESS;
 }
 
 status_t update_gyro_data(SCH1_result_t *persistent_gyro_data, size_t count ) {
@@ -66,7 +72,7 @@ status_t update_gyro_data(SCH1_result_t *persistent_gyro_data, size_t count ) {
         persistent_gyro_data[i] = persistent_gyro_data[i - 1];
     }
     
-    status_t result = SCH1_read(&persistent_gyro_data[0]);
+    status_t result = gyro_read(&persistent_gyro_data[0]);
     
     if (result != SUCCESS) {
         warning("adcs task: gyro read failed\n");
@@ -79,6 +85,8 @@ status_t update_gyro_data(SCH1_result_t *persistent_gyro_data, size_t count ) {
             // TODO: queue sth to task manage to update state variable. 
         }
     }
+
+    return SUCCESS;
 }
 
 /* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
@@ -136,29 +144,6 @@ command_t get_photomagrtc_read_command(
 /* ---------- NON-DISPATCHABLE FUNCTIONS (do not go through the command dispatcher) ---------- */
 
 /**
- * \fn exec_command_photomagrtc
- *
- * \brief Executes function corresponding to the command
- *
- * \param p_cmd a pointer to a command forwarded to magnetometer, photodiode, and rtc
- */
-void exec_command_photomagrtc(command_t *const p_cmd) {
-    if (p_cmd->target != p_adcs_task) {
-        fatal("photo/mag: command target is not adcs! target: %d operation: %d\n", p_cmd->target, p_cmd->operation);
-    }
-
-    photomagrtc_read_args_t *args = (photomagrtc_read_args_t *)p_cmd->p_data;
-    status_t magnetometer_status = mag_read_data(args->mag_buffer);
-    status_t photodiode_status = photodiode_read(args->photodiode_buffer);
-    status_t rtc_status = get_rtc_values(args->rtc_buffer);
-
-    if (photodiode_status == SUCCESS 
-        && magnetometer_status == SUCCESS
-        && rtc_status == SUCCESS) p_cmd->result = SUCCESS;
-    p_cmd->result = ERROR_READ_FAILED;
-}
-
-/**
  * \fn exec_command_adcs_process
  *
  * \brief Executes function corresponding to the command
@@ -182,9 +167,9 @@ void exec_command_adcs_process(command_t *const p_cmd) {
     info("ADCS microsecond count: %lu\n", temp.microseconds_count);
     info("ADCS seconds count: %lu\n", temp.seconds_count);
     info("ADCS mag reading [x,y,z]: [%f,%f,%f]\n", 
-        args->mag_buffer->gain_adj_readings[0], 
-        args->mag_buffer->gain_adj_readings[1],
-        args->mag_buffer->gain_adj_readings[2]);
+        mag_data_buffer[0].x, 
+        mag_data_buffer[0].y,
+        mag_data_buffer[0].z);
 
     if (rtc_status == SUCCESS) p_cmd->result = SUCCESS;
     p_cmd->result = ERROR_PROCESSING_FAILED;

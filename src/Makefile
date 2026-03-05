@@ -76,8 +76,10 @@ export OBJS :=                                              	\
 ../src/misc/exception_handlers/specific_handlers.o          	\
 																\
 ../src/drivers/display/display_driver.o                       	\
+../src/drivers/gyro/SCH1.o										\
 ../src/drivers/magnetometer/magnetometer_driver.o           	\
 ../src/drivers/photodiode/photodiode_driver.o               	\
+../src/drivers/rtc/rtc_driver.o                                 \
 ../src/drivers/watchdog/watchdog_driver.o                     	\
                                                             	\
 ../src/tasks/heartbeat/heartbeat_main.o                     	\
@@ -104,18 +106,12 @@ export OBJS :=                                              	\
 ../src/tasks/shell/shell_commands.o                         	\
                                                             	\
 ../src/tasks/task_list.o                                        \
-                                                            	\
-																\
-../src/tasks/adcs/SCH1.o										\
 																\
 ../src/checks/device_checks.o 									\
 																\
 ../src/tasks/radio/spp.o 										\
 ../src/tests/test.o                                             \
 																\
-../src/tasks/adcs/magnetometer_driver.o							\
-../src/tasks/adcs/photodiode_driver.o							\
-../src/tasks/adcs/rtc_driver.o									\
 ../src/tasks/adcs/adcs_main.o									\
 ../src/tasks/adcs/adcs_task.o									\
 
@@ -130,8 +126,10 @@ export EXTRA_VPATH := \
 ../../src/misc/exception_handlers \
 ../../src/drivers \
 ../../src/drivers/display \
+../../src/drivers/gyro \
 ../../src/drivers/magnetometer \
 ../../src/drivers/magnetorquer \
+../../src/drivers/rtc \
 ../../src/drivers/photodiode \
 ../../src/drivers/watchdog \
 ../../src/tasks \

@@ -88,11 +88,10 @@ void main_adcs(void *pvParameters) {
                 switch (cmd.operation) {
                 case OPERATION_READ:
                     debug("photo/mag/rtc: Command popped off queue. Target: %d, Operation: %d\n", cmd.target, cmd.operation);
-                    exec_command_photomagrtc(&cmd);
                     break;
                 case OPERATION_PROCESS:
                     debug("adcs processing: Command popped off queue. Target: %d, Operation: %d\n", cmd.target, cmd.operation);
-                    exec_command_adcs_process(&cmd);
+                    exec_command_adcs_process(&cmd); 
                     break;
                 default:
                     fatal("adcs: Invalid operation!\n");

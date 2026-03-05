@@ -839,7 +839,7 @@ uint32_t SCH1_convertBitfieldToDecimation(uint32_t bitfield) {
  *
  * @return SCH1_MT_OK = success, SCH1_MT_ERR_* = failure. Please see header file for error definitions.
  */
-int SCH1_getStatus(SCH1_status *Status) {
+int SCH1_getStatus(SCH1_status_t *Status) {
     if (Status == NULL) {
         return SCH1_ERR_NULL_POINTER;
     }
@@ -867,7 +867,7 @@ int SCH1_getStatus(SCH1_status *Status) {
  * @return true = no status failures
  *         false = at least one status failure.
  */
-bool SCH1_verifyStatus(SCH1_status *Status) {
+bool SCH1_verifyStatus(SCH1_status_t *Status) {
     if (Status == NULL) {
         return SCH1_ERR_NULL_POINTER;
     }
@@ -1031,11 +1031,11 @@ bool SCH1_checkCRC3(uint32_t SPIframe) {
  * @return SCH1_OK = success
  *         SCH1_ERR_* = failure. Please see header file for error definitions.
  */
-int SCH1_init(SCH1_filter sFilter, SCH1_sensitivity sSensitivity, SCH1_decimation sDecimation, bool enableDRY) {
+int SCH1_init(SCH1_filter_t sFilter, SCH1_sensitivity_t sSensitivity, SCH1_decimation_t sDecimation, bool enableDRY) {
     int ret = SCH1_OK;
     uint8_t startup_attempt = 0;
     bool SCH1status = false;
-    SCH1_status SCH1statusAll;
+    SCH1_status_t SCH1statusAll;
 
     // SCH1 startup sequence specified in section "5 Component Operation,
     // Reset and Power Up" in the data sheet.
@@ -1100,7 +1100,7 @@ int SCH1_init(SCH1_filter sFilter, SCH1_sensitivity sSensitivity, SCH1_decimatio
  *
  * @return None
  */
-void SCH1_getData(SCH1_raw_data *data) {
+void SCH1_getData(SCH1_raw_data_t *data) {
     SCH1_sendRequest(REQ_READ_RATE_X1);
     uint64_t rate_x_raw = SCH1_sendRequest(REQ_READ_RATE_Y1);
     uint64_t rate_y_raw = SCH1_sendRequest(REQ_READ_RATE_Z1);
@@ -1134,7 +1134,7 @@ void SCH1_getData(SCH1_raw_data *data) {
  *
  * @return None
  */
-void SCH1_convert_data(SCH1_raw_data *data_in, SCH1_result *data_out) {
+void SCH1_convert_data(SCH1_raw_data_t *data_in, SCH1_result_t *data_out) {
     // Convert from raw counts to sensitivity and calculate averages here for faster execution
     data_out->Rate1[AXIS_X] = (float)data_in->Rate1_raw[AXIS_X] / (SENSITIVITY_RATE1 * (float)AVG_FACTOR);
     data_out->Rate1[AXIS_Y] = (float)data_in->Rate1_raw[AXIS_Y] / (SENSITIVITY_RATE1 * (float)AVG_FACTOR);
@@ -1164,4 +1164,13 @@ bool SCH1_check_48bit_frame_error(uint64_t *data, int size) {
     }
 
     return false;
+}
+
+// gets data out. 
+status_t gyro_read(SCH1_result_t *result) {
+    SCH1_raw_data_t raw_data;
+    SCH1_getData(&raw_data);
+    SCH1_convert_data(&raw_data, result);
+    // TODO: error handling. 
+    return SUCCESS;
 }

@@ -40,6 +40,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "globals.h"
 
 
 /**
@@ -396,5 +397,7 @@ bool        SCH1_verifyStatus(SCH1_status_t *Status);
 
 char        *SCH1_getSnbr(void);
 void        SCH1_reset(void);
+
+status_t gyro_read(SCH1_result_t *result); 
 
 #endif /* SCH1_H */

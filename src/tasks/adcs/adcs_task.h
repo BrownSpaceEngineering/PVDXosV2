@@ -51,7 +51,6 @@ command_t get_photomagrtc_read_command(
     photodiode_data_t *const photodiode_data, 
     rtc_data_t *const rtc_data);
 command_t get_adcs_process_command(photomagrtc_read_args_t *const args);
-void exec_command_photomagrtc(command_t *const p_cmd);
 void exec_command_adcs_process(command_t *const p_cmd);
 
 #endif // ADCS_H
