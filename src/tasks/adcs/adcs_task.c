@@ -13,6 +13,7 @@
 #include "bdot.h"
 #include "checks/device_checks.h"
 #include "logging.h"
+#include "task_list.h"
 
 float K_VALUE = 1.0e9; // B-dot gain constant
 float DT_VALUE = 1.0;  // Time step for B-dot control
@@ -125,19 +126,19 @@ status_t adcs_orientation_loop() {
         return ERROR_PROCESSING_FAILED;
     }
 
-    if (tumbling(gyro_data_buffer[0])) {
-        bdot(mag_data_buffer, mag_torque_buffer, K_VALUE, DT_VALUE);
+    if (tumbling(&gyro_data_buffer[0])) {
+        bdot(mag_data_buffer, &mag_torque_buffer, K_VALUE, DT_VALUE);
 
     } else {
-        if (in_sun(photodiode_data_buffer[0])) {
+        if (in_sun(&photodiode_data_buffer[0])) {
             info("adcs task: sun detected; orienting\n");
 
             update_sun_vector(&photodiode_data_buffer[0], sun_vector_buffer, 2);
 
-            ukf_orient();
+            ukf_orient(/* TODO some inputs */);
         } else {
             info("adcs task: sun not detected; going into bdot\n");
-            bdot(mag_data_buffer, mag_torque_buffer, K_VALUE, DT_VALUE);
+            bdot(mag_data_buffer, &mag_torque_buffer, K_VALUE, DT_VALUE);
         }
     }
     return SUCCESS;
@@ -213,8 +214,7 @@ void exec_command_adcs_process(command_t *const p_cmd) {
         p_cmd->result = SUCCESS;
     p_cmd->result = ERROR_PROCESSING_FAILED;
 }
-}
 
-float_3d_t compute_sun_vector(photodiode_data_t input) {
+float_3d_t compute_sun_vector(photodiode_data_t *input) {
     return (float_3d_t){.x = 0, .y = 0, .z = 0};
 }

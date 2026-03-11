@@ -51,5 +51,8 @@ command_t get_photomagrtc_read_command(mag_data_t *const mag_data, photodiode_da
 command_t get_adcs_process_command(photomagrtc_read_args_t *const args);
 void exec_command_adcs_process(command_t *const p_cmd);
 sun_vector_t compute_sun_vector(photodiode_data_t *input);
+bool tumbling(SCH1_result_t *gyro_data);         // TODO define
+bool in_sun(photodiode_data_t *photodiode_data); // TODO define
+void ukf_orient(/* TODO some inputs */ void);    // TODO define
 
 #endif // ADCS_H
