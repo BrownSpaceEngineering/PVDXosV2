@@ -7,7 +7,7 @@
  *
  * Created: November 20, 2023
  * Modified: November 9, 2025
- * Authors: Oren Kohavi, Siddharta Laloux, Tanish Makadia, Yi Liu, 
+ * Authors: Oren Kohavi, Siddharta Laloux, Tanish Makadia, Yi Liu,
  *          Defne Doken, Aidan Wang, Ignacio Blancas Rodriguez, Alexander Thaep
  */
 
@@ -16,6 +16,7 @@
 #include "checks/device_checks.h"
 #include "globals.h"
 #include "logging.h"
+#include "tasks/task_manager/task_manager_task.h"
 #include "tests/test.h"
 
 cosmic_monkey_task_arguments_t cm_args = {0};

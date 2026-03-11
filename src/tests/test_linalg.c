@@ -1,46 +1,46 @@
 /**
  * test_linalg.c
- * 
- * Unit tests to check the correctness of linalg functions. 
- * 
+ *
+ * Unit tests to check the correctness of linalg functions.
+ *
  * Created: Friday, 13th February 2026
  * Authors: Siddharta Laloux
  */
 
 #include "test_linalg.h"
 
+#include "linalg/LinearAlgebra/declareFunctions.h"
+
 /**
  * \fn debug_matrix
  *
  * \brief Debug prints a matrix A, with the dimension row x column
- * 
+ *
  * \param A the matrix to print (as a 1D array in row-major order)
  * \param row the number of rows in the matrix
  * \param column the number of columns in the matrix
  */
-void debug_matrix(double* A, int row, int column) {
-	for(int i = 0; i < row; i++){
-		for(int j = 0; j < column; j++){
-			printf("%0.18f ", *(A++));
-		}
-		printf("\n");
-	}
-	printf("\n");
-
+void debug_matrix(double *A, int row, int column) {
+    for (int i = 0; i < row; i++) {
+        for (int j = 0; j < column; j++) {
+            printf("%0.18f ", *(A++));
+        }
+        printf("\n");
+    }
+    printf("\n");
 }
 
 void test_matrix_product(void) {
-
     test_log("----- testing matrix product -----\n");
 
     // test case for 2*2 matrix product
-    double A[4] = {1., 2., 3., 4.}; 
-    double B[4] = {5., 6., 7., 8.}; 
-    double C[4] = {0.}; 
+    double A[4] = {1., 2., 3., 4.};
+    double B[4] = {5., 6., 7., 8.};
+    double C[4] = {0.};
     double C_expected[4] = {19., 22., 43., 50.};
 
-    mul(A, B, false, C, 2, 2, 2); 
-    debug_matrix(C, 2, 2); 
+    mul(A, B, false, C, 2, 2, 2);
+    debug_matrix(C, 2, 2);
 
     if (dbl_eps_close_matrix(C, C_expected, 2, 2, DBL_EPSILON)) {
         test_log("2 * 2 matrix product test passed!\n");
@@ -49,8 +49,8 @@ void test_matrix_product(void) {
     }
 
     // 4*4 identity matrix test
-    double identity[4*4] = {0.};
-    double large_result[4*4] = {0.};
+    double identity[4 * 4] = {0.};
+    double large_result[4 * 4] = {0.};
 
     eye(identity, 4, 4);
 
@@ -62,11 +62,8 @@ void test_matrix_product(void) {
         test_log("Identity matrix squared test failed!\n");
     }
 
-    double A_large[4*4] = {1., 2., 3., 4.,
-                           5., 6., 7., 8.,
-                           9., 10., 11., 12.,
-                           13., 14., 15., 16.};
-    
+    double A_large[4 * 4] = {1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.};
+
     mul(A_large, identity, false, large_result, 4, 4, 4);
 
     if (dbl_eps_close_matrix(A_large, large_result, 4, 4, DBL_EPSILON)) {
@@ -83,21 +80,14 @@ void test_matrix_product(void) {
         test_log("Identity pre-multiplication test failed!\n");
     }
 
-    double B_large[4*4] = {5.24829, 6.21496, 3.27374, 3.49223,
-                           1.52040, 3.70849, 7.21884, 0.41667,
-                           7.77438, 8.24807, 8.63347, 2.01096,
-                           8.29170, 1.46735, 8.53606, 5.14221};
-                          
+    double B_large[4 * 4] = {5.24829, 6.21496, 3.27374, 3.49223, 1.52040, 3.70849, 7.21884, 0.41667,
+                             7.77438, 8.24807, 8.63347, 2.01096, 8.29170, 1.46735, 8.53606, 5.14221};
 
-    double C_large[4*4] = {1.92304, 0.14043, 1.64762, 4.97396,
-                           0.68077, 4.99275, 7.04041, 2.44857,
-                           8.22049, 1.66745, 7.94150, 0.56302,
-                           2.68638, 7.59450, 1.43236, 3.59834};
+    double C_large[4 * 4] = {1.92304, 0.14043, 1.64762, 4.97396, 0.68077, 4.99275, 7.04041, 2.44857,
+                             8.22049, 1.66745, 7.94150, 0.56302, 2.68638, 7.59450, 1.43236, 3.59834};
 
-    double large_multiplication_expected[4*4] = {50.6168, 63.7473, 83.4036, 55.732,
-                                              65.9102, 33.9305, 86.5396, 22.2066,
-                                              96.939, 71.9404, 142.322, 70.9624,
-                                              100.929, 61.7765, 99.1469, 68.1449};
+    double large_multiplication_expected[4 * 4] = {50.6168, 63.7473, 83.4036, 55.732,  65.9102, 33.9305, 86.5396, 22.2066,
+                                                   96.939,  71.9404, 142.322, 70.9624, 100.929, 61.7765, 99.1469, 68.1449};
 
     mul(B_large, C_large, false, large_result, 4, 4, 4);
 

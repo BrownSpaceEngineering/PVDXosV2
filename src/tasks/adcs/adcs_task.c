@@ -8,59 +8,61 @@
  * Authors: Avinash Patel, Yi Lyo, Alexander Thaep
  */
 
-#include "adcs_task.h"
-#include "logging.h"
-#include "device_checks.h"
+#include "tasks/adcs/adcs_task.h"
 
-float32_t K_VALUE = 1.0e9; // B-dot gain constant 
-float32_t DT_VALUE = 1.0; // Time step for B-dot control 
+#include "bdot.h"
+#include "checks/device_checks.h"
+#include "logging.h"
+
+float K_VALUE = 1.0e9; // B-dot gain constant
+float DT_VALUE = 1.0;  // Time step for B-dot control
 
 /* ---------- DATA MANAGEMENT ------------------------ */
 
 photodiode_data_t photodiode_data_buffer[2]; // Buffer to hold the last 2 photodiode readings
-mag_data_t mag_data_buffer[2]; // Buffer to hold the last 2 magnetometer readings
-SCH1_result_t gyro_data_buffer[2]; // Buffer to hold the last 2 gyro readings
-sun_vector_t sun_vector_buffer[2]; // Buffer to hold the last 2 photodiode readings
-mag_torque_input_t mag_torque_buffer; // Buffer to hold the last 2 magnetorquer torque inputs
+mag_data_t mag_data_buffer[2];               // Buffer to hold the last 2 magnetometer readings
+SCH1_result_t gyro_data_buffer[2];           // Buffer to hold the last 2 gyro readings
+sun_vector_t sun_vector_buffer[2];           // Buffer to hold the last 2 photodiode readings
+mag_torque_input_t mag_torque_buffer;        // Buffer to hold the last 2 magnetorquer torque inputs
 
-status_t update_photodiode_data(photodiode_data_t *persistent_photo_data, size_t count ) {
+status_t update_photodiode_data(photodiode_data_t *persistent_photo_data, size_t count) {
     // first move previous photodiode data backwards in the array
     for (size_t i = count - 1; i > 0; i--) {
         persistent_photo_data[i] = persistent_photo_data[i - 1];
     }
-    
+
     status_t result = photodiode_read(&persistent_photo_data[0]);
-    
+
     if (result != SUCCESS) {
         warning("adcs task: photodiode read failed\n");
-        // at this point we should check the device, as we've potentially run into a fault 
+        // at this point we should check the device, as we've potentially run into a fault
         // uncheck device to force check function to run
         uncheck_device(PHOTODIODE_ID);
         bool photo_status = check_device(PHOTODIODE_ID);
 
         if (!photo_status) {
             warning("adcs task: photodiode device check failed after read failure\n");
-            // TODO: queue sth to task manage to update state variable. 
+            // TODO: queue sth to task manage to update state variable.
         }
     }
 
-    return SUCCESS; 
+    return SUCCESS;
 }
 
 status_t update_magnetometer_data(mag_data_t *persistent_readings, size_t n_reads) {
     mag_raw_reading_t raw_readings;
-    
+
     // Push previous readings one step forwards
     for (size_t i = n_reads - 1; i > 0; i--) {
         persistent_readings[i] = persistent_readings[i - 1];
-    }   
+    }
 
     status_t data_read = magnetometer_read(&raw_readings, &persistent_readings[0]);
     if (data_read != SUCCESS) {
         // First we uncheck the magnetometer
         uncheck_device(MAGNETOMETER_ID);
         bool mag_status = check_device(MAGNETOMETER_ID);
-        
+
         if (!mag_status) {
             warning("adcs task: magnetometer device check failed after read failure\n");
             // TODO: Update status with magnetometer failure
@@ -70,50 +72,50 @@ status_t update_magnetometer_data(mag_data_t *persistent_readings, size_t n_read
     return SUCCESS;
 }
 
-status_t update_gyro_data(SCH1_result_t *persistent_gyro_data, size_t count ) {
+status_t update_gyro_data(SCH1_result_t *persistent_gyro_data, size_t count) {
     // first move previous gyro data backwards in the array
     for (size_t i = count - 1; i > 0; i--) {
         persistent_gyro_data[i] = persistent_gyro_data[i - 1];
     }
-    
+
     status_t result = gyro_read(&persistent_gyro_data[0]);
-    
+
     if (result != SUCCESS) {
         warning("adcs task: gyro read failed\n");
-        // at this point we should check the device, as we've potentially run into a fault 
+        // at this point we should check the device, as we've potentially run into a fault
         uncheck_device(GYROSCOPE_ID);
         bool gyro_status = check_device(GYROSCOPE_ID);
 
         if (!gyro_status) {
             warning("adcs task: gyro device check failed after read failure\n");
-            // TODO: queue sth to task manage to update state variable. 
+            // TODO: queue sth to task manage to update state variable.
         }
     }
 
     return SUCCESS;
 }
 
-status_t update_sun_vector(photodiode_data_t *current_reading, sun_vector_t *persistent_sun_vector, size_t count ) {
+status_t update_sun_vector(photodiode_data_t *current_reading, sun_vector_t *persistent_sun_vector, size_t count) {
     // first move previous photodiode data backwards in the array
     for (size_t i = count - 1; i > 0; i--) {
         persistent_sun_vector[i] = persistent_sun_vector[i - 1];
     }
-    
+
     sun_vector_t sun_vector = compute_sun_vector(current_reading);
     persistent_sun_vector[0] = sun_vector;
 
-    return SUCCESS; 
+    return SUCCESS;
+}
 /* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
 
 /**
  * \fn adcs_orientation_loop
- * 
+ *
  * \brief Main loop for ADCS orientation processing; should be called periodically by the main ADCS task loop
- * 
+ *
  * \return status_t SUCCESS if the function executed successfully, or negative status otherwise
  */
 status_t adcs_orientation_loop() {
-
     // first read all sensor data and update buffers
     status_t photo_status = update_photodiode_data(photodiode_data_buffer, 2);
     status_t mag_status = update_magnetometer_data(mag_data_buffer, 2);
@@ -124,22 +126,20 @@ status_t adcs_orientation_loop() {
     }
 
     if (tumbling(gyro_data_buffer[0])) {
-
         bdot(mag_data_buffer, mag_torque_buffer, K_VALUE, DT_VALUE);
 
     } else {
-
         if (in_sun(photodiode_data_buffer[0])) {
             info("adcs task: sun detected; orienting\n");
-    
+
             update_sun_vector(&photodiode_data_buffer[0], sun_vector_buffer, 2);
-    
+
             ukf_orient();
         } else {
             info("adcs task: sun not detected; going into bdot\n");
             bdot(mag_data_buffer, mag_torque_buffer, K_VALUE, DT_VALUE);
-        } 
-    } 
+        }
+    }
     return SUCCESS;
 }
 
@@ -153,14 +153,12 @@ status_t adcs_orientation_loop() {
  * \returns command_t command structure
  */
 command_t get_adcs_process_command(photomagrtc_read_args_t *const args) {
-    return (command_t) {
-        .target = p_adcs_task,
-        .operation = OPERATION_PROCESS,
-        .p_data = &args,
-        .len = sizeof(photomagrtc_read_args_t),
-        .result = PROCESSING,
-        .callback = NULL
-    };
+    return (command_t){.target = p_adcs_task,
+                       .operation = OPERATION_PROCESS,
+                       .p_data = &args,
+                       .len = sizeof(photomagrtc_read_args_t),
+                       .result = PROCESSING,
+                       .callback = NULL};
 }
 
 /**
@@ -172,25 +170,15 @@ command_t get_adcs_process_command(photomagrtc_read_args_t *const args) {
  *
  * \returns command_t command structure
  */
-command_t get_photomagrtc_read_command(
-        mag_data_t *const mag_data, 
-        photodiode_data_t *const photodiode_data,
-        rtc_data_t *const rtc_data) 
-    {
-    photomagrtc_read_args_t args = {
-        .mag_buffer = mag_data,
-        .photodiode_buffer = photodiode_data,
-        .rtc_buffer = rtc_data
-    };
+command_t get_photomagrtc_read_command(mag_data_t *const mag_data, photodiode_data_t *const photodiode_data, rtc_data_t *const rtc_data) {
+    photomagrtc_read_args_t args = {.mag_buffer = mag_data, .photodiode_buffer = photodiode_data, .rtc_buffer = rtc_data};
 
-    return (command_t) {
-        .target = p_adcs_task,
-        .operation = OPERATION_READ,
-        .p_data = &args,
-        .len = sizeof(photomagrtc_read_args_t),
-        .result = PROCESSING,
-        .callback = NULL
-    };
+    return (command_t){.target = p_adcs_task,
+                       .operation = OPERATION_READ,
+                       .p_data = &args,
+                       .len = sizeof(photomagrtc_read_args_t),
+                       .result = PROCESSING,
+                       .callback = NULL};
 }
 
 /* ---------- NON-DISPATCHABLE FUNCTIONS (do not go through the command dispatcher) ---------- */
@@ -212,17 +200,21 @@ void exec_command_adcs_process(command_t *const p_cmd) {
     photomagrtc_read_args_t *args = (photomagrtc_read_args_t *)p_cmd->p_data;
     status_t rtc_status = get_rtc_values(&temp);
 
-    if (args == NULL) info("adcs: stuff happens here\n");
+    if (args == NULL)
+        info("adcs: stuff happens here\n");
 
     // Do stuff with readings here
 
     info("ADCS microsecond count: %lu\n", temp.microseconds_count);
     info("ADCS seconds count: %lu\n", temp.seconds_count);
-    info("ADCS mag reading [x,y,z]: [%f,%f,%f]\n", 
-        mag_data_buffer[0].x, 
-        mag_data_buffer[0].y,
-        mag_data_buffer[0].z);
+    info("ADCS mag reading [x,y,z]: [%f,%f,%f]\n", mag_data_buffer[0].x, mag_data_buffer[0].y, mag_data_buffer[0].z);
 
-    if (rtc_status == SUCCESS) p_cmd->result = SUCCESS;
+    if (rtc_status == SUCCESS)
+        p_cmd->result = SUCCESS;
     p_cmd->result = ERROR_PROCESSING_FAILED;
+}
+}
+
+float_3d_t compute_sun_vector(photodiode_data_t input) {
+    return (float_3d_t){.x = 0, .y = 0, .z = 0};
 }

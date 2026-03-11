@@ -10,6 +10,8 @@
 
 #include "shell_helpers.h"
 
+#include "command_dispatcher/command_dispatcher_task.h"
+
 /* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
 
 /* ---------- NON-DISPATCHABLE FUNCTIONS (do not go through the command dispatcher) ---------- */

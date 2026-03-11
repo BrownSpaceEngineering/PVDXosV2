@@ -3,17 +3,14 @@
 
 // Includes
 #include "atmel_start.h"
-#include "globals.h"
-#include "logging.h"
-#include "magnetometer_driver.h"
-#include "photodiode_driver.h"
-#include "magnetorquer_driver.h"
-#include "rtc_driver.h"
-#include "SCH1.h"
-#include "queue.h"
-#include "task_list.h"
-#include "watchdog_task.h"
+#include "drivers/gyro/SCH1.h"
+#include "drivers/magnetometer/magnetometer_driver.h"
+#include "drivers/magnetorquer/magnetorquer_driver.h"
+#include "drivers/photodiode/photodiode_driver.h"
+#include "drivers/rtc/rtc_driver.h"
 #include "float.h"
+#include "globals.h"
+#include "queue.h"
 
 // TODO: cool ascii art
 #define ADCS_ASCII_ART                                                                                                                     \
@@ -50,11 +47,9 @@ typedef float_3d_t sun_vector_t;
 // Function declarations
 QueueHandle_t init_adcs(void);
 void main_adcs(void *pvParameters);
-command_t get_photomagrtc_read_command(
-    mag_data_t *const mag_data, 
-    photodiode_data_t *const photodiode_data, 
-    rtc_data_t *const rtc_data);
+command_t get_photomagrtc_read_command(mag_data_t *const mag_data, photodiode_data_t *const photodiode_data, rtc_data_t *const rtc_data);
 command_t get_adcs_process_command(photomagrtc_read_args_t *const args);
 void exec_command_adcs_process(command_t *const p_cmd);
+sun_vector_t compute_sun_vector(photodiode_data_t *input);
 
 #endif // ADCS_H

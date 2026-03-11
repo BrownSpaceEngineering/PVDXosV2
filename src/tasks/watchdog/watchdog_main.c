@@ -8,6 +8,7 @@
  * Authors: Oren Kohavi, Tanish Makadia, Siddharta Laloux
  */
 
+#include "tasks/command_dispatcher/command_dispatcher_task.h"
 #include "watchdog_task.h"
 
 watchdog_task_memory_t watchdog_mem;

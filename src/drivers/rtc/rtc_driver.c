@@ -10,6 +10,9 @@
 
 #include "rtc_driver.h"
 
+#include "atmel_start.h"
+#include "logging.h"
+
 static const void *rtc_hw;
 
 /**
@@ -21,11 +24,11 @@ static const void *rtc_hw;
  */
 status_t init_rtc_hardware(void) {
     rtc_hw = (&TIMER_0.device)->hw;
-	hri_rtcmode0_clear_CTRLA_ENABLE_bit(rtc_hw);
+    hri_rtcmode0_clear_CTRLA_ENABLE_bit(rtc_hw);
     hri_rtcmode0_clear_CTRLA_MATCHCLR_bit(rtc_hw);
-	hri_rtcmode0_write_COUNT_reg(rtc_hw, 0);
-	hri_rtcmode0_wait_for_sync(rtc_hw, RTC_MODE0_SYNCBUSY_COUNT);
-	hri_rtcmode0_set_CTRLA_ENABLE_bit(rtc_hw);
+    hri_rtcmode0_write_COUNT_reg(rtc_hw, 0);
+    hri_rtcmode0_wait_for_sync(rtc_hw, RTC_MODE0_SYNCBUSY_COUNT);
+    hri_rtcmode0_set_CTRLA_ENABLE_bit(rtc_hw);
     return SUCCESS;
 }
 
@@ -42,7 +45,7 @@ status_t get_rtc_values(rtc_data_t *data) {
     if (!rtc_hw) {
         warning("Attempting to get RTC count before initializing RTC");
         return ERROR_NOT_READY;
-     }
+    }
     data->rtc_count = hri_rtcmode0_get_COUNT_reg(rtc_hw, 4294967295UL);
     data->microseconds_count = (data->rtc_count / 32);
     data->seconds_count = data->rtc_count / 32768;

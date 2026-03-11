@@ -9,7 +9,10 @@
  */
 
 #include "adcs_task.h"
+#include "command_dispatcher_task.h"
+#include "globals.h"
 #include "logging.h"
+#include "watchdog_task.h"
 
 // ADCS Task memory structures
 adcs_task_memory_t adcs_mem;
@@ -24,9 +27,8 @@ adcs_task_memory_t adcs_mem;
  * \see `init_task_pointer()` for usage of functions of the type `init_<TASK>()`
  */
 QueueHandle_t init_adcs(void) {
-    QueueHandle_t adcs_command_queue_handle = xQueueCreateStatic(
-        COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE, adcs_mem.adcs_command_queue_buffer,
-        &adcs_mem.adcs_task_queue);
+    QueueHandle_t adcs_command_queue_handle = xQueueCreateStatic(COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE,
+                                                                 adcs_mem.adcs_command_queue_buffer, &adcs_mem.adcs_task_queue);
 
     if (adcs_command_queue_handle == NULL) {
         fatal("Failed to create adcs command queue!\n");
@@ -86,17 +88,17 @@ void main_adcs(void *pvParameters) {
             info("adcs: performing command\n");
             do {
                 switch (cmd.operation) {
-                case OPERATION_READ:
-                    debug("photo/mag/rtc: Command popped off queue. Target: %d, Operation: %d\n", cmd.target, cmd.operation);
-                    break;
-                case OPERATION_PROCESS:
-                    debug("adcs processing: Command popped off queue. Target: %d, Operation: %d\n", cmd.target, cmd.operation);
-                    exec_command_adcs_process(&cmd); 
-                    break;
-                default:
-                    fatal("adcs: Invalid operation!\n");
-                    cmd.result = ERROR_SANITY_CHECK_FAILED;
-                    break;
+                    case OPERATION_READ:
+                        debug("photo/mag/rtc: Command popped off queue. Target: %d, Operation: %d\n", cmd.target, cmd.operation);
+                        break;
+                    case OPERATION_PROCESS:
+                        debug("adcs processing: Command popped off queue. Target: %d, Operation: %d\n", cmd.target, cmd.operation);
+                        exec_command_adcs_process(&cmd);
+                        break;
+                    default:
+                        fatal("adcs: Invalid operation!\n");
+                        cmd.result = ERROR_SANITY_CHECK_FAILED;
+                        break;
                 }
             } while (xQueueReceive(p_adcs_task->command_queue, &cmd, 0) == pdPASS);
         }

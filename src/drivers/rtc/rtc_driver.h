@@ -2,10 +2,6 @@
 #define RTC_DRIVER_H
 
 #include "globals.h"
-#include "rtos_start.h"
-#include "logging.h"
-#include "atmel_start.h"
-#include "driver_init.h"
 
 // Data structure to hold RTC values
 typedef struct {
