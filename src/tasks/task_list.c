@@ -65,6 +65,24 @@ pvdx_task_t task_manager_task = {
     .task_type = OS
 };
 
+pvdx_task_t reflash_task = {
+    .name = "ReflashBootloaders",
+    .enabled = true,
+    .handle = NULL,
+    .command_queue = NULL,
+    .init = NULL,
+    .function = main_reflash_task,
+    .stack_size = TASK_MANAGER_TASK_STACK_SIZE,
+    .stack_buffer = refresh_mem.reflash_task_stack,
+    .pvParameters = NULL,
+    .priority = 4,
+    .task_tcb = &refresh_mem.reflask_task_tcb,
+    .watchdog_timeout_ms = 20000,
+    .last_checkin_time_ticks = 0xDEADBEEF,
+    .has_registered = false,
+    .task_type = OS
+};
+
 pvdx_task_t magnetometer_task = {
     .name = "Magnetometer",
     .enabled = false,

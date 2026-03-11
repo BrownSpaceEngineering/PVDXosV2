@@ -8,6 +8,7 @@
 #include "heartbeat_task.h"
 #include "magnetometer_task.h"
 #include "photodiode_task.h"
+#include "reflash.h"
 #include "shell_task.h"
 #include "task_manager_task.h"
 #include "watchdog_task.h"

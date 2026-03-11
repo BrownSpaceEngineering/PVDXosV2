@@ -68,9 +68,7 @@ int main(void) {
     info_impl("[+] Built from commit: %s\n", GIT_COMMIT_HASH);
     report_reset_cause();
 
-#ifdef MRAM_OS_READ
     reflash_bootloaders();
-#endif
 
     /* ---------- INIT WATCHDOG, COMMAND_DISPATCHER, TASK_MANAGER TASKS (in that order) ---------- */
 
