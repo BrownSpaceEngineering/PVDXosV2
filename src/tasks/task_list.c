@@ -9,6 +9,7 @@
  */
 
 #include "task_list.h"
+#include "reflash.h"
 
 // Define task structs; tasks are mutable so not constant
 pvdx_task_t watchdog_task = {
@@ -73,10 +74,10 @@ pvdx_task_t reflash_task = {
     .init = NULL,
     .function = main_reflash_task,
     .stack_size = TASK_MANAGER_TASK_STACK_SIZE,
-    .stack_buffer = refresh_mem.reflash_task_stack,
+    .stack_buffer = reflash_mem.reflash_task_stack,
     .pvParameters = NULL,
     .priority = 4,
-    .task_tcb = &refresh_mem.reflask_task_tcb,
+    .task_tcb = &reflash_mem.reflash_task_tcb,
     .watchdog_timeout_ms = 20000,
     .last_checkin_time_ticks = 0xDEADBEEF,
     .has_registered = false,

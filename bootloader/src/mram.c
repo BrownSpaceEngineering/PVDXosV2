@@ -321,3 +321,27 @@ void mram_init(void) {
     //     delay_ms(1000);
     // }
 }
+
+uint32_t crc32_table[256];
+bool crc32_table_ready = false;
+
+void crc32_init_table(void) {
+    for (uint32_t i = 0; i < 256; i++) {
+        uint32_t crc = i;
+        for (int j = 0; j < 8; j++) {
+            crc = (crc >> 1) ^ (0xEDB88320 & -(crc & 1));
+        }
+        crc32_table[i] = crc;
+    }
+    crc32_table_ready = true;
+}
+
+uint32_t crc32(const uint8_t *block, uint32_t size) {
+    if (!crc32_table_ready) crc32_init_table();
+
+    uint32_t crc = 0xFFFFFFFF;
+    for (uint32_t i = 0; i < size; i++) {
+        crc = (crc >> 8) ^ crc32_table[(crc ^ block[i]) & 0xFF];
+    }
+    return crc ^ 0xFFFFFFFF;
+}

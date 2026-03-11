@@ -1,3 +1,18 @@
+def crc32(data: bytearray) -> int:
+    table = []
+    for i in range(256):
+        crc = i
+        for _ in range(8):
+            crc = (crc >> 1) ^ (0xEDB88320 if crc & 1 else 0)
+        table.append(crc)
+
+    crc = 0xFFFFFFFF
+    for byte in data:
+        crc = (crc >> 8) ^ table[(crc ^ byte) & 0xFF]
+    crc = crc ^ 0xFFFFFFFF
+
+    return (crc & 0xFFFFFFFF).to_bytes(4, "little")
+
 def write_checksummed_segment(flash: bytearray, offset: int, path: str, size: int):
     with open(path, "rb") as f:
         segment = f.read()
@@ -7,8 +22,8 @@ def write_checksummed_segment(flash: bytearray, offset: int, path: str, size: in
     
     flash[offset:offset + size] = segment
 
-    checksum = (256 - (sum(segment) % 256)) % 256
-    flash[offset + size - 1] = checksum
+    checksum = crc32(flash[0:offset + size - 4])
+    flash[offset + size - 4:offset + size - 1] = checksum
 
 def write_normal_segment(flash: bytearray, offset: int, path: str, size: int):
     with open(path, "rb") as f:

@@ -30,14 +30,12 @@ int main(void) {
     // If no bootloader flag was defined, panic
     while (bootloader_index == 255);
 
-    uint32_t checksum = 0;
     volatile uint8_t *cur_bootloader_start = (uint8_t *)(bootloader_index * BOOTLOADER_SIZE);
-    for (uint32_t i = 0; i < BOOTLOADER_SIZE; i++) {
-        checksum += cur_bootloader_start[i];
-    }
-    checksum %= 256;
 
-    if (checksum != 0) {
+    uint32_t computed_checksum = crc32(cur_bootloader_start, BOOTLOADER_SIZE - sizeof(uint32_t));
+    uint32_t test_checksum = *(cur_bootloader_start + BOOTLOADER_SIZE - sizeof(uint32_t));
+
+    if (computed_checksum != test_checksum) {
         // If checksum fails on the last bootloader, there is nowhere to jump so panic
         while (bootloader_index == 2);
 
