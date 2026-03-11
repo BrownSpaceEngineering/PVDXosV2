@@ -9,6 +9,26 @@
 
 #include "test_linalg.h"
 
+/**
+ * \fn debug_matrix
+ *
+ * \brief Debug prints a matrix A, with the dimension row x column
+ * 
+ * \param A the matrix to print (as a 1D array in row-major order)
+ * \param row the number of rows in the matrix
+ * \param column the number of columns in the matrix
+ */
+void debug_matrix(double* A, int row, int column) {
+	for(int i = 0; i < row; i++){
+		for(int j = 0; j < column; j++){
+			printf("%0.18f ", *(A++));
+		}
+		printf("\n");
+	}
+	printf("\n");
+
+}
+
 void test_matrix_product(void) {
 
     test_log("----- testing matrix product -----\n");
@@ -20,7 +40,7 @@ void test_matrix_product(void) {
     double C_expected[4] = {19., 22., 43., 50.};
 
     mul(A, B, false, C, 2, 2, 2); 
-    test_log_matrix(C, 2, 2); 
+    debug_matrix(C, 2, 2); 
 
     if (dbl_eps_close_matrix(C, C_expected, 2, 2, DBL_EPSILON)) {
         test_log("2 * 2 matrix product test passed!\n");

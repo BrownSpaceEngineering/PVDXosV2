@@ -194,7 +194,7 @@ endif
 CFLAGS += -D'GIT_BRANCH_NAME="$(GIT_BRANCH_NAME)"' -D'GIT_COMMIT_HASH="$(GIT_COMMIT_HASH)"'
 
 # Robust error checking
-CFLAGS += -Wextra -Werror -Werror=maybe-uninitialized
+CFLAGS += -Wextra -Werror -Werror=maybe-uninitialized -static
 CFLAGS += -Wshadow -Wnull-dereference -Wduplicated-cond -Wlogical-op -Werror=return-type -Wfloat-equal
 CFLAGS += -Wdangling-else -Wtautological-compare
 CFLAGS += -fwrapv # Enable fwrapv (wrap on overflow of signed integers) just to be safe

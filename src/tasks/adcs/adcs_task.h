@@ -7,11 +7,13 @@
 #include "logging.h"
 #include "magnetometer_driver.h"
 #include "photodiode_driver.h"
+#include "magnetorquer_driver.h"
 #include "rtc_driver.h"
 #include "SCH1.h"
 #include "queue.h"
 #include "task_list.h"
 #include "watchdog_task.h"
+#include "float.h"
 
 // TODO: cool ascii art
 #define ADCS_ASCII_ART                                                                                                                     \
@@ -42,6 +44,8 @@ typedef struct {
     mag_data_t *mag_buffer;
     rtc_data_t *rtc_buffer;
 } photomagrtc_read_args_t;
+
+typedef float_3d_t sun_vector_t;
 
 // Function declarations
 QueueHandle_t init_adcs(void);

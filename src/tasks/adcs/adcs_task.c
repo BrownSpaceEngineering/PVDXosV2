@@ -12,12 +12,16 @@
 #include "logging.h"
 #include "device_checks.h"
 
+float32_t K_VALUE = 1.0e9; // B-dot gain constant 
+float32_t DT_VALUE = 1.0; // Time step for B-dot control 
 
 /* ---------- DATA MANAGEMENT ------------------------ */
 
 photodiode_data_t photodiode_data_buffer[2]; // Buffer to hold the last 2 photodiode readings
 mag_data_t mag_data_buffer[2]; // Buffer to hold the last 2 magnetometer readings
 SCH1_result_t gyro_data_buffer[2]; // Buffer to hold the last 2 gyro readings
+sun_vector_t sun_vector_buffer[2]; // Buffer to hold the last 2 photodiode readings
+mag_torque_input_t mag_torque_buffer; // Buffer to hold the last 2 magnetorquer torque inputs
 
 status_t update_photodiode_data(photodiode_data_t *persistent_photo_data, size_t count ) {
     // first move previous photodiode data backwards in the array
@@ -89,7 +93,55 @@ status_t update_gyro_data(SCH1_result_t *persistent_gyro_data, size_t count ) {
     return SUCCESS;
 }
 
+status_t update_sun_vector(photodiode_data_t *current_reading, sun_vector_t *persistent_sun_vector, size_t count ) {
+    // first move previous photodiode data backwards in the array
+    for (size_t i = count - 1; i > 0; i--) {
+        persistent_sun_vector[i] = persistent_sun_vector[i - 1];
+    }
+    
+    sun_vector_t sun_vector = compute_sun_vector(current_reading);
+    persistent_sun_vector[0] = sun_vector;
+
+    return SUCCESS; 
 /* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
+
+/**
+ * \fn adcs_orientation_loop
+ * 
+ * \brief Main loop for ADCS orientation processing; should be called periodically by the main ADCS task loop
+ * 
+ * \return status_t SUCCESS if the function executed successfully, or negative status otherwise
+ */
+status_t adcs_orientation_loop() {
+
+    // first read all sensor data and update buffers
+    status_t photo_status = update_photodiode_data(photodiode_data_buffer, 2);
+    status_t mag_status = update_magnetometer_data(mag_data_buffer, 2);
+    status_t gyro_status = update_gyro_data(gyro_data_buffer, 2);
+
+    if (photo_status != SUCCESS || mag_status != SUCCESS || gyro_status != SUCCESS) {
+        return ERROR_PROCESSING_FAILED;
+    }
+
+    if (tumbling(gyro_data_buffer[0])) {
+
+        bdot(mag_data_buffer, mag_torque_buffer, K_VALUE, DT_VALUE);
+
+    } else {
+
+        if (in_sun(photodiode_data_buffer[0])) {
+            info("adcs task: sun detected; orienting\n");
+    
+            update_sun_vector(&photodiode_data_buffer[0], sun_vector_buffer, 2);
+    
+            ukf_orient();
+        } else {
+            info("adcs task: sun not detected; going into bdot\n");
+            bdot(mag_data_buffer, mag_torque_buffer, K_VALUE, DT_VALUE);
+        } 
+    } 
+    return SUCCESS;
+}
 
 /**
  * \fn get_adcs_process_command
