@@ -22,14 +22,14 @@ void reflash_bootloaders(void) {
         uint8_t* flash_block = (uint8_t*)(i * FLASH_BLOCK_SIZE);
 
         if (stored_checksums_initialized) {
-            if (crc32_block(flash_block, FLASH_BLOCK_SIZE) == stored_checksums[i]) {
+            if (crc32(flash_block, FLASH_BLOCK_SIZE) == stored_checksums[i]) {
                 continue;
             }
         }
 
         mram_read_bytes(MRAM_FLASH_BASE_ADDRESS + i * FLASH_BLOCK_SIZE, mram_block, FLASH_BLOCK_SIZE);
 
-        stored_checksums[i] = crc32_block(mram_block, FLASH_BLOCK_SIZE);
+        stored_checksums[i] = crc32(mram_block, FLASH_BLOCK_SIZE);
 
         bool any_error = false;
         for (uint32_t j = 0; j < FLASH_BLOCK_SIZE; j++) {

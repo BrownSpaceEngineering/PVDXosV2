@@ -1,3 +1,4 @@
+#include "bootloader_index.h"
 #include "mram.h"
 
 #define FLASH_OS_BASE_ADDRESS (0x00020000)  // Address of OS in flash (after bootloaders)
@@ -17,20 +18,11 @@ int main(void);
 void go_to_app(void);
 
 int main(void) {
-    uint8_t bootloader_index = 255;
-#ifdef BOOTLOADER_1
-    bootloader_index = 0;
-#endif
-#ifdef BOOTLOADER_2
-    bootloader_index = 1;
-#endif
-#ifdef BOOTLOADER_3
-    bootloader_index = 2;
-#endif
+    uint8_t bootloader_index = (BOOTLOADER_INDEX);
     // If no bootloader flag was defined, panic
     while (bootloader_index == 255);
 
-    volatile uint8_t *cur_bootloader_start = (uint8_t *)(bootloader_index * BOOTLOADER_SIZE);
+    uint8_t *cur_bootloader_start = (uint8_t *)(bootloader_index * BOOTLOADER_SIZE);
 
     uint32_t computed_checksum = crc32(cur_bootloader_start, BOOTLOADER_SIZE - sizeof(uint32_t));
     uint32_t test_checksum = *(cur_bootloader_start + BOOTLOADER_SIZE - sizeof(uint32_t));

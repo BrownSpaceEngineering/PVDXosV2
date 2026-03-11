@@ -1,3 +1,6 @@
+BOOTLOADER_COUNT = 8
+BOOTLOADER_SIZE = 0x3000
+
 def crc32(data: bytearray) -> int:
     table = []
     for i in range(256):
@@ -36,9 +39,8 @@ def write_normal_segment(flash: bytearray, offset: int, path: str, size: int):
 
 flash = bytearray([0x00] * 0x80000)
 
-write_checksummed_segment(flash, 0x00000, "bootloader/src/bootloader1.bin", 0x3000)
-write_checksummed_segment(flash, 0x03000, "bootloader/src/bootloader2.bin", 0x3000)
-write_checksummed_segment(flash, 0x06000, "bootloader/src/bootloader3.bin", 0x3000)
+for i in range(BOOTLOADER_COUNT):
+    write_checksummed_segment(flash, i * BOOTLOADER_SIZE, f"bootloader/src/bootloader{i + 1}.bin", 0x3000)
 
 write_normal_segment(flash, 0x20000, "src/PVDXos.bin", 0x20000)
 write_normal_segment(flash, 0x40000, "src/PVDXos.bin", 0x20000)
