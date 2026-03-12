@@ -216,5 +216,5 @@ void exec_command_adcs_process(command_t *const p_cmd) {
 }
 
 float_3d_t compute_sun_vector(photodiode_data_t *input) {
-    return (float_3d_t){.x = 0, .y = 0, .z = 0};
+    return (float_3d_t){.x = 0, .y = 0, .z = 0}; // TODO actually implement
 }
