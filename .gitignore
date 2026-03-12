@@ -46,3 +46,7 @@ logs/*
 #Compilation Database
 compile_commands.json
 .cache
+
+#Bootloader build files
+bootloader_flash*.ld
+bootloader_index.h

@@ -76,6 +76,6 @@ connect_bl:
 		bootloader/src/bootloader1.elf
 
 clean:
-	rm -f PVDXos.bin PVDXos.elf \
+	rm -f flash.bin \
 	&& make -C bootloader/src clean \
 	&& make -C src clean
