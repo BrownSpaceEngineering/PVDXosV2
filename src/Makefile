@@ -94,6 +94,8 @@ export OBJS :=                                              	\
 ../src/tasks/display/display_main.o                         	\
 ../src/tasks/display/image_buffers/image_buffer_BrownLogo.o 	\
 ../src/tasks/display/image_buffers/image_buffer_PVDX.o      	\
+../src/tasks/adcs/adcs_task.o 									\
+../src/tasks/adcs/adcs_main.o 									\
                                                             	\
 ../src/tasks/task_manager/task_manager_main.o               	\
 ../src/tasks/task_manager/task_manager_task.o               	\
@@ -111,9 +113,7 @@ export OBJS :=                                              	\
 																\
 ../src/tasks/radio/spp.o 										\
 ../src/tests/test.o                                             \
-																\
-../src/tasks/adcs/adcs_main.o									\
-../src/tasks/adcs/adcs_task.o									\
+																
 
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###
 ### THESE ARE WRITTEN RELATIVE TO THE ./ASF/gcc/Makefile FILE ###

@@ -9,8 +9,18 @@
 #ifndef TESTS_TEST_H
 #define TESTS_TEST_H
 
-#include "test_linalg.h"
-
+#define PVDX_ASSERT_MSG(x, msg)                                                                                                            \
+    do {                                                                                                                                   \
+        if (!(x)) {                                                                                                                        \
+            warning("[!] ASSERT FAILED: " msg);                                                                                            \
+        }                                                                                                                                  \
+    } while (0)
+#define PVDX_ASSERT(x)                                                                                                                     \
+    do {                                                                                                                                   \
+        if (!(x)) {                                                                                                                        \
+            warning("[!] ASSERT FAILED");                                                                                                  \
+        }                                                                                                                                  \
+    } while (0)
 void tests_run(void);
 
 #endif

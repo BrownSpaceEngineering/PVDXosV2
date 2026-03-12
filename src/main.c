@@ -13,9 +13,13 @@
 
 #include "main.h"
 
+#include "SEGGER_RTT.h"
 #include "checks/device_checks.h"
+#include "cosmic_monkey_task.h"
 #include "globals.h"
 #include "logging.h"
+#include "rtos_start.h"
+#include "task_list.h"
 #include "tasks/task_manager/task_manager_task.h"
 #include "tests/test.h"
 
