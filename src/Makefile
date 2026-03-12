@@ -93,6 +93,8 @@ export OBJS :=                                              	\
 ../src/tasks/display/display_main.o                         	\
 ../src/tasks/display/image_buffers/image_buffer_BrownLogo.o 	\
 ../src/tasks/display/image_buffers/image_buffer_PVDX.o      	\
+../src/tasks/adcs/adcs_task.o 									\
+../src/tasks/adcs/adcs_main.o 									\
                                                             	\
 ../src/tasks/task_manager/task_manager_main.o               	\
 ../src/tasks/task_manager/task_manager_task.o               	\
@@ -109,8 +111,8 @@ export OBJS :=                                              	\
 ../src/checks/device_checks.o 									\
 																\
 ../src/tasks/radio/spp.o 									    \
-../src/tasks/radio/cfdp_pdu.o									\
 ../src/tests/test.o                                             \
+../src/drivers/rtc/rtc_driver.o 								\
 																
 
 
@@ -139,6 +141,7 @@ export EXTRA_VPATH := \
 ../../src/tasks/command_dispatcher \
 ../../src/tasks/shell \
 ../../src/tasks/radio \
+../../src/tasks/adcs \
 ../../src/mutexes \
 ../../src/checks \
 ../../src/tests \

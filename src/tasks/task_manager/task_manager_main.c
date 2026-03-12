@@ -9,7 +9,9 @@
  * Defne Doken, Aidan Wang, Jai Garg, Alex Khosrowshahi
  */
 
+#include "command_dispatcher_task.h"
 #include "task_manager_task.h"
+#include "watchdog_task.h"
 
 task_manager_task_memory_t task_manager_mem;
 SemaphoreHandle_t task_list_mutex = NULL;
@@ -39,19 +41,19 @@ void main_task_manager(void *pvParameters) {
     const TickType_t queue_block_time_ticks = get_command_queue_block_time_ticks(current_task);
     // Varible to hold commands popped off the queue
     command_t cmd;
-    
+
     command_t initialise_all_tasks = {
-        .target = p_task_manager_task, 
-        .operation = OPERATION_INIT_SUBTASKS, 
-        .p_data = NULL, 
-        .len = 0, 
+        .target = p_task_manager_task,
+        .operation = OPERATION_INIT_SUBTASKS,
+        .p_data = NULL,
+        .len = 0,
         .result = NO_STATUS_RETURN,
-        .callback = NULL, 
-    }; 
+        .callback = NULL,
+    };
 
-    command_t *const p_initialise_all_tasks = &initialise_all_tasks; 
+    command_t *const p_initialise_all_tasks = &initialise_all_tasks;
 
-    enqueue_command(p_initialise_all_tasks); 
+    enqueue_command(p_initialise_all_tasks);
 
     while (true) {
         debug("\n---------- Task Manager Task Loop ----------\n");

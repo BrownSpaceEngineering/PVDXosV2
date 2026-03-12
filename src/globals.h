@@ -14,6 +14,7 @@
 #include <queue.h>
 #include <stdbool.h>
 #include <task.h>
+#include <stdint.h>
 
 /* ---------- LOGGING CONSTANTS ---------- */
 
@@ -48,6 +49,7 @@ typedef enum {
     ERROR_TASK_DISABLED,
     ERROR_BAD_TARGET,
     ERROR_SANITY_CHECK_FAILED,
+    ERROR_PROCESSING_FAILED,
     ERROR_NOT_READY,
 } status_t;
 
@@ -69,11 +71,9 @@ typedef enum {
     OPERATION_DISPLAY_IMAGE, // p_data: color_t *p_buffer
     OPERATION_CLEAR_IMAGE,   // p_data: NULL
 
-    // Magnetometer operations
-    OPERATION_READ, // p_data: magnetometer_read_args_t *readings
-
-    // Photodiode operations
-    OPERATION_PHOTODIODE_READ,
+    // Magnetometer & Photodiode operations
+    OPERATION_READ,            // p_data: photomag_read_args_t *readings
+    OPERATION_PROCESS,         // p_data: TBD
 
     // TESTING
     TEST_OP, // p_data: char message[]
@@ -119,6 +119,19 @@ typedef enum {
 typedef QueueHandle_t (*init_function)(void);
 
 /* ---------- STRUCTS ---------- */
+
+// integer and float 3d vector types. 
+typedef struct {
+    int32_t x; 
+    int32_t y;
+    int32_t z;
+} int32_3d_t; 
+
+typedef struct {
+    float x;
+    float y;
+    float z;
+} float_3d_t;
 
 // A struct defining a task's lifecycle in the PVDXos RTOS
 typedef struct {

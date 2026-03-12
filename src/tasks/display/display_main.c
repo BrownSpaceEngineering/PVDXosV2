@@ -7,6 +7,7 @@
  * Authors: Tanish Makadia, Ignacio Blancas Rodriguez, Siddharta Laloux
  */
 
+#include "command_dispatcher_task.h"
 #include "display_task.h"
 
 // Display Task memory structures

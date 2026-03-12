@@ -11,6 +11,7 @@
  */
 
 #include "command_dispatcher_task.h"
+#include "watchdog_task.h"
 
 command_dispatcher_task_memory_t command_dispatcher_mem;
 

@@ -8,8 +8,9 @@
  * Authors: Oren Kohavi, Tanish Makadia
  */
 
-#include "heartbeat_task.h"
 #include "logging.h"
+#include "tasks/command_dispatcher/command_dispatcher_task.h"
+#include "tasks/heartbeat/heartbeat_task.h"
 
 heartbeat_task_memory_t heartbeat_mem;
 

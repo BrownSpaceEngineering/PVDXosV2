@@ -2,18 +2,13 @@
 #define TASK_LIST_H
 
 // Includes
-#include "command_dispatcher_task.h"
-#include "display_task.h"
 #include "globals.h"
-#include "heartbeat_task.h"
-#include "shell_task.h"
-#include "task_manager_task.h"
-#include "watchdog_task.h"
 
 // Extern defs of task pointers which can be accessed throughout the PVDXos codebase
 extern pvdx_task_t *const p_watchdog_task;
 extern pvdx_task_t *const p_command_dispatcher_task;
 extern pvdx_task_t *const p_task_manager_task;
+extern pvdx_task_t *const p_adcs_task;
 extern pvdx_task_t *const p_shell_task;
 extern pvdx_task_t *const p_display_task;
 extern pvdx_task_t *const p_heartbeat_task;

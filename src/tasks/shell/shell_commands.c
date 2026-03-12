@@ -11,10 +11,13 @@
 
 #include <atmel_start.h>
 
+#include "command_dispatcher_task.h"
+#include "display_task.h"
+#include "image_buffers/image_buffer_BrownLogo.h"
+#include "image_buffers/image_buffer_PVDX.h"
 #include "logging.h"
 #include "shell_helpers.h"
 #include "watchdog_task.h"
-
 shell_command_t shell_commands[] = {
     {"help", shell_help, help_help},
     {"echo", shell_echo, help_echo},
@@ -33,7 +36,7 @@ shell_command_t shell_commands[] = {
  * \brief This function is a utility that will only exist on the ground station
  *
  * \param args the command and arguments the shell command recieves
- * 
+ *
  * \param arg_count the number of total arguments provided
  *
  */
@@ -73,14 +76,13 @@ void help_help() {
 
 /* ---------- ECHO COMMAND ---------- */
 
-
 /**
  * \fn shell_echo
  *
  * \brief This function echos the command recieved
  *
  * \param args the command and arguments the shell command recieves
- * 
+ *
  * \param arg_count the number of total arguments provided
  *
  */
@@ -119,7 +121,7 @@ void help_echo() {
  * \brief Clears the shell
  *
  * \param args the command and arguments the shell command recieves
- * 
+ *
  * \param arg_count the number of total arguments provided
  *
  */
@@ -152,7 +154,7 @@ char *log_level_string_mappings[] = {"DEBUG", "INFO", "EVENT", "WARNING"};
  * \brief Sets or displays the log_level of the shell
  *
  * \param args the command and arguments the shell command recieves
- * 
+ *
  * \param arg_count the number of total arguments provided
  *
  */
@@ -200,7 +202,7 @@ void help_loglevel() {
  * \brief reboots the shell
  *
  * \param args the command and arguments the shell command recieves
- * 
+ *
  * \param arg_count the number of total arguments provided
  *
  */
@@ -234,7 +236,7 @@ void help_reboot() {
  * \brief displays the image on the display
  *
  * \param args the command and arguments the shell command recieves
- * 
+ *
  * \param arg_count the number of total arguments provided
  *
  */

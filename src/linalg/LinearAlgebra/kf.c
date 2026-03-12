@@ -31,9 +31,6 @@ bool kf(
     const size_t column_b) {
 
 	/* Prediction */
-	// float* dx = (float*)malloc(row_a * sizeof(float));
-	// float* Ax = (float*)malloc(row_a * sizeof(float));
-	// float* Bu = (float*)malloc(row_a * sizeof(float));
     float dx[row_a]; 
     float Ax[row_a]; 
     float Bu[row_a]; 
@@ -49,75 +46,57 @@ bool kf(
 
 	/* Compute covaraiance */
 	const size_t row_a_row_a = row_a * row_a;
-	float* AT = (float*)malloc(row_a_row_a * sizeof(float));
+	float AT[row_a_row_a];
 	memcpy(AT, A, row_a * row_a * sizeof(float));
 	tran(AT, row_a, row_a);
-	float* PAT = (float*)malloc(row_a_row_a * sizeof(float));
+	float PAT[row_a_row_a]; 
 	mul(P, AT, PAT, row_a, row_a, row_a);
-	float* APAT = (float*)malloc(row_a_row_a * sizeof(float));
+	float APAT[row_a_row_a]; 
 	mul(A, PAT, APAT, row_a, row_a, row_a);
 	for (i = 0; i < row_a_row_a; i++) {
 		P[i] = APAT[i] + Q[i];
 	}
 
 	/* Innovation covaraiance */
-	float* CT = (float*)malloc(row_c * row_a * sizeof(float));
+	float CT[row_c * row_a]; 
 	memcpy(CT, C, row_c * row_a * sizeof(float));
 	tran(CT, row_c, row_a);
-	float* PCT = (float*)malloc(row_a * row_c * sizeof(float));
+	float PCT[row_a * row_c]; 
 	mul(P, CT, PCT, row_a, row_a, row_c);
-	float* CPCT = (float*)malloc(row_c * row_c * sizeof(float));
+	float CPCT[row_c * row_c]; 
 	mul(C, PCT, CPCT, row_c, row_a, row_c);
-	float* S = (float*)malloc(row_c * row_c * sizeof(float));
+	float S[row_c * row_c]; 
 	for (i = 0; i < row_c * row_c; i++) {
 		S[i] = CPCT[i] + R[i];
 	}
 
 	/* Find kalman gain */
-	float* K = (float*)malloc(row_a * row_c * sizeof(float));
+	float K[row_a * row_c]; 
 	const bool status = inv(S, row_c);
 	mul(PCT, S, K, row_a, row_c, row_c);
 
 	/* Update state */
-	float* Cx = (float*)malloc(row_c * sizeof(float));
+	float Cx[row_c]; 
 	mul(C, dx, Cx, row_c, row_a, 1);
-	float* y_Cx = (float*)malloc(row_c * sizeof(float));
+	float y_Cx[row_c]; 
 	for (i = 0; i < row_c; i++) {
 		y_Cx[i] = y[i] - Cx[i];
 	}
-	float* Ky_Cx = (float*)malloc(row_a * sizeof(float));
+	float Ky_Cx[row_a]; 
 	mul(K, y_Cx, Ky_Cx, row_a, row_c, 1);
 	for (i = 0; i < row_a; i++) {
 		xhat[i] = dx[i] + Ky_Cx[i];
 	}
 
 	/* Update covaraiance */
-	float* KC = (float*)malloc(row_a_row_a * sizeof(float));
+	float KC[row_a_row_a]; 
 	mul(K, C, KC, row_a, row_c, row_a);
 	for (i = 0; i < row_a; i++) {
 		KC[i*row_a] = 1.0f - KC[i*row_a];
 	}
-	float* P_copy = (float*)malloc(row_a_row_a * sizeof(float));
+	float P_copy[row_a_row_a]; 
 	memcpy(P_copy, P, row_a_row_a * sizeof(float));
 	mul(KC, P_copy, P, row_a, row_a, row_a);
-
-	/* Free */
-	free(dx);
-	free(Ax);
-	free(Bu);
-	free(AT);
-	free(PAT);
-	free(APAT);
-	free(CT);
-	free(PCT);
-	free(CPCT);
-	free(S);
-	free(K);
-	free(Cx);
-	free(y_Cx);
-	free(Ky_Cx);
-	free(KC);
-	free(P_copy);
 
 	/* Return the status */
 	return status;
