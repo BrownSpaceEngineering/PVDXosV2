@@ -105,8 +105,6 @@ export OBJS :=                                              	\
 ../src/tasks/shell/shell_commands.o                         	\
                                                             	\
 ../src/tasks/task_list.o                                        \
-                                                            	\
-../src/checks/device_checks.o 									\
 																\
 ../src/tasks/radio/spp.o 									    \
 ../src/tasks/radio/cfdp_pdu.o									\

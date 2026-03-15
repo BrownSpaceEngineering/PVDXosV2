@@ -1,5 +1,6 @@
 #include "bootloader_index.h"
 #include "mram.h"
+#include "watchdog_driver.h"
 
 #define FLASH_OS_BASE_ADDRESS (0x00020000)  // Address of OS in flash (after bootloaders)
                                             // Note: in final version, OS copies will only be in MRAM
@@ -40,6 +41,8 @@ int main(void) {
             : "r"(next_sp), "r"(next_pc) // Arguments to the assembly (accessed as %0 and %1 in the assembly code)
             :);
     }
+
+    watchdog_setup();
 
 #if defined(MRAM_OS_WRITE) || defined(MRAM_OS_READ)
     mram_init();

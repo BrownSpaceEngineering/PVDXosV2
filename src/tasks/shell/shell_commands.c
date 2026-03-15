@@ -13,7 +13,7 @@
 
 #include "logging.h"
 #include "shell_helpers.h"
-#include "watchdog_task.h"
+#include "watchdog_driver.h"
 
 shell_command_t shell_commands[] = {
     {"help", shell_help, help_help},
@@ -212,7 +212,7 @@ void shell_reboot(char **args, int arg_count) {
     warning("Reboot command executed by user\n");
     terminal_printf("Rebooting the satellite...\n");
     delay_ms(1000);  // Give the message time to print
-    kick_watchdog(); // Kick the watchdog to trigger a reboot
+    watchdog_kick(); // Kick the watchdog to trigger a reboot
 }
 
 /**

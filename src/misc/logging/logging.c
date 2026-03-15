@@ -14,7 +14,7 @@
 #include <stdlib.h>
 
 #include "SEGGER_RTT.h"
-#include "watchdog_task.h"
+#include "watchdog_driver.h"
 
 // Macros for debugging functions so that file and line number info can be included
 
@@ -34,7 +34,7 @@ void fatal_impl(const char *string, ...) {
     vTaskDelay(pdMS_TO_TICKS(1000)); // Wait for the message to be printed
 
     // Force reboot
-    kick_watchdog();
+    watchdog_kick();
 
     // This line should never be reached, but we include it to adhere to the va_list contract
     va_end(args);
@@ -42,7 +42,7 @@ void fatal_impl(const char *string, ...) {
 
 void fatal_no_log_impl(void) {
     // Force reboot
-    kick_watchdog();
+    watchdog_kick();
 }
 
 void warning_impl(const char *string, ...) {

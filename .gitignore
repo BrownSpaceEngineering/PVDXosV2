@@ -19,6 +19,7 @@
 *.d
 *.map
 *.lss
+*.eep
 /debug
 
 # Build

@@ -11,9 +11,6 @@
 
 #include "watchdog_task.h"
 
-// Reference to the hardware watchdog timer on the SAMD51 microcontroller
-static volatile Wdt *const p_watchdog_timer = WDT;
-
 /* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
 
 /**
@@ -51,38 +48,13 @@ void watchdog_checkin(pvdx_task_t *const p_task) {
 /**
  * \fn init_watchdog
  *
- * \brief Initialises hardware watchdog and watchdog command queue
+ * \brief Initialises watchdog command queue
  *
  * \returns QueueHandle_t, a handle to the created queue
  *
  * \see `init_task_pointer()` for usage of functions of the type `init_<TASK>()`
  */
 QueueHandle_t init_watchdog(void) {
-    // Choose the period of the hardware watchdog timer
-    uint8_t watchdog_period = WDT_CONFIG_PER_CYC16384;
-
-    // Disable the watchdog before configuring
-    watchdog_disable(p_watchdog_timer);
-
-    // Configure the watchdog
-    uint8_t watchdog_earlywarning_period =
-        watchdog_period - 1; // Each increment of 1 doubles the period (see ASF/samd51a/include/component/wdt.h)
-    watchdog_set_early_warning_offset(p_watchdog_timer,
-                                      watchdog_earlywarning_period); // Early warning will trigger halfway through the watchdog period
-    watchdog_enable_early_warning(p_watchdog_timer);                       // Enable early warning interrupt
-    watchdog_set_period(p_watchdog_timer, watchdog_period);                // Set the watchdog period
-    watchdog_wait_for_register_sync(p_watchdog_timer, WDT_SYNCBUSY_ENABLE | WDT_SYNCBUSY_WEN); // Wait for register synchronization
-
-    // Enable the watchdog
-    watchdog_enable(p_watchdog_timer);
-
-    // Configure the watchdog early warning interrupt
-    NVIC_SetPriority(WDT_IRQn, 3);                      // Set the interrupt priority
-    NVIC_EnableIRQ(WDT_IRQn);                           // Enable the WDT_IRQn interrupt
-    NVIC_SetVector(WDT_IRQn, (uint32_t)(&WDT_Handler)); // When the WDT_IRQn interrupt is triggered, call the WDT_Handler function
-
-    info("Hardware Watchdog Initialized\n");
-
     // Create watchdog command queue
     watchdog_command_queue_handle = xQueueCreateStatic(COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE,
                                                        watchdog_mem.watchdog_command_queue_buffer, &watchdog_mem.watchdog_task_queue);
@@ -130,30 +102,6 @@ void early_warning_callback_watchdog(void) {
     gpio_set_pin_level(LED_RED, false);
     vTaskDelay(pdMS_TO_TICKS(300));
     ;
-}
-
-/**
- * \fn pet_watchdog
- *
- * \brief Writes the correct key in the hardware watchdog's clear register,
- *        delaying the next timeout
- */
-void pet_watchdog(void) {
-    debug("hardware-watchdog: Petted\n");
-    watchdog_feed(p_watchdog_timer);
-}
-
-/**
- * \fn kick_watchdog
- *
- * \brief Writes the incorrect key in the hardware watchdog's clear register,
- *        triggering a system-reboot.
- * 
- * \warning Satellite will restart execution from the bootloader
- */
-void kick_watchdog(void) {
-    debug("hardware-watchdog: Kicked\n");
-    watchdog_kick(p_watchdog_timer);
 }
 
 /**
