@@ -194,11 +194,11 @@ void exec_command_task_manager(command_t *const p_cmd) {
             p_cmd->result = SUCCESS;
             break;
         case OPERATION_ENABLE_SUBTASK:
-            task_manager_enable_task((pvdx_task_t *)p_cmd->p_data); // Turn this into an index
+            task_manager_enable_task(p_cmd->data.pvdx_task); // Turn this into an index
             p_cmd->result = SUCCESS;
             break;
         case OPERATION_DISABLE_SUBTASK:
-            task_manager_disable_task((pvdx_task_t *)p_cmd->p_data); // Turn this into an index
+            task_manager_disable_task(p_cmd->data.pvdx_task); // Turn this into an index
             p_cmd->result = SUCCESS;
             break;
         default:

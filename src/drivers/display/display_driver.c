@@ -17,7 +17,7 @@ uint8_t spi_tx_buffer[DISPLAY_SPI_BUFFER_CAPACITY] = {0x00};
 struct spi_xfer xfer = {.rxbuf = spi_rx_buffer, .txbuf = spi_tx_buffer, .size = 0};
 
 // Buffer for the display
-color_t display_buffer[(SSD1362_WIDTH / 2) * SSD1362_HEIGHT] = {0x00};
+color_t display_buffer[DISPLAY_BUFFER_SIZE] = {0x00};
 
 /**
  * \fn spi_transfer

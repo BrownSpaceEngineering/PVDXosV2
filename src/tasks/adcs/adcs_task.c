@@ -5,14 +5,16 @@
  *
  * Created: September 20, 2025
  * Modified: November 24, 2025
- * Authors: Avinash Patel, Yi Lyo, Alexander Thaep
+ * Authors: Avinash Patel, Yi Lyo, Alexander Thaep, Zach Mahan, Siddharta Laloux
  */
 
 #include "tasks/adcs/adcs_task.h"
 
 #include "bdot.h"
 #include "checks/device_checks.h"
+#include "globals.h"
 #include "logging.h"
+#include "rtc_driver.h"
 #include "task_list.h"
 
 float K_VALUE = 1.0e9; // B-dot gain constant
@@ -20,11 +22,21 @@ float DT_VALUE = 1.0;  // Time step for B-dot control
 
 /* ---------- DATA MANAGEMENT ------------------------ */
 
-photodiode_data_t photodiode_data_buffer[2]; // Buffer to hold the last 2 photodiode readings
-mag_data_t mag_data_buffer[2];               // Buffer to hold the last 2 magnetometer readings
-SCH1_result_t gyro_data_buffer[2];           // Buffer to hold the last 2 gyro readings
-sun_vector_t sun_vector_buffer[2];           // Buffer to hold the last 2 photodiode readings
-mag_torque_input_t mag_torque_buffer;        // Buffer to hold the last 2 magnetorquer torque inputs
+#define READING_BUFFER_COUNT 2
+
+photodiode_data_t photodiode_data_buffer[READING_BUFFER_COUNT]; // Buffer to hold the last 2 photodiode readings
+mag_data_t mag_data_buffer[READING_BUFFER_COUNT];               // Buffer to hold the last 2 magnetometer readings
+SCH1_result_t gyro_data_buffer[READING_BUFFER_COUNT];           // Buffer to hold the last 2 gyro readings
+sun_vector_t sun_vector_buffer[READING_BUFFER_COUNT];           // Buffer to hold the last 2 photodiode readings
+mag_torque_input_t mag_torque_buffer[READING_BUFFER_COUNT];     // Buffer to hold the last 2 magnetorquer torque inputs
+rtc_data_t rtc_data_buffer[READING_BUFFER_COUNT];
+
+static adcs_data_t latest_adcs_data_reading = {.mag_buffer = mag_data_buffer,
+                                               .mag_buffer_len = READING_BUFFER_COUNT,
+                                               .photodiode_buffer = photodiode_data_buffer,
+                                               .photodiode_data_len = READING_BUFFER_COUNT,
+                                               .rtc_buffer = rtc_data_buffer,
+                                               .rtc_buffer_len = READING_BUFFER_COUNT};
 
 status_t update_photodiode_data(photodiode_data_t *persistent_photo_data, size_t count) {
     // first move previous photodiode data backwards in the array
@@ -127,7 +139,7 @@ status_t adcs_orientation_loop() {
     }
 
     if (tumbling(&gyro_data_buffer[0])) {
-        bdot(mag_data_buffer, &mag_torque_buffer, K_VALUE, DT_VALUE);
+        bdot(mag_data_buffer, mag_torque_buffer, K_VALUE, DT_VALUE);
 
     } else {
         if (in_sun(&photodiode_data_buffer[0])) {
@@ -138,7 +150,7 @@ status_t adcs_orientation_loop() {
             ukf_orient(/* TODO some inputs */);
         } else {
             info("adcs task: sun not detected; going into bdot\n");
-            bdot(mag_data_buffer, &mag_torque_buffer, K_VALUE, DT_VALUE);
+            bdot(mag_data_buffer, mag_torque_buffer, K_VALUE, DT_VALUE);
         }
     }
     return SUCCESS;
@@ -153,11 +165,11 @@ status_t adcs_orientation_loop() {
  *
  * \returns command_t command structure
  */
-command_t get_adcs_process_command(photomagrtc_read_args_t *const args) {
+command_t get_adcs_process_command(adcs_data_t *const data) {
     return (command_t){.target = p_adcs_task,
                        .operation = OPERATION_PROCESS,
-                       .p_data = &args,
-                       .len = sizeof(photomagrtc_read_args_t),
+                       .data.adcs_data = data,
+                       .data_type = CMD_DATA_ADCS,
                        .result = PROCESSING,
                        .callback = NULL};
 }
@@ -171,13 +183,11 @@ command_t get_adcs_process_command(photomagrtc_read_args_t *const args) {
  *
  * \returns command_t command structure
  */
-command_t get_photomagrtc_read_command(mag_data_t *const mag_data, photodiode_data_t *const photodiode_data, rtc_data_t *const rtc_data) {
-    photomagrtc_read_args_t args = {.mag_buffer = mag_data, .photodiode_buffer = photodiode_data, .rtc_buffer = rtc_data};
-
+command_t get_photomagrtc_read_command() {
     return (command_t){.target = p_adcs_task,
                        .operation = OPERATION_READ,
-                       .p_data = &args,
-                       .len = sizeof(photomagrtc_read_args_t),
+                       .data.adcs_data = &latest_adcs_data_reading,
+                       .data_type = CMD_DATA_ADCS,
                        .result = PROCESSING,
                        .callback = NULL};
 }
@@ -197,12 +207,12 @@ void exec_command_adcs_process(command_t *const p_cmd) {
     }
 
     rtc_data_t temp;
-
-    photomagrtc_read_args_t *args = (photomagrtc_read_args_t *)p_cmd->p_data;
+    const adcs_data_t *data = p_cmd->data.adcs_data;
     status_t rtc_status = get_rtc_values(&temp);
 
-    if (args == NULL)
+    if (data == NULL) {
         info("adcs: stuff happens here\n");
+    }
 
     // Do stuff with readings here
 

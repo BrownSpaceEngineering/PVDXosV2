@@ -4,7 +4,7 @@
  * Defines global datatypes, structures and headers.
  *
  * Created:
- * Authors: Siddharta Laloux,
+ * Authors: Siddharta Laloux, Zach Mahan
  */
 
 #ifndef GLOBALS_H
@@ -13,8 +13,8 @@
 #include <FreeRTOS.h>
 #include <queue.h>
 #include <stdbool.h>
-#include <task.h>
 #include <stdint.h>
+#include <task.h>
 
 /* ---------- LOGGING CONSTANTS ---------- */
 
@@ -72,8 +72,8 @@ typedef enum {
     OPERATION_CLEAR_IMAGE,   // p_data: NULL
 
     // Magnetometer & Photodiode operations
-    OPERATION_READ,            // p_data: photomag_read_args_t *readings
-    OPERATION_PROCESS,         // p_data: TBD
+    OPERATION_READ,    // p_data: photomag_read_args_t *readings
+    OPERATION_PROCESS, // p_data: TBD
 
     // TESTING
     TEST_OP, // p_data: char message[]
@@ -120,12 +120,12 @@ typedef QueueHandle_t (*init_function)(void);
 
 /* ---------- STRUCTS ---------- */
 
-// integer and float 3d vector types. 
+// integer and float 3d vector types.
 typedef struct {
-    int32_t x; 
+    int32_t x;
     int32_t y;
     int32_t z;
-} int32_3d_t; 
+} int32_3d_t;
 
 typedef struct {
     float x;
@@ -152,12 +152,28 @@ typedef struct {
     const task_type_t task_type;        // Whether the task is OS-integrity, a sensor, or an actuator
 } pvdx_task_t;
 
+typedef struct adcs_data adcs_data_t;
+
+typedef union command_data {
+    adcs_data_t *adcs_data;
+    const uint8_t *display_data;
+    TaskHandle_t *task_handle;
+    pvdx_task_t *pvdx_task;
+} command_data_t;
+typedef enum {
+    CMD_DATA_NONE = 0,
+    CMD_DATA_ADCS,
+    CMD_DATA_DISPLAY,
+    CMD_DATA_TASK_HANDLE,
+    CMD_DATA_PVDX_TASK,
+} command_data_type_t;
+
 // A struct to represent a command that OS tasks can execute
 typedef struct {
     pvdx_task_t *const target;            // The target task for the command
+    const command_data_t data;            // Pointer to data needed for the operation
+    const command_data_type_t data_type;  // tag indicating the type of data help
     const operation_t operation;          // The operation to perform
-    const void *const p_data;             // Pointer to data needed for the operation
-    const size_t len;                     // Length of the data
     status_t result;                      // Pointer to the result of the operation
     void (*callback)(status_t *p_result); // Callback function to call after the operation is complete
 } command_t;

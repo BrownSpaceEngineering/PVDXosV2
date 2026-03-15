@@ -1,14 +1,15 @@
 /**
  * display_task.c
  *
- * RTOS task wrapping the driver for a SSD1362 OLED controller within a Midas Displays 
+ * RTOS task wrapping the driver for a SSD1362 OLED controller within a Midas Displays
  * MDOB256064D1Y-YS display.
  *
  * Created: February 29, 2024
- * Authors: Tanish Makadia, Ignacio Blancas Rodriguez, Aidan Wang, Siddharta Laloux
+ * Authors: Tanish Makadia, Ignacio Blancas Rodriguez, Aidan Wang, Siddharta Laloux, Zach Mahan
  */
 
 #include "display_task.h"
+
 #include "display_driver.h"
 
 /* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
@@ -16,9 +17,9 @@
 /**
  * \fn display_image
  *
- * \brief Overwrites the display buffer with the given buffer and triggers an 
+ * \brief Overwrites the display buffer with the given buffer and triggers an
  * update of the display
- * 
+ *
  * \param p_buffer pointer to the image buffer to be displayed
  *
  * \returns `status_t` SUCCESS if the operation was successful, or an error code otherwise
@@ -28,7 +29,7 @@ status_t display_image(const color_t *const p_buffer) {
 
     display_set_buffer(p_buffer);
     ret_err_status(display_update(), "display: Update failed");
-    
+
     return SUCCESS;
 }
 
@@ -52,7 +53,7 @@ status_t clear_image(void) {
 
 /**
  * \fn get_display_image_command
- * 
+ *
  * \brief Gets the task command for display image
  *
  * \param p_buffer the pointer to the buffer of what we want to display
@@ -64,8 +65,8 @@ inline command_t get_display_image_command(const color_t *const p_buffer) {
     // that `*p_data` is still valid when the command is received.
     command_t cmd = {.target = p_display_task,
                      .operation = OPERATION_DISPLAY_IMAGE,
-                     .p_data = p_buffer,
-                     .len = sizeof(color_t *),
+                     .data.display_data = p_buffer,
+                     .data_type = CMD_DATA_DISPLAY,
                      .result = PROCESSING,
                      .callback = NULL};
     return cmd;
@@ -73,7 +74,7 @@ inline command_t get_display_image_command(const color_t *const p_buffer) {
 
 /**
  * \fn exec_command_display
- * 
+ *
  * \brief Calls the correct function for the command
  *
  * \param p_cmd the pointer to the cmd we want to execute
@@ -86,7 +87,7 @@ void exec_command_display(command_t *const p_cmd) {
 
     switch (p_cmd->operation) {
         case OPERATION_DISPLAY_IMAGE:
-            p_cmd->result = display_image((const color_t *)p_cmd->p_data);
+            p_cmd->result = display_image((const color_t *)p_cmd->data.display_data);
             break;
         case OPERATION_CLEAR_IMAGE:
             p_cmd->result = clear_image();
@@ -99,13 +100,12 @@ void exec_command_display(command_t *const p_cmd) {
 
 /**
  * \fn init_display
- * 
+ *
  * \brief Initializes the display task
  *
  * \returns the command queue for the display
  */
 QueueHandle_t init_display(void) {
-
     // Initialize the display command queue
     QueueHandle_t display_command_queue_handle = xQueueCreateStatic(
         COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE, display_mem.display_command_queue_buffer, &display_mem.display_task_queue);

@@ -1,12 +1,12 @@
 /**
  * watchdog_task.c
  *
- * RTOS task wrapping the driver for an Atmel SAMD51's hardware watchdog timer. This task is 
- * responsible for monitoring the check-ins of other tasks and resetting the system if a 
+ * RTOS task wrapping the driver for an Atmel SAMD51's hardware watchdog timer. This task is
+ * responsible for monitoring the check-ins of other tasks and resetting the system if a
  * task fails to check in within the allowed time.
  *
  * Created: January 28, 2024
- * Authors: Oren Kohavi, Tanish Makadia, Siddharta Laloux
+ * Authors: Oren Kohavi, Tanish Makadia, Siddharta Laloux, Zach Mahan
  */
 
 #include "watchdog_task.h"
@@ -19,7 +19,7 @@ static volatile Wdt *const p_watchdog_timer = WDT;
 /**
  * \fn watchdog_checkin
  *
- * \brief Updates the last checkin time of the given task to prove that it is 
+ * \brief Updates the last checkin time of the given task to prove that it is
  *        still running
  *
  * \param p_task a constant task pointer; the task to check-in
@@ -69,8 +69,8 @@ QueueHandle_t init_watchdog(void) {
         watchdog_period - 1; // Each increment of 1 doubles the period (see ASF/samd51a/include/component/wdt.h)
     watchdog_set_early_warning_offset(p_watchdog_timer,
                                       watchdog_earlywarning_period); // Early warning will trigger halfway through the watchdog period
-    watchdog_enable_early_warning(p_watchdog_timer);                       // Enable early warning interrupt
-    watchdog_set_period(p_watchdog_timer, watchdog_period);                // Set the watchdog period
+    watchdog_enable_early_warning(p_watchdog_timer);                 // Enable early warning interrupt
+    watchdog_set_period(p_watchdog_timer, watchdog_period);          // Set the watchdog period
     watchdog_wait_for_register_sync(p_watchdog_timer, WDT_SYNCBUSY_ENABLE | WDT_SYNCBUSY_WEN); // Wait for register synchronization
 
     // Enable the watchdog
@@ -148,7 +148,7 @@ void pet_watchdog(void) {
  *
  * \brief Writes the incorrect key in the hardware watchdog's clear register,
  *        triggering a system-reboot.
- * 
+ *
  * \warning Satellite will restart execution from the bootloader
  */
 void kick_watchdog(void) {
@@ -159,11 +159,11 @@ void kick_watchdog(void) {
 /**
  * \fn get_watchdog_checkin_command
  *
- * \brief Given a pointer to a `pvdx_task_t` struct, returns a command to 
+ * \brief Given a pointer to a `pvdx_task_t` struct, returns a command to
  *      check-in with the watchdog task.
  *
  * \param p_task a pointer to the task
- * 
+ *
  * \return a command, the watchdog checkin command
  */
 inline command_t get_watchdog_checkin_command(pvdx_task_t *const p_task) {
@@ -171,8 +171,8 @@ inline command_t get_watchdog_checkin_command(pvdx_task_t *const p_task) {
     // that `*p_data` is still valid when the command is received.
     return (command_t){.target = p_watchdog_task,
                        .operation = OPERATION_CHECKIN,
-                       .p_data = p_task,
-                       .len = sizeof(pvdx_task_t *),
+                       .data.pvdx_task = p_task,
+                       .data_type = CMD_DATA_PVDX_TASK,
                        .result = NO_STATUS_RETURN,
                        .callback = NULL};
 }
@@ -213,9 +213,9 @@ void register_task_with_watchdog(pvdx_task_t *const p_task) {
  *        monitored.
  *
  * \param p_task a pointer to the task to be unregistered
- * 
+ *
  * \return void
- * 
+ *
  * \warning This function is not thread-safe and should only be called from
  *      within a critical section, with the task list mutex acquired
  * \warning modifies the task list
@@ -240,7 +240,7 @@ void unregister_task_with_watchdog(pvdx_task_t *const p_task) {
  * \brief Executes a command received by the watchdog task
  *
  * \param p_cmd a pointer to a command forwarded to the task manager
- * 
+ *
  * \return void
  *
  * \warning fatal error if target wrong or operation undefined
@@ -252,7 +252,7 @@ void exec_command_watchdog(command_t *const p_cmd) {
 
     switch (p_cmd->operation) {
         case OPERATION_CHECKIN:
-            watchdog_checkin((pvdx_task_t *)p_cmd->p_data);
+            watchdog_checkin(p_cmd->data.pvdx_task);
             break;
         default:
             fatal("watchdog: Invalid operation! target: %d operation: %d\n", p_cmd->target, p_cmd->operation);

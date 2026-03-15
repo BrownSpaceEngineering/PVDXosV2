@@ -2,6 +2,8 @@
 #define ADCS_H
 
 // Includes
+#include <stddef.h>
+
 #include "atmel_start.h"
 #include "drivers/gyro/SCH1.h"
 #include "drivers/magnetometer/magnetometer_driver.h"
@@ -36,19 +38,23 @@ typedef struct {
 // Global memory and configuration
 extern adcs_task_memory_t adcs_mem;
 
-typedef struct {
+// TODO update this to properly reflect updated logic
+struct adcs_data {
     photodiode_data_t *photodiode_buffer;
+    size_t photodiode_data_len;
     mag_data_t *mag_buffer;
+    size_t mag_buffer_len;
     rtc_data_t *rtc_buffer;
-} photomagrtc_read_args_t;
+    size_t rtc_buffer_len;
+};
 
 typedef float_3d_t sun_vector_t;
 
 // Function declarations
 QueueHandle_t init_adcs(void);
 void main_adcs(void *pvParameters);
-command_t get_photomagrtc_read_command(mag_data_t *const mag_data, photodiode_data_t *const photodiode_data, rtc_data_t *const rtc_data);
-command_t get_adcs_process_command(photomagrtc_read_args_t *const args);
+command_t get_photomagrtc_read_command(void);
+command_t get_adcs_process_command(adcs_data_t *const data);
 void exec_command_adcs_process(command_t *const p_cmd);
 sun_vector_t compute_sun_vector(photodiode_data_t *input);
 bool tumbling(SCH1_result_t *gyro_data);         // TODO define

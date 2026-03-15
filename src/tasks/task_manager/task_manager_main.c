@@ -6,7 +6,7 @@
  *
  * Created: April 14, 2024
  * Authors: Oren Kohavi, Ignacio Blancas Rodriguez, Tanish Makadia, Yi Liu, Siddharta Laloux, Aidan Wang, Simon Juknelis,
- * Defne Doken, Aidan Wang, Jai Garg, Alex Khosrowshahi
+ * Defne Doken, Aidan Wang, Jai Garg, Alex Khosrowshahi, Zach Mahan
  */
 
 #include "command_dispatcher_task.h"
@@ -45,8 +45,8 @@ void main_task_manager(void *pvParameters) {
     command_t initialise_all_tasks = {
         .target = p_task_manager_task,
         .operation = OPERATION_INIT_SUBTASKS,
-        .p_data = NULL,
-        .len = 0,
+        .data = {0},
+        .data_type = CMD_DATA_NONE,
         .result = NO_STATUS_RETURN,
         .callback = NULL,
     };
