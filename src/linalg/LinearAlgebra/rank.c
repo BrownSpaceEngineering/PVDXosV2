@@ -10,23 +10,23 @@
 /*
  * Find the rank of matrix A, size row x column, where row == column
  */
-int rank(double* A, int row){
-	double determinant = det(A, row);
+int rank(float* A, int row) {
+    float determinant = det(A, row);
 
-	/*
-	 * If the terminant is not equal to zero, then we have full rank = row, else we have not full rank
-	 */
-	
- // TODO: fix these pragmas
+    /*
+     * If the terminant is not equal to zero, then we have full rank = row, else we have not full
+     * rank
+     */
+
+    // TODO: fix these pragmas
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wfloat-equal"
 
-	if(determinant != 0){
-		return row;
+    if (determinant != 0) {
+        return row;
 
 #pragma GCC diagnostic pop
 
-	}else
-		return -1; // Not full rank
-
+    } else
+        return -1; // Not full rank
 }

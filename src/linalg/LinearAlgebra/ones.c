@@ -10,7 +10,7 @@
  * Turn every element of matrix A into 1. Size row x column
  */
 
-void ones(double* A, int row, int column){
-	for(int i = 0; i < row*column; i++)
-		*(A+i) = 1;
+void ones(float* A, int row, int column) {
+    for (int i = 0; i < row * column; i++)
+        *(A + i) = 1;
 }

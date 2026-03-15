@@ -11,13 +11,22 @@
  * Turn A into A^-1. A have the size row x row
  */
 
-void inv(double* A, int row) {
+void inv(float* A, int row) {
 
-	// Create identity matrix
-	double I[row*row];
-	eye(I, row, row);
+    // Create identity matrix
+    float I[row * row];
+    eye(I, row, row);
 
-	//Do inverse of A
-	linsolve(A, A, I, row, row);
+    // Do inverse of A
+    linsolve(A, A, I, row, row);
+}
 
+void invf(float* A, int row) {
+
+    // Create identity matrix
+    float I[row * row];
+    eye(I, row, row);
+
+    // Do inverse of A
+    linsolvef(A, A, I, row, row);
 }
