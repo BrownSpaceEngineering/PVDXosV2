@@ -9,7 +9,6 @@
  */
 
 #include "task_list.h"
-#include "reflash.h"
 
 // Define task structs; tasks are mutable so not constant
 pvdx_task_t watchdog_task = {

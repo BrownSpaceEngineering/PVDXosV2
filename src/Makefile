@@ -78,6 +78,7 @@ export OBJS :=                                              	\
 																\
 ../src/drivers/display/display_driver.o                       	\
 ../src/drivers/magnetometer/magnetometer_driver.o           	\
+../src/drivers/mram/mram_driver.o								\
 ../src/drivers/photodiode/photodiode_driver.o               	\
 ../src/drivers/watchdog/watchdog_driver.o                     	\
                                                             	\
@@ -100,6 +101,8 @@ export OBJS :=                                              	\
 ../src/tasks/command_dispatcher/command_dispatcher_main.o   	\
 ../src/tasks/command_dispatcher/command_dispatcher_task.o   	\
                                                             	\
+../src/tasks/reflash/reflash_main.o								\
+                                                            	\
 ../src/tasks/shell/shell_main.o                             	\
 ../src/tasks/shell/shell_helpers.o                          	\
 ../src/tasks/shell/shell_commands.o                         	\
@@ -111,10 +114,6 @@ export OBJS :=                                              	\
 ../src/tests/test.o                                             \
 																\
 ../src/checks/device_checks.o 									\
-                                                            	\
-../src/mram.o													\
-../src/reflash.o												\
-# ^^^ to be fixed when mram becomes a task/bootloader guy
 																
 
 
@@ -130,7 +129,8 @@ export EXTRA_VPATH := \
 ../../src/drivers \
 ../../src/drivers/display \
 ../../src/drivers/magnetometer \
-../../src/drivers/magnetorquer \
+../../src/drivers/magnetometer \
+../../src/drivers/mram \
 ../../src/drivers/photodiode \
 ../../src/drivers/watchdog \
 ../../src/tasks \
@@ -143,6 +143,7 @@ export EXTRA_VPATH := \
 ../../src/tasks/command_dispatcher \
 ../../src/tasks/shell \
 ../../src/tasks/radio \
+../../src/tasks/reflash \
 ../../src/mutexes \
 ../../src/checks \
 ../../src/tests \

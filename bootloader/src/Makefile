@@ -16,7 +16,7 @@ export NUM_BOOTLOADERS := 8
 ### ALL C FILES SHOULD HAVE AN OBJECT FILE LISTED HERE ###
 export OBJS := \
 ../src/bootloader.o \
-../src/mram.o \
+../src/mram_driver.o \
 ../src/watchdog_driver.o
 
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###

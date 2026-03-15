@@ -14,6 +14,7 @@ typedef struct {
 extern reflash_task_memory_t reflash_mem;
 
 void reflash_bootloaders(void);
+
 void main_reflash_task(void *pvParameters);
 
 #endif

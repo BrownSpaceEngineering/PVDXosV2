@@ -1,5 +1,5 @@
-#include "reflash.h"
-#include "mram.h"
+#include "reflash_task.h"
+#include "mram_driver.h"
 #include "watchdog_driver.h"
 
 extern struct flash_descriptor FLASH_0;

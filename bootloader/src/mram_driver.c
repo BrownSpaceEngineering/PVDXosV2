@@ -19,7 +19,7 @@ _|"""""|_|"""""|_|"""""|_|"""""|
  - block protection?
  */
 
-#include "mram.h"
+#include "mram_driver.h"
 #include "watchdog_driver.h"
 
 // MRAM Command Bytes

@@ -10,8 +10,7 @@
  */
 
 #include "main.h"
-#include "mram.h"
-#include "reflash.h"
+#include "reflash_task.h"
 
 #define RSTC_RCAUSE (0x40000C00UL)  // Reset Cause Register
 

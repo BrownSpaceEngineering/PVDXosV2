@@ -6,7 +6,7 @@
 #include "display_task.h"
 #include "globals.h"
 #include "heartbeat_task.h"
-#include "reflash.h"
+#include "reflash_task.h"
 #include "shell_task.h"
 #include "task_manager_task.h"
 #include "watchdog_task.h"

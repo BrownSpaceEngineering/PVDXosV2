@@ -33,8 +33,6 @@ void watchdog_checkin(pvdx_task_t *const task);
 QueueHandle_t init_watchdog();
 void main_watchdog(void *pvParameters);
 void early_warning_callback_watchdog(void);
-void pet_watchdog(void);
-void kick_watchdog(void);
 command_t get_watchdog_checkin_command(pvdx_task_t *const task);
 void register_task_with_watchdog(pvdx_task_t *const p_task);
 void unregister_task_with_watchdog(pvdx_task_t *const task);

@@ -1,5 +1,5 @@
 #include "bootloader_index.h"
-#include "mram.h"
+#include "mram_driver.h"
 #include "watchdog_driver.h"
 
 #define FLASH_OS_BASE_ADDRESS (0x00020000)  // Address of OS in flash (after bootloaders)
