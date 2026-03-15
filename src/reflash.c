@@ -1,5 +1,6 @@
 #include "reflash.h"
 #include "mram.h"
+#include "watchdog_driver.h"
 
 extern struct flash_descriptor FLASH_0;
 
@@ -40,8 +41,12 @@ void reflash_bootloaders(void) {
         }
 
         if (any_error) {
+            watchdog_pet();
+
             flash_erase(&FLASH_0, i * FLASH_BLOCK_SIZE, 1);
             flash_write(&FLASH_0, i * FLASH_BLOCK_SIZE, mram_block, FLASH_BLOCK_SIZE);
+
+            watchdog_pet();
         }
     }
 

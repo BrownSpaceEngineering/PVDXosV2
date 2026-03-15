@@ -20,6 +20,7 @@ _|"""""|_|"""""|_|"""""|_|"""""|
  */
 
 #include "mram.h"
+#include "watchdog_driver.h"
 
 // MRAM Command Bytes
 #define CMD_WREN    0x06    // Write Enable
@@ -110,6 +111,8 @@ void write_status(uint8_t mram, uint8_t value) {
 }
 
 void read_bytes(uint8_t mram, uint32_t address, uint8_t *data, uint32_t size) {
+    watchdog_pet();
+    
     uint8_t cmd[4] = {
         CMD_READ,
         (uint8_t)(address >> 16),
@@ -129,9 +132,13 @@ void read_bytes(uint8_t mram, uint32_t address, uint8_t *data, uint32_t size) {
         }
     }
 #endif
+
+    watchdog_pet();
 }
 
 void write_bytes(uint8_t mram, uint32_t address, const uint8_t *data, uint32_t size) {
+    watchdog_pet();
+
     uint8_t hdr[4] = {
         CMD_WRITE,
         (uint8_t)(address >> 16),
@@ -143,6 +150,8 @@ void write_bytes(uint8_t mram, uint32_t address, const uint8_t *data, uint32_t s
     spi_write(hdr, 4);
     spi_write(data, size);
     mram_deselect(mram);
+
+    watchdog_pet();
 }
 
 uint8_t read_nonvol_reg(uint8_t mram, uint8_t reg) {
