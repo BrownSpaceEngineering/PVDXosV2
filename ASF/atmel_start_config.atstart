@@ -1041,32 +1041,36 @@ drivers:
     variant: null
     clocks:
       domain_group: null
-  I2C_SBAND:
-    user_label: I2C_SBAND
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::SERCOM2::driver_config_definition::I2C.Master.Standard~2FFast-mode::HAL:Driver:I2C.Master.Sync
-    functionality: I2C
-    api: HAL:Driver:I2C_Master_Sync
+  SPI_UHF:
+    user_label: SPI_UHF
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::SERCOM0::driver_config_definition::SPI.Master::HAL:Driver:SPI.Master.Sync
+    functionality: SPI
+    api: HAL:Driver:SPI_Master_Sync
     configuration:
-      i2c_master_advanced: false
-      i2c_master_arch_dbgstop: Keep running
-      i2c_master_arch_inactout: Disabled
-      i2c_master_arch_lowtout: false
-      i2c_master_arch_mexttoen: false
-      i2c_master_arch_runstdby: false
-      i2c_master_arch_sdahold: 300-600ns hold time
-      i2c_master_arch_sexttoen: false
-      i2c_master_arch_trise: 215
-      i2c_master_baud_rate: 100000
+      spi_master_advanced: false
+      spi_master_arch_cpha: Sample input on leading edge
+      spi_master_arch_cpol: SCK is low when idle
+      spi_master_arch_dbgstop: Keep running
+      spi_master_arch_dord: MSB first
+      spi_master_arch_ibon: In data stream
+      spi_master_arch_runstdby: false
+      spi_master_baud_rate: 50000
+      spi_master_character_size: 8 bits
+      spi_master_dummybyte: 511
+      spi_master_rx_enable: true
     optional_signals: []
     variant:
-      specification: SDA=0, SCL=1
+      specification: TXPO=0, RXPO=2
       required_signals:
-      - name: SERCOM2/PAD/0
-        pad: PA09
-        label: SDA
-      - name: SERCOM2/PAD/1
-        pad: PA08
-        label: SCL
+      - name: SERCOM0/PAD/0
+        pad: PA04
+        label: MOSI
+      - name: SERCOM0/PAD/1
+        pad: PB25
+        label: SCK
+      - name: SERCOM0/PAD/2
+        pad: PA06
+        label: MISO
     clocks:
       domain_group:
         nodes:
@@ -1330,11 +1334,37 @@ drivers:
     clocks:
       domain_group: null
 pads:
+  UHF_CS:
+    name: PA02
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA02
+    mode: Digital output
+    user_label: UHF_CS
+    configuration:
+      pad_initial_level: High
+  UHF_RST:
+    name: PA03
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA03
+    mode: Digital output
+    user_label: UHF_RST
+    configuration:
+      pad_initial_level: High
   PB08:
     name: PB08
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB08
     mode: Analog
     user_label: PB08
+    configuration: null
+  UHF_MOSI:
+    name: PA04
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA04
+    mode: Digital output
+    user_label: UHF_MOSI
+    configuration: null
+  UHF_MISO:
+    name: PA06
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA06
+    mode: Digital input
+    user_label: UHF_MISO
     configuration: null
   MRAM1_CS:
     name: PC04
@@ -1364,18 +1394,6 @@ pads:
     user_label: MRAM2_RST
     configuration:
       pad_initial_level: High
-  SBAND_SCL:
-    name: PA08
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA08
-    mode: I2C
-    user_label: SBAND_SCL
-    configuration: null
-  SBAND_SDA:
-    name: PA09
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA09
-    mode: I2C
-    user_label: SBAND_SDA
-    configuration: null
   Display_RST:
     name: PB12
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB12
@@ -1540,6 +1558,12 @@ pads:
     user_label: Camera_CS
     configuration:
       pad_initial_level: High
+  UHF_SCK:
+    name: PB25
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB25
+    mode: Digital output
+    user_label: UHF_SCK
+    configuration: null
   Camera_MISO:
     name: PA30
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA30
