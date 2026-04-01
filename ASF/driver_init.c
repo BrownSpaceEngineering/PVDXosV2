@@ -13,13 +13,12 @@
 
 #include <hpl_adc_base.h>
 
+struct spi_m_sync_descriptor SPI_UHF;
 struct spi_m_sync_descriptor SPI_MRAM;
 struct spi_m_sync_descriptor SPI_DISPLAY;
 struct spi_m_sync_descriptor SPI_CAMERA;
 
 struct adc_sync_descriptor ADC_0;
-
-struct i2c_m_sync_desc I2C_SBAND;
 
 struct i2c_m_sync_desc I2C_MAG_GYRO;
 
@@ -51,10 +50,37 @@ void ADC_0_init(void)
 	adc_sync_init(&ADC_0, ADC1, (void *)NULL);
 }
 
-void I2C_SBAND_PORT_init(void)
+void SPI_UHF_PORT_init(void)
 {
 
-	gpio_set_pin_pull_mode(SBAND_SDA,
+	gpio_set_pin_level(UHF_MOSI,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   false);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(UHF_MOSI, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(UHF_MOSI, PINMUX_PA04D_SERCOM0_PAD0);
+
+	gpio_set_pin_level(UHF_SCK,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   false);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(UHF_SCK, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(UHF_SCK, PINMUX_PB25C_SERCOM0_PAD1);
+
+	// Set pin direction to input
+	gpio_set_pin_direction(UHF_MISO, GPIO_DIRECTION_IN);
+
+	gpio_set_pin_pull_mode(UHF_MISO,
 	                       // <y> Pull configuration
 	                       // <id> pad_pull_config
 	                       // <GPIO_PULL_OFF"> Off
@@ -62,32 +88,22 @@ void I2C_SBAND_PORT_init(void)
 	                       // <GPIO_PULL_DOWN"> Pull-down
 	                       GPIO_PULL_OFF);
 
-	gpio_set_pin_function(SBAND_SDA, PINMUX_PA09D_SERCOM2_PAD0);
-
-	gpio_set_pin_pull_mode(SBAND_SCL,
-	                       // <y> Pull configuration
-	                       // <id> pad_pull_config
-	                       // <GPIO_PULL_OFF"> Off
-	                       // <GPIO_PULL_UP"> Pull-up
-	                       // <GPIO_PULL_DOWN"> Pull-down
-	                       GPIO_PULL_OFF);
-
-	gpio_set_pin_function(SBAND_SCL, PINMUX_PA08D_SERCOM2_PAD1);
+	gpio_set_pin_function(UHF_MISO, PINMUX_PA06D_SERCOM0_PAD2);
 }
 
-void I2C_SBAND_CLOCK_init(void)
+void SPI_UHF_CLOCK_init(void)
 {
-	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM2_GCLK_ID_CORE, CONF_GCLK_SERCOM2_CORE_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
-	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM2_GCLK_ID_SLOW, CONF_GCLK_SERCOM2_SLOW_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM0_GCLK_ID_CORE, CONF_GCLK_SERCOM0_CORE_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM0_GCLK_ID_SLOW, CONF_GCLK_SERCOM0_SLOW_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
 
-	hri_mclk_set_APBBMASK_SERCOM2_bit(MCLK);
+	hri_mclk_set_APBAMASK_SERCOM0_bit(MCLK);
 }
 
-void I2C_SBAND_init(void)
+void SPI_UHF_init(void)
 {
-	I2C_SBAND_CLOCK_init();
-	i2c_m_sync_init(&I2C_SBAND, SERCOM2);
-	I2C_SBAND_PORT_init();
+	SPI_UHF_CLOCK_init();
+	spi_m_sync_init(&SPI_UHF, SERCOM0);
+	SPI_UHF_PORT_init();
 }
 
 void I2C_MAG_GYRO_PORT_init(void)
@@ -664,7 +680,7 @@ void system_init(void)
 
 	ADC_0_init();
 
-	I2C_SBAND_init();
+	SPI_UHF_init();
 
 	I2C_MAG_GYRO_init();
 

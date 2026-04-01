@@ -24,14 +24,14 @@ void ADC_0_example(void) {
     }
 }
 
-void I2C_SBAND_example(void) {
-    struct io_descriptor *I2C_SBAND_io;
-
-    i2c_m_sync_get_io_descriptor(&I2C_SBAND, &I2C_SBAND_io);
-    i2c_m_sync_enable(&I2C_SBAND);
-    i2c_m_sync_set_slaveaddr(&I2C_SBAND, 0x12, I2C_M_SEVEN);
-    io_write(I2C_SBAND_io, (uint8_t *)"Hello World!", 12);
-}
+// void I2C_SBAND_example(void) {
+//     struct io_descriptor *I2C_SBAND_io;
+// 
+//     i2c_m_sync_get_io_descriptor(&I2C_SBAND, &I2C_SBAND_io);
+//     i2c_m_sync_enable(&I2C_SBAND);
+//     i2c_m_sync_set_slaveaddr(&I2C_SBAND, 0x12, I2C_M_SEVEN);
+//     io_write(I2C_SBAND_io, (uint8_t *)"Hello World!", 12);
+// }
 
 void I2C_MAG_GYRO_example(void) {
     struct io_descriptor *I2C_MAG_GYRO_io;

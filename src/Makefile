@@ -80,6 +80,8 @@ export OBJS :=                                              	\
 ../src/drivers/magnetometer/magnetometer_driver.o           	\
 ../src/drivers/photodiode/photodiode_driver.o               	\
 ../src/drivers/watchdog/watchdog_driver.o                     	\
+																\
+../src/drivers/at86rf215/at86rf215.o							\
                                                             	\
 ../src/tasks/heartbeat/heartbeat_main.o                     	\
                                                             	\
@@ -125,6 +127,7 @@ export EXTRA_VPATH := \
 ../../src/misc/exception_handlers \
 ../../src/drivers \
 ../../src/drivers/display \
+../../src/drivers/at86rf215 \
 ../../src/drivers/magnetometer \
 ../../src/drivers/magnetorquer \
 ../../src/drivers/photodiode \
