@@ -160,6 +160,7 @@ typedef union command_data {
     TaskHandle_t *task_handle;
     pvdx_task_t *pvdx_task;
 } command_data_t;
+
 typedef enum {
     CMD_DATA_NONE = 0,
     CMD_DATA_ADCS,
@@ -170,12 +171,11 @@ typedef enum {
 
 // A struct to represent a command that OS tasks can execute
 typedef struct {
-    pvdx_task_t *const target;            // The target task for the command
-    const command_data_t data;            // Pointer to data needed for the operation
-    const command_data_type_t data_type;  // tag indicating the type of data help
-    const operation_t operation;          // The operation to perform
-    status_t result;                      // Pointer to the result of the operation
-    void (*callback)(status_t *p_result); // Callback function to call after the operation is complete
+    pvdx_task_t *const target;           // The target task for the command
+    const command_data_t data;           // Union containing a pointer to the data needed for the operation
+    const command_data_type_t data_type; // Tag indicating the type of data help
+    const operation_t operation;         // The operation to perform
+    status_t result;                     // Ttatus indicating result of the operation
 } command_t;
 
 /* ---------- BUILD CONSTANTS ---------- */
