@@ -383,6 +383,34 @@ void system_init(void)
 {
 	init_mcu();
 
+	// GPIO on PA02
+
+	gpio_set_pin_level(UHF_CS,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   true);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(UHF_CS, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(UHF_CS, GPIO_PIN_FUNCTION_OFF);
+
+	// GPIO on PA03
+
+	gpio_set_pin_level(UHF_RST,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   true);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(UHF_RST, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(UHF_RST, GPIO_PIN_FUNCTION_OFF);
+
 	// GPIO on PB01
 
 	gpio_set_pin_level(LED_RED,

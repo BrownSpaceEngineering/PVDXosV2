@@ -1334,6 +1334,20 @@ drivers:
     clocks:
       domain_group: null
 pads:
+  UHF_CS:
+    name: PA02
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA02
+    mode: Digital output
+    user_label: UHF_CS
+    configuration:
+      pad_initial_level: High
+  UHF_RST:
+    name: PA03
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA03
+    mode: Digital output
+    user_label: UHF_RST
+    configuration:
+      pad_initial_level: High
   PB08:
     name: PB08
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB08
