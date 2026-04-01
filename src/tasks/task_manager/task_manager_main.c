@@ -48,7 +48,7 @@ void main_task_manager(void *pvParameters) {
         .data = {0},
         .data_type = CMD_DATA_NONE,
         .result = NO_STATUS_RETURN,
-        .callback = NULL,
+
     };
 
     command_t *const p_initialise_all_tasks = &initialise_all_tasks;

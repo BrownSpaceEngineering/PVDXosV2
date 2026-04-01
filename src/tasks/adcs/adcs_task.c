@@ -166,12 +166,13 @@ status_t adcs_orientation_loop() {
  * \returns command_t command structure
  */
 command_t get_adcs_process_command(adcs_data_t *const data) {
-    return (command_t){.target = p_adcs_task,
-                       .operation = OPERATION_PROCESS,
-                       .data.adcs_data = data,
-                       .data_type = CMD_DATA_ADCS,
-                       .result = PROCESSING,
-                       .callback = NULL};
+    return (command_t){
+        .target = p_adcs_task,
+        .operation = OPERATION_PROCESS,
+        .data.adcs_data = data,
+        .data_type = CMD_DATA_ADCS,
+        .result = PROCESSING,
+    };
 }
 
 /**
@@ -184,12 +185,13 @@ command_t get_adcs_process_command(adcs_data_t *const data) {
  * \returns command_t command structure
  */
 command_t get_photomagrtc_read_command() {
-    return (command_t){.target = p_adcs_task,
-                       .operation = OPERATION_READ,
-                       .data.adcs_data = &latest_adcs_data_reading,
-                       .data_type = CMD_DATA_ADCS,
-                       .result = PROCESSING,
-                       .callback = NULL};
+    return (command_t){
+        .target = p_adcs_task,
+        .operation = OPERATION_READ,
+        .data.adcs_data = &latest_adcs_data_reading,
+        .data_type = CMD_DATA_ADCS,
+        .result = PROCESSING,
+    };
 }
 
 /* ---------- NON-DISPATCHABLE FUNCTIONS (do not go through the command dispatcher) ---------- */

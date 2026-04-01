@@ -63,12 +63,13 @@ status_t clear_image(void) {
 inline command_t get_display_image_command(const color_t *const p_buffer) {
     // NOTE: Be sure to use a pointer to a static lifetime variable to ensure
     // that `*p_data` is still valid when the command is received.
-    command_t cmd = {.target = p_display_task,
-                     .operation = OPERATION_DISPLAY_IMAGE,
-                     .data.display_data = p_buffer,
-                     .data_type = CMD_DATA_DISPLAY,
-                     .result = PROCESSING,
-                     .callback = NULL};
+    command_t cmd = {
+        .target = p_display_task,
+        .operation = OPERATION_DISPLAY_IMAGE,
+        .data.display_data = p_buffer,
+        .data_type = CMD_DATA_DISPLAY,
+        .result = PROCESSING,
+    };
     return cmd;
 }
 
