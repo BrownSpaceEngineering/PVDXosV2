@@ -33,8 +33,8 @@ static uint8_t spi_buffer[UHF_SPI_BUF_SIZE];
 // Preset buffers for the driver
 //
 // I know their driver just uses the above spi buffer but I like this more.
-uint8_t spi_rx_buffer[UHF_SPI_BUF_SIZE] = {0x00};
-uint8_t spi_tx_buffer[UHF_SPI_BUF_SIZE] = {0x00};
+uint8_t uhf_spi_rx_buffer[UHF_SPI_BUF_SIZE] = {0x00};
+uint8_t uhf_spi_tx_buffer[UHF_SPI_BUF_SIZE] = {0x00};
 
 #define INIT_MAGIC_VAL 0x92c2f0e3
 
@@ -510,11 +510,11 @@ __attribute__((weak)) size_t at86rf215_get_time_ms(struct at86rf215 *h) {
  */
 __attribute__((weak)) int at86rf215_spi_read(struct at86rf215 *h, uint8_t *out, const uint8_t *in, size_t tx_len, size_t rx_len) {
 
-    memcpy(spi_tx_buffer, in, tx_len);
-    memset(spi_tx_buffer + tx_len, 0, rx_len - tx_len);
+    memcpy(uhf_spi_tx_buffer, in, tx_len);
+    memset(uhf_spi_tx_buffer + tx_len, 0, rx_len - tx_len);
 
     struct spi_xfer xfer = {
-        .txbuf = spi_tx_buffer,
+        .txbuf = uhf_spi_tx_buffer,
         .rxbuf = out,
         .size = rx_len,
     };
@@ -541,7 +541,7 @@ __attribute__((weak)) int at86rf215_spi_read(struct at86rf215 *h, uint8_t *out, 
 __attribute__((weak)) int at86rf215_spi_write(struct at86rf215 *h, const uint8_t *in, size_t len) {
     struct spi_xfer xfer = {
         .txbuf = (uint8_t *)in,
-        .rxbuf = spi_rx_buffer, // Unused
+        .rxbuf = uhf_spi_rx_buffer, // Unused
         .size = len,
     };
 
@@ -1346,15 +1346,15 @@ int at86rf215_get_rssi(struct at86rf215 *h, at86rf215_radio_t radio, float *rssi
     } else {
         reg = REG_RF24_RSSI;
     }
-    int8_t val = 0;
+    uint8_t val = 0;
     ret = at86rf215_reg_read_8(h, &val, reg);
     if (ret) {
         return ret;
     }
-    if (val == 127) {
+    if ((int8_t)val == 127) {
         return -AT86RF215_INVAL_VAL;
     }
-    *rssi = val;
+    *rssi = (int8_t)val;
     return AT86RF215_OK;
 }
 
@@ -1373,15 +1373,15 @@ int at86rf215_get_edv(struct at86rf215 *h, at86rf215_radio_t radio, float *edv) 
     } else {
         reg = REG_RF24_EDV;
     }
-    int8_t val = 0;
+    uint8_t val = 0;
     ret = at86rf215_reg_read_8(h, &val, reg);
     if (ret) {
         return ret;
     }
-    if (val == 127) {
+    if ((int8_t)val == 127) {
         return -AT86RF215_INVAL_VAL;
     }
-    *edv = val;
+    *edv = (int8_t)val;
     return AT86RF215_OK;
 }
 
@@ -1827,9 +1827,7 @@ static int bb_conf_mrfsk(struct at86rf215 *h, at86rf215_radio_t radio, const str
             if (conf->fsk.bt != 2 || conf->fsk.midx < AT86RF215_MIDX_3) {
                 return -AT86RF215_INVAL_CONF;
             }
-            if (conf->fsk.midx < AT86RF215_MIDX_3 && conf->fsk.midxs == AT86RF215_MIDXS_78) {
-                return -AT86RF215_INVAL_CONF;
-            }
+            break;
         default:
             return -AT86RF215_INVAL_PARAM;
     }

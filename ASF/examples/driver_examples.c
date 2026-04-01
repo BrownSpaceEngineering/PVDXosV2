@@ -27,7 +27,7 @@ void ADC_0_example(void)
 /**
  * Example of using SPI_UHF to write "Hello World" using the IO abstraction.
  */
-static uint8_t example_SPI_UHF[12] = "Hello World!";
+static uint8_t example_SPI_UHF[13] = "Hello World!";
 
 void SPI_UHF_example(void)
 {
@@ -61,7 +61,7 @@ void I2C_CAMERA_example(void)
 /**
  * Example of using SPI_MRAM to write "Hello World" using the IO abstraction.
  */
-static uint8_t example_SPI_MRAM[12] = "Hello World!";
+static uint8_t example_SPI_MRAM[13] = "Hello World";
 
 void SPI_MRAM_example(void)
 {
@@ -75,7 +75,7 @@ void SPI_MRAM_example(void)
 /**
  * Example of using SPI_DISPLAY to write "Hello World" using the IO abstraction.
  */
-static uint8_t example_SPI_DISPLAY[12] = "Hello World!";
+static uint8_t example_SPI_DISPLAY[13] = "Hello World";
 
 void SPI_DISPLAY_example(void)
 {
@@ -89,7 +89,7 @@ void SPI_DISPLAY_example(void)
 /**
  * Example of using SPI_CAMERA to write "Hello World" using the IO abstraction.
  */
-static uint8_t example_SPI_CAMERA[12] = "Hello World!";
+static uint8_t example_SPI_CAMERA[13] = "Hello World";
 
 void SPI_CAMERA_example(void)
 {
