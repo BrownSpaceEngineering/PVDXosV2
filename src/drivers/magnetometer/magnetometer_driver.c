@@ -191,7 +191,7 @@ status_t rm3100_write_reg(int32_t *p_bytes_written, uint8_t addr, uint8_t *data,
  *
  * \return `status_t` SUCCESS if the read was successful, or ERROR_READ_FAILED/ERROR_WRITE_FAILED otherwise
  */
-status_t mag_read_data(int32_t *const raw_readings, float *const gain_adj_readings) {
+status_t mag_read_data(mag_raw_reading_t *const raw_readings, mag_data_t *const gain_adj_readings) {
     int32_t readings[3];
     int8_t m_samples[9];
 
@@ -212,16 +212,16 @@ status_t mag_read_data(int32_t *const raw_readings, float *const gain_adj_readin
     readings[2] |= m_samples[8];
 
     if (raw_readings != NULL) {
-        raw_readings[0] = readings[0];
-        raw_readings[1] = readings[1];
-        raw_readings[2] = readings[2];
+        raw_readings->x = readings[0];
+        raw_readings->y = readings[1];
+        raw_readings->z = readings[2];
     }
 
     // adjust the readings based on the gain
     if (gain_adj_readings != NULL) {
-        gain_adj_readings[0] = (float)readings[0] / m_gain;
-        gain_adj_readings[1] = (float)readings[1] / m_gain;
-        gain_adj_readings[2] = (float)readings[2] / m_gain;
+        gain_adj_readings->x = (float)readings[0] / m_gain;
+        gain_adj_readings->y = (float)readings[1] / m_gain;
+        gain_adj_readings->z = (float)readings[2] / m_gain;
     }
 
     return SUCCESS;
@@ -365,7 +365,7 @@ status_t mag_change_cycle_count(uint16_t newCC) {
  *         there was an I2C communication error, and ERROR_NOT_READY if the magnetometer's DRDY
  *         pin is set to false (indicating that data is not ready to be read).
  */
-status_t magnetometer_read(int32_t *const raw_readings, float *const gain_adj_readings) {
+status_t magnetometer_read(mag_raw_reading_t *const raw_readings, mag_data_t *const gain_adj_readings) {
     if (gpio_get_pin_level(Magnetometer_DRDY) == 0) {
         debug("magnetometer: DRDY is false; not ready to read yet...");
         return ERROR_NOT_READY;

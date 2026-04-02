@@ -11,19 +11,18 @@
  * A size row x column and B size column x 1
  */
 
-void mdiag(double* A, double* B, int row, int column){
+void mdiag(float* A, float* B, int row, int column) {
 
-	// This will take the diagonal of matrix a and turn it to a vector matrix
-	for(int i = 0; i < row; i++){
-		for(int j = 0; j < column; j++){
-			if(i == j){
-				*B = *A;
-				B++;
-				A++;
-			}else{
-				A++;
-			}
-
-		}
-	}
+    // This will take the diagonal of matrix a and turn it to a vector matrix
+    for (int i = 0; i < row; i++) {
+        for (int j = 0; j < column; j++) {
+            if (i == j) {
+                *B = *A;
+                B++;
+                A++;
+            } else {
+                A++;
+            }
+        }
+    }
 }

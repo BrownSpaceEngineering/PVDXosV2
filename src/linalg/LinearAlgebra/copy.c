@@ -10,6 +10,4 @@
  * Copy a matrix A -> B
  */
 
-void copy(double* A, double* B, int row, int column) {
-	memcpy(B, A, column * row * sizeof(double));
-}
+void copy(float* A, float* B, int row, int column) { memcpy(B, A, column * row * sizeof(float)); }

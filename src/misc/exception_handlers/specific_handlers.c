@@ -7,7 +7,8 @@
  * a placeholder for future customization of specific interrupt logic.
  * 
  * Created: April 5, 2024
- * Author: Oren Kohavi
+ * Modified: November 9, 2025
+ * Author: Oren Kohavi, Alexander Thaep
  */
 
 #include "default_handler.h"
@@ -89,9 +90,6 @@ void SUPC_1_Handler(void) {
     PVDX_default_handler();
 }
 void WDT_Handler(void) {
-    PVDX_default_handler();
-}
-void RTC_Handler(void) {
     PVDX_default_handler();
 }
 void EIC_0_Handler(void) {

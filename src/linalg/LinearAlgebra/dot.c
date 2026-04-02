@@ -12,10 +12,10 @@
  * MATLAB code:
  * >> A =    [1,2,3,5,8]
    A =
-	   1   2   3   5   8
+           1   2   3   5   8
    >> B =  [-3,4,1,5,10]
    B =
-	   -3    4    1    5   10
+           -3    4    1    5   10
    >> dot(A, B)
    ans =  113
    >>
@@ -23,15 +23,14 @@
  *
  */
 
-double dot(double* A, double* B, int row) {
+float dot(float* A, float* B, int row) {
 
-	// Reset
-	double sum = 0;
+    // Reset
+    float sum = 0;
 
-	// Multiply each row
-	for (int i = 0; i < row; ++i) {
-		sum += (*(A + i)) * (*(B + i));
-	}
-	return sum;
-
+    // Multiply each row
+    for (int i = 0; i < row; ++i) {
+        sum += (*(A + i)) * (*(B + i));
+    }
+    return sum;
 }

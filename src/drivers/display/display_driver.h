@@ -86,12 +86,13 @@
 typedef uint16_t point_t; // 16 bits per coordinate (larger than 8-bit for overflow checking)
 typedef uint8_t color_t;  // 4 bits per pixel (16 greyscale levels)
 
+#define DISPLAY_BUFFER_SIZE (SSD1362_WIDTH / 2) * SSD1362_HEIGHT
 // Variables
-extern color_t display_buffer[(SSD1362_WIDTH / 2) * SSD1362_HEIGHT]; // pixels are 4 bits, so 2 consecutive pixels per byte
+extern color_t display_buffer[DISPLAY_BUFFER_SIZE]; // pixels are 4 bits, so 2 consecutive pixels per byte
 
-void display_set_buffer(const color_t *const p_buffer); 
-void display_clear_buffer(void); 
-status_t display_update(void); 
+void display_set_buffer(const color_t *const p_buffer);
+void display_clear_buffer(void);
+status_t display_update(void);
 status_t init_display_hardware(void);
 
 #endif // DISPLAY_DRIVER_H

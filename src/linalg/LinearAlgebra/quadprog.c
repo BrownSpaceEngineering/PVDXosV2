@@ -25,21 +25,22 @@
  *  Set SHOW_QP_OUTPUT to TRUE to begin with in declareFunctions.h
  *  I recommend to read the qpOASES_e manual
  */
-void quadprog(double* H, double* g, double* A, double* ulb_vec, double* uub_vec, double* ylb_vec, double* yub_vec, int* nWSR, double* u, int columnH, int rowA) {
+// void quadprog(float* H, float* g, float* A, float* ulb_vec, float* uub_vec, float* ylb_vec,
+// float* yub_vec, int* nWSR, float* u, int columnH, int rowA) {
 
-	// Setting up QProblem object J = U^T*H*U + g^T*U
-	QProblem objective;
-	Options options;
-	int nV = columnH;
-	int nC = rowA;
-	QProblemCON(&objective, nV, nC, HST_UNKNOWN);
-	Options_setToDefault(&options);
-	QProblem_setOptions(&objective, options);
+// 	// Setting up QProblem object J = U^T*H*U + g^T*U
+// 	QProblem objective;
+// 	Options options;
+// 	int nV = columnH;
+// 	int nC = rowA;
+// 	QProblemCON(&objective, nV, nC, HST_UNKNOWN);
+// 	Options_setToDefault(&options);
+// 	QProblem_setOptions(&objective, options);
 
-	// Solve
-	QProblem_init(&objective, H, g, A, ulb_vec, uub_vec, ylb_vec, yub_vec, nWSR, 0);
+// 	// Solve
+// 	QProblem_init(&objective, H, g, A, ulb_vec, uub_vec, ylb_vec, yub_vec, nWSR, 0);
 
-	// Get the u
-	QProblem_getPrimalSolution(&objective, u);
+// 	// Get the u
+// 	QProblem_getPrimalSolution(&objective, u);
 
-}
+// }

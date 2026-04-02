@@ -1,19 +1,18 @@
 #include "../../Lapack/Include/f2c.h"
 
 #ifdef KR_headers
-double pow();
-double pow_dd(ap, bp) doublereal *ap, *bp;
+float pow();
+float pow_dd(ap, bp)
+floatreal *ap, *bp;
 #else
-#undef abs
+#undef fabs
 #include "math.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
-double pow_dd(doublereal *ap, doublereal *bp)
+float pow_dd(floatreal* ap, floatreal* bp)
 #endif
-{
-return(pow(*ap, *bp) );
-}
+{ return (pow(*ap, *bp)); }
 #ifdef __cplusplus
 }
 #endif

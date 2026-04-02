@@ -10,9 +10,8 @@
 /*
  * Scale a matrix A with a scalar value. Size of matrix A is row x column
  */
-void scale(double* A, double scalar, int row, int column) {
+void scale(float* A, float scalar, int row, int column) {
 
-	for (int i = 0; i < row*column; i++)
-		*(A + i) = *(A + i) * scalar;
-
+    for (int i = 0; i < row * column; i++)
+        *(A + i) = *(A + i) * scalar;
 }

@@ -11,7 +11,6 @@
 ###############################################################################
 ###############################################################################
 
-
 ### ALL C FILES SHOULD HAVE AN OBJECT FILE LISTED HERE ###
 export OBJS :=                                              	\
 ../src/linalg/LinearAlgebra/add.o 								\
@@ -77,8 +76,10 @@ export OBJS :=                                              	\
 ../src/misc/exception_handlers/specific_handlers.o          	\
 																\
 ../src/drivers/display/display_driver.o                       	\
+../src/drivers/gyro/SCH1.o										\
 ../src/drivers/magnetometer/magnetometer_driver.o           	\
 ../src/drivers/photodiode/photodiode_driver.o               	\
+../src/drivers/rtc/rtc_driver.o                                 \
 ../src/drivers/watchdog/watchdog_driver.o                     	\
                                                             	\
 ../src/tasks/heartbeat/heartbeat_main.o                     	\
@@ -93,6 +94,8 @@ export OBJS :=                                              	\
 ../src/tasks/display/display_main.o                         	\
 ../src/tasks/display/image_buffers/image_buffer_BrownLogo.o 	\
 ../src/tasks/display/image_buffers/image_buffer_PVDX.o      	\
+../src/tasks/adcs/adcs_task.o 									\
+../src/tasks/adcs/adcs_main.o 									\
                                                             	\
 ../src/tasks/task_manager/task_manager_main.o               	\
 ../src/tasks/task_manager/task_manager_task.o               	\
@@ -105,14 +108,13 @@ export OBJS :=                                              	\
 ../src/tasks/shell/shell_commands.o                         	\
                                                             	\
 ../src/tasks/task_list.o                                        \
-                                                            	\
+																\
 ../src/checks/device_checks.o 									\
 																\
-../src/tasks/radio/spp.o 									    \
-../src/tasks/radio/cfdp_pdu.o									\
+../src/tasks/radio/spp.o 										\
+../src/tasks/radio/cfdp_pdu.o 									\
 ../src/tests/test.o                                             \
 																
-
 
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###
 ### THESE ARE WRITTEN RELATIVE TO THE ./ASF/gcc/Makefile FILE ###
@@ -125,8 +127,10 @@ export EXTRA_VPATH := \
 ../../src/misc/exception_handlers \
 ../../src/drivers \
 ../../src/drivers/display \
+../../src/drivers/gyro \
 ../../src/drivers/magnetometer \
 ../../src/drivers/magnetorquer \
+../../src/drivers/rtc \
 ../../src/drivers/photodiode \
 ../../src/drivers/watchdog \
 ../../src/tasks \
@@ -139,19 +143,19 @@ export EXTRA_VPATH := \
 ../../src/tasks/command_dispatcher \
 ../../src/tasks/shell \
 ../../src/tasks/radio \
+../../src/tasks/adcs \
 ../../src/mutexes \
 ../../src/checks \
 ../../src/tests \
 ../../src/linalg \
 ../../src/linalg/Lapack \
 ../../src/linalg/LinearAlgebra \
-# $(PATH_TO_CCONTROL_INCLUDES)
-
+../../src/tasks/adcs \
+../../src/mutexes
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
-
 
 #Technical stuff
 
@@ -186,13 +190,12 @@ else
     GIT_COMMIT_HASH := \"NONE\"
 endif
 
-
 # Compiler flags
 # Include git branch and commit hash in the build
 CFLAGS += -D'GIT_BRANCH_NAME="$(GIT_BRANCH_NAME)"' -D'GIT_COMMIT_HASH="$(GIT_COMMIT_HASH)"'
 
 # Robust error checking
-CFLAGS += -Wextra -Werror -Werror=maybe-uninitialized
+CFLAGS += -Wextra -Werror -Werror=maybe-uninitialized -static
 CFLAGS += -Wshadow -Wnull-dereference -Wduplicated-cond -Wlogical-op -Werror=return-type -Wfloat-equal
 CFLAGS += -Wdangling-else -Wtautological-compare
 CFLAGS += -fwrapv # Enable fwrapv (wrap on overflow of signed integers) just to be safe
@@ -217,7 +220,6 @@ export DIR_INCLUDES := $(foreach dir,$(EXTRA_VPATH),-I"$(dir)" )
 export OBJS_AS_ARGS := $(foreach obj,$(OBJS),$(patsubst ../%,%,$(obj)))
 
 export DEPS_AS_ARGS := $(patsubst %.o,%.d,$(OBJS_AS_ARGS))
-
 
 .PHONY: all dev release test clean connect update_asf flash_bootloader
 
