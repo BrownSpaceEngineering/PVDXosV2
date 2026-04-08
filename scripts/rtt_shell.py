@@ -1,7 +1,12 @@
 import platform
+import sys
 import pylink # pip install pylink-square
 import os
 import datetime
+
+# Ensure UTF-8 output on Windows
+if sys.platform == 'win32':
+    sys.stdout.reconfigure(encoding='utf-8')
 
 def open_rtt_channels(logfile = None):
     jlink = pylink.JLink()
@@ -13,7 +18,7 @@ def open_rtt_channels(logfile = None):
         buf1 = jlink.rtt_read(0, 2048)
 
         if buf1:
-            text1 = bytes(buf1).decode('ascii', errors='replace')
+            text1 = bytes(buf1).decode('utf-8', errors='replace')
             print(text1)
             # Write to a log file if specified
             if logfile is not None:
@@ -42,7 +47,7 @@ def main():
     log_filename = current_time.strftime("%Y-%m-%d_%H-%M-%S.log")
     log_file_path = os.path.join(logs_path, log_filename)
     
-    with open (log_file_path, "w") as file:
+    with open (log_file_path, "w", encoding='utf-8') as file:
         open_rtt_channels(file)
 
 if __name__ == "__main__":

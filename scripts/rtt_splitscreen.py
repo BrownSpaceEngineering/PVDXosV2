@@ -2,8 +2,13 @@ import pylink
 import curses
 import re
 import platform
+import sys
 import os
 import datetime
+
+# Ensure UTF-8 output on Windows
+if sys.platform == 'win32':
+    sys.stdout.reconfigure(encoding='utf-8')
 
 """
 ABOUT THIS FILE:
@@ -137,10 +142,10 @@ def open_rtt_channels(stdscr, logfile = None):
         buf1 = jlink.rtt_read(1, 1024)
 
         if buf0:
-            text0 = bytes(buf0).decode('ascii', errors='replace')
+            text0 = bytes(buf0).decode('utf-8', errors='replace')
             parse_and_print(win0, text0)
         if buf1:
-            text1 = bytes(buf1).decode('ascii', errors='replace')
+            text1 = bytes(buf1).decode('utf-8', errors='replace')
             parse_and_print(win1, text1)
             # Write to a log file if specified
             if logfile is not None:
@@ -167,7 +172,7 @@ def main():
     log_file_path = os.path.join(logs_path, log_filename)
 
     def curses_opener(stdscr):
-        with open (log_file_path, "w") as file:
+        with open (log_file_path, "w", encoding='utf-8') as file:
             try:
                 open_rtt_channels(stdscr, log_file_path)
             except Exception as e:

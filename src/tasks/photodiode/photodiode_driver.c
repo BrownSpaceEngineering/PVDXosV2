@@ -71,13 +71,13 @@ status_t set_multiplexer_outputs(int_fast8_t output) {
     }
     static int_fast8_t current_output = 0xF;
 
-    debug("photodiode_driver: Setting multiplexer output to " PRIxFAST8 "\n", output);
+    debug("photodiode_driver: Setting multiplexer output to %" PRIxFAST8 "\n", output);
 
     int_fast8_t toggles_needed = output ^ current_output;
     PORT->Group[GPIO_PORTC].OUTTGL.reg = toggles_needed << PHOTODIODE_S0_PIN;
     current_output = output;
 
-    debug("photodiode_driver: MUX output set to " PRIxFAST8 "\n", output);
+    debug("photodiode_driver: MUX output set to %" PRIxFAST8 "\n", output);
 
     return SUCCESS;
 }
