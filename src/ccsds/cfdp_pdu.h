@@ -1,9 +1,9 @@
 #ifndef RADIO_CFDP
 #define RADIO_CFDP
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <stdbool.h>
 
 /*
  * NOTE: For brevity, sources in comments are abbreviated as follows.
@@ -24,15 +24,15 @@
 
 // Currently Supported PDU types
 #define CFDP_PDU_TYPE_DIRECTIVE 0
-#define CFDP_PDU_TYPE_FILEDATA  1
+#define CFDP_PDU_TYPE_FILEDATA 1
 
 // Directive codes (Table 5-4, Pg. 78)
-#define CFDP_DIR_EOF      0x04
+#define CFDP_DIR_EOF 0x04
 #define CFDP_DIR_FINISHED 0x05
-#define CFDP_DIR_ACK      0x06
+#define CFDP_DIR_ACK 0x06
 #define CFDP_DIR_METADATA 0x07
-#define CFDP_DIR_NAK      0x08
-#define CFDP_DIR_PROMPT   0x09
+#define CFDP_DIR_NAK 0x08
+#define CFDP_DIR_PROMPT 0x09
 #define CFDP_DIR_KEEPALIVE 0x0C
 
 // Condition Codes (Table 5-5, Pg. 79)
@@ -146,6 +146,53 @@ typedef struct cfdp_pdu_eof {
 } cfdp_pdu_eof_t;
 
 /*
+ * CFDP Finished PDU structure; BB Pg. 80-81
+ */
+typedef struct cfdp_pdu_finished {
+    uint8_t condition_code : 4;
+    uint8_t : 1;               // spare
+    uint8_t delivery_code : 1; // 1 : Data Incomplete, 0 : Data Complete
+    uint8_t file_status : 2;
+    cfdp_data_view_t filestore_responses; // needed?
+    cfdp_data_view_t fault_entity_id;
+} cfdp_pdu_finished_t;
+
+/*
+ * CFDP Ack PDU structure; BB Pg. 82
+ */
+typedef struct cfdp_pdu_ack {
+    uint8_t directive_code : 4;
+    uint8_t directive_subtype_code : 4;
+    uint8_t condition_code : 4;
+    uint8_t : 2;
+    uint8_t transaction_status : 2; // 00 : undefined, 01 : acitve, 10 : terminated, 11 : unrecognized
+} cfdp_pdu_ack_t;
+
+/*
+ * CFDP NAK PDU; BB 5.2.6.1, Pg. 84
+ */
+typedef struct cfdp_pdu_nak {
+    uint32_t start_of_scope; // BB lists as a variable length field
+    uint32_t end_of_scope;
+    // need segment request
+} cfdp_pdu_nak_t;
+
+/*
+ * CFDP Prompt PDU; BB Pg. 84
+ */
+typedef struct cfdp_pdu_prompt {
+    uint8_t response_required : 1;
+    uint8_t : 7; // spare
+} cfdp_pdu_prompt_t;
+
+/*
+ * CFDP Keep Alive PDU; BB Pg. 85
+ */
+typedef struct cfdp_pdu_keep_alive {
+    uint32_t progress; // offset from file
+} cfdp_pdu_keep_alive_t;
+
+/*
  * Format for parsing TLV objects
  */
 typedef struct cfdp_tlv {
@@ -155,11 +202,11 @@ typedef struct cfdp_tlv {
 } cfdp_tlv_t;
 
 /*
-* Format for parsing LV objects
-* NOTE: CFDP BB separates the notion of "LV" from "Variable".
-* I don't see a clear reasoning for this, so I may change
-* cfdp_data_view_t to cfdp_lv_t broadly.
-*/
+ * Format for parsing LV objects
+ * NOTE: CFDP BB separates the notion of "LV" from "Variable".
+ * I don't see a clear reasoning for this, so I may change
+ * cfdp_data_view_t to cfdp_lv_t broadly.
+ */
 typedef struct cfdp_lv {
     uint8_t length;
     const uint8_t *value;
@@ -212,5 +259,15 @@ int cfdp_pdu_metadata_parse(const uint8_t *raw, size_t len, cfdp_pdu_metadata_t 
 int cfdp_pdu_filedata_parse(const uint8_t *raw, size_t len, bool large_file, bool has_segment_metadata, cfdp_pdu_filedata_t *out);
 
 int cfdp_pdu_eof_parse(const uint8_t *raw, size_t len, bool large_file, cfdp_pdu_eof_t *out);
+
+int cfdp_pdu_finished_parse(const uint8_t *raw, size_t len, cfdp_pdu_finished_t *out);
+
+int cfdp_pdu_ack_parse(const uint8_t *raw, size_t len, cfdp_pdu_ack_t *out);
+
+int cfdp_pdu_nak_parse(const uint8_t *raw, size_t len, cfdp_pdu_nak_t *out);
+
+int cfdp_pdu_prompt_parse(const uint8_t *raw, size_t len, cfdp_pdu_prompt_t *out);
+
+int cfdp_pdu_prompt_keep_alive(const uint8_t *raw, size_t len, cfdp_pdu_keep_alive_t *out);
 
 #endif

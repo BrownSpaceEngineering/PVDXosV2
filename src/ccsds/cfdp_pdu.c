@@ -1,16 +1,21 @@
 #include "cfdp_pdu.h"
 
+// TODO:
+// - Deal with segment requests w/ NAKs
+// - Finished PDU filestore responses --> necessary?
+// - Finished PDU fault location
+
 void cfdp_data_view_clear_data(cfdp_data_view_t *view) {
     view->data = NULL;
     view->len = 0;
 }
 
 // Returns -1 on error, bytes parsed on success
-int cfdp_pdu_header_parse(const uint8_t *raw,
-                          size_t len,
-                          cfdp_pdu_header_t *out) {
-    if (raw == NULL || out == NULL) return -1;
-    if (len < 4) return -1;
+int cfdp_pdu_header_parse(const uint8_t *raw, size_t len, cfdp_pdu_header_t *out) {
+    if (raw == NULL || out == NULL)
+        return -1;
+    if (len < 4)
+        return -1;
 
     out->version_number = (raw[0] >> 5) & 0x07;
     out->pdu_type = (raw[0] >> 4) & 0x01;
@@ -29,7 +34,8 @@ int cfdp_pdu_header_parse(const uint8_t *raw,
     size_t var_len = out->entity_id_len + seq_len + out->entity_id_len;
     size_t header_len = 4 + var_len;
 
-    if (len < header_len) return -1;
+    if (len < header_len)
+        return -1;
 
     const uint8_t *pos = raw + 4;
 
@@ -45,27 +51,26 @@ int cfdp_pdu_header_parse(const uint8_t *raw,
 }
 
 // Returns -1 on error, bytes parsed on success
-int cfdp_pdu_metadata_parse(const uint8_t *raw,
-                            size_t len,
-                            cfdp_pdu_metadata_t *out) {
-    if (raw == NULL || out == NULL) return -1;
-    if (len < 7) return -1;
+int cfdp_pdu_metadata_parse(const uint8_t *raw, size_t len, cfdp_pdu_metadata_t *out) {
+    if (raw == NULL || out == NULL)
+        return -1;
+    if (len < 7)
+        return -1;
 
     out->closure_req = (raw[0] >> 6) & 0x01;
     out->checksum_type = raw[0] & 0x0F;
 
-    out->file_length = ((uint32_t)raw[1] << 24) |
-                       ((uint32_t)raw[2] << 16) |
-                       ((uint32_t)raw[3] << 8) |
-                       raw[4];
+    out->file_length = ((uint32_t)raw[1] << 24) | ((uint32_t)raw[2] << 16) | ((uint32_t)raw[3] << 8) | raw[4];
 
     uint8_t src_len = raw[5];
-    if ((uint8_t)len < 6 + src_len + 1) return -1;
+    if ((uint8_t)len < 6 + src_len + 1)
+        return -1;
     out->source_id = (src_len > 0) ? raw[6] : 0;
 
     size_t dest_offset = 6 + src_len;
     uint8_t dest_len = raw[dest_offset];
-    if (len < dest_offset + 1 + dest_len) return -1;
+    if (len < dest_offset + 1 + dest_len)
+        return -1;
     out->dest_id = (dest_len > 0) ? raw[dest_offset + 1] : 0;
 
     size_t consumed = dest_offset + 1 + dest_len;
@@ -79,12 +84,9 @@ int cfdp_pdu_metadata_parse(const uint8_t *raw,
 }
 
 // Returns -1 on error, bytes parsed on success
-int cfdp_pdu_filedata_parse(const uint8_t *raw,
-                            size_t len,
-                            bool large_file,
-                            bool has_segment_metadata,
-                            cfdp_pdu_filedata_t *out) {
-    if (raw == NULL || out == NULL) return -1;
+int cfdp_pdu_filedata_parse(const uint8_t *raw, size_t len, bool large_file, bool has_segment_metadata, cfdp_pdu_filedata_t *out) {
+    if (raw == NULL || out == NULL)
+        return -1;
 
     size_t offset_size = large_file ? 8 : 4;
     const uint8_t *pos = raw;
@@ -94,18 +96,21 @@ int cfdp_pdu_filedata_parse(const uint8_t *raw,
     cfdp_view_init_empty(&out->segment_metadata);
 
     if (has_segment_metadata) {
-        if (len < 1) return -1;
+        if (len < 1)
+            return -1;
 
         out->continue_state = (pos[0] >> 6) & 0x03;
         out->segment_metadata_length = pos[0] & 0x3F;
         pos++;
 
-        if (len < 1 + out->segment_metadata_length + offset_size) return -1;
+        if (len < 1 + out->segment_metadata_length + offset_size)
+            return -1;
 
         cfdp_view_init(&out->segment_metadata, pos, out->segment_metadata_length);
         pos += out->segment_metadata_length;
     } else {
-        if (len < offset_size) return -1;
+        if (len < offset_size)
+            return -1;
     }
 
     out->offset = 0;
@@ -125,23 +130,19 @@ int cfdp_pdu_filedata_parse(const uint8_t *raw,
 }
 
 // Returns -1 on error, bytes parsed on success
-int cfdp_pdu_eof_parse(const uint8_t *raw,
-                       size_t len,
-                       bool large_file,
-                       cfdp_pdu_eof_t *out) {
-    if (raw == NULL || out == NULL) return -1;
+int cfdp_pdu_eof_parse(const uint8_t *raw, size_t len, bool large_file, cfdp_pdu_eof_t *out) {
+    if (raw == NULL || out == NULL)
+        return -1;
 
     size_t filesize_len = large_file ? 8 : 4;
     size_t min_len = 1 + 4 + filesize_len;
 
-    if (len < min_len) return -1;
+    if (len < min_len)
+        return -1;
 
     out->condition_code = (raw[0] >> 4) & 0x0F;
 
-    out->checksum = ((uint32_t)raw[1] << 24) |
-                    ((uint32_t)raw[2] << 16) |
-                    ((uint32_t)raw[3] << 8) |
-                    raw[4];
+    out->checksum = ((uint32_t)raw[1] << 24) | ((uint32_t)raw[2] << 16) | ((uint32_t)raw[3] << 8) | raw[4];
 
     out->filesize = 0;
     for (size_t i = 0; i < filesize_len; i++) {
@@ -158,6 +159,74 @@ int cfdp_pdu_eof_parse(const uint8_t *raw,
             cfdp_view_init(&out->fault_entity_id, raw + tlv_offset + 2, tlv_len);
         }
     }
+
+    return (int)len;
+}
+
+int cfdp_pdu_finished_parse(const uint8_t *raw, size_t len, cfdp_pdu_finished_t *out) {
+    if (raw == NULL || out == NULL)
+        return -1;
+
+    if (len < 5)
+        return -1;
+
+    out->condition_code = (raw[0] >> 4) & 0x0F;
+    // 1 bit spare
+    out->delivery_code = (raw[0] >> 6) & 0x01;
+    out->file_status = (raw[0] >> 7) & 0x03;
+
+    // filestore responses (just make one tlv)
+
+    // fault location
+}
+
+int cfdp_pdu_ack_parse(const uint8_t *raw, size_t len, cfdp_pdu_ack_t *out) {
+    if (raw == NULL || out == NULL)
+        return -1;
+
+    if (len < 2)
+        return -1;
+
+    out->directive_code = (raw[0] >> 4) & 0x0F;
+    out->directive_subtype_code = raw[0] & 0x0F;
+    out->directive_subtype_code = (raw[1] >> 4) & 0x0F;
+    // 2 spare bits
+    out->transaction_status = (raw[1]) & 0x03;
+
+    return (int)len;
+}
+
+int cfdp_pdu_nak_parse(const uint8_t *raw, size_t len, cfdp_pdu_nak_t *out) {
+    if (raw == NULL || out == NULL)
+        return -1;
+
+    if (len < 8)
+        return -1;
+
+    out->start_of_scope = ((uint32_t)raw[0] << 24) | ((uint32_t)raw[1] << 16) | ((uint32_t)raw[2] << 8) | raw[3];
+    out->end_of_scope = ((uint32_t)raw[4] << 24) | ((uint32_t)raw[5] << 16) | ((uint32_t)raw[6] << 8) | raw[7];
+
+    return (int)len;
+}
+
+int cfdp_pdu_prompt_parse(const uint8_t *raw, size_t len, cfdp_pdu_prompt_t *out) {
+    if (raw == NULL || out == NULL)
+        return -1;
+    if (len < 1)
+        return -1;
+
+    out->response_required = (raw[0] >> 7) & 0b1;
+    return (int)len;
+}
+
+int cfdp_pdu_prompt_keep_alive(const uint8_t *raw, size_t len, cfdp_pdu_keep_alive_t *out) {
+    if (raw == NULL || out == NULL)
+        return -1;
+
+    if (len < 4)
+        return -1;
+
+    out->progress = ((uint32_t)raw[0] << 24) | ((uint32_t)raw[1] << 16) | ((uint32_t)raw[2] << 8) | raw[3];
 
     return (int)len;
 }
