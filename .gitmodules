@@ -1,0 +1,3 @@
+[submodule "PVDX-SAMD-PinConfig"]
+	path = PVDX-SAMD-PinConfig
+	url = git@github.com:BrownSpaceEngineering/PVDX-SAMD-PinConfig.git
