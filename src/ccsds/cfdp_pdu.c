@@ -257,7 +257,7 @@ int cfdp_pdu_prompt_parse(const uint8_t *raw, size_t len, cfdp_pdu_prompt_t *out
 }
 
 // Returns -1 on error, bytes parsed on success
-int cfdp_pdu_prompt_keep_alive(const uint8_t *raw, size_t len, cfdp_pdu_keep_alive_t *out) {
+int cfdp_pdu_keep_alive_parse(const uint8_t *raw, size_t len, cfdp_pdu_keep_alive_t *out) {
     if (raw == NULL || out == NULL)
         return -1;
 

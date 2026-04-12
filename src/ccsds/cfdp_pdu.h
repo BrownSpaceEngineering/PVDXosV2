@@ -282,6 +282,6 @@ int cfdp_pdu_nak_parse(const uint8_t *raw, size_t len, cfdp_pdu_nak_t *out);
 
 int cfdp_pdu_prompt_parse(const uint8_t *raw, size_t len, cfdp_pdu_prompt_t *out);
 
-int cfdp_pdu_prompt_keep_alive(const uint8_t *raw, size_t len, cfdp_pdu_keep_alive_t *out);
+int cfdp_pdu_keep_alive_parse(const uint8_t *raw, size_t len, cfdp_pdu_keep_alive_t *out);
 
 #endif
