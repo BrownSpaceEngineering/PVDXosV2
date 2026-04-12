@@ -81,6 +81,7 @@ export OBJS :=                                              	\
 ../src/drivers/photodiode/photodiode_driver.o               	\
 ../src/drivers/rtc/rtc_driver.o                                 \
 ../src/drivers/watchdog/watchdog_driver.o                     	\
+../src/drivers/at86rf215/at86rf215.o								\
                                                             	\
 ../src/tasks/heartbeat/heartbeat_main.o                     	\
                                                             	\
@@ -130,6 +131,7 @@ export EXTRA_VPATH := \
 ../../src/drivers/gyro \
 ../../src/drivers/magnetometer \
 ../../src/drivers/magnetorquer \
+../../src/drivers/at86rf215    \
 ../../src/drivers/rtc \
 ../../src/drivers/photodiode \
 ../../src/drivers/watchdog \
