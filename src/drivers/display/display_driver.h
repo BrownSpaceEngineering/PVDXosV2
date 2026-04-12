@@ -69,12 +69,12 @@
 
 // Functions for setting the reset, data/command, and chip-select pins on the
 // display to high or low voltage
-#define RST_LOW() gpio_set_pin_level(Display_RST, 0)
-#define RST_HIGH() gpio_set_pin_level(Display_RST, 1)
-#define DC_LOW() gpio_set_pin_level(Display_DC, 0)
-#define DC_HIGH() gpio_set_pin_level(Display_DC, 1)
-#define CS_LOW() gpio_set_pin_level(Display_CS, 0)
-#define CS_HIGH() gpio_set_pin_level(Display_CS, 1)
+#define RST_LOW() gpio_set_pin_level(DISPLAY_RST, 0)
+#define RST_HIGH() gpio_set_pin_level(DISPLAY_RST, 1)
+#define DC_LOW() gpio_set_pin_level(DISPLAY_DC, 0)
+#define DC_HIGH() gpio_set_pin_level(DISPLAY_DC, 1)
+#define CS_LOW() gpio_set_pin_level(DISPLAY_CS, 0)
+#define CS_HIGH() gpio_set_pin_level(DISPLAY_CS, 1)
 
 // Duration to wait between display initialization steps
 #define RESET_WAIT_INTERVAL 100

@@ -3,11 +3,11 @@
 
 #include <atmel_start.h>
 
-//   UHF_MISO: PA06
-//   UHF_MOSI: PA04
-//   UHF_SCK:  PB25
-//   UHF_CS: PA02
-//   UHF_RST: PA03
+//   UHF_MISO: PD10
+//   UHF_MOSI: PC12
+//   UHF_SCK:  PC13
+//   UHF_CS: PA16
+//   UHF_RST: PC17
 
 #define UHF_CS_LOW()  gpio_set_pin_level(UHF_CS, 0)
 #define UHF_CS_HIGH() gpio_set_pin_level(UHF_CS, 1)
