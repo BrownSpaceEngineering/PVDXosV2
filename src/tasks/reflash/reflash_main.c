@@ -12,7 +12,7 @@ reflash_task_memory_t reflash_mem;
 uint8_t stored_checksums[FLASK_BLOCK_COUNT];
 bool stored_checksums_initialized = false;
 
-void reflash_bootloaders(void) {
+void reflash_bootloaders(bool sched_running) {
 #ifndef MRAM_OS_READ
     return;
 #endif
@@ -43,8 +43,20 @@ void reflash_bootloaders(void) {
         if (any_error) {
             watchdog_pet();
 
+            if (sched_running) {
+                taskENTER_CRITICAL();
+            } else {
+                __disable_irq();
+            }
+
             flash_erase(&FLASH_0, i * FLASH_BLOCK_SIZE, 1);
             flash_write(&FLASH_0, i * FLASH_BLOCK_SIZE, mram_block, FLASH_BLOCK_SIZE);
+
+            if (sched_running) {
+                taskEXIT_CRITICAL();
+            } else {
+                __enable_irq();
+            }
 
             watchdog_pet();
         }
@@ -57,8 +69,6 @@ void main_reflash_task(void *pvParameters) {
     while (true) {
         vTaskDelay(pdMS_TO_TICKS(1000 * 60 * 60 * 6));
 
-        vTaskSuspendAll();
-        reflash_bootloaders();
-        xTaskResumeAll();
+        reflash_bootloaders(true);
     }
 }

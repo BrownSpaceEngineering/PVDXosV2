@@ -76,7 +76,7 @@ int main(void) {
     info_impl("[+] Built from commit: %s\n", GIT_COMMIT_HASH);
     report_reset_cause();
 
-    reflash_bootloaders();
+    reflash_bootloaders(false);
 
     /* ---------- INIT WATCHDOG, COMMAND_DISPATCHER, TASK_MANAGER TASKS (in that order) ---------- */
 

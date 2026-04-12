@@ -13,7 +13,7 @@ typedef struct {
 
 extern reflash_task_memory_t reflash_mem;
 
-void reflash_bootloaders(void);
+void reflash_bootloaders(bool sched_running);
 
 void main_reflash_task(void *pvParameters);
 
