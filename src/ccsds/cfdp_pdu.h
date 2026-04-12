@@ -73,6 +73,9 @@
 #define CFDP_TLV_FLOW_LABEL 0x05
 #define CFDP_TLV_ENTITY_ID 0x06
 
+// Implementation Specific
+#define MAX_SEGMENT_REQUESTS 10
+
 /*
  * CFDP generic variable length field struct
  */
@@ -169,12 +172,21 @@ typedef struct cfdp_pdu_ack {
 } cfdp_pdu_ack_t;
 
 /*
+ * CFDP Segment Request PDU; BB 5.2.6.2, Pg. 84
+ */
+typedef struct cfdp_pdu_segment_request {
+    uint32_t start_offset;
+    uint32_t end_offset;
+} cfdp_pdu_segment_request_t;
+
+/*
  * CFDP NAK PDU; BB 5.2.6.1, Pg. 84
  */
 typedef struct cfdp_pdu_nak {
     uint32_t start_of_scope; // BB lists as a variable length field
     uint32_t end_of_scope;
-    // need segment request
+    uint32_t segment_request_count;
+    cfdp_pdu_segment_request_t segment_requests[MAX_SEGMENT_REQUESTS];
 } cfdp_pdu_nak_t;
 
 /*
@@ -263,6 +275,8 @@ int cfdp_pdu_eof_parse(const uint8_t *raw, size_t len, bool large_file, cfdp_pdu
 int cfdp_pdu_finished_parse(const uint8_t *raw, size_t len, cfdp_pdu_finished_t *out);
 
 int cfdp_pdu_ack_parse(const uint8_t *raw, size_t len, cfdp_pdu_ack_t *out);
+
+int cfdp_pdu_semgment_request_parse(const uint8_t *raw, size_t len, cfdp_pdu_nak_t *out);
 
 int cfdp_pdu_nak_parse(const uint8_t *raw, size_t len, cfdp_pdu_nak_t *out);
 
