@@ -387,7 +387,7 @@
 // <i> Indicates whether generic clock 5 configuration is enabled or not
 // <id> enable_gclk_gen_5
 #ifndef CONF_GCLK_GENERATOR_5_CONFIG
-#define CONF_GCLK_GENERATOR_5_CONFIG 0
+#define CONF_GCLK_GENERATOR_5_CONFIG 1
 #endif
 
 // <h> Generic Clock Generator Control
