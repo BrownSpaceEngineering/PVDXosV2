@@ -91,9 +91,11 @@ void SUPC_1_Handler(void) {
 void WDT_Handler(void) {
     PVDX_default_handler();
 }
+/* --- ALREADY DEFINED IN "hpl/rtc/hpl_rtc.c"
 void RTC_Handler(void) {
     PVDX_default_handler();
 }
+*/
 void EIC_0_Handler(void) {
     PVDX_default_handler();
 }
