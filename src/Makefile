@@ -223,7 +223,7 @@ export OBJS_AS_ARGS := $(foreach obj,$(OBJS),$(patsubst ../%,%,$(obj)))
 
 export DEPS_AS_ARGS := $(patsubst %.o,%.d,$(OBJS_AS_ARGS))
 
-.PHONY: all dev release test clean connect update_asf flash_bootloader
+.PHONY: all dev release test clean connect update_asf flash_bootloader cppcheck
 
 # Default target
 all: dev
@@ -254,6 +254,15 @@ clean:
 	@$(MAKE) -C $(CHILD_MAKEFILE_PATH) clean \
 	&& rm -f ./PVDXos.bin ./PVDXos.elf \
 	&& echo " --- Cleaned Build Files --- "
+
+# Run cppcheck static analysis
+cppcheck:
+	unbuffer cppcheck --enable=all --inconclusive --std=c99 \
+		--suppress=missingIncludeSystem \
+		--suppress=unmatchedSuppression \
+		-I. -I../ASF -I../ASF/config \
+		-i linalg/Lapack \
+		. &> cppcheck-out.log
 
 # When updating the ASF configuration, this must be run once in order to automatically integrate the new ASF config
 # Hopefully nobody ever needs to touch this, but you can add to it if you want to automatically trigger an action when the ASF is updated
