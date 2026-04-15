@@ -172,17 +172,18 @@ int cfdp_pdu_finished_parse(const uint8_t *raw, size_t len, cfdp_pdu_finished_t 
     out->file_status = (raw[0] >> 7) & 0x03;
 
     // filestore responses
+    // Currently stores as one TLV, do we instead need to mark it as an array of TLVs? (is this field ever going to be filled out?)
     cfdp_view_init_empty(&out->filestore_responses);
     uint8_t filestore_responses_type = raw[1];
     uint8_t filestore_responses_len = raw[2];
-    if (filestore_responses_type == CFDP_TLV_FILESTORE_REQUEST && len >= 3 + filestore_responses_len) {
+    if (filestore_responses_type == CFDP_TLV_FILESTORE_REQUEST && len >= 3 + (size_t)filestore_responses_len) {
         cfdp_view_init(&out->fault_entity_id, raw + 3, filestore_responses_len);
     }
 
     // fault location
     cfdp_view_init_empty(&out->fault_entity_id);
     size_t fault_entity_id_offset = 3 + filestore_responses_len;
-    if ((out->condition_code != CFDP_COND_NOERROR || out->condition_code != CFDP_COND_BAD_CHECKSUM) && len >= fault_entity_id_offset + 2) {
+    if (!(out->condition_code == CFDP_COND_NOERROR || out->condition_code == CFDP_COND_BAD_CHECKSUM) && len >= fault_entity_id_offset + 2) {
         uint8_t tlv_type = raw[fault_entity_id_offset];
         uint8_t tlv_len = raw[fault_entity_id_offset + 1];
 
@@ -236,7 +237,7 @@ int cfdp_pdu_nak_parse(const uint8_t *raw, size_t len, cfdp_pdu_nak_t *out) {
     out->start_of_scope = ((uint32_t)raw[0] << 24) | ((uint32_t)raw[1] << 16) | ((uint32_t)raw[2] << 8) | raw[3];
     out->end_of_scope = ((uint32_t)raw[4] << 24) | ((uint32_t)raw[5] << 16) | ((uint32_t)raw[6] << 8) | raw[7];
 
-    size_t segment_request_count = (len - 8) / 8;
+    uint32_t segment_request_count = (len - 8) / 8;
     out->segment_request_count = segment_request_count;
 
     for (size_t i = 0; i < segment_request_count; i++) {
