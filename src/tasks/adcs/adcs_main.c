@@ -34,22 +34,22 @@ QueueHandle_t init_adcs(void) {
         fatal("Failed to create adcs command queue!\n");
     }
 
-    // Initialize photodiode hardware
-    status_t result = init_photodiode_hardware();
-    if (result != SUCCESS) {
-        warning("photodiode: Hardware initialization failed\n");
-    }
+    // TODO: Uncomment once photodiode pin config is updated
+    // status_t result = init_photodiode_hardware();
+    // if (result != SUCCESS) {
+    //     warning("photodiode: Hardware initialization failed\n");
+    // }
 
-    // Initialize magnetometer hardware
-    info("Initializing magnetometer\n");
-    result = init_rm3100();
-    if (result != SUCCESS) {
-        warning("rm3100: Hardware initialization failed\n");
-    }
+    // TODO: Uncomment once magnetometer Atmel Start Config is restored
+    // info("Initializing magnetometer\n");
+    // result = init_rm3100();
+    // if (result != SUCCESS) {
+    //     warning("rm3100: Hardware initialization failed\n");
+    // }
 
     // Initialize RTC timer hardware
     info("Initializing RTC timer\n");
-    result = init_rtc_hardware();
+    status_t result = init_rtc_hardware();
     if (result != SUCCESS) {
         warning("rtc timer: Hardware initialization failed\n");
     }

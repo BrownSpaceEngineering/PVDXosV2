@@ -81,6 +81,7 @@ export OBJS :=                                              	\
 ../src/drivers/photodiode/photodiode_driver.o               	\
 ../src/drivers/rtc/rtc_driver.o                                 \
 ../src/drivers/watchdog/watchdog_driver.o                     	\
+../src/drivers/at86rf215/at86rf215.o								\
                                                             	\
 ../src/tasks/heartbeat/heartbeat_main.o                     	\
                                                             	\
@@ -130,6 +131,7 @@ export EXTRA_VPATH := \
 ../../src/drivers/gyro \
 ../../src/drivers/magnetometer \
 ../../src/drivers/magnetorquer \
+../../src/drivers/at86rf215    \
 ../../src/drivers/rtc \
 ../../src/drivers/photodiode \
 ../../src/drivers/watchdog \
@@ -166,6 +168,10 @@ SHELL := /bin/bash
 #Path to the child makefile
 #This makefile is used to build the ASF files, and is provided by Atmel Start
 CHILD_MAKEFILE_PATH := ../ASF/gcc
+
+# Path to the pinconfig submodule and the .atzip it contains
+PINCONFIG_DIR := ../PVDX-SAMD-PinConfig
+ATZIP_FILE := $(firstword $(wildcard $(PINCONFIG_DIR)/*.atzip))
 
 # Ensure that MK_DIR is set even when none of the checks are hit
 export MK_DIR := mkdir -p
@@ -258,12 +264,12 @@ clean:
 # The worst part of this is step 6, making text modifications to the stock ASF Makefile
 # IF YOU MODIFY STEP 6, PLEASE MAKE SURE YOU KNOW WHAT YOU'RE DOING
 update_asf:
-	@if [ ! -f ../ASF.atzip ]; then \
-		echo "ASF.atzip not found in the current directory! (Make sure spelling and capitalization is exact)"; \
+	@if [ -z "$(ATZIP_FILE)" ]; then \
+		echo "No .atzip found in $(PINCONFIG_DIR)! Make sure the PVDX-SAMD-PinConfig submodule is initialized (git submodule update --init)."; \
 		echo " --- Operation Aborted --- "; \
 		exit 1; \
 	fi;
-	@read -p "WARNING -- Are you sure you want to REPLACE the ASF with ASF.atzip? [Y/N] " confirm; \
+	@read -p "WARNING -- Are you sure you want to REPLACE the ASF with $(ATZIP_FILE)? [Y/N] " confirm; \
 	if [ "$$confirm" != "y" ] && [ "$$confirm" != "Y" ]; then \
 		echo " --- Operation aborted --- "; \
 		exit 1; \
@@ -275,7 +281,7 @@ update_asf:
 	&& echo "(2) ASF config removed" \
 	&& mkdir -p ../ASF \
 	&& echo "(3) ASF dir re-Created" \
-	&& unzip -q ../ASF.atzip -d ../ASF \
+	&& unzip -q $(ATZIP_FILE) -d ../ASF \
 	&& echo "(4) ASF unzipped" \
 	&& cp -f ../ASF/atmel_start_config.atstart ./ \
 	&& echo "(5) ASF config lifted" \
