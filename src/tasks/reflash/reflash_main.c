@@ -14,7 +14,7 @@ bool stored_checksums_initialized = false;
 
 void reflash_bootloaders(bool sched_running) {
 #ifndef MRAM_OS_READ
-    return;
+    // return;
 #endif
 
     uint8_t mram_block[FLASH_BLOCK_SIZE];
@@ -28,7 +28,11 @@ void reflash_bootloaders(bool sched_running) {
             }
         }
 
-        mram_read_bytes(MRAM_FLASH_BASE_ADDRESS + i * FLASH_BLOCK_SIZE, mram_block, FLASH_BLOCK_SIZE);
+        // mram_read_bytes(MRAM_FLASH_BASE_ADDRESS + i * FLASH_BLOCK_SIZE, mram_block, FLASH_BLOCK_SIZE);
+        // MOCK MRAM READ BY COPYING
+        for (uint32_t j = 0; j < FLASH_BLOCK_SIZE; j++) {
+            mram_block[j] = flash_block[j];
+        }
 
         stored_checksums[i] = crc32(mram_block, FLASH_BLOCK_SIZE);
 
