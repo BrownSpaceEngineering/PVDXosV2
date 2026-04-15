@@ -161,6 +161,7 @@ That should be it. The J-Link GDB Server should now work as expected. Congrats o
 6. Ideally, there should be nothing to be done after `make update_asf` completes. Make sure you return to the top level of the project before trying to rebuild it.
 7. If you intend to move a change into main, make sure to push your changes to the PVDX-SAMD-PinConfig
 submodule first and update the README.md, so that everyone can keep a consistent base pinconfig on main!
+    - run `git submodule update --init` to set up the submodule within this repo
     - If you intend to do long-term work with a different config, consider creating a branch off the submodule.
 
 ## Building Docs 
