@@ -57,7 +57,7 @@ void main_reflash_task(void *pvParameters) {
     while (true) {
         vTaskDelay(pdMS_TO_TICKS(1000 * 60 * 60 * 6));
 
-        vTaskSuspendAll();
+        vTaskSuspendAll(); // make this a critical section?
         reflash_bootloaders();
         xTaskResumeAll();
     }

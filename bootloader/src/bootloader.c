@@ -19,18 +19,18 @@ int main(void);
 void go_to_app(void);
 
 int main(void) {
-    uint8_t bootloader_index = (BOOTLOADER_INDEX);
+    uint8_t bootloader_index = (BOOTLOADER_INDEX-1);
     // If no bootloader flag was defined, panic
     while (bootloader_index == 255);
 
     uint8_t *cur_bootloader_start = (uint8_t *)(bootloader_index * BOOTLOADER_SIZE);
 
     uint32_t computed_checksum = crc32(cur_bootloader_start, BOOTLOADER_SIZE - sizeof(uint32_t));
-    uint32_t test_checksum = *(cur_bootloader_start + BOOTLOADER_SIZE - sizeof(uint32_t));
+    uint32_t* test_checksum = (uint32_t *)(cur_bootloader_start + BOOTLOADER_SIZE - sizeof(uint32_t));
 
-    if (computed_checksum != test_checksum) {
+    if (computed_checksum != *test_checksum) {
         // If checksum fails on the last bootloader, there is nowhere to jump so panic
-        while (bootloader_index == 2);
+        while (bootloader_index == 7);
 
         uint32_t next_sp = *(uint32_t *)((bootloader_index + 1) * BOOTLOADER_SIZE);
         uint32_t next_pc = *(uint32_t *)((bootloader_index + 1) * BOOTLOADER_SIZE + 0x0004);

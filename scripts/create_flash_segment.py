@@ -26,7 +26,7 @@ def write_checksummed_segment(flash: bytearray, offset: int, path: str, size: in
     flash[offset:offset + size] = segment
 
     checksum = crc32(flash[0:offset + size - 4])
-    flash[offset + size - 4:offset + size - 1] = checksum
+    flash[offset + size - 4:offset + size] = checksum
 
 def write_normal_segment(flash: bytearray, offset: int, path: str, size: int):
     with open(path, "rb") as f:
