@@ -1,5 +1,5 @@
-#ifndef RADIO_CFDP
-#define RADIO_CFDP
+#ifndef RADIO_CFDP_PDU
+#define RADIO_CFDP_PDU
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -74,7 +74,9 @@
 #define CFDP_TLV_ENTITY_ID 0x06
 
 // Implementation Specific
-#define MAX_SEGMENT_REQUESTS 10
+#define CFDP_MAX_SEGMENT_REQUESTS 16 // Placeholder Value depends on the following,
+// - Size of JPEG/Raw Image
+// - Size of SPP Packets
 
 /*
  * CFDP generic variable length field struct
@@ -186,7 +188,7 @@ typedef struct cfdp_pdu_nak {
     uint32_t start_of_scope; // BB lists as a variable length field
     uint32_t end_of_scope;
     uint32_t segment_request_count;
-    cfdp_pdu_segment_request_t segment_requests[MAX_SEGMENT_REQUESTS];
+    cfdp_pdu_segment_request_t segment_requests[CFDP_MAX_SEGMENT_REQUESTS];
 } cfdp_pdu_nak_t;
 
 /*
