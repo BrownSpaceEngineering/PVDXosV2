@@ -2,13 +2,45 @@
 
 #include "cfdp_pdu.h"
 #include "string.h"
+""
+    "TODOS:
+    1. Add in timer logic
 
-int cfdp_send_init(uint8_t *fl, uint32_t sz, cfdp_lv_t source_filename, cfdp_lv_t dest_filename, uint32_t source_entity_id,
+    2. Ensure all macro numbering is proper
+    
+    3. Transact function that handles everything in a single flow
+    
+    4. ""
+    "
+
+    
+
+/**
+ * cfdp_send_init
+ *
+ * \brief initialises the data structures to manage a CFDP transaction
+ * 
+ * \param fl, an array of uint8_t representing the bytes of a file 
+ * \param sz, the size of the file in bytes
+ * \param source_filename, the representation of file on this device
+ * \param dest_filename, the representationg of file on receiving device
+ * \param source_entity_id, the entity ID of this device
+ * \param dest_entity_id, the entity ID of the destination device
+ * \param channel_num, the channel this transaction will take place over  
+ * \param priority, this transation's priority
+ * \param reliable_mode, whether this transaction should occur in reliable mode
+ * 
+ * \return int, 0 on success
+ */
+int cfdp_send_init(uint8_t *fl, size_t sz, cfdp_lv_t source_filename, cfdp_lv_t dest_filename, uint32_t source_entity_id,
                    uint32_t dest_entity_id, uint8_t channel_num, uint8_t priority, bool reliable_mode) {
-    if (fl == NULL || sz == 0)
+    if (fl == NULL || sz == 0) {
         return -1;
+    }
 
-    cfdp_gap_tracker_t gap_tracker = {.bitmap = {0}, .file_size = sz, .bytes_recv = 0, .eof_recv = false};
+    cfdp_pdu_segment_request_t segments[CFDP_MAX_SEGMENT_REQUESTS];
+
+    cfdp_nak_buf_t nak_buf = {.segments = segments, .head = 0, .tail = 0, .size = 0};
 
     cfdp_transaction_id_init transaction_id = {.entity_id = source_entity_id, .seq_num = next_seq_num()};
 
@@ -16,7 +48,7 @@ int cfdp_send_init(uint8_t *fl, uint32_t sz, cfdp_lv_t source_filename, cfdp_lv_
                                       .dest_entity_id = dest_entity_id,
                                       .inactivity_timer = 0,
                                       .ack_timer = 0,
-                                      .gaps = NULL,
+                                      .nak_buf = nak_buf,
                                       .state = CFDP_SEND_STATE_METADATA_SEND,
                                       .direction = CFDP_SEND,
                                       .reliable_mode = reliable_mode,
@@ -28,16 +60,29 @@ int cfdp_send_init(uint8_t *fl, uint32_t sz, cfdp_lv_t source_filename, cfdp_lv_
     return 0;
 }
 
+int cfdp_send_init_simple(uint8_t *fl, size_t sz) {
+    cfdp_lv_t empty = {.length = 0, .value = NULL};
+    return cfdp_send_init(fl, sz,
+                          empty,                // source_file
+                          empty,                // dest_file
+                          ENTITY_ID_SPACECRAFT, // source_entity_id
+                          ENTITY_ID_GROUND,     // dest_entity_id
+                          0,                    // channel_num
+                          0,                    // priority
+                          true                  // reliable_mode
+    );
+}
+
 void cfdp_handle_send_state(cfdp_transaction_t *transaction) {
     switch (transaction->state) {
         case CFPD_SEND_STATE_METADATA_SEND:
             cfdp_send_metadata(transaction);
             break;
         case CFPD_SEND_STATE_FILE_SEND:
-            if (transaction->gaps->bytes_recv > 0) {
+            if (transaction->nak_buf->count > 0) { // if there are NAKs we need to respond to
                 cfdp_resend(transaction);
             } else if (transaction->file_offset < transaction->file_size) {
-                cfdp_send_next_filedata(transaction);
+                cfdp_send_filedata(transaction, transaction->file_offset, SEGMENT_SIZE); // segments size is a bit of a placeholder
             } else {
                 cfdp_send_eof(transaction);
             }
@@ -56,18 +101,61 @@ void cfdp_handle_send_state(cfdp_transaction_t *transaction) {
     }
 }
 
-void uint32_to_big_endian(uint32_t src, uint8_t *dst) {
+/**
+ *List of bit conversion functions
+ *
+ * */
+void uint32_to_big_endian(uint32_t src, uint8_t dst[4]) {
     dst[0] = (src >> 24) & 0xFF;
     dst[1] = (src >> 16) & 0xFF;
     dst[2] = (src >> 8) & 0xFF;
     dst[3] = src & 0xFF;
 }
 
-void uint16_to_big_endian(uint16_t src, uint8_t *dst) {
+void uint16_to_big_endian(uint16_t src, uint8_t dst[2]) {
     dst[0] = (src >> 8) & 0xFF;
     dst[1] = src & 0xFF;
 }
 
+/**
+ * Functions for interfacing with the NAK Buffer
+ */
+void cfdp_nak_buf_push(cfdp_nak_buf_t *buf, cfdp_pdu_segment_request_t segment) {
+    if (buf->size == 0) {
+        buf->size = 1;
+        buf->tail = 0;
+        buf->head = 0;
+        buf->segments[0] = segment;
+        return;
+    }
+
+    // overwrites oldest data
+    if (buf->size == MAX_NAK_COUNT) {
+        buf->head = (buf->head + 1) % MAX_NAK_COUNT;
+        buf->tail = (buf->tail + 1) % MAX_NAK_COUNT;
+        buf->segments[buf->head] = segment;
+    }
+
+    buf->head = (buf->head + 1) % MAX_NAK_COUNT;
+    buf->segments[buf->head] = segment;
+    buf->size += 1;
+}
+
+cfdp_pdu_segment_request_t cfdp_nak_buf_pop(cfdp_nak_buf_t *buf) {
+    if (buf->size == 0) {
+        return {.start_offset = ((uint32_t)-1), .end_offset = ((uint32_t)-1)};
+    }
+
+    cfdp_pdu_segment_request_t seg = buf->segments[buf->tail];
+    buf->tail = (buf->tail + 1) % MAX_NAK_COUNT;
+    buf->size -= 1;
+    return seg;
+}
+
+/**
+ *
+ *
+ */
 int cfdp_prepare_pdu_header(uint8_t *buff, cfdp_transaction_t *transaction, uint16_t pdu_len, cfdp_pdu_type_t pdu_type) {
     if (buff == NULL || transaction == NULL || pdu_len == 0)
         return -1;
@@ -125,29 +213,47 @@ int cfdp_send_metadata(cfdp_transaction_t *transaction) {
     }
 
     send(buff, metadata_size + 16);
+    transaction->state = CFDP_SEND_FILE_SEND;
     return 0;
 }
 
 // Note: For now this does not support segment metadata
-int cfdp_send_filedata(cfdp_transaction_t *transaction, uint32_t offset) {
+int cfdp_send_filedata(cfdp_transaction_t *transaction, uint32_t offset, uint32_t size) {
     if (transaction == NULL)
         return -1;
 
-    uint8_t buff[20 + SEGMENT_SIZE];
-    cfdp_prepare_pdu_header(buff, transaction, 4 + SEGMENT_SIZE, CFDP_FILE_DATA);
+    uint8_t buff[20 + size];
+    cfdp_prepare_pdu_header(buff, transaction, 4 + size, CFDP_FILE_DATA);
 
     uint8_t *filedata_buff = buff + 16;
 
     uint32_to_big_endian(offset, filedata_buff);
 
-    memcpy(filedata_buff + 4, transaction->file_data + offset, SEGMENT_SIZE);
+    memcpy(filedata_buff + 4, transaction->file_data + offset, size);
 
-    send(buff, 20 + SEGMENT_SIZE);
-    return 0;
+    send(buff, 20 + size);
+
+    transaction->file_offset += size;
+    return size;
 }
 
-int cfdp_send_next_filedata(cfdp_transaction_t *transaction) {
-    cfdp_send_filedata(transaction, transaction->file_offset);
+uint32_t cfdp_calculate_modular_checksum(cfdp_transaction_t *txn) {
+    size_t words = txn->file_size / 4;
+    uint32_t checksum = 0;
+
+    for (uint32_t i = 0; i < words * 4; i += 4) {
+        checksum += (((uint32_t)txn->file_data[i] << 24) | ((uint32_t)txn->file_data[i + 1] << 16) |
+                     ((uint32_t)txn->file_data[i + 2] << 8) | txn->file_data[i + 3]);
+    }
+
+    size_t rem = txn->file_size % 4;
+
+    uint32_t checksum_rem = 0;
+    for (uint32_t i = 0; i < rem; i++) {
+        checksum_rem |= (uint32_t)txn->file_data[words * 4 + i] << (8 * (3 - i));
+    }
+
+    return checksum + checksum_rem;
 }
 
 int cfdp_send_eof(cfdp_transaction_t *transaction, uint8_t condition_code) {
@@ -162,7 +268,7 @@ int cfdp_send_eof(cfdp_transaction_t *transaction, uint8_t condition_code) {
     uint8_t *eof_buff = buff + 16;
 
     eof_buff[0] = (condition_code & 0xF) << 4;
-    uint32_to_big_endian(get_checksum(transaction), eof_buff + 1);
+    uint32_to_big_endian(cfdp_calc(transaction), eof_buff + 1);
     uint32_to_big_endian(transaction->file_offset, eof_buff + 5);
 
     // We're making all entity IDs 4 Bytes, but we still have to encode TLV Format
@@ -176,8 +282,21 @@ int cfdp_send_eof(cfdp_transaction_t *transaction, uint8_t condition_code) {
 }
 
 int cfdp_resend(cfdp_transaction_t *transaction) {
-    uint32_t total_segs = (transaction->gaps->file_size) / SEGMENT_SIZE;
-    bool in_gap = false;
+    while (transaction->nak_buf.size > 0) {
+        cfdp_pdu_segment_request_t seg = cfdp_nak_buf_pop(transaction->nak_buf.segments);
 
-    for (uint32_t seg = 0; seg < total_segs; seg++) {}
+        uint32_t nak_size = seg.end_offset - seg.start_offset;
+        uint32_t resend_count = nak_size / SEGMENT_SIZE;
+
+        for (uint32_t i = 0; i < resend_count; ++i) {
+            cfdp_send_filedata(transaction, seg.start_offset + i * SEGMENT_SIZE, SEGMENT_SIZE);
+        }
+
+        if (nak_size % SEGMENT_SIZE > 0) {
+            cfdp_send_filedata(transaction, seg.start_offset + resend_count * SEGMENT_SIZE, nak_size % SEGMENT_SIZE);
+        }
+    }
+    return 0;
 }
+
+cfdp_result_t cfdp_transact(cfdp_transaction_t *txn, uint32_t elapsed_ms) {}
