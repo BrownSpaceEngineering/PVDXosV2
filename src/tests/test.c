@@ -3,7 +3,6 @@
 
 #include <string.h>
 
-#include "ccsds/cfdp_pdu.h"
 #include "ccsds/spp.h"
 #include "ccsds/uslp.h"
 #include "linalg/LinearAlgebra/declareFunctions.h"
@@ -11,6 +10,9 @@
 
 int tests_passed = 0;
 int tests_total = 0;
+#include "cfdp/cfdp_pdu.h"
+#include "linalg/LinearAlgebra/declareFunctions.h"
+#include "logging.h"
 
 void test_spp(void);
 void test_matrix_product(void);
