@@ -81,7 +81,7 @@ export OBJS :=                                              	\
 ../src/drivers/photodiode/photodiode_driver.o               	\
 ../src/drivers/rtc/rtc_driver.o                                 \
 ../src/drivers/watchdog/watchdog_driver.o                     	\
-../src/drivers/at86rf215/at86rf215.o								\
+../src/drivers/at86rf215/at86rf215.o							\
                                                             	\
 ../src/tasks/heartbeat/heartbeat_main.o                     	\
                                                             	\
@@ -113,8 +113,8 @@ export OBJS :=                                              	\
 ../src/checks/device_checks.o 									\
 																\
 ../src/tasks/radio/spp.o 										\
-../src/tasks/radio/cfdp_pdu.o 									\
 ../src/tests/test.o                                             \
+../src/tasks/cfdp/cfdp_main.o 									\
 																
 
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###
@@ -145,6 +145,7 @@ export EXTRA_VPATH := \
 ../../src/tasks/command_dispatcher \
 ../../src/tasks/shell \
 ../../src/tasks/radio \
+../../src/tasks/cfdp \
 ../../src/tasks/adcs \
 ../../src/mutexes \
 ../../src/checks \

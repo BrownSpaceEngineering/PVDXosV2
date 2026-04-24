@@ -1,9 +1,9 @@
 
 #include "tests/test.h"
 
+#include "cfdp/cfdp_pdu.h"
 #include "linalg/LinearAlgebra/declareFunctions.h"
 #include "logging.h"
-#include "radio/cfdp_pdu.h"
 #include "radio/spp.h"
 
 void test_spp(void);

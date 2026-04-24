@@ -5,7 +5,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "cfdp_gap_tracker.h"
+// #include "cfdp_gap_tracker.h"
 #include "cfdp_pdu.h"
 
 #define MAX_FILE_SIZE 4096 // placeholder
@@ -58,7 +58,37 @@ typedef struct cfdp_nak_buf {
     uint32_t size;
 } cfdp_nak_buf_t;
 
-typedef struct {
+typedef struct cfdp_transaction {
+    cfdp_transaction_id_t *transaction_id;
+    uint32_t dest_entity_id;
+
+    uint32_t inactivity_timer;
+    uint32_t ack_timer; // in NASA implementation also NAK timer... need to look into this.
+    uint32_t nak_timer;
+    uint8_t eof_retransmit_counter;
+    uint8_t nak_retransmit_counter;
+
+    cfdp_nak_buf_t nak_buf;
+
+    uint32_t file_size;
+    uint32_t file_offset;
+
+    cfdp_state_t state;
+    cfdp_direction_t direction;
+
+    bool reliable_mode;
+
+    uint8_t channel_num;
+    uint8_t priority;
+
+    uint8_t *file_data;
+
+    cfdp_lv_t source_filename;
+    cfdp_lv_t dest_filename;
+
+} cfdp_transaction_t;
+
+/*typedef struct {
     cfdp_transaction_t transactions[MAX_TRANSACTIONS];
     bool active[MAX_TRANSACTIONS];
 } cfdp_transaction_store_t;
@@ -82,37 +112,7 @@ cfdp_transaction_t *cfdp_find_transaction(uint32_t entity_id, uint32_t seq_num) 
         }
     }
     return NULL;
-}
-
-typedef struct cfdp_transaction {
-    cfdp_transaction_id_t *transaction_id;
-    uint32_t dest_entity_id;
-
-    uint32_t inactivity_timer;
-    uint32_t ack_timer; // in NASA implementation also NAK timer... need to look into this.
-    uint32_t nak_timer;
-    uint8_t eof_retransmit_counter;
-    unit8_t nak_retransmit_counter;
-
-    cfdp_nak_buf_t nak_buf;
-
-    uint32_t file_size;
-    uint32_t file_offset;
-
-    cfdp_state_t state;
-    cfdp_pdu_direction_t direction;
-
-    bool reliable_mode;
-
-    uint8_t channel_num;
-    uint8_t priority;
-
-    uint8_t *file_data;
-
-    cfdp_lv_t source_filename;
-    cfdp_lv_t dest_filename;
-
-} cfdp_transaction_t;
+}*/
 
 void uint32_to_big_endian(uint32_t src, uint8_t dst[4]);
 void uint16_to_big_endian(uint16_t src, uint8_t dst[2]);

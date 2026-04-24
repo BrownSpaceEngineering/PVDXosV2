@@ -2,34 +2,34 @@
 
 #include "cfdp_pdu.h"
 #include "string.h"
-""
+/*""
     "TODOS:
     1. Add in timer logic
 
     2. Ensure all macro numbering is proper
-    
-    3. Transact function that handles everything in a single flow
-    
-    4. ""
-    "
 
-    
+    3. Transact function that handles everything in a single flow
+
+    4. ""
+    "*/
+
+// note : this currently doesn't build but i dont have time to fix it rn...
 
 /**
  * cfdp_send_init
  *
  * \brief initialises the data structures to manage a CFDP transaction
- * 
- * \param fl, an array of uint8_t representing the bytes of a file 
+ *
+ * \param fl, an array of uint8_t representing the bytes of a file
  * \param sz, the size of the file in bytes
  * \param source_filename, the representation of file on this device
  * \param dest_filename, the representationg of file on receiving device
  * \param source_entity_id, the entity ID of this device
  * \param dest_entity_id, the entity ID of the destination device
- * \param channel_num, the channel this transaction will take place over  
+ * \param channel_num, the channel this transaction will take place over
  * \param priority, this transation's priority
  * \param reliable_mode, whether this transaction should occur in reliable mode
- * 
+ *
  * \return int, 0 on success
  */
 int cfdp_send_init(uint8_t *fl, size_t sz, cfdp_lv_t source_filename, cfdp_lv_t dest_filename, uint32_t source_entity_id,
