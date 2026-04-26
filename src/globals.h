@@ -75,6 +75,9 @@ typedef enum {
     OPERATION_READ,    // p_data: photomag_read_args_t *readings
     OPERATION_PROCESS, // p_data: TBD
 
+    OPERATION_PUT,    // p_data: cfdp_request_t* req
+    OPERATION_CANCEL, // p_data: cfdp_request_t* req
+
     // TESTING
     TEST_OP, // p_data: char message[]
 } operation_t;
@@ -153,12 +156,14 @@ typedef struct {
 } pvdx_task_t;
 
 typedef struct adcs_data adcs_data_t;
+typedef struct cfdp_request cfdp_request_t;
 
 typedef union command_data {
     adcs_data_t *adcs_data;
     const uint8_t *display_data;
     TaskHandle_t *task_handle;
     pvdx_task_t *pvdx_task;
+    cfdp_request_t *cfdp_request;
 } command_data_t;
 
 typedef enum {
@@ -167,6 +172,7 @@ typedef enum {
     CMD_DATA_DISPLAY,
     CMD_DATA_TASK_HANDLE,
     CMD_DATA_PVDX_TASK,
+    CMD_CFDP_REQ
 } command_data_type_t;
 
 // A struct to represent a command that OS tasks can execute
