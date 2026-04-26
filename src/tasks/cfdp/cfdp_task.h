@@ -24,6 +24,11 @@ typedef struct {
     StaticTask_t cfdp_task_tcb;
 } cfdp_task_memory_t;
 
+struct cfdp_request {
+    uint32_t transaction_id;
+    bool transmission_mode;
+};
+
 extern cfdp_task_memory_t cfdp_mem;
 
 QueueHandle_t init_cfdp(void);
