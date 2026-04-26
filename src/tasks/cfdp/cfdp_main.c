@@ -18,6 +18,8 @@
 // CFDP Task Memory Structure
 cfdp_task_memory_t cfdp_mem;
 
+// transaction store
+
 /**
  * \fn init_cfdp
  *
