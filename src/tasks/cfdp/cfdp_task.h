@@ -20,7 +20,6 @@ typedef struct {
     StackType_t overflow_buffer[TASK_STACK_OVERFLOW_PADDING];
     StackType_t cfdp_task_stack[CFDP_TASK_STACK_SIZE];
     uint8_t cfdp_command_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
-    cfdp_transaction_t cfdp_transactions[CFDP_MAX_ACTIVE_TRANSACTIONS];
     StaticQueue_t cfdp_task_queue;
     StaticTask_t cfdp_task_tcb;
 } cfdp_task_memory_t;
