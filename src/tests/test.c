@@ -1,7 +1,7 @@
 
 #include "tests/test.h"
 
-#include "linalg/LinearAlgebra/declareFunctions.h"
+#include "declareFunctions.h"
 #include "logging.h"
 #include "radio/cfdp_pdu.h"
 #include "radio/spp.h"
