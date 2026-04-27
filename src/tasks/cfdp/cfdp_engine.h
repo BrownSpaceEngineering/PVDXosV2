@@ -6,7 +6,6 @@
 #include <stdint.h>
 #include <string.h>
 
-// #include "cfdp_gap_tracker.h"
 #include "cfdp_pdu.h"
 #include "drivers/at86rf215/at86rf215.h"
 
@@ -23,7 +22,7 @@ typedef struct at86rf215 at86rf215_t;
 #define TRANSACTION_LIFETIME_MS 43200000UL
 #define PROMPT_TIMEOUT_MS 20000UL
 
-#define ACK_RETRANSMIT_LIMIT 5
+#define ACK_RETRANSMIT_LIMIT 8
 #define NAK_RETRANSMIT_LIMIT 8
 #define MAX_TRANSACTIONS 8
 
@@ -40,10 +39,11 @@ typedef enum cfdp_state {
     CFDP_SEND_STATE_DONE,
     CFDP_SEND_STATE_ERR,
 
-    CFDP_RECV_STATE_FILE_RECV, // need more?
+    CFDP_RECV_STATE_FILE_RECV,
     CFDP_RECV_STATE_SEND_NAK,
     CFDP_RECV_STATE_WAIT_ACK,
     CFDP_RECV_STATE_SEND_FIN,
+    CFDP_RECV_STATE_DONE,
     CFDP_RECV_STATE_ERR
 } cfdp_state_t;
 
@@ -123,8 +123,8 @@ cfdp_transaction_t *cfdp_send_init(cfdp_transaction_store_t *txn_store, uint8_t 
                                    cfdp_lv_t dest_filename, uint32_t source_entity_id, uint32_t dest_entity_id, uint8_t channel_num,
                                    uint8_t priority, bool reliable_mode, at86rf215_t *radio_handle);
 
-void cfdp_handle_send_state(cfdp_transaction_t *transaction);
-void cfdp_handle_recv_state(cfdp_transaction_t *transaction);
+void cfdp_handle_send_state(cfdp_transaction_t *transaction, uint32_t elapsed_ms);
+void cfdp_handle_recv_state(cfdp_transaction_t *transaction, uint32_t elapsed_ms);
 
 int cfdp_prepare_pdu_header(uint8_t *buff, cfdp_transaction_t *transaction, uint16_t pdu_len, cfdp_pdu_type_t pdu_type);
 
@@ -138,7 +138,7 @@ int cfdp_send_eof(cfdp_transaction_t *transaction, uint8_t condition_code);
 
 int cfdp_resend(cfdp_transaction_t *transaction);
 
-int cfdp_send_init_simple(uint8_t *fl, size_t sz, struct at86rf215 *radio_handle);
+int cfdp_send_init_simple(uint8_t *fl, size_t sz, struct at86rf215 *radio_handle, cfdp_transaction_store_t *txn_store);
 
 cfdp_result_t cfdp_transact(cfdp_transaction_t *txn, uint32_t elapsed_ms);
 

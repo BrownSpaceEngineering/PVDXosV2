@@ -75,8 +75,8 @@ typedef enum {
     OPERATION_READ,    // p_data: photomag_read_args_t *readings
     OPERATION_PROCESS, // p_data: TBD
 
-    OPERATION_PUT,    // p_data: cfdp_request_t* req
-    OPERATION_CANCEL, // p_data: cfdp_request_t* req
+    // CFDP Operations
+    OPERATION_CFDP_REQ, // p_data: cfdp_request_t* req
 
     // TESTING
     TEST_OP, // p_data: char message[]
