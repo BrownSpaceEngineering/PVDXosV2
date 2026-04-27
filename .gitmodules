@@ -1,0 +1,3 @@
+[submodule "src/libraries/adcs"]
+	path = src/libraries/adcs
+	url = git@github.com:BrownSpaceEngineering/adcs-unix-testing.git
