@@ -75,7 +75,22 @@ void main_cfdp(void *pvParameters) {
             info("cfdp: performing command\n");
             do {
                 switch (cmd.operation) {
+                    case OPERATION_CFDP_REQ:
+                        switch (cmd.data.cfdp_request->type) {
+                            case CFDP_PUT_REQ:
+                                debug("cfdp: Put Request Recieved");
+                                // cfdp_put_request(cmd.data.cfdp_request->data.txn_type);
+                                break;
+                            case CFDP_CANCEL_REQ:
+                                debug("cfdp: Cancel Request Recieved");
+                                // cfdp_cancel_request(cmd.data.cfdp_request->data.txn_id);
+                                break;
+                            default:
+                                debug("cfdp: Invalid Request Type");
+                        }
+                        break;
                     default:
+                        debug("cfdp: Invalid CFDP Operation Type");
                         break;
                 }
             } while (xQueueReceive(p_cfdp_task->command_queue, &cmd, 0) == pdPASS);

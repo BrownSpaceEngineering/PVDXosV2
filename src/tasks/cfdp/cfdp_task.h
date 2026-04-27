@@ -24,12 +24,31 @@ typedef struct {
     StaticTask_t cfdp_task_tcb;
 } cfdp_task_memory_t;
 
+typedef enum cfdp_txn_type {
+    IMAGE = 0,
+    TELEMETRY = 1
+} cfdp_txn_type_t;
+
+typedef union {
+    uint32_t txn_id;
+    cfdp_txn_type_t txn_type;
+} cfdp_request_data_t;
+
+typedef enum cfdp_request_data_type {
+    CFDP_PUT_REQ = 0,
+    CFDP_CANCEL_REQ = 1
+} cfdp_request_data_type_t;
+
 struct cfdp_request {
-    uint32_t transaction_id;
-    bool transmission_mode;
+    cfdp_request_data_type_t type;
+    cfdp_request_data_t data;
 };
 
 extern cfdp_task_memory_t cfdp_mem;
+
+int cfdp_put_request(cfdp_txn_type_t type);
+
+int cfdp_cancel_request(uint32_t txn_id);
 
 QueueHandle_t init_cfdp(void);
 void main_cfdp(void *pvParameters);
