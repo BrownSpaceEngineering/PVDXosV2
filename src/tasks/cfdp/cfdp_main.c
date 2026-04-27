@@ -17,8 +17,7 @@
 
 // CFDP Task Memory Structure
 cfdp_task_memory_t cfdp_mem;
-
-// transaction store
+cfdp_transaction_store_t cfdp_store;
 
 /**
  * \fn init_cfdp
@@ -68,34 +67,12 @@ void main_cfdp(void *pvParameters) {
     command_t cmd;
 
     while (true) {
-        debug_impl("\n---------- CFDP Run ----------\n");
-
-        // Block waiting for at least one command to appear in the command queue
-        if (xQueueReceive(p_cfdp_task->command_queue, &cmd, queue_block_time_ticks) == pdPASS) {
+        while (cfdp_store.slot_free && xQueueReceive(p_cfdp_task->command_queue, &cmd, queue_block_time_ticks) == pdPASS) {
             info("cfdp: performing command\n");
-            do {
-                switch (cmd.operation) {
-                    case OPERATION_CFDP_REQ:
-                        switch (cmd.data.cfdp_request->type) {
-                            case CFDP_PUT_REQ:
-                                debug("cfdp: Put Request Recieved");
-                                // cfdp_put_request(cmd.data.cfdp_request->data.txn_type);
-                                break;
-                            case CFDP_CANCEL_REQ:
-                                debug("cfdp: Cancel Request Recieved");
-                                // cfdp_cancel_request(cmd.data.cfdp_request->data.txn_id);
-                                break;
-                            default:
-                                debug("cfdp: Invalid Request Type");
-                        }
-                        break;
-                    default:
-                        debug("cfdp: Invalid CFDP Operation Type");
-                        break;
-                }
-            } while (xQueueReceive(p_cfdp_task->command_queue, &cmd, 0) == pdPASS);
+            exec_command_cfdp_request(&cmd);
         }
-        debug("cfdp: No more commands queued.\n");
+
+        // handle CFDP State
 
         // Check in with the watchdog task
         if (should_checkin(current_task)) {
