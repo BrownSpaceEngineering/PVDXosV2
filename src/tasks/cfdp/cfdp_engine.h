@@ -103,11 +103,6 @@ typedef struct cfdp_transaction {
 
 } cfdp_transaction_t;
 
-typedef struct {
-    cfdp_transaction_t transactions[MAX_TRANSACTIONS];
-    bool active[MAX_TRANSACTIONS];
-} cfdp_transaction_store_t;
-
 void uint32_to_big_endian(uint32_t src, uint8_t dst[4]);
 void uint16_to_big_endian(uint16_t src, uint8_t dst[2]);
 

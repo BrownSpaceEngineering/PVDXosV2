@@ -29,26 +29,24 @@ typedef enum cfdp_txn_type {
     TELEMETRY = 1
 } cfdp_txn_type_t;
 
-typedef union {
+typedef union cfdp_request_data {
     uint32_t txn_id;
     cfdp_txn_type_t txn_type;
 } cfdp_request_data_t;
 
-typedef enum cfdp_request_data_type {
-    CFDP_PUT_REQ = 0,
-    CFDP_CANCEL_REQ = 1
-} cfdp_request_data_type_t;
-
-struct cfdp_request {
-    cfdp_request_data_type_t type;
-    cfdp_request_data_t data;
-};
+typedef struct {
+    cfdp_transaction_t transactions[MAX_TRANSACTIONS];
+    bool active[MAX_TRANSACTIONS];
+    bool slot_free;
+} cfdp_transaction_store_t;
 
 extern cfdp_task_memory_t cfdp_mem;
 
-int cfdp_put_request(cfdp_txn_type_t type);
+extern cfdp_transaction_store_t cfdp_store;
 
-int cfdp_cancel_request(uint32_t txn_id);
+void cfdp_put_request(cfdp_txn_type_t type);
+
+void cfdp_cancel_request(uint32_t txn_id);
 
 QueueHandle_t init_cfdp(void);
 void main_cfdp(void *pvParameters);

@@ -76,7 +76,8 @@ typedef enum {
     OPERATION_PROCESS, // p_data: TBD
 
     // CFDP Operations
-    OPERATION_CFDP_REQ, // p_data: cfdp_request_t* req
+    OPERATION_CFDP_PUT,    // p_data: cfdp_request_t* req
+    OPERATION_CFDP_CANCEL, // p_data: cfdp_request_t* req
 
     // TESTING
     TEST_OP, // p_data: char message[]
@@ -156,14 +157,14 @@ typedef struct {
 } pvdx_task_t;
 
 typedef struct adcs_data adcs_data_t;
-typedef struct cfdp_request cfdp_request_t;
+typedef union cfdp_request_data cfdp_request_data_t;
 
 typedef union command_data {
     adcs_data_t *adcs_data;
     const uint8_t *display_data;
     TaskHandle_t *task_handle;
     pvdx_task_t *pvdx_task;
-    cfdp_request_t *cfdp_request;
+    cfdp_request_data_t *cfdp_request;
 } command_data_t;
 
 typedef enum {
