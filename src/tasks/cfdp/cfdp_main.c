@@ -75,7 +75,7 @@ void main_cfdp(void *pvParameters) {
 
         // handle CFDP State
         if (recv(recv_buff, TXN_FRAME) == 0 /* Whatever success status code is*/) {
-            process_pdu(recv_buff, TXN_FRAME);
+            cfdp_process_pdu(recv_buff, TXN_FRAME);
         }
         uint32_t elapsed_ms = 10; // how do i use RTC? / calculate this
 

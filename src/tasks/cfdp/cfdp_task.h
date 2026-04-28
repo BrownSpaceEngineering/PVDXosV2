@@ -121,12 +121,14 @@ extern cfdp_task_memory_t cfdp_mem;
 
 extern cfdp_transaction_store_t cfdp_txn_store;
 
-void cfdp_put_request(cfdp_txn_type_t type);
+size_t cfdp_put_request(cfdp_txn_type_t type);
 
 void cfdp_cancel_request(uint32_t txn_id);
 
 int send(void *buff, size_t sz);
 int recv(void *buff, size_t sz);
+
+void cfdp_process_pdu(uint8_t *raw, size_t sz);
 
 QueueHandle_t init_cfdp(void);
 void main_cfdp(void *pvParameters);
