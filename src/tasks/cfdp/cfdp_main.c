@@ -17,7 +17,7 @@
 
 // CFDP Task Memory Structure
 cfdp_task_memory_t cfdp_mem;
-cfdp_transaction_store_t cfdp_store;
+cfdp_transaction_store_t cfdp_txn_store;
 
 /**
  * \fn init_cfdp
@@ -65,14 +65,24 @@ void main_cfdp(void *pvParameters) {
     const TickType_t queue_block_time_ticks = get_command_queue_block_time_ticks(current_task);
     // Variable to hold commands popped off the queue
     command_t cmd;
+    uint8_t *recv_buff;
 
     while (true) {
-        while (cfdp_store.slot_free && xQueueReceive(p_cfdp_task->command_queue, &cmd, queue_block_time_ticks) == pdPASS) {
+        while (cfdp_txn_store.slot_free && xQueueReceive(p_cfdp_task->command_queue, &cmd, queue_block_time_ticks) == pdPASS) {
             info("cfdp: performing command\n");
             exec_command_cfdp_request(&cmd);
         }
 
         // handle CFDP State
+        if (recv(recv_buff, TXN_FRAME) == 0 /* Whatever success status code is*/) {
+            process_pdu(recv_buff, TXN_FRAME);
+        }
+        uint32_t elapsed_ms = 10; // how do i use RTC? / calculate this
+
+        for (size_t i = 0; i < MAX_TRANSACTIONS; i++) {
+            // probably need to update elapsed_ms for each transaction
+            cfdp_transact(cfdp_txn_store.transactions[i], elapsed_ms);
+        }
 
         // Check in with the watchdog task
         if (should_checkin(current_task)) {
