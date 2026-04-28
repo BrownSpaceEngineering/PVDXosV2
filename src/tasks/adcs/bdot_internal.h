@@ -6,6 +6,6 @@
 #include "drivers/magnetorquer/magnetorquer_driver.h"
 #include "globals.h"
 
-status_t bdot(mag_data_t *mag_readings, mag_torque_input_t *torques, float k, float dt);
+status_t bdot_internal(mag_data_t *mag_readings, mag_torque_input_t *torques, float k, float dt);
 
 #endif

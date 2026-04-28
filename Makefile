@@ -1,3 +1,5 @@
+export PVDXOS_ROOT := $(CURDIR)
+
 ifeq ($(OS),Windows_NT)
 	# Pure Windows (e.g. MSYS2/MinGW). Note that in WSL, $(OS) is *not* Windows_NT.
 	GDBCMD = gdb-multiarch

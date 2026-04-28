@@ -10,7 +10,7 @@
 
 #include "tasks/adcs/adcs_task.h"
 
-#include "bdot.h"
+#include "bdot_internal.h"
 #include "checks/device_checks.h"
 #include "globals.h"
 #include "logging.h"
@@ -139,7 +139,7 @@ status_t adcs_orientation_loop() {
     }
 
     if (tumbling(&gyro_data_buffer[0])) {
-        bdot(mag_data_buffer, mag_torque_buffer, K_VALUE, DT_VALUE);
+        bdot_internal(mag_data_buffer, mag_torque_buffer, K_VALUE, DT_VALUE);
 
     } else {
         if (in_sun(&photodiode_data_buffer[0])) {
@@ -150,7 +150,7 @@ status_t adcs_orientation_loop() {
             ukf_orient(/* TODO some inputs */);
         } else {
             info("adcs task: sun not detected; going into bdot\n");
-            bdot(mag_data_buffer, mag_torque_buffer, K_VALUE, DT_VALUE);
+            bdot_internal(mag_data_buffer, mag_torque_buffer, K_VALUE, DT_VALUE);
         }
     }
     return SUCCESS;

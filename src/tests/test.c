@@ -1,5 +1,6 @@
 
-#include "tests/test.h"
+#include "test.h"
+#include "adcs_test.h"
 
 #include "declareFunctions.h"
 #include "logging.h"
@@ -7,13 +8,14 @@
 #include "radio/spp.h"
 
 void test_spp(void);
-void test_matrix_product(void);
+void test_matrix_product_internal(void);
 void test_cfdp(void);
 
 void tests_run(void) {
     test_spp();
-    test_matrix_product();
+    test_matrix_product_internal();
     test_cfdp();
+    adcs_test_run_all();
 }
 
 // #ifdef UNITTEST
@@ -43,7 +45,7 @@ void test_spp(void) {
     PVDX_ASSERT_MSG(packet.header.data_length == 0xAA, "data_length");
 }
 
-void test_matrix_product(void) {
+void test_matrix_product_internal(void) {
     test_log("----- testing matrix product -----\n");
 
     // test case for 2*2 matrix product

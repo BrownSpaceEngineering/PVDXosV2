@@ -12,147 +12,132 @@
 ###############################################################################
 
 ### ALL C FILES SHOULD HAVE AN OBJECT FILE LISTED HERE ###
-export OBJS :=                                              	\
-../src/libraries/adcs/linalg/LinearAlgebra/add.o 								\
-../src/libraries/adcs/linalg/LinearAlgebra/chol.o 								\
-../src/libraries/adcs/linalg/LinearAlgebra/cofact.o 							\
-../src/libraries/adcs/linalg/LinearAlgebra/copy.o 								\
-../src/libraries/adcs/linalg/LinearAlgebra/cut.o 								\
-../src/libraries/adcs/linalg/LinearAlgebra/det.o 								\
-../src/libraries/adcs/linalg/LinearAlgebra/diag.o 								\
-../src/libraries/adcs/linalg/LinearAlgebra/diagpower.o 						\
-../src/libraries/adcs/linalg/LinearAlgebra/dot.o 								\
-../src/libraries/adcs/linalg/LinearAlgebra/eabs.o 								\
-../src/libraries/adcs/linalg/LinearAlgebra/eig.o 								\
-../src/libraries/adcs/linalg/LinearAlgebra/eye.o 								\
-../src/libraries/adcs/linalg/LinearAlgebra/hankel.o 							\
-../src/libraries/adcs/linalg/LinearAlgebra/horzcat.o 							\
-../src/libraries/adcs/linalg/LinearAlgebra/insert.o 							\
-../src/libraries/adcs/linalg/LinearAlgebra/inv.o								\
-../src/libraries/adcs/linalg/LinearAlgebra/linprog.o 							\
-../src/libraries/adcs/linalg/LinearAlgebra/linsolve.o 							\
-../src/libraries/adcs/linalg/LinearAlgebra/lu.o 								\
-../src/libraries/adcs/linalg/LinearAlgebra/maxvector.o 						\
-../src/libraries/adcs/linalg/LinearAlgebra/mdiag.o 							\
-../src/libraries/adcs/linalg/LinearAlgebra/minvector.o 						\
-../src/libraries/adcs/linalg/LinearAlgebra/move.o 								\
-../src/libraries/adcs/linalg/LinearAlgebra/mpower.o 							\
-../src/libraries/adcs/linalg/LinearAlgebra/mul.o 								\
-../src/libraries/adcs/linalg/LinearAlgebra/norm.o 								\
-../src/libraries/adcs/linalg/LinearAlgebra/ones.o 								\
-../src/libraries/adcs/linalg/LinearAlgebra/pinv.o 								\
-../src/libraries/adcs/linalg/LinearAlgebra/power.o 							\
-../src/libraries/adcs/linalg/LinearAlgebra/print.o 							\
-../src/libraries/adcs/linalg/LinearAlgebra/qr.o 								\
-../src/libraries/adcs/linalg/LinearAlgebra/rank.o 								\
-../src/libraries/adcs/linalg/LinearAlgebra/repmat.o 							\
-../src/libraries/adcs/linalg/LinearAlgebra/scale.o 							\
-../src/libraries/adcs/linalg/LinearAlgebra/sqrte.o 							\
-../src/libraries/adcs/linalg/LinearAlgebra/sub.o 								\
-../src/libraries/adcs/linalg/LinearAlgebra/sumrows.o 							\
-../src/libraries/adcs/linalg/LinearAlgebra/svd.o 								\
-../src/libraries/adcs/linalg/LinearAlgebra/toeplitz.o 							\
-../src/libraries/adcs/linalg/LinearAlgebra/tran.o 								\
-../src/libraries/adcs/linalg/LinearAlgebra/tril.o 								\
-../src/libraries/adcs/linalg/LinearAlgebra/triu.o 								\
-../src/libraries/adcs/linalg/LinearAlgebra/vec.o 								\
-../src/libraries/adcs/linalg/LinearAlgebra/vertcat.o 							\
-../src/libraries/adcs/linalg/LinearAlgebra/zeros.o 							\
-../src/libraries/adcs/linalg/LinearAlgebra/eps.o 								\
+LINALG_DIR := $(PVDXOS_ROOT)/src/libraries/adcs/linalg/LinearAlgebra
+LAPACK_BLAS_DIR := $(PVDXOS_ROOT)/src/libraries/adcs/linalg/Lapack/Blas
+LAPACK_COMP_DIR := $(PVDXOS_ROOT)/src/libraries/adcs/linalg/Lapack/comparison
+LAPACK_F2C_DIR := $(PVDXOS_ROOT)/src/libraries/adcs/linalg/Lapack/F2c
+LAPACK_INCLUDE_DIR := $(PVDXOS_ROOT)/src/libraries/adcs/linalg/Lapack/Include
+LAPACK_INSTALL_DIR := $(PVDXOS_ROOT)/src/libraries/adcs/linalg/Lapack/Install
+LAPACK_SCR_DIR := $(PVDXOS_ROOT)/src/libraries/adcs/linalg/Lapack/Scr
+ADCS_IMPL_DIR   := $(PVDXOS_ROOT)/src/libraries/adcs/src
+ADCS_HDR_DIR := $(PVDXOS_ROOT)/src/libraries/adcs/include
+
+LINALG_OBJS := $(patsubst %.c,%.o,$(wildcard $(LINALG_DIR)/*.c))
+LAPACK_BLAS_OBJS := $(patsubst %.c,%.o,$(wildcard $(LAPACK_BLAS_DIR)/*.c))
+LAPACK_COMP_OBJS := $(patsubst %.c,%.o,$(wildcard $(LAPACK_COMP_DIR)/*.c))
+LAPACK_F2C_OBJS := $(patsubst %.c,%.o,$(wildcard $(LAPACK_F2C_DIR)/*.c))
+LAPACK_INCLUDE_OBJS := $(patsubst %.c,%.o,$(wildcard $(LAPACK_INCLUDE_DIR)/*.c))
+LAPACK_INSTALL_OBJS := $(patsubst %.c,%.o,$(wildcard $(LAPACK_INSTALL_DIR)/*.c))
+LAPACK_SCR_OBJS := $(patsubst %.c,%.o,$(wildcard $(LAPACK_SCR_DIR)/*.c))
+ADCS_OBJS := $(patsubst %.c,%.o,$(wildcard $(ADCS_IMPL_DIR)/*.c))
+
+PVDX_OBJS :=                                              		\
+$(PVDXOS_ROOT)/src/main.o                                               	\
+                                                            	\
+$(PVDXOS_ROOT)/src/mutexes/mutexes.o                                    	\
+                                                            	\
+$(PVDXOS_ROOT)/src/misc/printf/SEGGER_RTT.o                             	\
+$(PVDXOS_ROOT)/src/misc/printf/SEGGER_RTT_printf.o                      	\
+                                                            	\
+$(PVDXOS_ROOT)/src/misc/rtos_support/rtos_static_memory.o               	\
+$(PVDXOS_ROOT)/src/misc/rtos_support/rtos_stack_overflow.o              	\
+                                                            	\
+$(PVDXOS_ROOT)/src/misc/logging/logging.o                               	\
+                                                            	\
+$(PVDXOS_ROOT)/src/misc/exception_handlers/default_handler.o            	\
+$(PVDXOS_ROOT)/src/misc/exception_handlers/specific_handlers.o          	\
 																\
-../src/main.o                                               	\
+$(PVDXOS_ROOT)/src/drivers/display/display_driver.o                       	\
+$(PVDXOS_ROOT)/src/drivers/gyro/SCH1.o										\
+$(PVDXOS_ROOT)/src/drivers/magnetometer/magnetometer_driver.o           	\
+$(PVDXOS_ROOT)/src/drivers/photodiode/photodiode_driver.o               	\
+$(PVDXOS_ROOT)/src/drivers/rtc/rtc_driver.o                                 \
+$(PVDXOS_ROOT)/src/drivers/watchdog/watchdog_driver.o                     	\
                                                             	\
-../src/mutexes/mutexes.o                                    	\
+$(PVDXOS_ROOT)/src/tasks/heartbeat/heartbeat_main.o                     	\
                                                             	\
-../src/misc/printf/SEGGER_RTT.o                             	\
-../src/misc/printf/SEGGER_RTT_printf.o                      	\
+$(PVDXOS_ROOT)/src/tasks/watchdog/watchdog_task.o                       	\
+$(PVDXOS_ROOT)/src/tasks/watchdog/watchdog_main.o                       	\
                                                             	\
-../src/misc/rtos_support/rtos_static_memory.o               	\
-../src/misc/rtos_support/rtos_stack_overflow.o              	\
+$(PVDXOS_ROOT)/src/tasks/cosmic_monkey/cosmic_monkey_main.o             	\
+$(PVDXOS_ROOT)/src/tasks/cosmic_monkey/cosmic_monkey_task.o             	\
                                                             	\
-../src/misc/logging/logging.o                               	\
+$(PVDXOS_ROOT)/src/tasks/display/display_task.o                         	\
+$(PVDXOS_ROOT)/src/tasks/display/display_main.o                         	\
+$(PVDXOS_ROOT)/src/tasks/display/image_buffers/image_buffer_BrownLogo.o 	\
+$(PVDXOS_ROOT)/src/tasks/display/image_buffers/image_buffer_PVDX.o      	\
+$(PVDXOS_ROOT)/src/tasks/adcs/adcs_task.o 									\
+$(PVDXOS_ROOT)/src/tasks/adcs/adcs_main.o 									\
                                                             	\
-../src/misc/exception_handlers/default_handler.o            	\
-../src/misc/exception_handlers/specific_handlers.o          	\
+$(PVDXOS_ROOT)/src/tasks/task_manager/task_manager_main.o               	\
+$(PVDXOS_ROOT)/src/tasks/task_manager/task_manager_task.o               	\
+                                                            	\
+$(PVDXOS_ROOT)/src/tasks/command_dispatcher/command_dispatcher_main.o   	\
+$(PVDXOS_ROOT)/src/tasks/command_dispatcher/command_dispatcher_task.o   	\
+                                                            	\
+$(PVDXOS_ROOT)/src/tasks/shell/shell_main.o                             	\
+$(PVDXOS_ROOT)/src/tasks/shell/shell_helpers.o                          	\
+$(PVDXOS_ROOT)/src/tasks/shell/shell_commands.o                         	\
+                                                            	\
+$(PVDXOS_ROOT)/src/tasks/task_list.o                                        \
 																\
-../src/drivers/display/display_driver.o                       	\
-../src/drivers/gyro/SCH1.o										\
-../src/drivers/magnetometer/magnetometer_driver.o           	\
-../src/drivers/photodiode/photodiode_driver.o               	\
-../src/drivers/rtc/rtc_driver.o                                 \
-../src/drivers/watchdog/watchdog_driver.o                     	\
-                                                            	\
-../src/tasks/heartbeat/heartbeat_main.o                     	\
-                                                            	\
-../src/tasks/watchdog/watchdog_task.o                       	\
-../src/tasks/watchdog/watchdog_main.o                       	\
-                                                            	\
-../src/tasks/cosmic_monkey/cosmic_monkey_main.o             	\
-../src/tasks/cosmic_monkey/cosmic_monkey_task.o             	\
-                                                            	\
-../src/tasks/display/display_task.o                         	\
-../src/tasks/display/display_main.o                         	\
-../src/tasks/display/image_buffers/image_buffer_BrownLogo.o 	\
-../src/tasks/display/image_buffers/image_buffer_PVDX.o      	\
-../src/tasks/adcs/adcs_task.o 									\
-../src/tasks/adcs/adcs_main.o 									\
-                                                            	\
-../src/tasks/task_manager/task_manager_main.o               	\
-../src/tasks/task_manager/task_manager_task.o               	\
-                                                            	\
-../src/tasks/command_dispatcher/command_dispatcher_main.o   	\
-../src/tasks/command_dispatcher/command_dispatcher_task.o   	\
-                                                            	\
-../src/tasks/shell/shell_main.o                             	\
-../src/tasks/shell/shell_helpers.o                          	\
-../src/tasks/shell/shell_commands.o                         	\
-                                                            	\
-../src/tasks/task_list.o                                        \
+$(PVDXOS_ROOT)/src/checks/device_checks.o 									\
 																\
-../src/checks/device_checks.o 									\
-																\
-../src/tasks/radio/spp.o 										\
-../src/tasks/radio/cfdp_pdu.o 									\
-../src/tests/test.o                                             \
+$(PVDXOS_ROOT)/src/tasks/radio/spp.o 										\
+$(PVDXOS_ROOT)/src/tasks/radio/cfdp_pdu.o 									\
+$(PVDXOS_ROOT)/src/tests/test.o                                             \
 																
+export OBJS := 													\
+$(PVDX_OBJS) 													\
+$(LINALG_OBJS) 													\
+$(LAPACK_BLAS_OBJS) 											\
+$(LAPACK_COMP_OBJS) 											\
+$(LAPACK_F2C_OBJS) 												\
+$(LAPACK_INCLUDE_OBJS) 											\
+$(LAPACK_INSTALL_OBJS) 											\
+$(LAPACK_SCR_OBJS) 												\
+$(ADCS_OBJS)
 
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###
 ### THESE ARE WRITTEN RELATIVE TO THE ./ASF/gcc/Makefile FILE ###
 export EXTRA_VPATH := \
-../../src \
-../../src/misc \
-../../src/misc/printf \
-../../src/misc/rtos_support \
-../../src/misc/logging \
-../../src/misc/exception_handlers \
-../../src/drivers \
-../../src/drivers/display \
-../../src/drivers/gyro \
-../../src/drivers/magnetometer \
-../../src/drivers/magnetorquer \
-../../src/drivers/rtc \
-../../src/drivers/photodiode \
-../../src/drivers/watchdog \
-../../src/tasks \
-../../src/tasks/watchdog \
-../../src/tasks/heartbeat \
-../../src/tasks/cosmic_monkey \
-../../src/tasks/display \
-../../src/tasks/display/image_buffers \
-../../src/tasks/task_manager \
-../../src/tasks/command_dispatcher \
-../../src/tasks/shell \
-../../src/tasks/radio \
-../../src/tasks/adcs \
-../../src/mutexes \
-../../src/checks \
-../../src/tests \
-../../src/libraries/adcs/linalg \
-../../src/libraries/adcs/linalg/Lapack \
-../../src/libraries/adcs/linalg/Lapack/Include \
-../../src/libraries/adcs/linalg/LinearAlgebra \
-../../src/tasks/adcs \
-../../src/mutexes
+$(PVDXOS_ROOT)/src \
+$(PVDXOS_ROOT)/src/misc \
+$(PVDXOS_ROOT)/src/misc/printf \
+$(PVDXOS_ROOT)/src/misc/rtos_support \
+$(PVDXOS_ROOT)/src/misc/logging \
+$(PVDXOS_ROOT)/src/misc/exception_handlers \
+$(PVDXOS_ROOT)/src/drivers \
+$(PVDXOS_ROOT)/src/drivers/display \
+$(PVDXOS_ROOT)/src/drivers/gyro \
+$(PVDXOS_ROOT)/src/drivers/magnetometer \
+$(PVDXOS_ROOT)/src/drivers/magnetorquer \
+$(PVDXOS_ROOT)/src/drivers/rtc \
+$(PVDXOS_ROOT)/src/drivers/photodiode \
+$(PVDXOS_ROOT)/src/drivers/watchdog \
+$(PVDXOS_ROOT)/src/tasks \
+$(PVDXOS_ROOT)/src/tasks/watchdog \
+$(PVDXOS_ROOT)/src/tasks/heartbeat \
+$(PVDXOS_ROOT)/src/tasks/cosmic_monkey \
+$(PVDXOS_ROOT)/src/tasks/display \
+$(PVDXOS_ROOT)/src/tasks/display/image_buffers \
+$(PVDXOS_ROOT)/src/tasks/task_manager \
+$(PVDXOS_ROOT)/src/tasks/command_dispatcher \
+$(PVDXOS_ROOT)/src/tasks/shell \
+$(PVDXOS_ROOT)/src/tasks/radio \
+$(PVDXOS_ROOT)/src/tasks/adcs \
+$(PVDXOS_ROOT)/src/mutexes \
+$(PVDXOS_ROOT)/src/checks \
+$(PVDXOS_ROOT)/src/tests \
+$(LINALG_DIR) \
+$(LAPACK_BLAS_DIR) \
+$(LAPACK_COMP_DIR) \
+$(LAPACK_F2C_DIR) \
+$(LAPACK_INCLUDE_DIR) \
+$(LAPACK_INSTALL_DIR) \
+$(LAPACK_SCR_DIR) \
+$(ADCS_IMPL_DIR) \
+$(ADCS_HDR_DIR)
 
 ###############################################################################
 ###############################################################################
@@ -194,6 +179,7 @@ endif
 # Compiler flags
 # Include git branch and commit hash in the build
 CFLAGS += -D'GIT_BRANCH_NAME="$(GIT_BRANCH_NAME)"' -D'GIT_COMMIT_HASH="$(GIT_COMMIT_HASH)"'
+CFLAGS += -D'PVDXOS' # to compile submodules with RTT-specific outputs. 
 
 # Robust error checking
 CFLAGS += -Wextra -Werror -Werror=maybe-uninitialized -static
