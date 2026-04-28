@@ -105,9 +105,9 @@ typedef struct cfdp_pdu_header {
     uint8_t segmentation_control : 1;
     uint8_t entity_id_len : 3;
     uint8_t segment_metadata_field : 1;
-    cfdp_data_view_t source_entity_id;
-    cfdp_data_view_t transaction_seq;
-    cfdp_data_view_t dest_entity_id;
+    uint32_t source_entity_id;
+    uint32_t transaction_seq;
+    uint32_t dest_entity_id;
 } cfdp_pdu_header_t;
 
 /*

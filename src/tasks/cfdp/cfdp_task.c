@@ -19,7 +19,7 @@
 
 /* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
 
-void cfdp_put_request(cfdp_txn_type_t type, cfdp_direction_t dir) {
+size_t cfdp_put_request(cfdp_txn_type_t type, cfdp_direction_t dir) {
     size_t store_index = MAX_TRANSACTIONS;
     for (size_t i = 0; i < MAX_TRANSACTIONS; i++) {
         if (!cfdp_txn_store.active[i]) {
@@ -28,7 +28,7 @@ void cfdp_put_request(cfdp_txn_type_t type, cfdp_direction_t dir) {
         }
     }
     if (store_index == MAX_TRANSACTIONS) {
-        fatal("cfdp put: no valid transaction slots");
+        fatal("cfdp put: no valid transaction slots\n");
     }
 
     cfdp_txn_store.active[store_index] = true;
@@ -70,7 +70,7 @@ void cfdp_cancel_request(uint32_t txn_id) {
     }
 
     if (store_index == MAX_TRANSACTIONS) {
-        debug("cfdp cancel: txn_id: %lu not active", txn_id);
+        debug("cfdp cancel: txn_id: %lu not active\n", txn_id);
         return;
     }
 
@@ -106,5 +106,75 @@ void exec_command_cfdp_request(command_t *const p_cmd) {
             break;
         default:
             debug("cfdp request: invalid operation for cfdp! operation %d\n", p_cmd->operation);
+    }
+}
+
+/**
+ * \fn cfdp_process_pdu
+ *
+ * \brief Processes incoming raw PDU and updates cfdp_txn_store
+ *
+ * \param raw a pointer to the incoming data
+ * \param sz the size in octets of the data
+ */
+void cfdp_process_pdu(uint8_t *raw, size_t sz) {
+    cfdp_pdu_header_t header;
+    int bytes_read = cfdp_pdu_header_parse(raw, sz, &header);
+
+    if (bytes_read < 0) {
+        debug("cfdp: incoming pdu of invalid size\n");
+        return;
+    }
+
+    size_t header_size = (size_t)bytes_read;
+
+    // get PDU type
+    uint8_t dir_code = 0;
+
+    if (header.pdu_type == 0) {
+        dir_code = raw[header_size];
+    }
+
+    cfdp_transaction_t *txn = NULL;
+    for (size_t i = 0; i < MAX_TRANSACTIONS; i++) {
+        if (cfdp_txn_store.active[i] && cfdp_txn_store.transactions[i].transaction_id.entity_id == header.source_entity_id &&
+            cfdp_txn_store.transactions[i].transaction_id.seq_num == header.transaction_seq) {
+            txn = &cfdp_txn_store.transactions[i];
+            break;
+        }
+    }
+    if (txn == NULL) {
+        if (dir_code != CFDP_DIR_METADATA) {
+            debug("cfdp: unknown incoming pdu of type %x disregarded\n", dir_code);
+            return;
+        }
+
+        if (!cfdp_txn_store.slot_free) {
+            debug("cfdp: txn store full, unable to accept sequence: %x, from entity: %x\n", header.transaction_seq,
+                  header.source_entity_id);
+            return;
+        }
+
+        // create new transaction
+    }
+
+    // Note: probably want to strucutre this where each case calls a function that handles that PDU type specifically
+    switch (dir_code) {
+        case 0: // Not an offical CFDP Directive Code, but we will treat it as file data
+            break;
+        case CFDP_DIR_EOF:
+            break;
+        case CFDP_DIR_FINISHED:
+            break;
+        case CFDP_DIR_ACK:
+            break;
+        case CFDP_DIR_METADATA: // should always be handled with the check above, because we should never recieve metadata for a txn we
+                                // already have in store
+            break;
+        case CFDP_DIR_NAK:
+            break;
+        default:
+            debug("cfdp: unrecognized directive code: %x", dir_code);
+            return;
     }
 }

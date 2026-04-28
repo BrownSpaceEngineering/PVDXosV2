@@ -73,7 +73,10 @@ cfdp_result_t cfdp_transact(cfdp_transaction_t *txn, uint32_t elapsed_ms);
  * TODO(open): Finalize active transaction storage strategy (queue/store ownership and lifecycle).
  * TODO(open): Decide MRAM persistence policy for transaction sequence number and related state.
  * TODO(open): Define file-data PDU segmentation policy (full file vs fixed segments/chunks).
- * TODO(open): Implement both modular and null checksum modes for Blue Book compliance.
+ * TODO(done): Implement both modular and null checksum modes for Blue Book compliance.
+ * TODO(in-progress): Implement process_pdu to update state based on incoming PDUs
+ * TODO(open): Fix cfdp_send_* to correclty include directive codes between header and pdu.
  * TODO(optional): Implement CRC algorithm
+
  */
 #endif

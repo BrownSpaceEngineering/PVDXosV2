@@ -26,21 +26,29 @@ int cfdp_pdu_header_parse(const uint8_t *raw, size_t len, cfdp_pdu_header_t *out
     out->segment_metadata_field = (raw[3] >> 3) & 0x01;
     uint8_t seq_len = (raw[3] & 0x07) + 1;
 
-    size_t var_len = out->entity_id_len + seq_len + out->entity_id_len;
-    size_t header_len = 4 + var_len;
+    size_t header_len = 16;
 
     if (len < header_len)
         return -1;
 
     const uint8_t *pos = raw + 4;
 
-    cfdp_view_init(&out->source_entity_id, pos, out->entity_id_len);
+    out->source_entity_id = 0;
+    for (size_t i = 0; i < 4 && i < out->entity_id_len; i++) {
+        out->source_entity_id |= (uint32_t)pos[i] << (24 - i * 8);
+    }
     pos += out->entity_id_len;
 
-    cfdp_view_init(&out->transaction_seq, pos, seq_len);
+    out->transaction_seq = 0;
+    for (size_t i = 0; i < 4 && i < seq_len; i++) {
+        out->transaction_seq |= (uint32_t)pos[i] << (24 - i * 8);
+    }
     pos += seq_len;
 
-    cfdp_view_init(&out->dest_entity_id, pos, out->entity_id_len);
+    out->dest_entity_id = 0;
+    for (size_t i = 0; i < 4 && i < out->entity_id_len; i++) {
+        out->dest_entity_id |= (uint32_t)pos[i] << (24 - i * 8);
+    }
 
     return (int)header_len;
 }
