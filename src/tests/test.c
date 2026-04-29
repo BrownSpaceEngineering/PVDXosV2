@@ -1,10 +1,13 @@
 
 #include "tests/test.h"
 
+#include "ccsds/cfdp_pdu.h"
+#include "ccsds/spp.h"
 #include "linalg/LinearAlgebra/declareFunctions.h"
 #include "logging.h"
-#include "radio/cfdp_pdu.h"
-#include "radio/spp.h"
+
+int tests_passed = 0;
+int tests_total = 0;
 
 void test_spp(void);
 void test_matrix_product(void);
@@ -14,6 +17,7 @@ void tests_run(void) {
     test_spp();
     test_matrix_product();
     test_cfdp();
+    test_log("test results: %d/%d passed", tests_passed, tests_total);
 }
 
 // #ifdef UNITTEST

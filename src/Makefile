@@ -112,8 +112,8 @@ export OBJS :=                                              	\
 																\
 ../src/checks/device_checks.o 									\
 																\
-../src/tasks/radio/spp.o 										\
-../src/tasks/radio/cfdp_pdu.o 									\
+../src/ccsds/spp.o 										\
+../src/ccsds/cfdp_pdu.o 									\
 ../src/tests/test.o                                             \
 																
 
@@ -148,6 +148,7 @@ export EXTRA_VPATH := \
 ../../src/tasks/adcs \
 ../../src/mutexes \
 ../../src/checks \
+../../src/ccsds \
 ../../src/tests \
 ../../src/linalg \
 ../../src/linalg/Lapack \
