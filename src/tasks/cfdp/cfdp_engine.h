@@ -77,6 +77,7 @@ cfdp_result_t cfdp_transact(cfdp_transaction_t *txn, uint32_t elapsed_ms);
  * TODO(in-progress): Implement process_pdu to update state based on incoming PDUs
  * TODO(open): Fix cfdp_send_* to correclty include directive codes between header and pdu.
  * TODO(optional): Implement CRC algorithm
+ * TODO(optional): Implement filestore requests for files we send? Specifically images
 
  */
 #endif

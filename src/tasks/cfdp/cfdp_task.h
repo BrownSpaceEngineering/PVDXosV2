@@ -86,6 +86,10 @@ typedef struct cfdp_transaction {
     uint32_t inactivity_timer;
     uint32_t ack_timer;
     uint32_t nak_timer;
+
+    uint32_t checksum;
+    uint8_t checksum_mode;
+
     uint8_t eof_retransmit_counter;
     uint8_t nak_retransmit_counter;
 
@@ -129,6 +133,8 @@ int send(void *buff, size_t sz);
 int recv(void *buff, size_t sz);
 
 void cfdp_process_pdu(uint8_t *raw, size_t sz);
+
+size_t cfdp_process_crc(uint8_t *raw, size_t pdu_sz);
 
 QueueHandle_t init_cfdp(void);
 void main_cfdp(void *pvParameters);
