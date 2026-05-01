@@ -51,6 +51,7 @@ size_t cfdp_put_request(cfdp_txn_type_t type, cfdp_direction_t dir) {
                                       .inactivity_timer = 0,
                                       .ack_timer = 0,
                                       .nak_timer = 0,
+                                      .checksum_type = 0,
                                       .eof_retransmit_counter = 0,
                                       .nak_retransmit_counter = 0,
                                       .nak_buf = (cfdp_nak_buf_t){.segments = {0}, .head = 0, .tail = 0, .size = 0},
@@ -126,13 +127,13 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz) {
         return;
     }
 
-    size_t header_size = (size_t)bytes_read;
+    size_t header_sz = (size_t)bytes_read;
 
     // get PDU type
     uint8_t dir_code = 0;
 
     if (header.pdu_type == 0) {
-        dir_code = raw[header_size];
+        dir_code = raw[header_sz];
     }
 
     cfdp_transaction_t *txn = NULL;
@@ -145,7 +146,7 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz) {
     }
     if (txn == NULL) {
         if (dir_code != CFDP_DIR_METADATA) {
-            debug("cfdp: unknown incoming pdu of type %x disregarded\n", dir_code);
+            debug("cfdp: incoming from unknown sequence %x pdu of type %x disregarded\n", header.transaction_seq, dir_code);
             return;
         }
 
@@ -158,15 +159,88 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz) {
         // create new transaction
     }
 
+    size_t dir_sz = (dir_code) ? 1 : 0;
+    size_t crc_sz = (header.crc) ? 2 : 0;
+    if (header_sz + header.pdu_data_length + dir_sz + crc_sz > sz) { // should this check for minimum bound or exact?
+        debug("cfdp: incoming pdu below specified length\n");
+    }
+
+    if (header.crc && cfdp_process_crc(raw, header_sz + header.pdu_data_length + dir_sz) != 0) {
+        debug("cfdp: crc failed, incoming pdu disregarded\n");
+    }
+
+    uint8_t *pdu = raw + header_sz + dir_sz;
+
     // Note: probably want to strucutre this where each case calls a function that handles that PDU type specifically
     switch (dir_code) {
         case 0: // Not an offical CFDP Directive Code, but we will treat it as file data
             break;
         case CFDP_DIR_EOF:
+            cfdp_pdu_eof_t eof;
+            cfdp_pdu_eof_parse(pdu, header.pdu_data_length, false, &eof);
+
+            if (txn->direction != CFDP_RECV) {
+                debug("cfdp: recieved eof for a transaction we are sending, pdu disregarded\n");
+                return;
+            }
+
+            cfdp_update_nak_buf(txn, txn->file_size); // need to work out how this will be done
+
+            // I think we can assume all files we recieve will not use variable size, so we can disregard the new size data here
+            // not sure though
+            if (eof.condition_code != CFDP_COND_NOERROR) {
+                debug("cfdp: error code recieved in incoming eof pdu: %x\n", header.transaction_seq);
+                txn->state = CFDP_RECV_STATE_ERR;
+                return;
+            }
+
+            txn->checksum = eof.checksum; // calculate once we have recievied entire file.
+
+            if (txn->nak_buf.size > 0) {
+                txn->state = CFDP_RECV_STATE_SEND_NAK;
+            } else {
+                txn->state = CFDP_RECV_STATE_SEND_FIN;
+            }
+
             break;
         case CFDP_DIR_FINISHED:
+            cfdp_pdu_finished_t fin;
+            cfdp_pdu_finished_parse(pdu, header.pdu_data_length, &fin);
+
+            if (txn->direction != CFDP_SEND) {
+                debug("cfdp: recieved fin for a transaction we are receiving, pdu disregarded\n");
+                return;
+            }
+
+            if (fin.condition_code != CFDP_COND_NOERROR || fin.delivery_code == 1) {
+                debug("cfdp: error condition/delivery code recieved in incoming fin pdu: %x\n", header.transaction_seq);
+                txn->state = CFDP_SEND_STATE_ERR;
+                return;
+            }
+            // if we add support for filestore interaction, that will need to be dealt with here.
+
+            txn->state = CFDP_SEND_STATE_DONE;
             break;
         case CFDP_DIR_ACK:
+            cfdp_pdu_ack_t ack;
+            cfdp_pdu_ack_parse(pdu, header.pdu_data_length, &ack);
+
+            if (txn->direction == CFDP_SEND && ack.directive_code == CFDP_DIR_EOF) {
+                debug("cfdp: recieved an eof ack for a transaction we are transmitting, pdu disregarded\n");
+                return;
+            }
+
+            if (txn->direction == CFDP_RECV && ack.directive_code == CFDP_DIR_FINISHED) {
+                debug("cfdp: recieved an fin ack for a transaction we are recieving, pdu disregarded\n");
+                return;
+            }
+
+            if (ack.directive_code == CFDP_DIR_EOF) {
+                if (ack.condition_code != CFDP_COND_NOERROR) {
+                    debug("");
+                }
+            }
+
             break;
         case CFDP_DIR_METADATA: // should always be handled with the check above, because we should never recieve metadata for a txn we
                                 // already have in store
