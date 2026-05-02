@@ -187,8 +187,8 @@ typedef struct cfdp_pdu_segment_request {
 typedef struct cfdp_pdu_nak {
     uint32_t start_of_scope; // BB lists as a variable length field
     uint32_t end_of_scope;
-    uint32_t segment_request_count;
-    cfdp_pdu_segment_request_t segment_requests[CFDP_MAX_SEGMENT_REQUESTS];
+    /*uint32_t segment_request_count;
+    cfdp_pdu_segment_request_t segment_requests[CFDP_MAX_SEGMENT_REQUESTS];*/
 } cfdp_pdu_nak_t;
 
 /*

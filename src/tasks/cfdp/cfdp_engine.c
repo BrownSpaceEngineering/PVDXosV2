@@ -94,6 +94,7 @@ void cfdp_handle_send_state(cfdp_transaction_t *transaction, uint32_t elapsed_ms
     switch (transaction->state) {
         case CFDP_SEND_STATE_METADATA_SEND:
             cfdp_send_metadata(transaction);
+            transaction->state = CFDP_SEND_STATE_FILE_SEND;
             break;
         case CFDP_SEND_STATE_FILE_SEND:
             if (transaction->nak_buf.size > 0) {
@@ -115,7 +116,9 @@ void cfdp_handle_send_state(cfdp_transaction_t *transaction, uint32_t elapsed_ms
             }
             break;
         case CFDP_SEND_STATE_WAIT_FIN:
-            // do anything?
+            if (transaction->nak_buf.size > 0) {
+                cfdp_resend(transaction);
+            }
             break;
         case CFDP_SEND_STATE_ERR:
             // panic? or just fail silently?
@@ -342,7 +345,6 @@ int cfdp_send_metadata(cfdp_transaction_t *transaction) {
     }
 
     cfdp_send(transaction, buff, metadata_size + 16);
-    transaction->state = CFDP_SEND_STATE_FILE_SEND;
     return 0;
 }
 

@@ -19,6 +19,9 @@
 
 #define TXN_FRAME 0x1000
 
+#define IMAGE_FILE_SZ 0x10000
+#define TELEMETRY_FILE_SZ 0x100
+
 // Placed in a struct to ensure that the TCB is placed higher than the stack in memory
 //^ This ensures that stack overflows do not corrupt the TCB (since the stack grows downwards)
 typedef struct {
@@ -125,7 +128,7 @@ extern cfdp_task_memory_t cfdp_mem;
 
 extern cfdp_transaction_store_t cfdp_txn_store;
 
-size_t cfdp_put_request(cfdp_txn_type_t type);
+size_t cfdp_put_request(cfdp_txn_type_t type, cfdp_direction_t dir);
 
 void cfdp_cancel_request(uint32_t txn_id);
 
