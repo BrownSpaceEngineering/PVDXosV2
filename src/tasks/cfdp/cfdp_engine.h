@@ -34,7 +34,7 @@ uint32_t next_seq_num(void);
 void uint32_to_big_endian(uint32_t src, uint8_t dst[4]);
 void uint16_to_big_endian(uint16_t src, uint8_t dst[2]);
 
-int cfdp_nak_push(cfdp_nak_buf_t buf, cfdp_pdu_segment_request_t segment);
+int cfdp_nak_buf_push(cfdp_nak_buf_t buf, cfdp_pdu_segment_request_t segment);
 cfdp_pdu_segment_request_t cfdp_nak_buf_pop(cfdp_nak_buf_t *buf);
 
 cfdp_transaction_t *cfdp_alloc_transaction(cfdp_transaction_store_t *txn_store);

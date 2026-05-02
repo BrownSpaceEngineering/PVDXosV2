@@ -245,12 +245,12 @@ int cfdp_pdu_nak_parse(const uint8_t *raw, size_t len, cfdp_pdu_nak_t *out) {
     out->start_of_scope = ((uint32_t)raw[0] << 24) | ((uint32_t)raw[1] << 16) | ((uint32_t)raw[2] << 8) | raw[3];
     out->end_of_scope = ((uint32_t)raw[4] << 24) | ((uint32_t)raw[5] << 16) | ((uint32_t)raw[6] << 8) | raw[7];
 
-    uint32_t segment_request_count = (len - 8) / 8;
+    /*uint32_t segment_request_count = (len - 8) / 8;
     out->segment_request_count = segment_request_count;
 
     for (size_t i = 0; i < segment_request_count; i++) {
         cfdp_pdu_segment_request_parse(raw + 8 + (i * 8), 8, out->segment_requests + i);
-    }
+    }*/
     return (int)len;
 }
 

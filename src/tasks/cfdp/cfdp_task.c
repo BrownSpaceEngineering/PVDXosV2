@@ -46,28 +46,32 @@ size_t cfdp_put_request(cfdp_txn_type_t type, cfdp_direction_t dir) {
     uint32_t seq_num = next_seq_num();
     uint8_t *file_data = (type == IMAGE) ? IMAGE_BUF : TELEMETRY_BUF;
 
-    cfdp_txn_store.transactions[i] = {.transaction_id = (cfdp_transaction_id_t){.entity_id = ENTITY_ID_SPACECRAFT, .seq_num = seq_num},
-                                      .dest_entity_id = ENTITY_ID_SPACECRAFT,
-                                      .inactivity_timer = 0,
-                                      .ack_timer = 0,
-                                      .nak_timer = 0,
-                                      .checksum_type = 0,
-                                      .eof_retransmit_counter = 0,
-                                      .nak_retransmit_counter = 0,
-                                      .nak_buf = (cfdp_nak_buf_t){.segments = {0}, .head = 0, .tail = 0, .size = 0},
-                                      .file_size = file_size,
-                                      .file_offset = 0,
-                                      .state = state,
-                                      .reliable_mode = true,
-                                      .file_data = file_data,
-                                      .source_filename = (cfdp_lv_t){.length = 4, .value = seq_num},
-                                      .dest_filename = (cfdp_lv_t){.length = 4, .value = seq_num}};
+    cfdp_txn_store.transactions[store_index] =
+        (cfdp_transaction_t){.transaction_id = (cfdp_transaction_id_t){.entity_id = ENTITY_ID_SPACECRAFT, .seq_num = seq_num},
+                             .dest_entity_id = ENTITY_ID_SPACECRAFT,
+                             .inactivity_timer = 0,
+                             .ack_timer = 0,
+                             .nak_timer = 0,
+                             .checksum_mode = 0,
+                             .eof_retransmit_counter = 0,
+                             .nak_retransmit_counter = 0,
+                             .nak_buf = (cfdp_nak_buf_t){.segments = {0}, .head = 0, .tail = 0, .size = 0},
+                             .file_size = file_size,
+                             .file_offset = 0,
+                             .state = state,
+                             .reliable_mode = true,
+                             .file_data = file_data,
+                             .source_filename = (cfdp_lv_t){.length = 4, .value = seq_num},
+                             .dest_filename = (cfdp_lv_t){.length = 4, .value = seq_num}};
 }
 
 void cfdp_cancel_request(uint32_t txn_id) {
     size_t store_index = MAX_TRANSACTIONS;
     for (size_t i = 0; i < MAX_TRANSACTIONS; ++i) {
-        if (cfdp_txn_store.active[i] && cfdp_txn_store.transactions[i].transaction_id == txn_id) {}
+        if (cfdp_txn_store.active[i] && cfdp_txn_store.transactions[i].transaction_id.seq_num == txn_id &&
+            cfdp_txn_store.transactions[i].transaction_id.entity_id == ENTITY_ID_SPACECRAFT) {
+            store_index = i;
+        }
     }
 
     if (store_index == MAX_TRANSACTIONS) {
@@ -146,6 +150,7 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz) {
     }
     if (txn == NULL) {
         if (dir_code != CFDP_DIR_METADATA) {
+            // we need to actually send a NAK for the metadata here...
             debug("cfdp: incoming from unknown sequence %x pdu of type %x disregarded\n", header.transaction_seq, dir_code);
             return;
         }
@@ -225,6 +230,8 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz) {
             cfdp_pdu_ack_t ack;
             cfdp_pdu_ack_parse(pdu, header.pdu_data_length, &ack);
 
+            // need to work out logic with condition codes / directive/subdirective codes
+
             if (txn->direction == CFDP_SEND && ack.directive_code == CFDP_DIR_EOF) {
                 debug("cfdp: recieved an eof ack for a transaction we are transmitting, pdu disregarded\n");
                 return;
@@ -235,17 +242,46 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz) {
                 return;
             }
 
-            if (ack.directive_code == CFDP_DIR_EOF) {
-                if (ack.condition_code != CFDP_COND_NOERROR) {
-                    debug("");
-                }
+            if (ack.condition_code != CFDP_COND_NOERROR || ack.transaction_status != 0b01) {
+                debug("cfdp: ack for pdu of type %x recieved with error condition code/status\n", dir_code);
+                return;
             }
 
+            if (ack.directive_code == CFDP_DIR_EOF) {
+                txn->state = CFDP_SEND_STATE_WAIT_FIN;
+            } else if (ack.directive_code == CFDP_DIR_FINISHED) {
+                txn->state = CFDP_RECV_STATE_DONE;
+            } else {
+                debug("cfdp: unrecongized directive code for an ACK (only Fin/Eof are acknowledged)");
+                return;
+            }
             break;
         case CFDP_DIR_METADATA: // should always be handled with the check above, because we should never recieve metadata for a txn we
                                 // already have in store
             break;
         case CFDP_DIR_NAK:
+
+            cfdp_pdu_nak_t nak;
+            cfdp_pdu_nak_parse(pdu, header.pdu_data_length, &nak);
+
+            if (txn->direction != CFDP_SEND) {
+                debug("cfdp: recieved a nak for a transaction we are transmitting, pdu disregarded\n");
+                return;
+            }
+
+            if (header.pdu_data_length <= 8) {
+                debug("cfdp: nak pdu has no segment requests\n"); // is this sometimes valid? need to read more closesly
+                return;
+            }
+
+            size_t nak_offset = 8;
+
+            for (size_t seg_offset = 0; seg_offset < header.pdu_data_length - nak_offset; seg_offset += 8) {
+                cfdp_pdu_segment_request_t seg;
+                cfdp_pdu_semgment_request_parse(pdu + nak_offset + seg_offset, 8, &seg);
+                cfdp_nak_buf_push(&txn->nak_buf, seg);
+            }
+
             break;
         default:
             debug("cfdp: unrecognized directive code: %x", dir_code);
