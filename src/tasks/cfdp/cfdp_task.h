@@ -58,6 +58,8 @@ typedef struct at86rf215 at86rf215_t;
 #define CFDP_SMALL_BUFF_SZ 128
 #define CFDP_SMALL_BUFF_COUNT 4
 
+#define CFDP_MAX_PDU_SIZE 128
+
 // Placed in a struct to ensure that the TCB is placed higher than the stack in memory
 //^ This ensures that stack overflows do not corrupt the TCB (since the stack grows downwards)
 typedef struct {
@@ -196,6 +198,10 @@ cfdp_transaction_t *cfdp_alloc_transaction(cfdp_transaction_store_t *txn_store);
 void cfdp_free_transaction(cfdp_transaction_store_t *txn_store, cfdp_transaction_t *txn);
 cfdp_transaction_t *cfdp_find_transaction(cfdp_transaction_store_t *txn_store, uint32_t entity_id, uint32_t seq_num);
 
+uint8_t *cfdp_alloc_small_buff();
+uint8_t *cfdp_alloc_large_buff();
+int cfdp_free_buff(uint8_t *buff);
+
 cfdp_transaction_t *cfdp_send_init(cfdp_transaction_store_t *txn_store, uint8_t *fl, uint32_t sz, cfdp_lv_t source_filename,
                                    cfdp_lv_t dest_filename, uint32_t source_entity_id, uint32_t dest_entity_id, uint8_t channel_num,
                                    uint8_t priority, bool reliable_mode, at86rf215_t *radio_handle);
@@ -208,6 +214,7 @@ cfdp_result_t cfdp_transact(cfdp_transaction_t *txn, uint32_t elapsed_ms);
 size_t cfdp_put_request(cfdp_txn_type_t type, cfdp_direction_t dir);
 void cfdp_cancel_request(uint32_t txn_id);
 
+void cfdp_send(cfdp_transaction_t *transaction, const uint8_t *buff, size_t sz);
 int send(void *buff, size_t sz);
 int recv(void *buff, size_t sz);
 
@@ -219,6 +226,7 @@ int cfdp_send_fin(cfdp_transaction_t *transaction);
 int cfdp_send_ack(cfdp_transaction_t *transaction, uint8_t acked_directive_code, uint8_t directive_subtype_code, uint8_t condition_code,
                   uint8_t transaction_status);
 int cfdp_send_eof(cfdp_transaction_t *transaction, uint8_t condition_code);
+int cfdp_send_nak(cfdp_transaction_t *transaction);
 int cfdp_resend(cfdp_transaction_t *transaction);
 
 void exec_command_cfdp_request(command_t *const p_cmd);

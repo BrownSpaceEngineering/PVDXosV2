@@ -610,33 +610,20 @@ void cfdp_handle_recv_state(cfdp_transaction_t *transaction, uint32_t elapsed_ms
     }
 }
 
-static void cfdp_send(cfdp_transaction_t *transaction, const uint8_t *buff, size_t sz) {
+void cfdp_send(cfdp_transaction_t *transaction, const uint8_t *buff, size_t sz) {
     at86rf215_tx_frame(transaction->radio_handle, (at86rf215_radio_t)transaction->channel_num, buff, sz, TX_TIMEOUT_MS);
 }
 
-static void cfdp_send_nak(cfdp_transaction_t *transaction) {
-    if (transaction == NULL || transaction->nak_buf.size == 0) {
-        return;
-    }
+int send(void *buff, size_t sz) {
+    (void)buff;
+    (void)sz;
+    return 0;
+}
 
-    uint32_t n = transaction->nak_buf.size;
-    size_t nak_data_size = 9 + (8 * n);
-    uint8_t buff[16 + nak_data_size];
-
-    cfdp_prepare_pdu_header(buff, transaction, (uint16_t)nak_data_size, CFDP_FILE_DIRECTIVE);
-
-    uint8_t *nak_buff = buff + 16;
-    nak_buff[0] = CFDP_DIR_NAK;
-    uint32_to_big_endian(0, nak_buff + 1);
-    uint32_to_big_endian(transaction->file_size, nak_buff + 5);
-
-    for (uint32_t i = 0; i < n; i++) {
-        cfdp_pdu_segment_request_t seg = transaction->nak_buf.segments[(transaction->nak_buf.tail + i) % CFDP_MAX_SEGMENT_REQUESTS];
-        uint32_to_big_endian(seg.start_offset, nak_buff + 9 + (i * 8));
-        uint32_to_big_endian(seg.end_offset, nak_buff + 13 + (i * 8));
-    }
-
-    cfdp_send(transaction, buff, 16 + nak_data_size);
+int recv(void *buff, size_t sz) {
+    (void)buff;
+    (void)sz;
+    return 0;
 }
 
 /* ---------- CFDP Utility and PDU Build/Send ---------- */
@@ -724,6 +711,37 @@ cfdp_transaction_t *cfdp_find_transaction(cfdp_transaction_store_t *txn_store, u
         }
     }
     return NULL;
+}
+
+uint8_t *cfdp_alloc_small_buff() {
+    for (size_t i = 0; i < CFDP_SMALL_BUFF_COUNT; ++i) {
+        if (!cfdp_small_buffs.in_use[i]) {
+            return &cfdp_small_buffs.buff[i * CFDP_SMALL_BUFF_SZ];
+        }
+    }
+    return NULL;
+}
+
+uint8_t *cfdp_alloc_large_buff() {
+    if (cfdp_large_buff.in_use) {
+        return NULL;
+    } else {
+        return cfdp_large_buff.buff;
+    }
+}
+
+int cfdp_free_buff(uint8_t *buff) {
+    if (cfdp_large_buff.buff == buff) {
+        cfdp_large_buff.in_use = false;
+        return 0;
+    }
+    for (size_t i = 0; i < CFDP_SMALL_BUFF_COUNT; ++i) {
+        if (&cfdp_small_buffs.buff[i * CFDP_SMALL_BUFF_SZ] == buff) {
+            cfdp_small_buffs.in_use[i] = false;
+            return 0;
+        }
+    }
+    return -1;
 }
 
 uint32_t cfdp_calculate_modular_checksum(cfdp_transaction_t *txn) {

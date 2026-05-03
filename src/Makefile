@@ -115,7 +115,8 @@ export OBJS :=                                              	\
 ../src/tasks/radio/spp.o 										\
 ../src/tests/test.o                                             \
 ../src/tasks/cfdp/cfdp_main.o 									\
-../src/tasks/cfdp/cfdp_task.o 								\
+../src/tasks/cfdp/cfdp_task.o 									\
+../src/tasks/cfdp/cfdp_pdu.o 									\
 																
 
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###

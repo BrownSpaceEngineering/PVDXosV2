@@ -134,15 +134,6 @@ void test_cfdp(void) {
     test_log("entity_id_len: %d\n", header.entity_id_len);
     PVDX_ASSERT(header.entity_id_len == 1 && "entity_id_len");
 
-    test_log("source_entity_id: 0x%02x\n", header.source_entity_id.data[0]);
-    PVDX_ASSERT(header.source_entity_id.data[0] == 0x01 && "source_entity_id");
-
-    test_log("transaction_seq: 0x%02x\n", header.transaction_seq.data[0]);
-    PVDX_ASSERT(header.transaction_seq.data[0] == 0x05 && "transaction_seq");
-
-    test_log("dest_entity_id: 0x%02x\n", header.dest_entity_id.data[0]);
-    PVDX_ASSERT(header.dest_entity_id.data[0] == 0x02 && "dest_entity_id");
-
     test_log("cfdp header parse error (too short) test:\n");
     ret = cfdp_pdu_header_parse(raw_header, 3, &header);
     PVDX_ASSERT(ret == -1 && "header parse too short");

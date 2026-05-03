@@ -67,7 +67,7 @@ void main_cfdp(void *pvParameters) {
     const TickType_t queue_block_time_ticks = get_command_queue_block_time_ticks(current_task);
     // Variable to hold commands popped off the queue
     command_t cmd;
-    uint8_t *recv_buff;
+    uint8_t recv_buff[CFDP_MAX_PDU_SIZE];
 
     while (true) {
         while (cfdp_txn_store.slot_free && xQueueReceive(p_cfdp_task->command_queue, &cmd, queue_block_time_ticks) == pdPASS) {
