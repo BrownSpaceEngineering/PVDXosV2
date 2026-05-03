@@ -8,17 +8,18 @@
  * Authors: Noah Shepard
  */
 
-#include "tasks/cfdp/cfdp_engine.h"
-#include "tasks/cfdp/cfdp_task.h"
 #include "command_dispatcher_task.h"
 #include "drivers/rtc/rtc_driver.h"
 #include "globals.h"
 #include "logging.h"
+#include "tasks/cfdp/cfdp_task.h"
 #include "watchdog_task.h"
 
-// CFDP Task Memory Structure
+// CFDP Task Memory Structure & CFDP Memory Stores
 cfdp_task_memory_t cfdp_mem;
 cfdp_transaction_store_t cfdp_txn_store;
+cfdp_large_buff_t cfdp_large_buff;
+cfdp_small_buffs_t cfdp_small_buffs;
 
 /**
  * \fn init_cfdp
