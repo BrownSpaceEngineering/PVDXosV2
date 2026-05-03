@@ -243,11 +243,6 @@ static inline uint64_t cfdp_view_to_uint(const cfdp_data_view_t *view) {
     return result;
 }
 
-static inline void cfdp_transaction_id_init(const cfdp_pdu_header_t *header, cfdp_transaction_id_t *out) {
-    out->entity_id = cfdp_view_to_uint(&header->source_entity_id);
-    out->seq_num = cfdp_view_to_uint(&header->transaction_seq);
-}
-
 static inline bool cfdp_tlv_next(const uint8_t **pos, const uint8_t *end, cfdp_tlv_t *out) {
     if (*pos + 2 > end)
         return false;

@@ -360,9 +360,9 @@ int cfdp_send_filedata(cfdp_transaction_t *transaction, uint32_t offset, uint32_
  * transaction's nak_buf. Does NOT pop the buffer — gaps stay tracked until the
  * sender retransmits and the caller clears them on receipt.
  */
-static void cfdp_send_nak(cfdp_transaction_t *transaction) {
+int cfdp_send_nak(cfdp_transaction_t *transaction) {
     if (transaction == NULL || transaction->nak_buf.size == 0) {
-        return;
+        return -1;
     }
 
     uint32_t n = transaction->nak_buf.size;
@@ -395,6 +395,7 @@ static void cfdp_send_nak(cfdp_transaction_t *transaction) {
     uint32_to_big_endian(end_scope, nak_buff + 5);   // end_of_scope: full file extent
 
     cfdp_send(transaction, buff, 16 + nak_data_size);
+    return nak_data_size;
 }
 
 /**
