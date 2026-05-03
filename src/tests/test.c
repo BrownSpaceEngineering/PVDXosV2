@@ -1,6 +1,7 @@
 
 #include "test.h"
 #include "adcs_test.h"
+#include "eps.h"
 
 #include "declareFunctions.h"
 #include "logging.h"
