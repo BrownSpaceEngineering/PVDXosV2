@@ -74,7 +74,6 @@
 #define CFDP_TLV_ENTITY_ID 0x06
 
 // Implementation Specific
-#define CFDP_MAX_SEGMENT_REQUESTS 16 // Placeholder Value depends on the following,
 // - Size of JPEG/Raw Image
 // - Size of SPP Packets
 
