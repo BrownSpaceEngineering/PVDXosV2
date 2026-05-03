@@ -4,8 +4,9 @@
 #include "cfdp_task.h"
 #include "string.h"
 /*""
-    "TODOS:
-    1. Add in timer logic
+    /*
+    TODOS:
+    1. (done) Add in timer logic
 
     2. Ensure all macro numbering is proper
 
@@ -16,6 +17,23 @@
     "*/
 
 // note : this currently doesn't build but i dont have time to fix it rn...
+
+/**
+ * next_seq_num
+ *
+ * Returns the next transaction sequence number, then increments the counter.
+ * The counter is held in RAM (static variable), so it resets to 1 on power-cycle.
+ *
+ * TODO(open): Back this counter with MRAM once a CFDP MRAM driver is available,
+ * so sequence numbers survive resets and never alias an in-progress transaction
+ * on the ground side. Suggested layout: write the new counter value to a known
+ * MRAM address (e.g. CFDP_SEQ_NUM_MRAM_ADDR) before returning it, and read it
+ * back during init_cfdp() to restore the last value.
+ */
+uint32_t next_seq_num(void) {
+    static uint32_t counter = 0;
+    return ++counter;
+}
 
 /**
  * cfdp_send_init
@@ -94,7 +112,6 @@ void cfdp_handle_send_state(cfdp_transaction_t *transaction, uint32_t elapsed_ms
     switch (transaction->state) {
         case CFDP_SEND_STATE_METADATA_SEND:
             cfdp_send_metadata(transaction);
-            transaction->state = CFDP_SEND_STATE_FILE_SEND;
             break;
         case CFDP_SEND_STATE_FILE_SEND:
             if (transaction->nak_buf.size > 0) {
@@ -104,27 +121,54 @@ void cfdp_handle_send_state(cfdp_transaction_t *transaction, uint32_t elapsed_ms
                 uint32_t chunk_size = (remaining < SEGMENT_SIZE) ? remaining : SEGMENT_SIZE;
                 cfdp_send_filedata(transaction, transaction->file_offset, chunk_size);
             } else {
+                // All data sent — transmit EOF and wait for ACK-of-EOF (reliable) or finish (unreliable).
+                // Blue Book Class 2: WAIT_ACK must come before WAIT_FIN; ACK-of-EOF drives the
+                // WAIT_ACK→WAIT_FIN transition in cfdp_process_pdu (CFDP_DIR_ACK handler).
                 cfdp_send_eof(transaction, CFDP_COND_NOERROR);
-                transaction->state = transaction->reliable_mode ? CFDP_SEND_STATE_WAIT_FIN : CFDP_SEND_STATE_DONE;
+                if (transaction->reliable_mode) {
+                    transaction->state = CFDP_SEND_STATE_WAIT_ACK;
+                    transaction->ack_timer = 0;
+                    transaction->eof_retransmit_counter = 0;
+                } else {
+                    transaction->state = CFDP_SEND_STATE_DONE;
+                }
             }
             break;
         case CFDP_SEND_STATE_WAIT_ACK:
-            transaction->ack_timer += elapsed_ms; // update timer waiting for ACK
+            // Waiting for ACK-of-EOF from the receiver. Retransmit EOF on timeout up to the limit.
+            transaction->ack_timer += elapsed_ms;
             if (transaction->ack_timer > ACK_TIMEOUT_MS) {
-                cfdp_send_eof(transaction, CFDP_COND_NOERROR);
                 transaction->ack_timer = 0;
+                if (transaction->eof_retransmit_counter >= ACK_RETRANSMIT_LIMIT) {
+                    // Receiver never acknowledged — give up.
+                    transaction->state = CFDP_SEND_STATE_ERR;
+                } else {
+                    transaction->eof_retransmit_counter++;
+                    cfdp_send_eof(transaction, CFDP_COND_NOERROR);
+                }
             }
             break;
         case CFDP_SEND_STATE_WAIT_FIN:
-            if (transaction->nak_buf.size > 0) {
-                cfdp_resend(transaction);
+            // ACK-of-EOF was received; now waiting for the receiver's Finished PDU.
+            // Reuse nak_timer here so it does not interfere with ack_timer's EOF retransmit role.
+            transaction->nak_timer += elapsed_ms;
+            if (transaction->nak_timer > NAK_TIMEOUT_MS) {
+                transaction->nak_timer = 0;
+                if (transaction->eof_retransmit_counter >= ACK_RETRANSMIT_LIMIT) {
+                    // Receiver never sent FIN — give up.
+                    transaction->state = CFDP_SEND_STATE_ERR;
+                } else {
+                    // Retransmit EOF to prompt the receiver to re-send its FIN.
+                    transaction->eof_retransmit_counter++;
+                    cfdp_send_eof(transaction, CFDP_COND_NOERROR);
+                }
             }
             break;
         case CFDP_SEND_STATE_ERR:
-            // panic? or just fail silently?
+            // Error is terminal — caller (cfdp_transact) will detect and free the slot.
             break;
         default:
-            // panic! A send transaction should always be one of these!
+            // Unreachable for a properly initialised send transaction.
     }
 }
 
@@ -186,7 +230,16 @@ static void cfdp_send_nak(cfdp_transaction_t *transaction) {
 void cfdp_handle_recv_state(cfdp_transaction_t *transaction, uint32_t elapsed_ms) {
     switch (transaction->state) {
         case CFDP_RECV_STATE_FILE_RECV:
-            // do anything?
+            // Advance the NAK timer. If data stops arriving before an EOF appears, fire a NAK
+            // to prompt the sender. This handles the case where individual file-data PDUs are
+            // lost and the EOF never arrives because the sender is waiting for an ACK.
+            transaction->nak_timer += elapsed_ms;
+            if (transaction->nak_timer > NAK_TIMEOUT_MS && transaction->file_size > 0) {
+                // file_size is only non-zero after a Metadata PDU has been processed, so we
+                // know the full scope and can build a meaningful NAK.
+                transaction->nak_timer = 0;
+                transaction->state = CFDP_RECV_STATE_SEND_NAK;
+            }
             break;
         case CFDP_RECV_STATE_SEND_NAK:
             cfdp_send_nak(transaction);
@@ -194,20 +247,46 @@ void cfdp_handle_recv_state(cfdp_transaction_t *transaction, uint32_t elapsed_ms
             transaction->ack_timer = 0;
             break;
         case CFDP_RECV_STATE_WAIT_ACK:
+            // Waiting for the sender to retransmit the missing segments flagged in our NAK.
+            // On timeout, retransmit the NAK up to the retry limit.
             transaction->ack_timer += elapsed_ms;
             if (transaction->ack_timer > ACK_TIMEOUT_MS) {
-                transaction->state = CFDP_RECV_STATE_SEND_NAK;
+                transaction->ack_timer = 0;
+                if (transaction->nak_retransmit_counter >= NAK_RETRANSMIT_LIMIT) {
+                    transaction->state = CFDP_RECV_STATE_ERR;
+                } else {
+                    transaction->nak_retransmit_counter++;
+                    transaction->state = CFDP_RECV_STATE_SEND_NAK;
+                }
             }
             break;
         case CFDP_RECV_STATE_SEND_FIN:
-            transaction->ack_timer += elapsed_ms; // update timer waiting for ACK
-            if (transaction->ack_timer > ACK_TIMEOUT_MS) {
-                // cfdp_send_fin(transaction); need to implement
+            // File is complete. Send a Finished PDU and wait for ACK-of-FIN from the sender.
+            // Retransmit on timeout up to the retry limit.
+            cfdp_send_fin(transaction);
+            transaction->nak_retransmit_counter++;
+            if (transaction->nak_retransmit_counter > NAK_RETRANSMIT_LIMIT) {
+                transaction->state = CFDP_RECV_STATE_ERR;
+            } else {
+                transaction->state = CFDP_RECV_STATE_WAIT_FIN_ACK;
                 transaction->ack_timer = 0;
             }
             break;
+        case CFDP_RECV_STATE_WAIT_FIN_ACK:
+            // Waiting for ACK(Finished) from the sender.
+            transaction->ack_timer += elapsed_ms;
+            if (transaction->ack_timer > ACK_TIMEOUT_MS) {
+                transaction->ack_timer = 0;
+                // Timeout waiting for ACK(FIN): retransmit FIN.
+                transaction->state = CFDP_RECV_STATE_SEND_FIN;
+            }
+            break;
+        case CFDP_RECV_STATE_DONE:
+            // Terminal success — nothing to do; cfdp_transact will free the slot.
+            break;
         case CFDP_RECV_STATE_ERR:
         default:
+            break;
     }
 }
 
@@ -268,10 +347,31 @@ cfdp_transaction_t *cfdp_alloc_transaction(cfdp_transaction_store_t *txn_store) 
         if (!txn_store->active[i]) {
             txn_store->active[i] = true;
             memset(&txn_store->transactions[i], 0, sizeof(cfdp_transaction_t));
+            // Recompute slot_free: check if any other slot is still available.
+            txn_store->slot_free = false;
+            for (int j = 0; j < MAX_TRANSACTIONS; j++) {
+                if (!txn_store->active[j]) {
+                    txn_store->slot_free = true;
+                    break;
+                }
+            }
             return &txn_store->transactions[i];
         }
     }
     return NULL; // no free slots
+}
+
+void cfdp_free_transaction(cfdp_transaction_store_t *txn_store, cfdp_transaction_t *txn) {
+    if (txn_store == NULL || txn == NULL) {
+        return;
+    }
+    for (int i = 0; i < MAX_TRANSACTIONS; i++) {
+        if (&txn_store->transactions[i] == txn) {
+            txn_store->active[i] = false;
+            txn_store->slot_free = true;
+            return;
+        }
+    }
 }
 
 cfdp_transaction_t *cfdp_find_transaction(cfdp_transaction_store_t *txn_store, uint32_t entity_id, uint32_t seq_num) {
@@ -319,32 +419,39 @@ int cfdp_send_metadata(cfdp_transaction_t *transaction) {
 
     size_t source_filename_length = transaction->source_filename.length;
     size_t dest_filename_length = transaction->dest_filename.length;
+    // metadata content size (excludes the 1-byte directive code prefix)
     size_t metadata_size = 7 + source_filename_length + dest_filename_length;
+    // pdu_data_length includes the directive code byte (BB Table 5-1, Pg. 75)
+    size_t pdu_data_length = metadata_size + 1;
 
-    uint8_t buff[metadata_size + 16];
-    cfdp_prepare_pdu_header(buff, transaction, metadata_size & 0xFFFF, CFDP_FILE_DIRECTIVE);
+    uint8_t buff[pdu_data_length + 16];
+    cfdp_prepare_pdu_header(buff, transaction, (uint16_t)pdu_data_length, CFDP_FILE_DIRECTIVE);
 
     uint8_t *metadata_buff = buff + 16;
 
-    metadata_buff[0] = 0;
+    // Directive code must be the first byte of the PDU data field (BB Table 5-4, Pg. 78)
+    metadata_buff[0] = CFDP_DIR_METADATA;
+
+    metadata_buff[1] = 0;
 
     uint8_t req_closure = (transaction->reliable_mode) ? 0 : REQ_CLOSURE;
-    metadata_buff[0] |= (req_closure << 6);
-    metadata_buff[0] |= CHECKSUM_TYPE;
+    metadata_buff[1] |= (req_closure << 6);
+    metadata_buff[1] |= CHECKSUM_TYPE;
 
-    uint32_to_big_endian(transaction->file_size, metadata_buff + 1);
+    uint32_to_big_endian(transaction->file_size, metadata_buff + 2);
 
-    metadata_buff[5] = source_filename_length;
+    metadata_buff[6] = source_filename_length;
     for (size_t i = 0; i < source_filename_length; i++) {
-        metadata_buff[6 + i] = (transaction->source_filename.value)[i];
+        metadata_buff[7 + i] = (transaction->source_filename.value)[i];
     }
 
-    metadata_buff[6 + source_filename_length] = (dest_filename_length);
+    metadata_buff[7 + source_filename_length] = (dest_filename_length);
     for (size_t i = 0; i < dest_filename_length; i++) {
-        metadata_buff[7 + i + source_filename_length] = (transaction->source_filename.value)[i];
+        metadata_buff[8 + i + source_filename_length] = (transaction->dest_filename.value)[i];
     }
 
-    cfdp_send(transaction, buff, metadata_size + 16);
+    cfdp_send(transaction, buff, pdu_data_length + 16);
+    transaction->state = CFDP_SEND_STATE_FILE_SEND;
     return 0;
 }
 
@@ -387,28 +494,81 @@ uint32_t cfdp_calculate_modular_checksum(cfdp_transaction_t *txn) {
     return checksum + checksum_rem;
 }
 
+/**
+ * cfdp_send_fin
+ *
+ * Builds and transmits a Finished PDU (directive code 0x05).
+ * Used by the receive side in reliable mode to tell the sender that
+ * the complete file has been received and the checksum passed.
+ *
+ * Finished PDU data field (BB Pg. 80-81):
+ *   byte 0 : directive code (0x05)
+ *   byte 1 : condition_code[7:4] | spare[3] | delivery_code[2] | file_status[1:0]
+ *
+ * We always send: condition = NO_ERROR, delivery_code = 0 (complete), file_status = 0b00.
+ * No filestore-response or fault-location TLVs are appended.
+ */
+int cfdp_send_fin(cfdp_transaction_t *transaction) {
+    if (transaction == NULL)
+        return -1;
+
+    // pdu_data_length: 1 (directive) + 1 (flags byte)
+    uint8_t buff[18];
+    cfdp_prepare_pdu_header(buff, transaction, 2, CFDP_FILE_DIRECTIVE);
+
+    uint8_t *fin_buff = buff + 16;
+    fin_buff[0] = CFDP_DIR_FINISHED;
+    // condition_code=0 (NO_ERROR), spare=0, delivery_code=0 (complete), file_status=0b00
+    fin_buff[1] = (CFDP_COND_NOERROR << 4) | 0x00;
+
+    cfdp_send(transaction, buff, 18);
+    return 0;
+}
+
+int cfdp_send_ack(cfdp_transaction_t *transaction, uint8_t acked_directive_code, uint8_t directive_subtype_code,
+                  uint8_t condition_code, uint8_t transaction_status) {
+    if (transaction == NULL)
+        return -1;
+
+    // pdu_data_length: 1 (directive code) + 2 (ACK parameters)
+    uint8_t buff[19];
+    cfdp_prepare_pdu_header(buff, transaction, 3, CFDP_FILE_DIRECTIVE);
+
+    uint8_t *ack_buff = buff + 16;
+    ack_buff[0] = CFDP_DIR_ACK;
+    ack_buff[1] = ((acked_directive_code & 0x0F) << 4) | (directive_subtype_code & 0x0F);
+    ack_buff[2] = ((condition_code & 0x0F) << 4) | (transaction_status & 0x03);
+
+    cfdp_send(transaction, buff, 19);
+    return 0;
+}
+
 int cfdp_send_eof(cfdp_transaction_t *transaction, uint8_t condition_code) {
     size_t fault_location_size = 0;
     if (condition_code != CFDP_COND_NOERROR) {
         fault_location_size = 6;
     }
-    uint8_t buff[25 + fault_location_size];
+    // pdu_data_length: 1 (directive) + 1 (condition/spare) + 4 (checksum) + 4 (filesize) + optional fault TLV
+    size_t pdu_data_length = 10 + fault_location_size;
+    uint8_t buff[16 + pdu_data_length];
 
-    cfdp_prepare_pdu_header(buff, transaction, 9, CFDP_FILE_DIRECTIVE);
+    cfdp_prepare_pdu_header(buff, transaction, (uint16_t)pdu_data_length, CFDP_FILE_DIRECTIVE);
 
     uint8_t *eof_buff = buff + 16;
 
-    eof_buff[0] = (condition_code & 0xF) << 4;
-    uint32_to_big_endian(cfdp_calculate_modular_checksum(transaction), eof_buff + 1);
-    uint32_to_big_endian(transaction->file_offset, eof_buff + 5);
+    // Directive code must be the first byte of the PDU data field (BB Table 5-4, Pg. 78)
+    eof_buff[0] = CFDP_DIR_EOF;
+    eof_buff[1] = (condition_code & 0xF) << 4;
+    uint32_to_big_endian(cfdp_calculate_modular_checksum(transaction), eof_buff + 2);
+    uint32_to_big_endian(transaction->file_offset, eof_buff + 6);
 
     // We're making all entity IDs 4 Bytes, but we still have to encode TLV Format
     if (condition_code != CFDP_COND_NOERROR) {
-        eof_buff[9] = 0x06;
-        eof_buff[10] = 0x04;
-        uint32_to_big_endian(transaction->transaction_id.entity_id, eof_buff + 11);
+        eof_buff[10] = 0x06;
+        eof_buff[11] = 0x04;
+        uint32_to_big_endian(transaction->transaction_id.entity_id, eof_buff + 12);
     }
-    cfdp_send(transaction, buff, 25 + fault_location_size);
+    cfdp_send(transaction, buff, 16 + pdu_data_length);
     return 0;
 }
 
