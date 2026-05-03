@@ -144,6 +144,7 @@ pvdx_task_t *const p_task_manager_task = &task_manager_task;
 pvdx_task_t *const p_shell_task = &shell_task;
 pvdx_task_t *const p_display_task = &display_task;
 pvdx_task_t *const p_heartbeat_task = &heartbeat_task;
+pvdx_task_t *const p_reflash_task = &reflash_task;
 pvdx_task_t *const task_list_null_terminator = NULL;
 
 // Global list of all tasks running on PVDXos (see `pvdx_task_t` definition in globals.h)
@@ -156,6 +157,7 @@ pvdx_task_t *task_list[] = {
     p_watchdog_task,
     p_command_dispatcher_task,
     p_task_manager_task,
+    p_reflash_task,
     p_shell_task,
     p_display_task,
     p_heartbeat_task,

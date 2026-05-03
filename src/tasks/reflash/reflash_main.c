@@ -2,9 +2,11 @@
 #include "mram_driver.h"
 #include "watchdog_driver.h"
 
+#include "FreeRTOS.h"
+
 extern struct flash_descriptor FLASH_0;
 
-#define FLASH_BLOCK_SIZE 8192
+#define FLASH_BLOCK_SIZE 512
 #define FLASK_BLOCK_COUNT (MRAM_FLASH_SIZE / FLASH_BLOCK_SIZE)
 
 reflash_task_memory_t reflash_mem;
@@ -12,9 +14,9 @@ reflash_task_memory_t reflash_mem;
 uint8_t stored_checksums[FLASK_BLOCK_COUNT];
 bool stored_checksums_initialized = false;
 
-void reflash_bootloaders(void) {
+void reflash_bootloaders(bool sched_running) {
 #ifndef MRAM_OS_READ
-    return;
+    // return;
 #endif
 
     uint8_t mram_block[FLASH_BLOCK_SIZE];
@@ -24,15 +26,19 @@ void reflash_bootloaders(void) {
 
         if (stored_checksums_initialized) {
             if (crc32(flash_block, FLASH_BLOCK_SIZE) == stored_checksums[i]) {
-                continue;
+                // continue;
             }
         }
 
-        mram_read_bytes(MRAM_FLASH_BASE_ADDRESS + i * FLASH_BLOCK_SIZE, mram_block, FLASH_BLOCK_SIZE);
+        // mram_read_bytes(MRAM_FLASH_BASE_ADDRESS + i * FLASH_BLOCK_SIZE, mram_block, FLASH_BLOCK_SIZE);
+        // MOCK MRAM READ BY COPYING
+        for (uint32_t j = 0; j < FLASH_BLOCK_SIZE; j++) {
+            mram_block[j] = flash_block[j];
+        }
 
         stored_checksums[i] = crc32(mram_block, FLASH_BLOCK_SIZE);
 
-        bool any_error = false;
+        bool any_error = true; // MOCK AN ERROR 
         for (uint32_t j = 0; j < FLASH_BLOCK_SIZE; j++) {
             if (mram_block[j] != flash_block[j]) {
                 any_error = true;
@@ -43,8 +49,28 @@ void reflash_bootloaders(void) {
         if (any_error) {
             watchdog_pet();
 
+            volatile TickType_t start_ticks = xTaskGetTickCount();
+
+            if (sched_running) {
+                // taskENTER_CRITICAL();
+                vTaskSuspendAll();
+            } else {
+                __disable_irq();
+            }
+
             flash_erase(&FLASH_0, i * FLASH_BLOCK_SIZE, 1);
             flash_write(&FLASH_0, i * FLASH_BLOCK_SIZE, mram_block, FLASH_BLOCK_SIZE);
+
+            if (sched_running) {
+                //taskEXIT_CRITICAL();
+                xTaskResumeAll();
+            } else {
+                __enable_irq();
+            }
+
+            volatile TickType_t end_ticks = xTaskGetTickCount();
+            volatile uint32_t ms = (end_ticks - start_ticks) * 1000 / configTICK_RATE_HZ;
+            (void)ms;
 
             watchdog_pet();
         }
@@ -55,10 +81,7 @@ void reflash_bootloaders(void) {
 
 void main_reflash_task(void *pvParameters) {
     while (true) {
-        vTaskDelay(pdMS_TO_TICKS(1000 * 60 * 60 * 6));
-
-        vTaskSuspendAll(); // make this a critical section?
-        reflash_bootloaders();
-        xTaskResumeAll();
+        vTaskDelay(pdMS_TO_TICKS(1000 * 10)); // 1000 * 60 * 60 * 6
+        reflash_bootloaders(true);
     }
 }

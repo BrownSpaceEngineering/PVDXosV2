@@ -16,11 +16,11 @@ def write_linker_files():
 def write_index_file():
     h_file = """
 #if defined(BOOTLOADER_1)
-#define BOOTLOADER_INDEX 1"""
+#define BOOTLOADER_INDEX 0"""
     for i in range(2, bootloader_count + 1):
         h_file += f"""
 #elif defined(BOOTLOADER_{i})
-#define BOOTLOADER_INDEX {i}"""
+#define BOOTLOADER_INDEX {i - 1}"""
     h_file += """
 #else
 #define BOOTLOADER_INDEX 255

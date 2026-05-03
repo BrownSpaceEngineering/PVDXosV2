@@ -19,7 +19,7 @@ int main(void);
 void go_to_app(void);
 
 int main(void) {
-    uint8_t bootloader_index = (BOOTLOADER_INDEX-1);
+    uint8_t bootloader_index = (BOOTLOADER_INDEX);
     // If no bootloader flag was defined, panic
     while (bootloader_index == 255);
 
