@@ -8,7 +8,8 @@
  * Authors: Noah Shepard
  */
 
-#include "cfdp_task.h"
+#include "tasks/cfdp/cfdp_engine.h"
+#include "tasks/cfdp/cfdp_task.h"
 #include "command_dispatcher_task.h"
 #include "drivers/rtc/rtc_driver.h"
 #include "globals.h"
@@ -80,8 +81,18 @@ void main_cfdp(void *pvParameters) {
         uint32_t elapsed_ms = 10; // how do i use RTC? / calculate this
 
         for (size_t i = 0; i < MAX_TRANSACTIONS; i++) {
+            if (!cfdp_txn_store.active[i]) {
+                continue;
+            }
             // probably need to update elapsed_ms for each transaction
-            cfdp_transact(cfdp_txn_store.transactions[i], elapsed_ms);
+            cfdp_result_t result = cfdp_transact(&cfdp_txn_store.transactions[i], elapsed_ms);
+            if (result == CFDP_RESULT_COMPLETE) {
+                info("cfdp: transaction %lu complete\n", cfdp_txn_store.transactions[i].transaction_id.seq_num);
+                cfdp_free_transaction(&cfdp_txn_store, &cfdp_txn_store.transactions[i]);
+            } else if (result == CFDP_RESULT_ERROR) {
+                warning("cfdp: transaction %lu ended with error\n", cfdp_txn_store.transactions[i].transaction_id.seq_num);
+                cfdp_free_transaction(&cfdp_txn_store, &cfdp_txn_store.transactions[i]);
+            }
         }
 
         // Check in with the watchdog task

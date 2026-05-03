@@ -28,7 +28,7 @@ typedef struct at86rf215 at86rf215_t;
 
 #define TX_TIMEOUT_MS 5000UL // max time to wait for a single PDU transmission to complete
 
-// DUMMY FUNCTIONS
+// next_seq_num: returns the next transaction sequence number (RAM counter; see cfdp_engine.c TODO for MRAM backing)
 uint32_t next_seq_num(void);
 
 void uint32_to_big_endian(uint32_t src, uint8_t dst[4]);
@@ -38,6 +38,7 @@ int cfdp_nak_buf_push(cfdp_nak_buf_t buf, cfdp_pdu_segment_request_t segment);
 cfdp_pdu_segment_request_t cfdp_nak_buf_pop(cfdp_nak_buf_t *buf);
 
 cfdp_transaction_t *cfdp_alloc_transaction(cfdp_transaction_store_t *txn_store);
+void cfdp_free_transaction(cfdp_transaction_store_t *txn_store, cfdp_transaction_t *txn);
 cfdp_transaction_t *cfdp_find_transaction(cfdp_transaction_store_t *txn_store, uint32_t entity_id, uint32_t seq_num);
 
 void cfdp_send_prompt(cfdp_transaction_t *txn);
@@ -57,6 +58,11 @@ int cfdp_send_filedata(cfdp_transaction_t *transaction, uint32_t offset, uint32_
 
 uint32_t cfdp_calculate_modular_checksum(cfdp_transaction_t *transaction);
 
+int cfdp_send_fin(cfdp_transaction_t *transaction);
+
+int cfdp_send_ack(cfdp_transaction_t *transaction, uint8_t acked_directive_code, uint8_t directive_subtype_code,
+                  uint8_t condition_code, uint8_t transaction_status);
+
 int cfdp_send_eof(cfdp_transaction_t *transaction, uint8_t condition_code);
 
 int cfdp_resend(cfdp_transaction_t *transaction);
@@ -70,12 +76,12 @@ cfdp_result_t cfdp_transact(cfdp_transaction_t *txn, uint32_t elapsed_ms);
  *
  * TODO(done): PDU parsing/building foundation.
  * TODO(done): Implement and validate the transaction loop/state progression.
- * TODO(open): Finalize active transaction storage strategy (queue/store ownership and lifecycle).
- * TODO(open): Decide MRAM persistence policy for transaction sequence number and related state.
- * TODO(open): Define file-data PDU segmentation policy (full file vs fixed segments/chunks).
+ * TODO(done): Finalize active transaction storage strategy (queue/store ownership and lifecycle).
+ * TODO(done): Decide MRAM persistence policy for transaction sequence number and related state.
+ * TODO(done): Define file-data PDU segmentation policy (full file vs fixed segments/chunks).
  * TODO(done): Implement both modular and null checksum modes for Blue Book compliance.
- * TODO(in-progress): Implement process_pdu to update state based on incoming PDUs
- * TODO(open): Fix cfdp_send_* to correclty include directive codes between header and pdu.
+ * TODO(done): Implement process_pdu to update state based on incoming PDUs
+ * TODO(done): Fix cfdp_send_* to correctly include directive codes between header and pdu.
  * TODO(optional): Implement CRC algorithm
  * TODO(optional): Implement filestore requests for files we send? Specifically images
 

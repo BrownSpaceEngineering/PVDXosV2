@@ -17,10 +17,16 @@
 #define IMAGE_BUF 0xFFFFFFFF // placeholder, this probably isn't gonna be how we represent it
 #define TELEMETRY_BUF 0XFFFFFFFF
 
+// Placeholder sizes until real image/telemetry sources are wired in.
+#define IMAGE_FILE_SZ MAX_FILE_SIZE
+#define TELEMETRY_FILE_SZ MAX_FILE_SIZE
+
 #define TXN_FRAME 0x1000
 
-#define IMAGE_FILE_SZ 0x10000
-#define TELEMETRY_FILE_SZ 0x100
+// Received-segment bitmap sizing.
+// One bit per SEGMENT_SIZE-byte chunk, covering the worst-case MAX_FILE_SIZE file.
+#define CFDP_MAX_SEGMENTS    (MAX_FILE_SIZE / SEGMENT_SIZE)       // 128 segments
+#define CFDP_BITMAP_WORDS    (CFDP_MAX_SEGMENTS / 32)             // 4 × uint32_t = 16 bytes
 
 // Placed in a struct to ensure that the TCB is placed higher than the stack in memory
 //^ This ensures that stack overflows do not corrupt the TCB (since the stack grows downwards)
@@ -54,6 +60,7 @@ typedef enum cfdp_state {
     CFDP_RECV_STATE_SEND_NAK,
     CFDP_RECV_STATE_WAIT_ACK,
     CFDP_RECV_STATE_SEND_FIN,
+    CFDP_RECV_STATE_WAIT_FIN_ACK,
     CFDP_RECV_STATE_DONE,
     CFDP_RECV_STATE_ERR
 } cfdp_state_t;
@@ -89,10 +96,6 @@ typedef struct cfdp_transaction {
     uint32_t inactivity_timer;
     uint32_t ack_timer;
     uint32_t nak_timer;
-
-    uint32_t checksum;
-    uint8_t checksum_mode;
-
     uint8_t eof_retransmit_counter;
     uint8_t nak_retransmit_counter;
 
@@ -111,6 +114,10 @@ typedef struct cfdp_transaction {
 
     uint8_t *file_data;
 
+    // One bit per segment (SEGMENT_SIZE bytes). Bit i is set when segment i has been received.
+    // Used on the receive side to detect gaps without relying on zero-byte content checks.
+    uint32_t received_bitmap[CFDP_BITMAP_WORDS];
+
     cfdp_lv_t source_filename;
     cfdp_lv_t dest_filename;
 
@@ -128,7 +135,7 @@ extern cfdp_task_memory_t cfdp_mem;
 
 extern cfdp_transaction_store_t cfdp_txn_store;
 
-size_t cfdp_put_request(cfdp_txn_type_t type, cfdp_direction_t dir);
+size_t cfdp_put_request(cfdp_txn_type_t type);
 
 void cfdp_cancel_request(uint32_t txn_id);
 
@@ -136,8 +143,6 @@ int send(void *buff, size_t sz);
 int recv(void *buff, size_t sz);
 
 void cfdp_process_pdu(uint8_t *raw, size_t sz);
-
-size_t cfdp_process_crc(uint8_t *raw, size_t pdu_sz);
 
 QueueHandle_t init_cfdp(void);
 void main_cfdp(void *pvParameters);
