@@ -5,7 +5,7 @@
  *
  * Created: 20260429 SUN
  * Updated: 20260429 THU
- * Authors: Zach Mahan
+ * Authors: Zach Mahan, Ilan Goldfein
  */
 
 #include <stdint.h>
@@ -74,3 +74,18 @@ typedef struct uslp_transfer_frame_view {
     uslp_transfer_frame_data_field_header_t data_field_header;
     uint8_t *datafield;
 } uslp_transfer_frame_view_t;
+
+// Quality of Serice (QoS) options
+// Reference - USLP Blue Book 3-5
+typedef enum uslp_qos {
+    USLP_QOS_SEQUENCE_CONTROLLED,
+    USLP_QOS_EXPEDITED
+} uslp_qos_t;
+
+/*
+ * MAPP.request function
+ * Reference: USLP Blue book page 3-6
+ *
+ * - This function is the Service Access Point for USLP
+ */
+int uslp_mapp_request(uint8_t *sdu, uint32_t gmap_id, uint8_t pvn, uint32_t sdu_id, uslp_qos_t qos);
