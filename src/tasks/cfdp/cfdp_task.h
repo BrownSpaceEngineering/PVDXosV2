@@ -193,6 +193,7 @@ void uint16_to_big_endian(uint16_t src, uint8_t dst[2]);
 
 void cfdp_nak_buf_push(cfdp_nak_buf_t *buf, cfdp_pdu_segment_request_t segment);
 cfdp_pdu_segment_request_t cfdp_nak_buf_pop(cfdp_nak_buf_t *buf);
+size_t cfdp_nak_buf_get_index(cfdp_nak_buf_t *buf, size_t offset, size_t len);
 
 cfdp_transaction_t *cfdp_alloc_transaction(cfdp_transaction_store_t *txn_store);
 void cfdp_free_transaction(cfdp_transaction_store_t *txn_store, cfdp_transaction_t *txn);

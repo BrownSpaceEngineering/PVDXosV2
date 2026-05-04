@@ -380,7 +380,7 @@ int cfdp_send_nak(cfdp_transaction_t *transaction) {
 
     // Iterate the ring buffer without popping — read segments in tail→head order
     for (uint32_t i = 0; i < n; i++) {
-        cfdp_pdu_segment_request_t seg = cfdp_nak_buf_pop(&transaction->nak_buf);
+        cfdp_pdu_segment_request_t seg = transaction->nak_buf.segments[transaction->nak_buf.tail + i % CFDP_MAX_SEGMENTS];
         uint32_to_big_endian(seg.start_offset, nak_buff + 9 + (i * 8));
         uint32_to_big_endian(seg.end_offset, nak_buff + 13 + (i * 8));
         if (seg.start_offset < start_scope) {
