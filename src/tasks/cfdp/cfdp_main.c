@@ -85,8 +85,13 @@ void main_cfdp(void *pvParameters) {
             if (!cfdp_txn_store.active[i]) {
                 continue;
             }
+
             // probably need to update elapsed_ms for each transaction
-            cfdp_result_t result = cfdp_transact(&cfdp_txn_store.transactions[i], elapsed_ms);
+            cfdp_result_t result;
+            do {
+                result = cfdp_transact(&cfdp_txn_store.transactions[i], elapsed_ms);
+            } while (result == CFDP_RESULT_IN_PROGRESS);
+
             if (result == CFDP_RESULT_COMPLETE) {
                 info("cfdp: transaction %lu complete\n", cfdp_txn_store.transactions[i].transaction_id.seq_num);
                 cfdp_free_transaction(&cfdp_txn_store, &cfdp_txn_store.transactions[i]);

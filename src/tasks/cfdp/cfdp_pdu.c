@@ -359,6 +359,8 @@ int cfdp_send_filedata(cfdp_transaction_t *transaction, uint32_t offset, uint32_
  * Builds and transmits a NAK PDU listing every segment gap currently in the
  * transaction's nak_buf. Does NOT pop the buffer — gaps stay tracked until the
  * sender retransmits and the caller clears them on receipt.
+ *
+ * NOTE: this needs to be reworked so that we don't exceed a nak of our transaction frame. For this purpose, NAK should not boock
  */
 int cfdp_send_nak(cfdp_transaction_t *transaction) {
     if (transaction == NULL || transaction->nak_buf.size == 0) {

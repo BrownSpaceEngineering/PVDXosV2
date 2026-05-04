@@ -511,11 +511,11 @@ int cfdp_send_init_simple(uint8_t *fl, size_t sz, at86rf215_t *radio_handle, cfd
 
 /* ---------- CFDP State Machines ---------- */
 
-void cfdp_handle_send_state(cfdp_transaction_t *transaction, uint32_t elapsed_ms) {
+cfdp_result_t cfdp_handle_send_state(cfdp_transaction_t *transaction, uint32_t elapsed_ms) {
     switch (transaction->state) {
         case CFDP_SEND_STATE_METADATA_SEND:
             cfdp_send_metadata(transaction);
-            break;
+            return CFDP_RESULT_IN_PROGRESS;
         case CFDP_SEND_STATE_FILE_SEND:
             if (transaction->nak_buf.size > 0) {
                 cfdp_resend(transaction);
@@ -533,7 +533,7 @@ void cfdp_handle_send_state(cfdp_transaction_t *transaction, uint32_t elapsed_ms
                     transaction->state = CFDP_SEND_STATE_DONE;
                 }
             }
-            break;
+            return CFDP_RESULT_IN_PROGRESS;
         case CFDP_SEND_STATE_WAIT_ACK:
             transaction->ack_timer += elapsed_ms;
             if (transaction->ack_timer > ACK_TIMEOUT_MS) {
@@ -545,7 +545,7 @@ void cfdp_handle_send_state(cfdp_transaction_t *transaction, uint32_t elapsed_ms
                     cfdp_send_eof(transaction, CFDP_COND_NOERROR);
                 }
             }
-            break;
+            return CFDP_RESULT_BLOCKED;
         case CFDP_SEND_STATE_WAIT_FIN:
             transaction->nak_timer += elapsed_ms;
             if (transaction->nak_timer > NAK_TIMEOUT_MS) {
@@ -557,49 +557,27 @@ void cfdp_handle_send_state(cfdp_transaction_t *transaction, uint32_t elapsed_ms
                     cfdp_send_eof(transaction, CFDP_COND_NOERROR);
                 }
             }
-            break;
+            return CFDP_RESULT_BLOCKED;
+        case CFDP_SEND_STATE_DONE:
+            return CFDP_RESULT_COMPLETE;
         case CFDP_SEND_STATE_ERR:
-            break;
+            return CFDP_RESULT_ERROR;
         default:
-            break;
+            return CFDP_RESULT_ERROR;
     }
 }
 
-/**
- * CFDP_RECV_STATE_FILE_RECV,
-    CFDP_RECV_STATE_SEND_NAK,
-    CFDP_RECV_STATE_WAIT_ACK,
-    CFDP_RECV_STATE_SEND_FIN,
-    CFDP_RECV_STATE_WAIT_FIN_ACK,
-    CFDP_RECV_STATE_DONE,
-    CFDP_RECV_STATE_ERR
- */
-
-/**
- * - RECV Wait EOF
- * - Send NAK
- * - Wait retransmit
- * - Send fin
- * - Wait FIN ACK
- *
- * CFDP_RECV_STATE_WAIT_EOF,
-    CFDP_RECV_STATE_SEND_NAK,
-    CFDP_RECV_STATE_WAIT_RETRANSMIT,
-    CFDP_RECV_STATE_SEND_FIN,
-    CFDP_RECV_STATE_WAIT_FIN_ACK,
-    CFDP_RECV_STATE_DONE,
-    CFDP_RECV_STATE_ERR
- */
-
-void cfdp_handle_recv_state(cfdp_transaction_t *transaction, uint32_t elapsed_ms) {
+cfdp_result_t cfdp_handle_recv_state(cfdp_transaction_t *transaction, uint32_t elapsed_ms) {
     switch (transaction->state) {
         case CFDP_RECV_STATE_WAIT_EOF:
-            break;
+            return CFDP_RESULT_BLOCKED;
         case CFDP_RECV_STATE_SEND_NAK:
             cfdp_send_nak(transaction);
-            transaction->state = CFDP_RECV_STATE_WAIT_RETRANSMIT;
+            if (transaction->nak_buf.size == 0) {
+                transaction->state = CFDP_RECV_STATE_WAIT_RETRANSMIT;
+            }
             transaction->ack_timer = 0;
-            break;
+            return CFDP_RESULT_IN_PROGRESS;
         case CFDP_RECV_STATE_WAIT_RETRANSMIT:
             if (transaction->nak_buf.size == 0) {
                 transaction->state = CFDP_RECV_STATE_SEND_FIN;
@@ -614,7 +592,7 @@ void cfdp_handle_recv_state(cfdp_transaction_t *transaction, uint32_t elapsed_ms
                     transaction->state = CFDP_RECV_STATE_SEND_NAK;
                 }
             }
-            break;
+            return CFDP_RESULT_BLOCKED;
         case CFDP_RECV_STATE_SEND_FIN:
             cfdp_send_fin(transaction);
             transaction->nak_retransmit_counter++;
@@ -624,18 +602,20 @@ void cfdp_handle_recv_state(cfdp_transaction_t *transaction, uint32_t elapsed_ms
                 transaction->state = CFDP_RECV_STATE_WAIT_FIN_ACK;
                 transaction->ack_timer = 0;
             }
-            break;
+            return CFDP_RESULT_BLOCKED;
         case CFDP_RECV_STATE_WAIT_FIN_ACK:
             transaction->ack_timer += elapsed_ms;
             if (transaction->ack_timer > ACK_TIMEOUT_MS) {
                 transaction->ack_timer = 0;
                 transaction->state = CFDP_RECV_STATE_SEND_FIN;
             }
-            break;
+            return CFDP_RESULT_BLOCKED;
         case CFDP_RECV_STATE_DONE:
+            return CFDP_RESULT_COMPLETE;
         case CFDP_RECV_STATE_ERR:
+            return CFDP_RESULT_ERROR;
         default:
-            break;
+            return CFDP_RESULT_ERROR;
     }
 }
 
@@ -807,33 +787,19 @@ cfdp_result_t cfdp_transact(cfdp_transaction_t *txn, uint32_t elapsed_ms) {
         return CFDP_RESULT_INVALID_ARG;
     }
 
-    if (txn->state == CFDP_SEND_STATE_DONE || txn->state == CFDP_RECV_STATE_DONE) {
-        return CFDP_RESULT_COMPLETE;
-    }
-
-    if (txn->state == CFDP_SEND_STATE_ERR || txn->state == CFDP_RECV_STATE_ERR) {
-        return CFDP_RESULT_ERROR;
-    }
-
     txn->inactivity_timer += elapsed_ms;
     if (txn->inactivity_timer >= TRANSACTION_LIFETIME_MS) {
         txn->state = (txn->direction == CFDP_SEND) ? CFDP_SEND_STATE_ERR : CFDP_RECV_STATE_ERR;
         return CFDP_RESULT_ERROR;
     }
 
+    cfdp_state_t state;
+
     if (txn->direction == CFDP_SEND) {
-        cfdp_handle_send_state(txn, elapsed_ms);
+        state = cfdp_handle_send_state(txn, elapsed_ms);
     } else {
-        cfdp_handle_recv_state(txn, elapsed_ms);
+        state = cfdp_handle_recv_state(txn, elapsed_ms);
     }
 
-    if (txn->state == CFDP_SEND_STATE_DONE || txn->state == CFDP_RECV_STATE_DONE) {
-        return CFDP_RESULT_COMPLETE;
-    }
-
-    if (txn->state == CFDP_SEND_STATE_ERR || txn->state == CFDP_RECV_STATE_ERR) {
-        return CFDP_RESULT_ERROR;
-    }
-
-    return CFDP_RESULT_IN_PROGRESS;
+    return state;
 }
