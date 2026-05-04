@@ -161,13 +161,16 @@ static void handle_filedata_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data
     if (txn->file_data != NULL && fd.offset + fd.data.len <= txn->file_size) {
         memcpy(txn->file_data + fd.offset, fd.data.data, fd.data.len);
     }
-    {
-        uint32_t first_seg = fd.offset / SEGMENT_SIZE;
-        uint32_t last_seg = (fd.offset + (fd.data.len > 0 ? fd.data.len - 1 : 0)) / SEGMENT_SIZE;
-        for (uint32_t s = first_seg; s <= last_seg && s < CFDP_MAX_SEGMENTS; s++) {
-            txn->received_bitmap[s / 32] |= (1u << (s % 32));
+
+    if (fd.offset == txn->file_offset) {
+        txn->file_offset += fd.data.len;
+    } else if (fd.offset < txn->file_offset) {
+        size_t gap_index = cfdp_nak_buf_get_index(&txn->nak_buf, fd.offset, fd.data.len);
+        if (gap_index == CFDP_MAX_SEGMENT_REQUESTS) {
+            debug("cfdp: duplicate filedata pdu ignored");
         }
     }
+
     if (fd.offset + fd.data.len > txn->file_offset) {
         txn->file_offset = fd.offset + fd.data.len;
     }
@@ -670,6 +673,16 @@ cfdp_pdu_segment_request_t cfdp_nak_buf_pop(cfdp_nak_buf_t *buf) {
     buf->tail = (buf->tail + 1) % CFDP_MAX_SEGMENT_REQUESTS;
     buf->size -= 1;
     return seg;
+}
+
+size_t cfdp_nak_buf_get_index(cfdp_nak_buf_t *buf, size_t offset, size_t len) {
+    for (size_t i = 0; i < CFDP_MAX_SEGMENT_REQUESTS; ++i) {
+        if (buf->segments[buf->tail + i % CFDP_MAX_SEGMENT_REQUESTS].start_offset <= offset + len &&
+            buf->segments[buf->tail + i % CFDP_MAX_SEGMENT_REQUESTS].end_offset >= offset) {
+            return buf->tail + i % CFDP_MAX_SEGMENT_REQUESTS;
+        }
+    }
+    return CFDP_MAX_SEGMENT_REQUESTS;
 }
 
 cfdp_transaction_t *cfdp_alloc_transaction(cfdp_transaction_store_t *txn_store) {
