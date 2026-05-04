@@ -109,6 +109,7 @@ typedef enum cfdp_pdu_type {
 
 typedef enum cfdp_result {
     CFDP_RESULT_IN_PROGRESS = 0,
+    CFDP_RESULT_BLOCKED,
     CFDP_RESULT_COMPLETE,
     CFDP_RESULT_ERROR,
     CFDP_RESULT_INVALID_ARG
@@ -208,8 +209,8 @@ cfdp_transaction_t *cfdp_send_init(cfdp_transaction_store_t *txn_store, uint8_t 
                                    uint8_t priority, bool reliable_mode, at86rf215_t *radio_handle);
 int cfdp_send_init_simple(uint8_t *fl, size_t sz, at86rf215_t *radio_handle, cfdp_transaction_store_t *txn_store);
 
-void cfdp_handle_send_state(cfdp_transaction_t *transaction, uint32_t elapsed_ms);
-void cfdp_handle_recv_state(cfdp_transaction_t *transaction, uint32_t elapsed_ms);
+cfdp_result_t cfdp_handle_send_state(cfdp_transaction_t *transaction, uint32_t elapsed_ms);
+cfdp_result_t cfdp_handle_recv_state(cfdp_transaction_t *transaction, uint32_t elapsed_ms);
 cfdp_result_t cfdp_transact(cfdp_transaction_t *txn, uint32_t elapsed_ms);
 
 size_t cfdp_put_request(cfdp_txn_type_t type, cfdp_direction_t dir);
