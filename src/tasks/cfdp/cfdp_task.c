@@ -165,14 +165,40 @@ static void handle_filedata_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data
     if (fd.offset == txn->file_offset) {
         txn->file_offset += fd.data.len;
     } else if (fd.offset < txn->file_offset) {
-        size_t gap_index = cfdp_nak_buf_get_index(&txn->nak_buf, fd.offset, fd.data.len);
-        if (gap_index == CFDP_MAX_SEGMENT_REQUESTS) {
-            debug("cfdp: duplicate filedata pdu ignored");
-        }
-    }
+        size_t gap_index;
+        while ((gap_index = cfdp_nak_buf_get_index(&txn->nak_buf, fd.offset, fd.data.len)) != CFDP_MAX_SEGMENT_REQUESTS) {
+            cfdp_pdu_segment_request_t seg = txn->nak_buf.segments[gap_index];
 
-    if (fd.offset + fd.data.len > txn->file_offset) {
-        txn->file_offset = fd.offset + fd.data.len;
+            if (fd.offset > seg.start_offset && fd.offset + fd.data.len < seg.end_offset) {
+                if (txn->nak_buf.size < CFDP_MAX_SEGMENT_REQUESTS) {
+                    txn->nak_buf.segments[gap_index] =
+                        (cfdp_pdu_segment_request_t){.start_offset = seg.start_offset, .end_offset = fd.offset};
+                    cfdp_nak_buf_push(&txn->nak_buf,
+                                      (cfdp_pdu_segment_request_t){.start_offset = fd.offset + fd.data.len, .end_offset = seg.end_offset});
+                } else {
+                    debug("cfdp: no room to split gap in NAK buffer, fd pdu disregarded");
+                }
+                break;
+            } else if (fd.offset > seg.start_offset) {
+                txn->nak_buf.segments[gap_index] = (cfdp_pdu_segment_request_t){.start_offset = seg.start_offset, .end_offset = fd.offset};
+
+            } else if (fd.offset + fd.data.len < seg.end_offset) {
+                txn->nak_buf.segments[gap_index] =
+                    (cfdp_pdu_segment_request_t){.start_offset = fd.offset + fd.data.len, .end_offset = seg.end_offset};
+                break;
+            } else {
+                txn->nak_buf.segments[gap_index] = txn->nak_buf.segments[txn->nak_buf.head];
+                txn->nak_buf.size -= 1;
+                txn->nak_buf.head = (txn->nak_buf.head == 0) ? CFDP_MAX_SEGMENT_REQUESTS - 1 : txn->nak_buf.head - 1;
+            }
+        }
+    } else {
+        if (txn->nak_buf.size < CFDP_MAX_SEGMENT_REQUESTS) {
+            cfdp_nak_buf_push(&txn->nak_buf, (cfdp_pdu_segment_request_t){.start_offset = txn->file_offset, .end_offset = fd.offset});
+            txn->file_offset = fd.offset + fd.data.len;
+        } else {
+            debug("cfdp: no room to properly update NAK buffer, therefore the fd pdu will be disregarded");
+        }
     }
     txn->inactivity_timer = 0;
 }
