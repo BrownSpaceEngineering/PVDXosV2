@@ -414,7 +414,7 @@ int cfdp_send_nak(cfdp_transaction_t *transaction) {
  * We always send: condition = NO_ERROR, delivery_code = 0 (complete), file_status = 0b00.
  * No filestore-response or fault-location TLVs are appended.
  */
-int cfdp_send_fin(cfdp_transaction_t *transaction) {
+int cfdp_send_fin(cfdp_transaction_t *transaction, uint8_t condition_code) {
     if (transaction == NULL)
         return -1;
 
@@ -425,7 +425,7 @@ int cfdp_send_fin(cfdp_transaction_t *transaction) {
     uint8_t *fin_buff = buff + 16;
     fin_buff[0] = CFDP_DIR_FINISHED;
     // condition_code=0 (NO_ERROR), spare=0, delivery_code=0 (complete), file_status=0b00
-    fin_buff[1] = (CFDP_COND_NOERROR << 4) | 0x00;
+    fin_buff[1] = (condition_code << 4) | 0x00;
 
     cfdp_send(transaction, buff, 18);
     return 0;

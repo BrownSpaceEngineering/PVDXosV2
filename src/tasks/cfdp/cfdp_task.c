@@ -17,38 +17,15 @@
 #include "task_list.h"
 #include "tasks/cfdp/cfdp_pdu.h"
 
-static int cfdp_send_finished_with_condition(cfdp_transaction_t *transaction, uint8_t condition_code) {
-    if (transaction == NULL || transaction->radio_handle == NULL) {
-        return -1;
-    }
-
-    uint8_t buff[18];
-    cfdp_prepare_pdu_header(buff, transaction, 2, CFDP_FILE_DIRECTIVE);
-
-    uint8_t *fin_buff = buff + 16;
-    fin_buff[0] = CFDP_DIR_FINISHED;
-    // delivery_code=1 (incomplete) for cancel/fault paths, file_status=0b00.
-    fin_buff[1] = ((condition_code & 0x0F) << 4) | (1u << 2);
-
-    at86rf215_tx_frame(transaction->radio_handle, (at86rf215_radio_t)transaction->channel_num, buff, sizeof(buff), TX_TIMEOUT_MS);
-    return 0;
-}
-
 /* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
 
-size_t cfdp_put_request(cfdp_txn_type_t type, cfdp_direction_t dir) {
-    size_t store_index = MAX_TRANSACTIONS;
-    for (size_t i = 0; i < MAX_TRANSACTIONS; i++) {
-        if (!cfdp_txn_store.active[i]) {
-            store_index = i;
-            break;
-        }
-    }
-    if (store_index == MAX_TRANSACTIONS) {
-        fatal("cfdp put: no valid transaction slots\n");
-    }
+void cfdp_put_request(cfdp_txn_type_t type, cfdp_direction_t dir) {
+    cfdp_transaction_t *txn = cfdp_alloc_transaction(&cfdp_txn_store);
 
-    cfdp_txn_store.active[store_index] = true;
+    if (txn == NULL) {
+        debug("cfdp put: no valid transaction slots\n");
+        return;
+    }
 
     cfdp_txn_store.slot_free = false;
     for (size_t i = 0; i < MAX_TRANSACTIONS; i++) {
@@ -63,7 +40,6 @@ size_t cfdp_put_request(cfdp_txn_type_t type, cfdp_direction_t dir) {
     uint32_t seq_num = next_seq_num();
     uint8_t *file_data = (type == IMAGE) ? (uint8_t *)IMAGE_BUF : (uint8_t *)TELEMETRY_BUF;
 
-    cfdp_transaction_t *txn = &cfdp_txn_store.transactions[store_index];
     memset(txn, 0, sizeof(*txn));
     txn->transaction_id.entity_id = ENTITY_ID_SPACECRAFT;
     txn->transaction_id.seq_num = seq_num;
@@ -78,8 +54,9 @@ size_t cfdp_put_request(cfdp_txn_type_t type, cfdp_direction_t dir) {
     txn->source_filename.value = NULL;
     txn->dest_filename.length = 0;
     txn->dest_filename.value = NULL;
+    txn->checksum_type = 0;
 
-    return store_index;
+    return;
 }
 
 void cfdp_cancel_request(uint32_t txn_id) {
@@ -103,14 +80,10 @@ void cfdp_cancel_request(uint32_t txn_id) {
     // Fault signaling policy for local cancel requests:
     // - Send side: transmit EOF with condition = CANCEL_REQ.
     // - Receive side: transmit Finished with condition = CANCEL_REQ.
-    if (txn->radio_handle != NULL) {
-        if (dir == CFDP_SEND) {
-            (void)cfdp_send_eof(txn, CFDP_COND_CANCEL_REQ);
-        } else {
-            (void)cfdp_send_finished_with_condition(txn, CFDP_COND_CANCEL_REQ);
-        }
+    if (dir == CFDP_SEND) {
+        cfdp_send_eof(txn, CFDP_COND_CANCEL_REQ);
     } else {
-        warning("cfdp cancel: txn %lu has no radio_handle, cancel fault PDU not sent\n", txn_id);
+        cfdp_send_fin(txn, CFDP_COND_CANCEL_REQ);
     }
 
     cfdp_txn_store.transactions[store_index].state = (dir == CFDP_SEND) ? CFDP_SEND_STATE_ERR : CFDP_RECV_STATE_ERR;
@@ -203,13 +176,13 @@ static void handle_filedata_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data
     txn->inactivity_timer = 0;
 }
 
-static void handle_eof_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data, uint16_t pdu_data_length, bool largefile) {
+static void handle_eof_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data, uint16_t pdu_data_length) {
     if (txn == NULL || txn->direction != CFDP_RECV) {
         debug("cfdp: eof pdu for unknown/non-recv txn\n");
         return;
     }
     cfdp_pdu_eof_t eof;
-    if (cfdp_pdu_eof_parse(pdu_data + 1, pdu_data_length - 1, largefile, &eof) < 0) {
+    if (cfdp_pdu_eof_parse(pdu_data + 1, pdu_data_length - 1, false, &eof) < 0) {
         debug("cfdp: failed to parse eof pdu\n");
         return;
     }
@@ -225,31 +198,15 @@ static void handle_eof_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data, uin
         return;
     }
 
-    txn->nak_buf.head = 0;
-    txn->nak_buf.tail = 0;
-    txn->nak_buf.size = 0;
-    uint32_t total_segments = (txn->file_size + SEGMENT_SIZE - 1) / SEGMENT_SIZE;
-    for (uint32_t seg_idx = 0; seg_idx < total_segments && seg_idx < CFDP_MAX_SEGMENTS; seg_idx++) {
-        bool received = (txn->received_bitmap[seg_idx / 32] & (1u << (seg_idx % 32))) != 0;
-        if (!received) {
-            uint32_t start = seg_idx * SEGMENT_SIZE;
-            uint32_t end = start + SEGMENT_SIZE;
-            if (end > txn->file_size) {
-                end = txn->file_size;
-            }
-            cfdp_pdu_segment_request_t seg = {.start_offset = start, .end_offset = end};
-            cfdp_nak_buf_push(&txn->nak_buf, seg);
-        }
-    }
-
-    if (txn->nak_buf.size > 0) {
+    if (txn->reliable_mode && txn->nak_buf.size > 0) {
         txn->state = CFDP_RECV_STATE_SEND_NAK;
+        txn->checksum = eof.checksum;
     } else {
         uint32_t computed = (txn->file_data != NULL) ? cfdp_calculate_modular_checksum(txn) : 0;
-        if (computed != eof.checksum) {
-            debug("cfdp: checksum mismatch \xe2\x80\x94 computed 0x%08lx expected 0x%08lx\n", computed, eof.checksum);
+        if (txn->checksum_type == 0 && computed != eof.checksum) {
+            debug("cfdp: checksum mismatch; computed = 0x%08lx expected = 0x%08lx\n", computed, eof.checksum);
             if (txn->radio_handle != NULL) {
-                (void)cfdp_send_finished_with_condition(txn, CFDP_COND_FILE_CHECKSUM_FAIL);
+                cfdp_send_fin(txn, CFDP_COND_FILE_CHECKSUM_FAIL);
             }
             txn->state = CFDP_RECV_STATE_ERR;
             return;
@@ -414,6 +371,7 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz) {
         new_txn->source_filename = (cfdp_lv_t){.length = 0, .value = NULL};
         new_txn->dest_filename = (cfdp_lv_t){.length = 0, .value = NULL};
         new_txn->radio_handle = NULL; // not needed for recv side
+        new_txn->checksum_type = meta.checksum_type;
 
         uint8_t *data = NULL;
 
@@ -440,7 +398,7 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz) {
             handle_filedata_pdu(txn, pdu_data, pdu_data_sz, header.largefile, header.segment_metadata_field);
             break;
         case CFDP_DIR_EOF:
-            handle_eof_pdu(txn, pdu_data, header.pdu_data_length, header.largefile);
+            handle_eof_pdu(txn, pdu_data, header.pdu_data_length);
             break;
         case CFDP_DIR_FINISHED:
             handle_finished_pdu(txn);
@@ -594,7 +552,7 @@ cfdp_result_t cfdp_handle_recv_state(cfdp_transaction_t *transaction, uint32_t e
             }
             return CFDP_RESULT_BLOCKED;
         case CFDP_RECV_STATE_SEND_FIN:
-            cfdp_send_fin(transaction);
+            cfdp_send_fin(transaction, CFDP_COND_NOERROR);
             transaction->nak_retransmit_counter++;
             if (transaction->nak_retransmit_counter > NAK_RETRANSMIT_LIMIT) {
                 transaction->state = CFDP_RECV_STATE_ERR;
@@ -692,6 +650,9 @@ size_t cfdp_nak_buf_get_index(cfdp_nak_buf_t *buf, size_t offset, size_t len) {
 }
 
 cfdp_transaction_t *cfdp_alloc_transaction(cfdp_transaction_store_t *txn_store) {
+    if (!txn_store->slot_free) {
+        return NULL;
+    }
     for (int i = 0; i < MAX_TRANSACTIONS; i++) {
         if (!txn_store->active[i]) {
             txn_store->active[i] = true;
@@ -706,6 +667,8 @@ cfdp_transaction_t *cfdp_alloc_transaction(cfdp_transaction_store_t *txn_store) 
             return &txn_store->transactions[i];
         }
     }
+    txn_store->slot_free = false;
+    debug("cfdp: mismatch between slot_free and txn store capacity");
     return NULL;
 }
 

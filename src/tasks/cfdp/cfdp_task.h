@@ -1,64 +1,64 @@
 #ifndef CFDP_TASK_H
-#define CFDP_TASK_H
+    #define CFDP_TASK_H
 
-// Includes
-#include <atmel_start.h>
-#include <driver_init.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <string.h>
+    // Includes
+    #include <atmel_start.h>
+    #include <driver_init.h>
+    #include <stdbool.h>
+    #include <stddef.h>
+    #include <stdint.h>
+    #include <string.h>
 
-#include "drivers/at86rf215/at86rf215.h"
-#include "globals.h"
-#include "tasks/cfdp/cfdp_pdu.h"
-#include "tasks/watchdog/watchdog_task.h"
+    #include "drivers/at86rf215/at86rf215.h"
+    #include "globals.h"
+    #include "tasks/cfdp/cfdp_pdu.h"
+    #include "tasks/watchdog/watchdog_task.h"
 
 typedef struct at86rf215 at86rf215_t;
 
-// Memory for the CFDP task
-#define CFDP_TASK_STACK_SIZE 1024 // Size of the stack in words (multiply by 4 to get bytes)
+    // Memory for the CFDP task
+    #define CFDP_TASK_STACK_SIZE 1024 // Size of the stack in words (multiply by 4 to get bytes)
 
-#define CFDP_MAX_ACTIVE_TRANSACTIONS 4
+    #define CFDP_MAX_ACTIVE_TRANSACTIONS 4
 
-#define MAX_FILE_SIZE 4096 // placeholder
-#define SEGMENT_SIZE 32    // placeholder
+    #define MAX_FILE_SIZE 4096 // placeholder
+    #define SEGMENT_SIZE 32    // placeholder
 
-#define REQ_CLOSURE 0   // 1 : requested, 0 : not requested
-#define CHECKSUM_TYPE 0 // Default to 0 (Modular Checksum)
+    #define REQ_CLOSURE 0   // 1 : requested, 0 : not requested
+    #define CHECKSUM_TYPE 0 // Default to 0 (Modular Checksum)
 
-#define ACK_TIMEOUT_MS 10000UL // placeholders
-#define NAK_TIMEOUT_MS 10000UL
-#define TRANSACTION_LIFETIME_MS 43200000UL
-#define PROMPT_TIMEOUT_MS 20000UL
+    #define ACK_TIMEOUT_MS 10000UL // placeholders
+    #define NAK_TIMEOUT_MS 10000UL
+    #define TRANSACTION_LIFETIME_MS 43200000UL
+    #define PROMPT_TIMEOUT_MS 20000UL
 
-#define ACK_RETRANSMIT_LIMIT 8
-#define NAK_RETRANSMIT_LIMIT 8
-#define MAX_TRANSACTIONS 8
+    #define ACK_RETRANSMIT_LIMIT 8
+    #define NAK_RETRANSMIT_LIMIT 8
+    #define MAX_TRANSACTIONS 8
 
-#define CFDP_MAX_SEGMENT_REQUESTS 16
+    #define CFDP_MAX_SEGMENT_REQUESTS 16
 
-#define TX_TIMEOUT_MS 5000UL // max time to wait for a single PDU transmission to complete
+    #define TX_TIMEOUT_MS 5000UL // max time to wait for a single PDU transmission to complete
 
-#define IMAGE_BUF 0xFFFFFFFF // placeholder, this probably isn't gonna be how we represent it
-#define TELEMETRY_BUF 0XFFFFFFFF
+    #define IMAGE_BUF 0xFFFFFFFF // placeholder, this probably isn't gonna be how we represent it
+    #define TELEMETRY_BUF 0XFFFFFFFF
 
-// Placeholder sizes until real image/telemetry sources are wired in.
-#define IMAGE_FILE_SZ MAX_FILE_SIZE
-#define TELEMETRY_FILE_SZ MAX_FILE_SIZE
+    // Placeholder sizes until real image/telemetry sources are wired in.
+    #define IMAGE_FILE_SZ MAX_FILE_SIZE
+    #define TELEMETRY_FILE_SZ MAX_FILE_SIZE
 
-#define TXN_FRAME 0x1000
+    #define TXN_FRAME 0x1000
 
-// Received-segment bitmap sizing.
-// One bit per SEGMENT_SIZE-byte chunk, covering the worst-case MAX_FILE_SIZE file.
-#define CFDP_MAX_SEGMENTS (MAX_FILE_SIZE / SEGMENT_SIZE) // 128 segments
-#define CFDP_BITMAP_WORDS (CFDP_MAX_SEGMENTS / 32)       // 4 × uint32_t = 16 bytes
+    // Received-segment bitmap sizing.
+    // One bit per SEGMENT_SIZE-byte chunk, covering the worst-case MAX_FILE_SIZE file.
+    #define CFDP_MAX_SEGMENTS (MAX_FILE_SIZE / SEGMENT_SIZE) // 128 segments
+    #define CFDP_BITMAP_WORDS (CFDP_MAX_SEGMENTS / 32)       // 4 × uint32_t = 16 bytes
 
-#define CFDP_LARGE_BUFF_SZ 8192
-#define CFDP_SMALL_BUFF_SZ 128
-#define CFDP_SMALL_BUFF_COUNT 4
+    #define CFDP_LARGE_BUFF_SZ 8192
+    #define CFDP_SMALL_BUFF_SZ 128
+    #define CFDP_SMALL_BUFF_COUNT 4
 
-#define CFDP_MAX_PDU_SIZE 128
+    #define CFDP_MAX_PDU_SIZE 128
 
 // Placed in a struct to ensure that the TCB is placed higher than the stack in memory
 //^ This ensures that stack overflows do not corrupt the TCB (since the stack grows downwards)
@@ -213,7 +213,7 @@ cfdp_result_t cfdp_handle_send_state(cfdp_transaction_t *transaction, uint32_t e
 cfdp_result_t cfdp_handle_recv_state(cfdp_transaction_t *transaction, uint32_t elapsed_ms);
 cfdp_result_t cfdp_transact(cfdp_transaction_t *txn, uint32_t elapsed_ms);
 
-size_t cfdp_put_request(cfdp_txn_type_t type, cfdp_direction_t dir);
+void cfdp_put_request(cfdp_txn_type_t type, cfdp_direction_t dir);
 void cfdp_cancel_request(uint32_t txn_id);
 
 void cfdp_send(cfdp_transaction_t *transaction, const uint8_t *buff, size_t sz);
@@ -224,7 +224,7 @@ int cfdp_prepare_pdu_header(uint8_t *buff, cfdp_transaction_t *transaction, uint
 int cfdp_send_metadata(cfdp_transaction_t *transaction);
 int cfdp_send_filedata(cfdp_transaction_t *transaction, uint32_t offset, uint32_t size);
 uint32_t cfdp_calculate_modular_checksum(cfdp_transaction_t *transaction);
-int cfdp_send_fin(cfdp_transaction_t *transaction);
+int cfdp_send_fin(cfdp_transaction_t *transaction, uint8_t condition_code);
 int cfdp_send_ack(cfdp_transaction_t *transaction, uint8_t acked_directive_code, uint8_t directive_subtype_code, uint8_t condition_code,
                   uint8_t transaction_status);
 int cfdp_send_eof(cfdp_transaction_t *transaction, uint8_t condition_code);
@@ -238,3 +238,11 @@ QueueHandle_t init_cfdp(void);
 void main_cfdp(void *pvParameters);
 
 #endif // CFDP_TASK_H
+
+/**
+ * CFDP TODO
+ * - Make sure we reject incoming files with large file flag set (might already happen since we'll never have a buff that big)
+ * - Make it so unacknowledged transaction are actually run in that mode
+ * - Implement timers with rtc
+ * - more ...
+ */
