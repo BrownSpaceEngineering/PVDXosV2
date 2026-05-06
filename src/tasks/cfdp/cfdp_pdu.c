@@ -28,7 +28,7 @@ int cfdp_pdu_header_parse(const uint8_t *raw, size_t len, cfdp_pdu_header_t *out
     out->segment_metadata_field = (raw[3] >> 3) & 0x01;
     uint8_t seq_len = (raw[3] & 0x07) + 1;
 
-    size_t header_len = 16;
+    size_t header_len = 16; // why do we hardcode this, isnt this meant to be header_len=4+entity_id_len+seq_len+entity_id_len
 
     if (len < header_len)
         return -1;

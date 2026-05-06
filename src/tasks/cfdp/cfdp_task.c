@@ -756,13 +756,13 @@ cfdp_result_t cfdp_transact(cfdp_transaction_t *txn, uint32_t elapsed_ms) {
         return CFDP_RESULT_ERROR;
     }
 
-    cfdp_state_t state;
+    cfdp_result_t result = CFDP_RESULT_ERROR;
 
     if (txn->direction == CFDP_SEND) {
-        state = cfdp_handle_send_state(txn, elapsed_ms);
+        result = cfdp_handle_send_state(txn, elapsed_ms);
     } else {
-        state = cfdp_handle_recv_state(txn, elapsed_ms);
+        result = cfdp_handle_recv_state(txn, elapsed_ms);
     }
 
-    return state;
+    return result;
 }
