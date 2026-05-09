@@ -13,6 +13,7 @@
     #include "globals.h"
     #include "tasks/cfdp/cfdp_pdu.h"
     #include "tasks/watchdog/watchdog_task.h"
+    #include "timers.h"
 
 typedef struct at86rf215 at86rf215_t;
 
@@ -32,9 +33,9 @@ typedef struct at86rf215 at86rf215_t;
     #define TRANSACTION_LIFETIME_MS 43200000UL
     #define PROMPT_TIMEOUT_MS 20000UL
 
-    #define ACK_RETRANSMIT_LIMIT 8
-    #define NAK_RETRANSMIT_LIMIT 8
-    #define MAX_TRANSACTIONS 8
+    #define ACK_RETRANSMIT_LIMIT 16
+    #define NAK_RETRANSMIT_LIMIT 16
+    #define MAX_TRANSACTIONS 4
 
     #define CFDP_MAX_SEGMENT_REQUESTS 16
 
@@ -126,10 +127,15 @@ typedef struct cfdp_transaction {
     cfdp_transaction_id_t transaction_id;
     uint32_t dest_entity_id;
 
-    uint32_t inactivity_timer;
-    uint32_t ack_timer;
-    uint32_t nak_timer;
-    uint8_t eof_retransmit_counter;
+    StaticTimer_t inactivity_timer_mem;
+    StaticTimer_t ack_timer_mem;
+    StaticTimer_t nak_timer_mem;
+
+    TimerHandle_t inactivity_timer_handle;
+    TimerHandle_t ack_timer_handle;
+    TimerHandle_t nak_timer_handle;
+
+    uint8_t ack_retransmit_counter;
     uint8_t nak_retransmit_counter;
 
     uint32_t checksum;
@@ -144,6 +150,7 @@ typedef struct cfdp_transaction {
     cfdp_direction_t direction;
 
     bool reliable_mode;
+    bool delivery_complete;
 
     uint8_t channel_num;
     uint8_t priority;
@@ -230,6 +237,10 @@ int cfdp_send_ack(cfdp_transaction_t *transaction, uint8_t acked_directive_code,
 int cfdp_send_eof(cfdp_transaction_t *transaction, uint8_t condition_code);
 int cfdp_send_nak(cfdp_transaction_t *transaction);
 int cfdp_resend(cfdp_transaction_t *transaction);
+
+void inactivity_timer_callback(TimerHandle_t inactivity_timer_handle);
+void ack_timer_callback(TimerHandle_t ack_timer_handle);
+void nak_timer_callback(TimerHandle_t nak_timer_handle);
 
 void exec_command_cfdp_request(command_t *const p_cmd);
 void cfdp_process_pdu(uint8_t *raw, size_t sz);

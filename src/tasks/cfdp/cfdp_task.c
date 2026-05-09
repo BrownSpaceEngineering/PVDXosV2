@@ -766,3 +766,71 @@ cfdp_result_t cfdp_transact(cfdp_transaction_t *txn, uint32_t elapsed_ms) {
 
     return result;
 }
+
+// Timer Functions
+// NOTE: This code will run in the internal timer task -- if cfdp cares about only sending/recving at one time we need to rework this
+// to send a command to cfdp
+
+void inactivity_timer_callback(TimerHandle_t inactivity_timer_handle) {
+    cfdp_transaction_t *txn = (cfdp_transaction_t *)pvTimerGetTimerID(inactivity_timer_handle);
+
+    if (txn->direction == CFDP_SEND) {
+        txn->state = CFDP_SEND_STATE_ERR;
+        cfdp_send_eof(txn, CFDP_COND_INACTIVITY);
+    } else {
+        txn->state = CFDP_RECV_STATE_ERR;
+        cfdp_send_fin(txn, CFDP_COND_INACTIVITY);
+    }
+}
+
+void ack_timer_callback(TimerHandle_t ack_timer_handle) {
+    cfdp_transaction_t *txn = (cfdp_transaction_t *)pvTimerGetTimerID(ack_timer_handle);
+
+    uint8_t cond = CFDP_COND_NOERROR;
+
+    if (txn->ack_retransmit_counter >= ACK_RETRANSMIT_LIMIT) {
+        if (xTimerStop(ack_timer_handle, 0) != pdPASS) {
+            debug("timer: unable to stop ack timer even though retransmit limit reached");
+            return; // timer double counts, but it gives time for the timer queue to process
+        }
+
+        if (txn->direction == CFDP_SEND) {
+            txn->state = CFDP_SEND_STATE_ERR;
+            cond = CFDP_COND_ACK_LIMIT;
+        } else {
+            txn->state = CFDP_RECV_STATE_ERR;
+            cond = CFDP_COND_NAK_LIMIT;
+        }
+    }
+
+    if (txn->direction == CFDP_SEND) { // EOF-ACK Timer
+        cfdp_send_eof(txn, cond);
+    } else { // FIN-ACK Timer
+        cfdp_send_fin(txn, cond);
+    }
+
+    txn->ack_retransmit_counter++;
+}
+
+void nak_timer_callback(TimerHandle_t nak_timer_handle) {
+    cfdp_transaction_t *txn = (cfdp_transaction_t *)pvTimerGetTimerID(nak_timer_handle);
+
+    if (txn->direction != CFDP_RECV) {
+        debug("timer: somehow started NAK timer for a send transaction, attempting to stop");
+        xTimerStop(nak_timer_handle, 0);
+        return;
+    }
+
+    if (txn->nak_retransmit_counter >= NAK_RETRANSMIT_LIMIT) {
+        cfdp_send_fin(txn, CFDP_COND_NAK_LIMIT);
+
+        if (xTimerStart(txn->ack_timer_handle, 0) != pdPASS) {
+            debug("timer: unable to start fin timer, even though one was sent");
+        }
+
+        return;
+    }
+
+    cfdp_send_nak(txn);
+    txn->nak_retransmit_counter++;
+}
