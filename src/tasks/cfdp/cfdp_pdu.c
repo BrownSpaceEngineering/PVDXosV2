@@ -424,8 +424,9 @@ int cfdp_send_fin(cfdp_transaction_t *transaction, uint8_t condition_code) {
 
     uint8_t *fin_buff = buff + 16;
     fin_buff[0] = CFDP_DIR_FINISHED;
-    // condition_code=0 (NO_ERROR), spare=0, delivery_code=0 (complete), file_status=0b00
-    fin_buff[1] = (condition_code << 4) | 0x00;
+
+    uint8_t del_code = (transaction->delivery_complete) ? 0 : 1;
+    fin_buff[1] = (condition_code << 4) | (del_code << 2) | (0x0);
 
     cfdp_send(transaction, buff, 18);
     return 0;
