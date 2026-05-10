@@ -233,9 +233,17 @@ void inactivity_timer_callback(TimerHandle_t inactivity_timer_handle);
 void ack_timer_callback(TimerHandle_t ack_timer_handle);
 void nak_timer_callback(TimerHandle_t nak_timer_handle);
 
-static inline void reset_timer(TimerHandle_t timer_handle);
-static inline void stop_timer(TimerHandle_t timer_handle);
-static inline void start_timer(TimerHandle_t timer_handle);
+static inline void reset_timer(TimerHandle_t timer_handle) {
+    xTimerReset(timer_handle, CFDP_TIMER_TICKS_TO_WAIT);
+}
+
+static inline void stop_timer(TimerHandle_t timer_handle) {
+    xTimerStop(timer_handle, CFDP_TIMER_TICKS_TO_WAIT);
+}
+
+static inline void start_timer(TimerHandle_t timer_handle) {
+    xTimerStart(timer_handle, CFDP_TIMER_TICKS_TO_WAIT);
+}
 
 void exec_command_cfdp_request(command_t *const p_cmd);
 void cfdp_process_pdu(uint8_t *raw, size_t sz);

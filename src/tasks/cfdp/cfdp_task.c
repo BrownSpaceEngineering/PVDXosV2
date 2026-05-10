@@ -23,7 +23,7 @@ void cfdp_put_request(cfdp_txn_type_t type, cfdp_direction_t dir) {
     cfdp_transaction_t *txn = cfdp_alloc_transaction(&cfdp_txn_store);
 
     if (txn == NULL) {
-        debug("cfdp put: no valid transaction slots\n");
+        warning("cfdp put: no valid transaction slots\n");
         return;
     }
 
@@ -58,12 +58,12 @@ void cfdp_put_request(cfdp_txn_type_t type, cfdp_direction_t dir) {
     txn->ack_retransmit_counter = 0;
     txn->nak_retransmit_counter = 0;
     txn->inactivity_timer_handle = xTimerCreateStatic("Inactivity Timer", pdMS_TO_TICKS(TRANSACTION_LIFETIME_MS), pdFALSE, (void *)txn,
-                                                      inactivity_timer_callback, &txn->inactivity_timer_mem);
+                                                      &inactivity_timer_callback, &txn->inactivity_timer_mem);
 
     start_timer(txn->inactivity_timer_handle);
 
     txn->ack_timer_handle =
-        xTimerCreateStatic("EOF ACK Timer", pdMS_TO_TICKS(ACK_TIMEOUT_MS), pdTRUE, (void *)txn, ack_timer_callback, &txn->ack_timer_mem);
+        xTimerCreateStatic("EOF ACK Timer", pdMS_TO_TICKS(ACK_TIMEOUT_MS), pdTRUE, (void *)txn, &ack_timer_callback, &txn->ack_timer_mem);
 
     return;
 }
@@ -78,7 +78,7 @@ void cfdp_cancel_request(uint32_t txn_id) {
     }
 
     if (store_index == MAX_TRANSACTIONS) {
-        debug("cfdp cancel: txn_id: %lu not active\n", txn_id);
+        warning("cfdp cancel: txn_id: %lu not active\n", txn_id);
         return;
     }
 
@@ -123,7 +123,7 @@ void exec_command_cfdp_request(command_t *const p_cmd) {
             cfdp_cancel_request(p_cmd->data.cfdp_request->txn_id);
             break;
         default:
-            debug("cfdp request: invalid operation for cfdp! operation %d\n", p_cmd->operation);
+            warning("cfdp request: invalid operation for cfdp! operation %d\n", p_cmd->operation);
     }
 }
 
@@ -132,12 +132,12 @@ void exec_command_cfdp_request(command_t *const p_cmd) {
 static void handle_filedata_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data, size_t pdu_data_sz, bool largefile,
                                 bool segment_metadata_field) {
     if (txn == NULL || txn->direction != CFDP_RECV) {
-        debug("cfdp: file data pdu for unknown/non-recv txn\n");
+        warning("cfdp: file data pdu for unknown/non-recv txn\n");
         return;
     }
     cfdp_pdu_filedata_t fd;
     if (cfdp_pdu_filedata_parse(pdu_data, pdu_data_sz, largefile, segment_metadata_field, &fd) < 0) {
-        debug("cfdp: failed to parse file data pdu\n");
+        warning("cfdp: failed to parse file data pdu\n");
         return;
     }
     if (txn->file_data != NULL && fd.offset + fd.data.len <= txn->file_size) {
@@ -158,7 +158,7 @@ static void handle_filedata_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data
                     cfdp_nak_buf_push(&txn->nak_buf,
                                       (cfdp_pdu_segment_request_t){.start_offset = fd.offset + fd.data.len, .end_offset = seg.end_offset});
                 } else {
-                    debug("cfdp: no room to split gap in NAK buffer, fd pdu disregarded");
+                    warning("cfdp: no room to split gap in NAK buffer, fd pdu disregarded");
                 }
                 break;
             } else if (fd.offset > seg.start_offset) {
@@ -179,7 +179,7 @@ static void handle_filedata_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data
             cfdp_nak_buf_push(&txn->nak_buf, (cfdp_pdu_segment_request_t){.start_offset = txn->file_offset, .end_offset = fd.offset});
             txn->file_offset = fd.offset + fd.data.len;
         } else {
-            debug("cfdp: no room to properly update NAK buffer, therefore the fd pdu will be disregarded");
+            warning("cfdp: no room to properly update NAK buffer, therefore the fd pdu will be disregarded");
         }
     }
 
@@ -188,12 +188,12 @@ static void handle_filedata_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data
 
 static void handle_eof_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data, uint16_t pdu_data_length) {
     if (txn == NULL || txn->direction != CFDP_RECV) {
-        debug("cfdp: eof pdu for unknown/non-recv txn\n");
+        warning("cfdp: eof pdu for unknown/non-recv txn\n");
         return;
     }
     cfdp_pdu_eof_t eof;
     if (cfdp_pdu_eof_parse(pdu_data + 1, pdu_data_length - 1, false, &eof) < 0) {
-        debug("cfdp: failed to parse eof pdu\n");
+        warning("cfdp: failed to parse eof pdu\n");
         return;
     }
     txn->file_size = eof.filesize;
@@ -215,7 +215,7 @@ static void handle_eof_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data, uin
     } else {
         uint32_t computed = (txn->file_data != NULL) ? cfdp_calculate_modular_checksum(txn) : 0;
         if (txn->checksum_type == 0 && computed != eof.checksum) {
-            debug("cfdp: checksum mismatch; computed = 0x%08lx expected = 0x%08lx\n", computed, eof.checksum);
+            warning("cfdp: checksum mismatch; computed = 0x%08lx expected = 0x%08lx\n", computed, eof.checksum);
             cfdp_send_fin(txn, CFDP_COND_FILE_CHECKSUM_FAIL);
             txn->state = CFDP_RECV_STATE_ERR;
             return;
@@ -226,7 +226,7 @@ static void handle_eof_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data, uin
 
 static void handle_finished_pdu(cfdp_transaction_t *txn) {
     if (txn == NULL || txn->direction != CFDP_SEND) {
-        debug("cfdp: finished pdu for unknown/non-send txn\n");
+        warning("cfdp: finished pdu for unknown/non-send txn\n");
         return;
     }
     cfdp_send_ack(txn, CFDP_DIR_FINISHED, 0, CFDP_COND_NOERROR, 0x02);
@@ -236,11 +236,11 @@ static void handle_finished_pdu(cfdp_transaction_t *txn) {
 
 static void handle_ack_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data, size_t pdu_data_sz) {
     if (txn == NULL) {
-        debug("cfdp: ack pdu for unknown txn\n");
+        warning("cfdp: ack pdu for unknown txn\n");
         return;
     }
     if (pdu_data_sz < 3) {
-        debug("cfdp: ack pdu too short\n");
+        warning("cfdp: ack pdu too short\n");
         return;
     }
     cfdp_pdu_ack_t ack;
@@ -265,17 +265,17 @@ static void handle_metadata_pdu(cfdp_transaction_t *txn) {
     // Transaction allocation for new Metadata PDUs happens before the switch in cfdp_process_pdu.
     // If txn is non-NULL here the PDU is a duplicate for an already-active transaction.
     if (txn != NULL) {
-        debug("cfdp: duplicate metadata pdu for existing txn \xe2\x80\x94 ignored\n");
+        warning("cfdp: duplicate metadata pdu for existing txn \xe2\x80\x94 ignored\n");
     }
 }
 
 static void handle_nak_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data, size_t pdu_data_sz) {
     if (txn == NULL || txn->direction != CFDP_SEND) {
-        debug("cfdp: nak pdu for unknown/non-send txn\n");
+        warning("cfdp: nak pdu for unknown/non-send txn\n");
         return;
     }
     if (pdu_data_sz < 9) {
-        debug("cfdp: nak pdu too short\n");
+        warning("cfdp: nak pdu too short\n");
         return;
     }
     const uint8_t *nak_body = pdu_data + 1;
@@ -308,7 +308,7 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz) {
     int bytes_read = cfdp_pdu_header_parse(raw, sz, &header);
 
     if (bytes_read < 0) {
-        debug("cfdp: incoming pdu of invalid size\n");
+        warning("cfdp: incoming pdu of invalid size\n");
         return;
     }
 
@@ -333,32 +333,32 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz) {
     }
     if (txn == NULL) {
         if (!cfdp_txn_store.slot_free) {
-            debug("cfdp: txn store full, unable to accept sequence: %x, from entity: %x\n", header.transaction_seq,
-                  header.source_entity_id); // we should probably transmit an error finished
+            warning("cfdp: txn store full, unable to accept sequence: %x, from entity: %x\n", header.transaction_seq,
+                    header.source_entity_id); // we should probably transmit an error finished
             return;
         }
 
         if (dir_code == CFDP_DIR_METADATA || dir_code == CFDP_DIR_EOF) {
             cfdp_send_metadata_nak(&header);
         } else if (dir_code != CFDP_DIR_METADATA) {
-            debug("cfdp: unable to process incoming pdu of type %x from unrecognized transaction", dir_code);
+            warning("cfdp: unable to process incoming pdu of type %x from unrecognized transaction", dir_code);
         }
 
         // create new receive-side transaction from incoming Metadata PDU
         if (pdu_data_sz < 2) {
-            debug("cfdp: metadata pdu too short to parse\n");
+            warning("cfdp: metadata pdu too short to parse\n");
             return;
         }
         // Skip the directive code byte before parsing the metadata body.
         cfdp_pdu_metadata_t meta;
         if (cfdp_pdu_metadata_parse(pdu_data + 1, pdu_data_sz - 1, &meta) < 0) {
-            debug("cfdp: failed to parse metadata pdu\n");
+            warning("cfdp: failed to parse metadata pdu\n");
             return;
         }
 
         cfdp_transaction_t *new_txn = cfdp_alloc_transaction(&cfdp_txn_store);
         if (new_txn == NULL) {
-            debug("cfdp: alloc failed for new recv txn\n");
+            warning("cfdp: alloc failed for new recv txn\n");
             return;
         }
         new_txn->transaction_id.entity_id = header.source_entity_id;
@@ -378,16 +378,16 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz) {
         new_txn->dest_filename = (cfdp_lv_t){.length = 0, .value = NULL};
         new_txn->checksum_type = meta.checksum_type;
 
-        txn->inactivity_timer_handle = xTimerCreateStatic("Inactivity Timer", pdMS_TO_TICKS(TRANSACTION_LIFETIME_MS), pdFALSE, (void *)txn,
-                                                          inactivity_timer_callback, &txn->inactivity_timer_mem);
+        new_txn->inactivity_timer_handle = xTimerCreateStatic("Inactivity Timer", pdMS_TO_TICKS(TRANSACTION_LIFETIME_MS), pdFALSE,
+                                                              (void *)new_txn, &inactivity_timer_callback, &new_txn->inactivity_timer_mem);
 
-        start_timer(txn->inactivity_timer_handle);
+        start_timer(new_txn->inactivity_timer_handle);
 
-        txn->ack_timer_handle = xTimerCreateStatic("FIN ACK Timer", pdMS_TO_TICKS(TRANSACTION_LIFETIME_MS), pdTRUE, (void *)txn,
-                                                   ack_timer_callback, &txn->ack_timer_mem);
+        new_txn->ack_timer_handle = xTimerCreateStatic("FIN ACK Timer", pdMS_TO_TICKS(TRANSACTION_LIFETIME_MS), pdTRUE, (void *)new_txn,
+                                                       &ack_timer_callback, &new_txn->ack_timer_mem);
 
-        txn->nak_timer_handle = xTimerCreateStatic("NAK Timer", pdMS_TO_TICKS(TRANSACTION_LIFETIME_MS), pdTRUE, (void *)txn,
-                                                   nak_timer_callback, &txn->nak_timer_mem);
+        new_txn->nak_timer_handle = xTimerCreateStatic("NAK Timer", pdMS_TO_TICKS(TRANSACTION_LIFETIME_MS), pdTRUE, (void *)new_txn,
+                                                       &nak_timer_callback, &new_txn->nak_timer_mem);
 
         uint8_t *data = NULL;
 
@@ -396,11 +396,11 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz) {
         } else if (meta.file_length <= CFDP_LARGE_BUFF_SZ) {
             data = cfdp_alloc_large_buff();
         } else {
-            debug("cfdp: incoming file larger than supported size\n");
+            warning("cfdp: incoming file larger than supported size\n");
         }
 
         if (data == NULL) {
-            debug("cfdp: no free buffer to allocate\n");
+            warning("cfdp: no free buffer to allocate\n");
         }
 
         new_txn->file_data = data;
@@ -429,7 +429,7 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz) {
             handle_nak_pdu(txn, pdu_data, pdu_data_sz);
             break;
         default:
-            debug("cfdp: unrecognized directive code: %x", dir_code);
+            warning("cfdp: unrecognized directive code: %x", dir_code);
             return;
     }
 }
@@ -608,7 +608,7 @@ cfdp_transaction_t *cfdp_alloc_transaction(cfdp_transaction_store_t *txn_store) 
         }
     }
     txn_store->slot_free = false;
-    debug("cfdp: mismatch between slot_free and txn store capacity");
+    warning("cfdp: mismatch between slot_free and txn store capacity");
     return NULL;
 }
 
@@ -724,7 +724,7 @@ void ack_timer_callback(TimerHandle_t ack_timer_handle) {
 
     if (txn->ack_retransmit_counter >= ACK_RETRANSMIT_LIMIT) {
         if (xTimerStop(ack_timer_handle, 0) != pdPASS) {
-            debug("timer: unable to stop ack timer even though retransmit limit reached");
+            warning("timer: unable to stop ack timer even though retransmit limit reached");
             return; // timer double counts, but it gives time for the timer queue to process
         }
 
@@ -750,7 +750,7 @@ void nak_timer_callback(TimerHandle_t nak_timer_handle) {
     cfdp_transaction_t *txn = (cfdp_transaction_t *)pvTimerGetTimerID(nak_timer_handle);
 
     if (txn->direction != CFDP_RECV) {
-        debug("timer: somehow started NAK timer for a send transaction, attempting to stop");
+        warning("timer: somehow started NAK timer for a send transaction, attempting to stop");
         xTimerStop(nak_timer_handle, 0);
         return;
     }
@@ -759,7 +759,7 @@ void nak_timer_callback(TimerHandle_t nak_timer_handle) {
         cfdp_send_fin(txn, CFDP_COND_NAK_LIMIT);
 
         if (xTimerStart(txn->ack_timer_handle, 0) != pdPASS) {
-            debug("timer: unable to start fin timer, even though one was sent");
+            warning("timer: unable to start fin timer, even though one was sent");
         }
 
         return;
@@ -767,16 +767,4 @@ void nak_timer_callback(TimerHandle_t nak_timer_handle) {
 
     cfdp_send_nak(txn);
     txn->nak_retransmit_counter++;
-}
-
-static inline void reset_timer(TimerHandle_t timer_handle) {
-    xTimerReset(timer_handle, CFDP_TIMER_TICKS_TO_WAIT);
-}
-
-static inline void stop_timer(TimerHandle_t timer_handle) {
-    xTimerStop(timer_handle, CFDP_TIMER_TICKS_TO_WAIT);
-}
-
-static inline void start_timer(TimerHandle_t timer_handle) {
-    xTimerStart(timer_handle, CFDP_TIMER_TICKS_TO_WAIT);
 }
