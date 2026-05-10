@@ -55,6 +55,15 @@ void cfdp_put_request(cfdp_txn_type_t type, cfdp_direction_t dir) {
     txn->dest_filename.length = 0;
     txn->dest_filename.value = NULL;
     txn->checksum_type = 0;
+    txn->ack_retransmit_counter = 0;
+    txn->nak_retransmit_counter = 0;
+    txn->inactivity_timer_handle = xTimerCreateStatic("Inactivity Timer", pdMS_TO_TICKS(TRANSACTION_LIFETIME_MS), pdFALSE, (void *)txn,
+                                                      inactivity_timer_callback, &txn->inactivity_timer_mem);
+
+    start_timer(txn->inactivity_timer_handle);
+
+    txn->ack_timer_handle =
+        xTimerCreateStatic("EOF ACK Timer", pdMS_TO_TICKS(ACK_TIMEOUT_MS), pdTRUE, (void *)txn, ack_timer_callback, &txn->ack_timer_mem);
 
     return;
 }
@@ -173,7 +182,8 @@ static void handle_filedata_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data
             debug("cfdp: no room to properly update NAK buffer, therefore the fd pdu will be disregarded");
         }
     }
-    txn->inactivity_timer = 0;
+
+    reset_timer(txn->inactivity_timer_handle);
 }
 
 static void handle_eof_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data, uint16_t pdu_data_length) {
@@ -188,12 +198,10 @@ static void handle_eof_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data, uin
     }
     txn->file_size = eof.filesize;
     txn->expected_checksum = eof.checksum;
-    txn->inactivity_timer = 0;
+    reset_timer(txn->inactivity_timer_handle);
 
     if (eof.condition_code != CFDP_COND_NOERROR) {
-        if (txn->radio_handle != NULL) {
-            (void)cfdp_send_ack(txn, CFDP_DIR_EOF, 0, eof.condition_code, 0x02);
-        }
+        cfdp_send_ack(txn, CFDP_DIR_EOF, 0, eof.condition_code, 0x02);
         txn->state = CFDP_RECV_STATE_ERR;
         return;
     }
@@ -201,13 +209,14 @@ static void handle_eof_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data, uin
     if (txn->reliable_mode && txn->nak_buf.size > 0) {
         txn->state = CFDP_RECV_STATE_SEND_NAK;
         txn->checksum = eof.checksum;
+
+        start_timer(txn->nak_timer_handle);
+
     } else {
         uint32_t computed = (txn->file_data != NULL) ? cfdp_calculate_modular_checksum(txn) : 0;
         if (txn->checksum_type == 0 && computed != eof.checksum) {
             debug("cfdp: checksum mismatch; computed = 0x%08lx expected = 0x%08lx\n", computed, eof.checksum);
-            if (txn->radio_handle != NULL) {
-                cfdp_send_fin(txn, CFDP_COND_FILE_CHECKSUM_FAIL);
-            }
+            cfdp_send_fin(txn, CFDP_COND_FILE_CHECKSUM_FAIL);
             txn->state = CFDP_RECV_STATE_ERR;
             return;
         }
@@ -222,7 +231,7 @@ static void handle_finished_pdu(cfdp_transaction_t *txn) {
     }
     cfdp_send_ack(txn, CFDP_DIR_FINISHED, 0, CFDP_COND_NOERROR, 0x02);
     txn->state = CFDP_SEND_STATE_DONE;
-    txn->inactivity_timer = 0;
+    reset_timer(txn->inactivity_timer_handle);
 }
 
 static void handle_ack_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data, size_t pdu_data_sz) {
@@ -240,16 +249,16 @@ static void handle_ack_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data, siz
     ack.condition_code = (pdu_data[2] >> 4) & 0x0F;
     ack.transaction_status = pdu_data[2] & 0x03;
 
+    stop_timer(txn->ack_timer_handle);
+    txn->ack_retransmit_counter = 0;
+
     if (ack.directive_code == CFDP_DIR_EOF && txn->direction == CFDP_SEND) {
-        txn->ack_timer = 0;
-        txn->nak_timer = 0;
-        txn->eof_retransmit_counter = 0;
         txn->state = txn->reliable_mode ? CFDP_SEND_STATE_WAIT_FIN : CFDP_SEND_STATE_DONE;
     } else if (ack.directive_code == CFDP_DIR_FINISHED && txn->direction == CFDP_RECV) {
-        txn->ack_timer = 0;
         txn->state = CFDP_RECV_STATE_DONE;
     }
-    txn->inactivity_timer = 0;
+
+    reset_timer(txn->inactivity_timer_handle);
 }
 
 static void handle_metadata_pdu(cfdp_transaction_t *txn) {
@@ -280,7 +289,7 @@ static void handle_nak_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data, siz
         cfdp_nak_buf_push(&txn->nak_buf, seg);
     }
     txn->state = CFDP_SEND_STATE_FILE_SEND;
-    txn->inactivity_timer = 0;
+    reset_timer(txn->inactivity_timer_handle);
 }
 
 /**
@@ -359,19 +368,25 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz) {
         new_txn->state = CFDP_RECV_STATE_WAIT_EOF;
         new_txn->direction = CFDP_RECV;
         new_txn->reliable_mode = (meta.closure_req != 0);
-        new_txn->inactivity_timer = 0;
-        new_txn->ack_timer = 0;
-        new_txn->nak_timer = 0;
-        new_txn->eof_retransmit_counter = 0;
+        new_txn->ack_retransmit_counter = 0;
         new_txn->nak_retransmit_counter = 0;
         new_txn->nak_buf.head = 0;
         new_txn->nak_buf.tail = 0;
         new_txn->nak_buf.size = 0;
-        memset(new_txn->received_bitmap, 0, sizeof(new_txn->received_bitmap));
         new_txn->source_filename = (cfdp_lv_t){.length = 0, .value = NULL};
         new_txn->dest_filename = (cfdp_lv_t){.length = 0, .value = NULL};
-        new_txn->radio_handle = NULL; // not needed for recv side
         new_txn->checksum_type = meta.checksum_type;
+
+        txn->inactivity_timer_handle = xTimerCreateStatic("Inactivity Timer", pdMS_TO_TICKS(TRANSACTION_LIFETIME_MS), pdFALSE, (void *)txn,
+                                                          inactivity_timer_callback, &txn->inactivity_timer_mem);
+
+        start_timer(txn->inactivity_timer_handle);
+
+        txn->ack_timer_handle = xTimerCreateStatic("FIN ACK Timer", pdMS_TO_TICKS(TRANSACTION_LIFETIME_MS), pdTRUE, (void *)txn,
+                                                   ack_timer_callback, &txn->ack_timer_mem);
+
+        txn->nak_timer_handle = xTimerCreateStatic("NAK Timer", pdMS_TO_TICKS(TRANSACTION_LIFETIME_MS), pdTRUE, (void *)txn,
+                                                   nak_timer_callback, &txn->nak_timer_mem);
 
         uint8_t *data = NULL;
 
@@ -423,50 +438,6 @@ uint32_t next_seq_num(void) {
     return ++counter;
 }
 
-cfdp_transaction_t *cfdp_send_init(cfdp_transaction_store_t *txn_store, uint8_t *fl, uint32_t sz, cfdp_lv_t source_filename,
-                                   cfdp_lv_t dest_filename, uint32_t source_entity_id, uint32_t dest_entity_id, uint8_t channel_num,
-                                   uint8_t priority, bool reliable_mode, at86rf215_t *radio_handle) {
-    if (txn_store == NULL || fl == NULL || sz == 0 || radio_handle == NULL) {
-        return NULL;
-    }
-
-    cfdp_transaction_t *txn = cfdp_alloc_transaction(txn_store);
-    if (txn == NULL) {
-        return NULL;
-    }
-
-    txn->transaction_id.entity_id = source_entity_id;
-    txn->transaction_id.seq_num = next_seq_num();
-    txn->dest_entity_id = dest_entity_id;
-    txn->inactivity_timer = 0;
-    txn->ack_timer = 0;
-    txn->nak_timer = 0;
-    txn->eof_retransmit_counter = 0;
-    txn->nak_retransmit_counter = 0;
-    txn->nak_buf.head = 0;
-    txn->nak_buf.tail = 0;
-    txn->nak_buf.size = 0;
-    txn->file_size = sz;
-    txn->file_offset = 0;
-    txn->state = CFDP_SEND_STATE_METADATA_SEND;
-    txn->direction = CFDP_SEND;
-    txn->reliable_mode = reliable_mode;
-    txn->channel_num = channel_num;
-    txn->priority = priority;
-    txn->file_data = fl;
-    txn->source_filename = source_filename;
-    txn->dest_filename = dest_filename;
-    txn->radio_handle = radio_handle;
-
-    return txn;
-}
-
-int cfdp_send_init_simple(uint8_t *fl, size_t sz, at86rf215_t *radio_handle, cfdp_transaction_store_t *txn_store) {
-    cfdp_lv_t empty = {.length = 0, .value = NULL};
-    return cfdp_send_init(txn_store, fl, sz, empty, empty, ENTITY_ID_SPACECRAFT, ENTITY_ID_GROUND, 0, 0, true, radio_handle) != NULL ? 0
-                                                                                                                                     : -1;
-}
-
 /* ---------- CFDP State Machines ---------- */
 
 cfdp_result_t cfdp_handle_send_state(cfdp_transaction_t *transaction, uint32_t elapsed_ms) {
@@ -475,7 +446,7 @@ cfdp_result_t cfdp_handle_send_state(cfdp_transaction_t *transaction, uint32_t e
             cfdp_send_metadata(transaction);
             return CFDP_RESULT_IN_PROGRESS;
         case CFDP_SEND_STATE_FILE_SEND:
-            if (transaction->nak_buf.size > 0) {
+            if (transaction->reliable_mode && transaction->nak_buf.size > 0) {
                 cfdp_resend(transaction);
             } else if (transaction->file_offset < transaction->file_size) {
                 uint32_t remaining = transaction->file_size - transaction->file_offset;
@@ -485,35 +456,18 @@ cfdp_result_t cfdp_handle_send_state(cfdp_transaction_t *transaction, uint32_t e
                 cfdp_send_eof(transaction, CFDP_COND_NOERROR);
                 if (transaction->reliable_mode) {
                     transaction->state = CFDP_SEND_STATE_WAIT_ACK;
-                    transaction->ack_timer = 0;
-                    transaction->eof_retransmit_counter = 0;
+                    start_timer(transaction->ack_timer_handle);
+                    transaction->ack_retransmit_counter = 0;
                 } else {
                     transaction->state = CFDP_SEND_STATE_DONE;
                 }
             }
             return CFDP_RESULT_IN_PROGRESS;
         case CFDP_SEND_STATE_WAIT_ACK:
-            transaction->ack_timer += elapsed_ms;
-            if (transaction->ack_timer > ACK_TIMEOUT_MS) {
-                transaction->ack_timer = 0;
-                if (transaction->eof_retransmit_counter >= ACK_RETRANSMIT_LIMIT) {
-                    transaction->state = CFDP_SEND_STATE_ERR;
-                } else {
-                    transaction->eof_retransmit_counter++;
-                    cfdp_send_eof(transaction, CFDP_COND_NOERROR);
-                }
-            }
             return CFDP_RESULT_BLOCKED;
         case CFDP_SEND_STATE_WAIT_FIN:
-            transaction->nak_timer += elapsed_ms;
-            if (transaction->nak_timer > NAK_TIMEOUT_MS) {
-                transaction->nak_timer = 0;
-                if (transaction->eof_retransmit_counter >= ACK_RETRANSMIT_LIMIT) {
-                    transaction->state = CFDP_SEND_STATE_ERR;
-                } else {
-                    transaction->eof_retransmit_counter++;
-                    cfdp_send_eof(transaction, CFDP_COND_NOERROR);
-                }
+            if (transaction->reliable_mode && transaction->nak_buf.size > 0) {
+                cfdp_resend(transaction);
             }
             return CFDP_RESULT_BLOCKED;
         case CFDP_SEND_STATE_DONE:
@@ -534,39 +488,20 @@ cfdp_result_t cfdp_handle_recv_state(cfdp_transaction_t *transaction, uint32_t e
             if (transaction->nak_buf.size == 0) {
                 transaction->state = CFDP_RECV_STATE_WAIT_RETRANSMIT;
             }
-            transaction->ack_timer = 0;
             return CFDP_RESULT_IN_PROGRESS;
         case CFDP_RECV_STATE_WAIT_RETRANSMIT:
             if (transaction->nak_buf.size == 0) {
+                stop_timer(transaction->nak_timer_handle);
                 transaction->state = CFDP_RECV_STATE_SEND_FIN;
-            }
-            transaction->nak_timer += elapsed_ms;
-            if (transaction->nak_timer > NAK_TIMEOUT_MS) {
-                transaction->nak_timer = 0;
-                if (transaction->nak_retransmit_counter >= NAK_RETRANSMIT_LIMIT) {
-                    transaction->state = CFDP_RECV_STATE_ERR;
-                } else {
-                    transaction->nak_retransmit_counter++;
-                    transaction->state = CFDP_RECV_STATE_SEND_NAK;
-                }
             }
             return CFDP_RESULT_BLOCKED;
         case CFDP_RECV_STATE_SEND_FIN:
             cfdp_send_fin(transaction, CFDP_COND_NOERROR);
-            transaction->nak_retransmit_counter++;
-            if (transaction->nak_retransmit_counter > NAK_RETRANSMIT_LIMIT) {
-                transaction->state = CFDP_RECV_STATE_ERR;
-            } else {
-                transaction->state = CFDP_RECV_STATE_WAIT_FIN_ACK;
-                transaction->ack_timer = 0;
-            }
+            start_timer(transaction->ack_timer_handle);
+            transaction->ack_retransmit_counter = 0;
+
             return CFDP_RESULT_BLOCKED;
         case CFDP_RECV_STATE_WAIT_FIN_ACK:
-            transaction->ack_timer += elapsed_ms;
-            if (transaction->ack_timer > ACK_TIMEOUT_MS) {
-                transaction->ack_timer = 0;
-                transaction->state = CFDP_RECV_STATE_SEND_FIN;
-            }
             return CFDP_RESULT_BLOCKED;
         case CFDP_RECV_STATE_DONE:
             return CFDP_RESULT_COMPLETE;
@@ -578,7 +513,11 @@ cfdp_result_t cfdp_handle_recv_state(cfdp_transaction_t *transaction, uint32_t e
 }
 
 void cfdp_send(cfdp_transaction_t *transaction, const uint8_t *buff, size_t sz) {
-    at86rf215_tx_frame(transaction->radio_handle, (at86rf215_radio_t)transaction->channel_num, buff, sz, TX_TIMEOUT_MS);
+    // at86rf215_tx_frame(transaction->radio_handle, (at86rf215_radio_t)transaction->channel_num, buff, sz, TX_TIMEOUT_MS);
+    (void)transaction;
+    (void)buff;
+    debug("sending %lu bytes", sz);
+    return;
 }
 
 int send(void *buff, size_t sz) {
@@ -750,12 +689,6 @@ cfdp_result_t cfdp_transact(cfdp_transaction_t *txn, uint32_t elapsed_ms) {
         return CFDP_RESULT_INVALID_ARG;
     }
 
-    txn->inactivity_timer += elapsed_ms;
-    if (txn->inactivity_timer >= TRANSACTION_LIFETIME_MS) {
-        txn->state = (txn->direction == CFDP_SEND) ? CFDP_SEND_STATE_ERR : CFDP_RECV_STATE_ERR;
-        return CFDP_RESULT_ERROR;
-    }
-
     cfdp_result_t result = CFDP_RESULT_ERROR;
 
     if (txn->direction == CFDP_SEND) {
@@ -833,4 +766,16 @@ void nak_timer_callback(TimerHandle_t nak_timer_handle) {
 
     cfdp_send_nak(txn);
     txn->nak_retransmit_counter++;
+}
+
+static inline void reset_timer(TimerHandle_t timer_handle) {
+    xTimerReset(timer_handle, CFDP_TIMER_TICKS_TO_WAIT);
+}
+
+static inline void stop_timer(TimerHandle_t timer_handle) {
+    xTimerStop(timer_handle, CFDP_TIMER_TICKS_TO_WAIT);
+}
+
+static inline void start_timer(TimerHandle_t timer_handle) {
+    xTimerStart(timer_handle, CFDP_TIMER_TICKS_TO_WAIT);
 }

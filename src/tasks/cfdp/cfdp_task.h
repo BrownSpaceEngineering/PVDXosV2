@@ -35,6 +35,10 @@ typedef struct at86rf215 at86rf215_t;
 
     #define ACK_RETRANSMIT_LIMIT 16
     #define NAK_RETRANSMIT_LIMIT 16
+
+    #define CFDP_TIMER_TICKS_TO_WAIT 10 // placeholders
+    #define CFDP_TIMER_MAX_ATTEMPTS 10
+
     #define MAX_TRANSACTIONS 4
 
     #define CFDP_MAX_SEGMENT_REQUESTS 16
@@ -152,22 +156,13 @@ typedef struct cfdp_transaction {
     bool reliable_mode;
     bool delivery_complete;
 
-    uint8_t channel_num;
-    uint8_t priority;
-
     uint8_t *file_data;
-
-    // One bit per segment (SEGMENT_SIZE bytes). Bit i is set when segment i has been received.
-    // Used on the receive side to detect gaps without relying on zero-byte content checks.
-    uint32_t received_bitmap[CFDP_BITMAP_WORDS];
 
     cfdp_lv_t source_filename;
     cfdp_lv_t dest_filename;
 
     // Checksum received from the sender's EOF PDU. Stored for audit/logging after transfer completes.
     uint32_t expected_checksum;
-
-    at86rf215_t *radio_handle; // handle to the radio hardware; channel_num selects RF09 vs RF24
 
 } cfdp_transaction_t;
 
@@ -211,11 +206,6 @@ uint8_t *cfdp_alloc_small_buff();
 uint8_t *cfdp_alloc_large_buff();
 int cfdp_free_buff(uint8_t *buff);
 
-cfdp_transaction_t *cfdp_send_init(cfdp_transaction_store_t *txn_store, uint8_t *fl, uint32_t sz, cfdp_lv_t source_filename,
-                                   cfdp_lv_t dest_filename, uint32_t source_entity_id, uint32_t dest_entity_id, uint8_t channel_num,
-                                   uint8_t priority, bool reliable_mode, at86rf215_t *radio_handle);
-int cfdp_send_init_simple(uint8_t *fl, size_t sz, at86rf215_t *radio_handle, cfdp_transaction_store_t *txn_store);
-
 cfdp_result_t cfdp_handle_send_state(cfdp_transaction_t *transaction, uint32_t elapsed_ms);
 cfdp_result_t cfdp_handle_recv_state(cfdp_transaction_t *transaction, uint32_t elapsed_ms);
 cfdp_result_t cfdp_transact(cfdp_transaction_t *txn, uint32_t elapsed_ms);
@@ -241,6 +231,10 @@ int cfdp_resend(cfdp_transaction_t *transaction);
 void inactivity_timer_callback(TimerHandle_t inactivity_timer_handle);
 void ack_timer_callback(TimerHandle_t ack_timer_handle);
 void nak_timer_callback(TimerHandle_t nak_timer_handle);
+
+static inline void reset_timer(TimerHandle_t timer_handle);
+static inline void stop_timer(TimerHandle_t timer_handle);
+static inline void start_timer(TimerHandle_t timer_handle);
 
 void exec_command_cfdp_request(command_t *const p_cmd);
 void cfdp_process_pdu(uint8_t *raw, size_t sz);
