@@ -1,11 +1,11 @@
 /**
- * adcs_task.c
+ * cfdp_task.c
  *
  * RTOS task for CFDP functionality
  *
  * Created: April 26, 2026
- * Modified: April 26, 2026
- * Authors: Noah Shepard
+ * Modified: May 10, 2026
+ * Authors: Noah Shepard, Avinash Patel
  */
 
 #include "tasks/cfdp/cfdp_task.h"
@@ -38,7 +38,6 @@ void cfdp_put_request(cfdp_txn_type_t type, cfdp_direction_t dir) {
     size_t file_size = (type == IMAGE) ? IMAGE_FILE_SZ : TELEMETRY_FILE_SZ;
     cfdp_state_t state = (dir == CFDP_SEND) ? CFDP_SEND_STATE_METADATA_SEND : CFDP_RECV_STATE_WAIT_EOF;
     uint32_t seq_num = next_seq_num();
-    uint8_t *file_data = (type == IMAGE) ? (uint8_t *)IMAGE_BUF : (uint8_t *)TELEMETRY_BUF;
 
     memset(txn, 0, sizeof(*txn));
     txn->transaction_id.entity_id = ENTITY_ID_SPACECRAFT;
@@ -49,11 +48,11 @@ void cfdp_put_request(cfdp_txn_type_t type, cfdp_direction_t dir) {
     txn->state = state;
     txn->direction = dir;
     txn->reliable_mode = true;
-    txn->file_data = file_data;
     txn->source_filename.length = 0;
     txn->source_filename.value = NULL;
     txn->dest_filename.length = 0;
     txn->dest_filename.value = NULL;
+    txn->file_data = NULL;
     txn->checksum_type = 0;
     txn->ack_retransmit_counter = 0;
     txn->nak_retransmit_counter = 0;
@@ -94,6 +93,9 @@ void cfdp_cancel_request(uint32_t txn_id) {
     } else {
         cfdp_send_fin(txn, CFDP_COND_CANCEL_REQ);
     }
+
+    stop_timer(txn->inactivity_timer_handle);
+    stop_timer(txn->ack_timer_handle);
 
     cfdp_txn_store.transactions[store_index].state = (dir == CFDP_SEND) ? CFDP_SEND_STATE_ERR : CFDP_RECV_STATE_ERR;
 
@@ -209,7 +211,7 @@ static void handle_eof_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data, uin
     if (txn->reliable_mode && txn->nak_buf.size > 0) {
         txn->state = CFDP_RECV_STATE_SEND_NAK;
         txn->checksum = eof.checksum;
-
+        cfdp_send_ack(txn, CFDP_DIR_EOF, 0, CFDP_COND_NOERROR, 0x01);
         start_timer(txn->nak_timer_handle);
 
     } else {
@@ -342,6 +344,7 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz) {
             cfdp_send_metadata_nak(&header);
         } else if (dir_code != CFDP_DIR_METADATA) {
             warning("cfdp: unable to process incoming pdu of type %x from unrecognized transaction", dir_code);
+            return;
         }
 
         // create new receive-side transaction from incoming Metadata PDU
@@ -445,6 +448,7 @@ cfdp_result_t cfdp_handle_send_state(cfdp_transaction_t *transaction, uint32_t e
     switch (transaction->state) {
         case CFDP_SEND_STATE_METADATA_SEND:
             cfdp_send_metadata(transaction);
+            transaction->state = CFDP_SEND_STATE_FILE_SEND;
             return CFDP_RESULT_IN_PROGRESS;
         case CFDP_SEND_STATE_FILE_SEND:
             if (transaction->reliable_mode && transaction->nak_buf.size > 0) {
@@ -498,6 +502,7 @@ cfdp_result_t cfdp_handle_recv_state(cfdp_transaction_t *transaction, uint32_t e
             return CFDP_RESULT_BLOCKED;
         case CFDP_RECV_STATE_SEND_FIN:
             cfdp_send_fin(transaction, CFDP_COND_NOERROR);
+            transaction->state = CFDP_RECV_STATE_WAIT_FIN_ACK;
             start_timer(transaction->ack_timer_handle);
             transaction->ack_retransmit_counter = 0;
 
@@ -580,9 +585,9 @@ cfdp_pdu_segment_request_t cfdp_nak_buf_pop(cfdp_nak_buf_t *buf) {
 }
 
 size_t cfdp_nak_buf_get_index(cfdp_nak_buf_t *buf, size_t offset, size_t len) {
-    for (size_t i = 0; i < CFDP_MAX_SEGMENT_REQUESTS; ++i) {
-        if (buf->segments[buf->tail + i % CFDP_MAX_SEGMENT_REQUESTS].start_offset <= offset + len &&
-            buf->segments[buf->tail + i % CFDP_MAX_SEGMENT_REQUESTS].end_offset >= offset) {
+    for (size_t i = 0; i < buf->size; ++i) {
+        if (buf->segments[(buf->tail + i) % CFDP_MAX_SEGMENT_REQUESTS].start_offset <= offset + len &&
+            buf->segments[(buf->tail + i) % CFDP_MAX_SEGMENT_REQUESTS].end_offset >= offset) {
             return buf->tail + i % CFDP_MAX_SEGMENT_REQUESTS;
         }
     }
@@ -638,6 +643,7 @@ cfdp_transaction_t *cfdp_find_transaction(cfdp_transaction_store_t *txn_store, u
 uint8_t *cfdp_alloc_small_buff() {
     for (size_t i = 0; i < CFDP_SMALL_BUFF_COUNT; ++i) {
         if (!cfdp_small_buffs.in_use[i]) {
+            cfdp_small_buffs.in_use[i] = true;
             return &cfdp_small_buffs.buff[i * CFDP_SMALL_BUFF_SZ];
         }
     }
@@ -648,6 +654,7 @@ uint8_t *cfdp_alloc_large_buff() {
     if (cfdp_large_buff.in_use) {
         return NULL;
     } else {
+        cfdp_large_buff.in_use = true;
         return cfdp_large_buff.buff;
     }
 }
@@ -728,13 +735,9 @@ void ack_timer_callback(TimerHandle_t ack_timer_handle) {
             return; // timer double counts, but it gives time for the timer queue to process
         }
 
-        if (txn->direction == CFDP_SEND) {
-            txn->state = CFDP_SEND_STATE_ERR;
-            cond = CFDP_COND_ACK_LIMIT;
-        } else {
-            txn->state = CFDP_RECV_STATE_ERR;
-            cond = CFDP_COND_NAK_LIMIT;
-        }
+        txn->state = (txn->direction == CFDP_SEND) ? CFDP_SEND_STATE_ERR : CFDP_RECV_STATE_ERR;
+
+        cond = CFDP_COND_ACK_LIMIT;
     }
 
     if (txn->direction == CFDP_SEND) { // EOF-ACK Timer
