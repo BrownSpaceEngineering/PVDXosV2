@@ -226,6 +226,7 @@ int cfdp_send_ack(cfdp_transaction_t *transaction, uint8_t acked_directive_code,
                   uint8_t transaction_status);
 int cfdp_send_eof(cfdp_transaction_t *transaction, uint8_t condition_code);
 int cfdp_send_nak(cfdp_transaction_t *transaction);
+int cfdp_send_metadata_nak(cfdp_pdu_header_t *header);
 int cfdp_resend(cfdp_transaction_t *transaction);
 
 void inactivity_timer_callback(TimerHandle_t inactivity_timer_handle);
