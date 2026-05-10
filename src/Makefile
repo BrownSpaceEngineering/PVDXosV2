@@ -1,165 +1,34 @@
-###############################################################################
-##################### ADDING SOMETHING?  READ THIS FIRST! #####################
-###############################################################################
-###
-###  When adding a new C file to the source, you must do 2 things:
-###    - Add the file to the OBJS list below (with a .o extension)
-###    - If it is in a new directory, Add the directory to the EXTRA_VPATH list below (with a .c extension)
-###  Remember to add the trailing \ to the end of each line!
-###
-###############################################################################
-###############################################################################
-###############################################################################
+##############################################################################
+################## OBJECT FILE AND INCLUDE PATH DISCOVERY ####################
+##############################################################################
 
-### ALL C FILES SHOULD HAVE AN OBJECT FILE LISTED HERE ###
-export OBJS :=                                              	\
-../src/linalg/LinearAlgebra/add.o 								\
-../src/linalg/LinearAlgebra/chol.o 								\
-../src/linalg/LinearAlgebra/cofact.o 							\
-../src/linalg/LinearAlgebra/copy.o 								\
-../src/linalg/LinearAlgebra/cut.o 								\
-../src/linalg/LinearAlgebra/det.o 								\
-../src/linalg/LinearAlgebra/diag.o 								\
-../src/linalg/LinearAlgebra/diagpower.o 						\
-../src/linalg/LinearAlgebra/dot.o 								\
-../src/linalg/LinearAlgebra/eabs.o 								\
-../src/linalg/LinearAlgebra/eig.o 								\
-../src/linalg/LinearAlgebra/eye.o 								\
-../src/linalg/LinearAlgebra/hankel.o 							\
-../src/linalg/LinearAlgebra/horzcat.o 							\
-../src/linalg/LinearAlgebra/insert.o 							\
-../src/linalg/LinearAlgebra/inv.o								\
-../src/linalg/LinearAlgebra/linprog.o 							\
-../src/linalg/LinearAlgebra/linsolve.o 							\
-../src/linalg/LinearAlgebra/lu.o 								\
-../src/linalg/LinearAlgebra/maxvector.o 						\
-../src/linalg/LinearAlgebra/mdiag.o 							\
-../src/linalg/LinearAlgebra/minvector.o 						\
-../src/linalg/LinearAlgebra/move.o 								\
-../src/linalg/LinearAlgebra/mpower.o 							\
-../src/linalg/LinearAlgebra/mul.o 								\
-../src/linalg/LinearAlgebra/norm.o 								\
-../src/linalg/LinearAlgebra/ones.o 								\
-../src/linalg/LinearAlgebra/pinv.o 								\
-../src/linalg/LinearAlgebra/power.o 							\
-../src/linalg/LinearAlgebra/print.o 							\
-../src/linalg/LinearAlgebra/qr.o 								\
-../src/linalg/LinearAlgebra/rank.o 								\
-../src/linalg/LinearAlgebra/repmat.o 							\
-../src/linalg/LinearAlgebra/scale.o 							\
-../src/linalg/LinearAlgebra/sqrte.o 							\
-../src/linalg/LinearAlgebra/sub.o 								\
-../src/linalg/LinearAlgebra/sumrows.o 							\
-../src/linalg/LinearAlgebra/svd.o 								\
-../src/linalg/LinearAlgebra/toeplitz.o 							\
-../src/linalg/LinearAlgebra/tran.o 								\
-../src/linalg/LinearAlgebra/tril.o 								\
-../src/linalg/LinearAlgebra/triu.o 								\
-../src/linalg/LinearAlgebra/vec.o 								\
-../src/linalg/LinearAlgebra/vertcat.o 							\
-../src/linalg/LinearAlgebra/zeros.o 							\
-../src/linalg/LinearAlgebra/eps.o 								\
-																\
-../src/main.o                                               	\
-                                                            	\
-../src/mutexes/mutexes.o                                    	\
-                                                            	\
-../src/misc/printf/SEGGER_RTT.o                             	\
-../src/misc/printf/SEGGER_RTT_printf.o                      	\
-                                                            	\
-../src/misc/rtos_support/rtos_static_memory.o               	\
-../src/misc/rtos_support/rtos_stack_overflow.o              	\
-                                                            	\
-../src/misc/logging/logging.o                               	\
-                                                            	\
-../src/misc/exception_handlers/default_handler.o            	\
-../src/misc/exception_handlers/specific_handlers.o          	\
-																\
-../src/drivers/display/display_driver.o                       	\
-../src/drivers/gyro/SCH1.o										\
-../src/drivers/magnetometer/magnetometer_driver.o           	\
-../src/drivers/photodiode/photodiode_driver.o               	\
-../src/drivers/rtc/rtc_driver.o                                 \
-../src/drivers/watchdog/watchdog_driver.o                     	\
-../src/drivers/at86rf215/at86rf215.o								\
-                                                            	\
-../src/tasks/heartbeat/heartbeat_main.o                     	\
-                                                            	\
-../src/tasks/watchdog/watchdog_task.o                       	\
-../src/tasks/watchdog/watchdog_main.o                       	\
-                                                            	\
-../src/tasks/cosmic_monkey/cosmic_monkey_main.o             	\
-../src/tasks/cosmic_monkey/cosmic_monkey_task.o             	\
-                                                            	\
-../src/tasks/display/display_task.o                         	\
-../src/tasks/display/display_main.o                         	\
-../src/tasks/display/image_buffers/image_buffer_BrownLogo.o 	\
-../src/tasks/display/image_buffers/image_buffer_PVDX.o      	\
-../src/tasks/adcs/adcs_task.o 									\
-../src/tasks/adcs/adcs_main.o 									\
-                                                            	\
-../src/tasks/task_manager/task_manager_main.o               	\
-../src/tasks/task_manager/task_manager_task.o               	\
-                                                            	\
-../src/tasks/command_dispatcher/command_dispatcher_main.o   	\
-../src/tasks/command_dispatcher/command_dispatcher_task.o   	\
-                                                            	\
-../src/tasks/shell/shell_main.o                             	\
-../src/tasks/shell/shell_helpers.o                          	\
-../src/tasks/shell/shell_commands.o                         	\
-                                                            	\
-../src/tasks/task_list.o                                        \
-																\
-../src/checks/device_checks.o 									\
-																\
-../src/ccsds/spp.o 										\
-../src/ccsds/cfdp_pdu.o 									\
-../src/tests/test.o                                             \
-																
+# list of directories and files to exclude from compilation
+EXCLUDE_PATHS := $(PVDXOS_DIR)/src/libraries/adcs \
+				 $(PVDXOS_DIR)/src/linalg/Lapack \
 
-### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###
-### THESE ARE WRITTEN RELATIVE TO THE ./ASF/gcc/Makefile FILE ###
-export EXTRA_VPATH := \
-../../src \
-../../src/misc \
-../../src/misc/printf \
-../../src/misc/rtos_support \
-../../src/misc/logging \
-../../src/misc/exception_handlers \
-../../src/drivers \
-../../src/drivers/display \
-../../src/drivers/gyro \
-../../src/drivers/magnetometer \
-../../src/drivers/magnetorquer \
-../../src/drivers/at86rf215    \
-../../src/drivers/rtc \
-../../src/drivers/photodiode \
-../../src/drivers/watchdog \
-../../src/tasks \
-../../src/tasks/watchdog \
-../../src/tasks/heartbeat \
-../../src/tasks/cosmic_monkey \
-../../src/tasks/display \
-../../src/tasks/display/image_buffers \
-../../src/tasks/task_manager \
-../../src/tasks/command_dispatcher \
-../../src/tasks/shell \
-../../src/tasks/radio \
-../../src/tasks/adcs \
-../../src/mutexes \
-../../src/checks \
-../../src/ccsds \
-../../src/tests \
-../../src/linalg \
-../../src/linalg/Lapack \
-../../src/linalg/LinearAlgebra \
-../../src/tasks/adcs \
-../../src/mutexes
+# generate flags to pass to find to exclude paths from above
+EXCLUDE_FLAGS := $(foreach dir,$(EXCLUDE_PATHS),-not -path "$(dir)/*")
 
-###############################################################################
-###############################################################################
-###############################################################################
+# Discover all c files in src dir
+SRCS := $(shell find $(PVDXOS_DIR)/src -name "*.c" $(EXCLUDE_FLAGS))
 
+# Substitute .c suffix with .o to create output object names
+export OBJS := $(patsubst %.c,%.o,$(SRCS))
+
+# Create list of directories to include from
+export EXTRA_VPATH := $(sort $(dir $(SRCS)))
+
+# Print discovered objs and VPATH for debugging 
+$(info Parsed OBJS:)
+$(eval $(foreach f,$(OBJS),$(info $(f))))
+
+$(info Parsed EXTRA_VPATH:)
+$(eval $(foreach f,$(EXTRA_VPATH),$(info $(f))))
+
+##############################################################################
+##############################################################################
+##############################################################################
+ 
 #Technical stuff
 
 #Makefile usually uses /bin/sh to evaluate commands, so we need to change it to /bin/bash
@@ -259,6 +128,11 @@ clean:
 	@$(MAKE) -C $(CHILD_MAKEFILE_PATH) clean \
 	&& rm -f ./PVDXos.bin ./PVDXos.elf \
 	&& echo " --- Cleaned Build Files --- "
+
+# this is a cheat, since it's just a nop. Execution stops after 
+# info statements at the top of Makefile
+list_files:
+	@: 
 
 # When updating the ASF configuration, this must be run once in order to automatically integrate the new ASF config
 # Hopefully nobody ever needs to touch this, but you can add to it if you want to automatically trigger an action when the ASF is updated
