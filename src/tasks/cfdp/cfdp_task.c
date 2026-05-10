@@ -332,15 +332,16 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz) {
         }
     }
     if (txn == NULL) {
-        if (dir_code != CFDP_DIR_METADATA) {
-            debug("cfdp: unknown incoming pdu of type %x disregarded\n", dir_code);
-            return;
-        }
-
         if (!cfdp_txn_store.slot_free) {
             debug("cfdp: txn store full, unable to accept sequence: %x, from entity: %x\n", header.transaction_seq,
                   header.source_entity_id); // we should probably transmit an error finished
             return;
+        }
+
+        if (dir_code == CFDP_DIR_METADATA || dir_code == CFDP_DIR_EOF) {
+            cfdp_send_metadata_nak(&header);
+        } else if (dir_code != CFDP_DIR_METADATA) {
+            debug("cfdp: unable to process incoming pdu of type %x from unrecognized transaction", dir_code);
         }
 
         // create new receive-side transaction from incoming Metadata PDU

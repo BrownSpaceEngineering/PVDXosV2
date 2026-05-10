@@ -400,6 +400,32 @@ int cfdp_send_nak(cfdp_transaction_t *transaction) {
     return nak_data_size;
 }
 
+int cfdp_send_metadata_nak(cfdp_pdu_header_t *header) {
+    if (header == NULL) {
+        return -1;
+    }
+
+    uint8_t buff[32] = {0};
+
+    uint8_t direction = 0b1;
+    uint8_t mode = header->transmission_mode;
+    uint8_t crc_present = header->crc;
+    uint8_t large_file = header->largefile;
+
+    buff[0] = (0b001 << 5) | (direction << 3) | (mode << 2) | (crc_present << 1) | large_file | 0b0;
+
+    uint16_to_big_endian(16, buff + 1);
+
+    uint8_t has_segment_metadata = header->segment_metadata_field;
+    buff[3] = 0b00110011 | (has_segment_metadata << 3); // fix :(
+
+    uint32_to_big_endian(header->source_entity_id, buff + 4);
+    uint32_to_big_endian(header->transaction_seq, buff + 8);
+    uint32_to_big_endian(header->dest_entity_id, buff + 12);
+
+    return 32;
+}
+
 /**
  * cfdp_send_fin
  *
