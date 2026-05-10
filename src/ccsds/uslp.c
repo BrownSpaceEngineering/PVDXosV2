@@ -38,7 +38,7 @@ int uslp_mapp_request(uint8_t *sdu, uint32_t gmap_id, uint8_t pvn, uint32_t sdu_
     // TODO: see if these need non-zero values
     primary_header.vc_frame_count = 0; // This needs to be some sort of counter which increments per frame sent
     primary_header.frame_length = 0;
-    primary_header.bypass_sequence_control_flag = qos; // Make sure enum values are in correct order
+    primary_header.bypass_sequence_control_flag = qos;
     primary_header.protocol_control_command_flag = 0;
     primary_header.spare = 0;
     primary_header.ocf_flag = 0;
@@ -52,7 +52,7 @@ int uslp_mapp_request(uint8_t *sdu, uint32_t gmap_id, uint8_t pvn, uint32_t sdu_
     uslp_transfer_frame_view_t frame = {0};
     frame.primary_header = primary_header;
     frame.data_field_header = data_header;
-    frame.datafield = sdu; // Maybe?
+    frame.datafield = sdu;
 
     return uslp_send(&frame);
 }

@@ -12,7 +12,7 @@
 
 /// USLP Transfer Frame Primary Header
 ///
-/// Reference: USLP Green & Blue Book
+/// Reference: USLP Blue Book pg. 70 - ~90
 ///
 /// - This struct internally reorders some fields and using bitfields,
 ///   so the ordering does not necessarily match the specification
@@ -36,7 +36,7 @@ typedef struct uslp_transfer_frame_primary_header {
 
 /// USLP Transfer Frame Data Field Header
 ///
-/// Reference: USLP Green & Blue Book
+/// Reference: USLP Blue Book figure 4.1.2.11.3 (pg. 96)
 ///
 /// - This struct internally reorders some fields and using bitfields,
 ///   so the ordering does not necessarily match the specification
@@ -78,8 +78,8 @@ typedef struct uslp_transfer_frame_view {
 // Quality of Serice (QoS) options
 // Reference - USLP Blue Book 3-5
 typedef enum uslp_qos {
-    USLP_QOS_SEQUENCE_CONTROLLED,
-    USLP_QOS_EXPEDITED
+    USLP_QOS_SEQUENCE_CONTROLLED = 0,
+    USLP_QOS_EXPEDITED = 1
 } uslp_qos_t;
 
 /*
