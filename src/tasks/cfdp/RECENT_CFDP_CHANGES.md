@@ -22,5 +22,5 @@
 
  ## CFDP Timers
 - Updated cfdp to user FreeRTOS timers to handle CFDP Timers. 
-- Currently in process implementation of timer callbacks
-- need to update existing code to correcty call/use new timers 
+- Implemented timer timeout functionality and updated existing timer code to support it 
+- TODO: I don't think we actually need to store a nak and ack timer b/c only one will ever be used at once. 
