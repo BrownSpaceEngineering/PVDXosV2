@@ -10,7 +10,6 @@
 
 #include "task_list.h"
 
-#include "command_dispatcher_task.h"
 #include "display_task.h"
 #include "globals.h"
 #include "heartbeat_task.h"
@@ -35,22 +34,6 @@ pvdx_task_t watchdog_task = {.name = "Watchdog",
                              .last_checkin_time_ticks = 0xDEADBEEF,
                              .has_registered = false,
                              .task_type = OS};
-
-pvdx_task_t command_dispatcher_task = {.name = "CommandDispatcher",
-                                       .enabled = true,
-                                       .handle = NULL,
-                                       .command_queue = NULL,
-                                       .init = init_command_dispatcher,
-                                       .function = main_command_dispatcher,
-                                       .stack_size = COMMAND_DISPATCHER_TASK_STACK_SIZE,
-                                       .stack_buffer = command_dispatcher_mem.command_dispatcher_task_stack,
-                                       .pvParameters = NULL,
-                                       .priority = 4,
-                                       .task_tcb = &command_dispatcher_mem.command_dispatcher_task_tcb,
-                                       .watchdog_timeout_ms = 10000,
-                                       .last_checkin_time_ticks = 0xDEADBEEF,
-                                       .has_registered = false,
-                                       .task_type = OS};
 
 pvdx_task_t task_manager_task = {.name = "TaskManager",
                                  .enabled = true,
@@ -136,7 +119,6 @@ pvdx_task_t heartbeat_task = {
 
 // and define their constant pointers
 pvdx_task_t *const p_watchdog_task = &watchdog_task;
-pvdx_task_t *const p_command_dispatcher_task = &command_dispatcher_task;
 pvdx_task_t *const p_task_manager_task = &task_manager_task;
 pvdx_task_t *const p_adcs_task = &adcs_task;
 pvdx_task_t *const p_shell_task = &shell_task;
@@ -151,7 +133,7 @@ pvdx_task_t *const task_list_null_terminator = NULL;
 // NOTE: Watchdog task must be first in the list, Command Dispatcher second, and Task Manager third.
 // If you change the order of any of these, make sure that main.c reflects the change and update this comment.
 pvdx_task_t *task_list[] = {
-    p_watchdog_task, p_command_dispatcher_task, p_task_manager_task,       p_adcs_task, p_shell_task,
+    p_watchdog_task, p_task_manager_task,       p_adcs_task, p_shell_task,
     p_display_task,  p_heartbeat_task,          task_list_null_terminator,
 };
 
