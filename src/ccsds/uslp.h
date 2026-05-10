@@ -8,6 +8,8 @@
  * Authors: Zach Mahan, Ilan Goldfein
  */
 
+#include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 /// USLP Transfer Frame Primary Header
@@ -89,3 +91,14 @@ typedef enum uslp_qos {
  * - This function is the Service Access Point for USLP
  */
 int uslp_mapp_request(uint8_t *sdu, uint32_t gmap_id, uint8_t pvn, uint32_t sdu_id, uslp_qos_t qos);
+
+/**
+ * Parsing for USLP Transfer Frames
+ *
+ * \param tf - unitialized transfer frame to unitialized
+ * \param data - pointer to start of raw byte-stream data
+ * \param len - length, in bytes, of the byte stream
+ *
+ * Reference: USLP Blue Book Figure 4-2 (pg. 91), 4-4 (pg. 101)
+ */
+bool uslp_transfer_frame_parse(uslp_transfer_frame_t *tf, uint8_t *data, uint32_t len);

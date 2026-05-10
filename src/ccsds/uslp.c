@@ -64,3 +64,7 @@ int uslp_mapp_request(uint8_t *sdu, uint32_t gmap_id, uint8_t pvn, uint32_t sdu_
 static int uslp_send(uslp_transfer_frame_view_t *view) {
     return 0;
 }
+
+bool uslp_transfer_frame_parse(uslp_transfer_frame_t *tf, uint8_t *data, uint32_t len) {
+    return false;
+}
