@@ -194,7 +194,7 @@ static void handle_eof_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data, uin
         return;
     }
     cfdp_pdu_eof_t eof;
-    if (cfdp_pdu_eof_parse(pdu_data + 1, pdu_data_length - 1, false, &eof) < 0) {
+    if (cfdp_pdu_eof_parse(pdu_data, pdu_data_length, false, &eof) < 0) {
         warning("cfdp: failed to parse eof pdu\n");
         return;
     }
@@ -203,7 +203,7 @@ static void handle_eof_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data, uin
     reset_timer(txn->inactivity_timer_handle);
 
     if (eof.condition_code != CFDP_COND_NOERROR) {
-        cfdp_send_ack(txn, CFDP_DIR_EOF, 0, eof.condition_code, 0x02);
+        cfdp_send_ack(txn, CFDP_DIR_EOF, 0, eof.condition_code, 0x01);
         txn->state = CFDP_RECV_STATE_ERR;
         return;
     }
@@ -226,13 +226,23 @@ static void handle_eof_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data, uin
     }
 }
 
-static void handle_finished_pdu(cfdp_transaction_t *txn) {
+static void handle_finished_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data, size_t pdu_data_sz) {
     if (txn == NULL || txn->direction != CFDP_SEND) {
         warning("cfdp: finished pdu for unknown/non-send txn\n");
         return;
     }
-    cfdp_send_ack(txn, CFDP_DIR_FINISHED, 0, CFDP_COND_NOERROR, 0x02);
-    txn->state = CFDP_SEND_STATE_DONE;
+
+    cfdp_pdu_finished_t fin;
+    cfdp_pdu_finished_parse(pdu_data, pdu_data_sz, &fin);
+
+    if (fin.condition_code != CFDP_COND_NOERROR) {
+        txn->state = CFDP_SEND_STATE_ERR;
+        cfdp_send_ack(txn, CFDP_DIR_FINISHED, 0, fin.condition_code, 0x01);
+    } else {
+        txn->state = CFDP_SEND_STATE_DONE;
+        cfdp_send_ack(txn, CFDP_DIR_FINISHED, 0, fin.condition_code, 0x01);
+    }
+
     reset_timer(txn->inactivity_timer_handle);
 }
 
@@ -246,6 +256,8 @@ static void handle_ack_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data, siz
         return;
     }
     cfdp_pdu_ack_t ack;
+    cfdp_pdu_ack_parse(pdu_data, pdu_data_sz, &ack);
+
     ack.directive_code = (pdu_data[1] >> 4) & 0x0F;
     ack.directive_subtype_code = pdu_data[1] & 0x0F;
     ack.condition_code = (pdu_data[2] >> 4) & 0x0F;
@@ -276,12 +288,12 @@ static void handle_nak_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data, siz
         warning("cfdp: nak pdu for unknown/non-send txn\n");
         return;
     }
-    if (pdu_data_sz < 9) {
+    if (pdu_data_sz < 8) {
         warning("cfdp: nak pdu too short\n");
         return;
     }
-    const uint8_t *nak_body = pdu_data + 1;
-    size_t nak_body_sz = pdu_data_sz - 1;
+    const uint8_t *nak_body = pdu_data;
+    size_t nak_body_sz = pdu_data_sz;
     uint32_t seg_count = (nak_body_sz - 8) / 8;
     for (uint32_t i = 0; i < seg_count && i < CFDP_MAX_SEGMENT_REQUESTS; i++) {
         const uint8_t *s = nak_body + 8 + (i * 8);
@@ -323,6 +335,8 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz) {
 
     if (header.pdu_type == 0) {
         dir_code = raw[header_size];
+        pdu_data++;
+        pdu_data_sz--;
     }
 
     cfdp_transaction_t *txn = NULL;
@@ -354,16 +368,24 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz) {
         }
         // Skip the directive code byte before parsing the metadata body.
         cfdp_pdu_metadata_t meta;
-        if (cfdp_pdu_metadata_parse(pdu_data + 1, pdu_data_sz - 1, &meta) < 0) {
+        if (cfdp_pdu_metadata_parse(pdu_data, pdu_data_sz, &meta) < 0) {
             warning("cfdp: failed to parse metadata pdu\n");
+            return;
+        }
+
+        if (header.largefile != 0 || header.segmentation_control != 0) {
+            warning("cfdp: unsupported transaction type, rejecting");
+            // need to send a fin here to show that we recieved the transaction, but are not accepting it
             return;
         }
 
         cfdp_transaction_t *new_txn = cfdp_alloc_transaction(&cfdp_txn_store);
         if (new_txn == NULL) {
             warning("cfdp: alloc failed for new recv txn\n");
+            // also need to send fin here
             return;
         }
+
         new_txn->transaction_id.entity_id = header.source_entity_id;
         new_txn->transaction_id.seq_num = header.transaction_seq;
         new_txn->dest_entity_id = header.dest_entity_id;
@@ -400,10 +422,14 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz) {
             data = cfdp_alloc_large_buff();
         } else {
             warning("cfdp: incoming file larger than supported size\n");
+            // also need to send fin here.
+            return;
         }
 
         if (data == NULL) {
             warning("cfdp: no free buffer to allocate\n");
+            // also need to send fin here.
+            return;
         }
 
         new_txn->file_data = data;
@@ -420,7 +446,7 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz) {
             handle_eof_pdu(txn, pdu_data, header.pdu_data_length);
             break;
         case CFDP_DIR_FINISHED:
-            handle_finished_pdu(txn);
+            handle_finished_pdu(txn, pdu_data, header.pdu_data_length);
             break;
         case CFDP_DIR_ACK:
             handle_ack_pdu(txn, pdu_data, pdu_data_sz);
@@ -457,6 +483,7 @@ cfdp_result_t cfdp_handle_send_state(cfdp_transaction_t *transaction, uint32_t e
                 uint32_t remaining = transaction->file_size - transaction->file_offset;
                 uint32_t chunk_size = (remaining < SEGMENT_SIZE) ? remaining : SEGMENT_SIZE;
                 cfdp_send_filedata(transaction, transaction->file_offset, chunk_size);
+                transaction->file_offset += chunk_size;
             } else {
                 cfdp_send_eof(transaction, CFDP_COND_NOERROR);
                 if (transaction->reliable_mode) {
