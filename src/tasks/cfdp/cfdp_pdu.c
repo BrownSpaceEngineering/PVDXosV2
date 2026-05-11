@@ -454,8 +454,14 @@ int cfdp_send_fin(cfdp_transaction_t *transaction, uint8_t condition_code) {
     if (transaction == NULL)
         return -1;
 
-    // pdu_data_length: 1 (directive) + 1 (flags byte)
-    uint8_t buff[18];
+    uint32_t buff_sz = 18;
+
+    if (condition_code != CFDP_COND_NOERROR) {
+        buff_sz += 6;
+    }
+
+    // pdu_data_length: 1 (directive) + 1 (flags byte) + (?error) 6 (fault location TLV)
+    uint8_t buff[buff_sz];
     cfdp_prepare_pdu_header(buff, transaction, 2, CFDP_FILE_DIRECTIVE);
 
     uint8_t *fin_buff = buff + 16;
@@ -464,7 +470,107 @@ int cfdp_send_fin(cfdp_transaction_t *transaction, uint8_t condition_code) {
     uint8_t del_code = (transaction->delivery_complete) ? 0 : 1;
     fin_buff[1] = (condition_code << 4) | (del_code << 2) | (0x0);
 
-    cfdp_send(transaction, buff, 18);
+    if (condition_code != CFDP_COND_NOERROR) {
+        fin_buff[2] = CFDP_TLV_ENTITY_ID;
+        fin_buff[2] = 0x04;
+        uint32_to_big_endian(ENTITY_ID_SPACECRAFT, fin_buff + 3);
+    }
+
+    cfdp_send(transaction, buff, buff_sz);
+    return 0;
+}
+
+int cfdp_send_reject_fin(cfdp_pdu_header_t *header, cfdp_pdu_metadata_t *meta, uint8_t condition_code) {
+    if (header == NULL) {
+        return -1;
+    }
+
+    uint8_t buff[TXN_FRAME] = {0};
+
+    uint8_t direction = 0b1;
+    uint8_t mode = header->transmission_mode;
+    uint8_t crc_present = header->crc;
+    uint8_t large_file = header->largefile;
+
+    buff[0] = (0b001 << 5) | (direction << 3) | (mode << 2) | (crc_present << 1) | large_file | 0b0;
+
+    uint8_t has_segment_metadata = header->segment_metadata_field;
+    buff[3] = 0b00110011 | (has_segment_metadata << 3); // fix :(
+
+    uint32_to_big_endian(header->dest_entity_id, buff + 4);
+    uint32_to_big_endian(header->transaction_seq, buff + 8);
+    uint32_to_big_endian(header->source_entity_id, buff + 12);
+
+    buff[16] = CFDP_DIR_FINISHED;
+
+    // deal with filestore responses
+    uint32_t fin_size = 1;
+
+    if (meta != NULL && meta->options.len > 0) {
+        uint8_t *pos = meta->options.data;
+        while (true) {
+            cfdp_tlv_t tlv;
+
+            if (!cfdp_tlv_next(&pos, meta->options.data + meta->options.len, &tlv)) {
+                break;
+            }
+
+            if (tlv.type == CFDP_TLV_FILESTORE_REQUEST) {
+                if (17 + fin_size + tlv.length + 6 + 2 >= TXN_FRAME) {
+                    warning("cfdp: unable to process all filestore requests");
+                    break;
+                }
+                buff[17 + fin_size] = 0x01;
+
+                condition_code = CFDP_COND_FILESTORE_REJECT;
+                uint8_t action_code = (tlv.value[0] >> 4) & 0x0F;
+
+                uint8_t *filestore_resp_size = buff + 18 + fin_size;
+
+                // get first file name
+                buff[19 + fin_size] = tlv.value[0] | 0b1111;
+
+                uint8_t file_name_len = tlv.value[1];
+                buff[20 + fin_size] = file_name_len;
+
+                for (uint8_t i = 0; i < file_name_len; i++) {
+                    buff[21 + fin_size + i] = tlv.value[2 + i];
+                }
+
+                fin_size += file_name_len + 4;
+                *filestore_resp_size = 2 + file_name_len;
+
+                if (action_code == 0b0010 || action_code == 0b0011 || action_code == 0b0100) {
+                    uint8_t sec_file_name_len = tlv.value[2 + file_name_len];
+
+                    buff[17 + fin_size] = sec_file_name_len;
+
+                    for (uint8_t i = 0; i < sec_file_name_len; i++) {
+                        buff[18 + fin_size + i] = tlv.value[3 + file_name_len + i];
+                    }
+                    fin_size += 1 + sec_file_name_len;
+                    *filestore_resp_size += 1 + sec_file_name_len;
+                }
+            }
+        }
+    }
+
+    buff[17] = (condition_code << 4) | (0x111); // only apply condition code now since it may change.
+
+    // deal with fault location (spacecraft_entity_id)
+
+    if (condition_code != CFDP_COND_BAD_CHECKSUM) {
+        buff[17 + fin_size] = CFDP_TLV_ENTITY_ID;
+        buff[18 + fin_size] = 0x04;
+        uint32_to_big_endian(ENTITY_ID_SPACECRAFT, buff + 19 + fin_size);
+
+        fin_size += 6;
+    }
+
+    uint16_to_big_endian(fin_size + 1, buff + 1);
+
+    send(buff, 17 + fin_size);
+
     return 0;
 }
 

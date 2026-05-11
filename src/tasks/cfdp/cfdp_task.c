@@ -348,12 +348,6 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz) {
         }
     }
     if (txn == NULL) {
-        if (!cfdp_txn_store.slot_free) {
-            warning("cfdp: txn store full, unable to accept sequence: %x, from entity: %x\n", header.transaction_seq,
-                    header.source_entity_id); // we should probably transmit an error finished
-            return;
-        }
-
         if (dir_code == CFDP_DIR_METADATA || dir_code == CFDP_DIR_EOF) {
             cfdp_send_metadata_nak(&header);
         } else if (dir_code != CFDP_DIR_METADATA) {
@@ -376,13 +370,21 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz) {
         if (header.largefile != 0 || header.segmentation_control != 0) {
             warning("cfdp: unsupported transaction type, rejecting");
             // need to send a fin here to show that we recieved the transaction, but are not accepting it
+            cfdp_send_reject_fin(&header, &meta, CFDP_COND_INVALID_TRANSMISSION);
             return;
         }
+
+        if (meta.checksum_type != 0x00 || meta.checksum_type != 0x0F) {
+            warning("cfdp: unsported checksum type, rejecting");
+            cfdp_send_reject_fin(&header, &meta, CFDP_COND_BAD_CHECKSUM);
+        }
+
+        cfdp_handle_metadata_opt(&meta);
 
         cfdp_transaction_t *new_txn = cfdp_alloc_transaction(&cfdp_txn_store);
         if (new_txn == NULL) {
             warning("cfdp: alloc failed for new recv txn\n");
-            // also need to send fin here
+            cfdp_send_reject_fin(&header, &meta, CFDP_COND_CANCEL_REQ);
             return;
         }
 
@@ -422,13 +424,13 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz) {
             data = cfdp_alloc_large_buff();
         } else {
             warning("cfdp: incoming file larger than supported size\n");
-            // also need to send fin here.
+            cfdp_send_reject_fin(&header, &meta, CFDP_COND_FILE_SIZEERROR);
             return;
         }
 
         if (data == NULL) {
             warning("cfdp: no free buffer to allocate\n");
-            // also need to send fin here.
+            cfdp_send_reject_fin(&header, &meta, CFDP_COND_INVALID_TRANSMISSION);
             return;
         }
 
