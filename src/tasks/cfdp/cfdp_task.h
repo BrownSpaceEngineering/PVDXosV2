@@ -217,11 +217,14 @@ void cfdp_send(cfdp_transaction_t *transaction, const uint8_t *buff, size_t sz);
 int send(void *buff, size_t sz);
 int recv(void *buff, size_t sz);
 
+uint32_t cfdp_calculate_modular_checksum(cfdp_transaction_t *transaction);
+
 int cfdp_prepare_pdu_header(uint8_t *buff, cfdp_transaction_t *transaction, uint16_t pdu_len, cfdp_pdu_type_t pdu_type);
 int cfdp_send_metadata(cfdp_transaction_t *transaction);
 int cfdp_send_filedata(cfdp_transaction_t *transaction, uint32_t offset, uint32_t size);
-uint32_t cfdp_calculate_modular_checksum(cfdp_transaction_t *transaction);
+
 int cfdp_send_fin(cfdp_transaction_t *transaction, uint8_t condition_code);
+int cfdp_send_reject_fin(cfdp_pdu_header_t *header, cfdp_pdu_metadata_t *meta, uint8_t condition_code);
 int cfdp_send_ack(cfdp_transaction_t *transaction, uint8_t acked_directive_code, uint8_t directive_subtype_code, uint8_t condition_code,
                   uint8_t transaction_status);
 int cfdp_send_eof(cfdp_transaction_t *transaction, uint8_t condition_code);

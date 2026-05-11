@@ -19,7 +19,7 @@
 #define CFDP_VERSION_NUMBER 0b001
 
 // For Entity ID field of EOF PDU. Perhaps unneeded.
-#define ENTITY_ID_SPACECRAFT 0x01
+#define ENTITY_ID_SPACECRAFT 0x50564485 // hex for ascii PVDX
 #define ENTITY_ID_GROUND 0x02
 
 // Currently Supported PDU types
@@ -72,10 +72,6 @@
 #define CFDP_TLV_FAULT_HANDLER 0x04
 #define CFDP_TLV_FLOW_LABEL 0x05
 #define CFDP_TLV_ENTITY_ID 0x06
-
-// Implementation Specific
-// - Size of JPEG/Raw Image
-// - Size of SPP Packets
 
 /*
  * CFDP generic variable length field struct
