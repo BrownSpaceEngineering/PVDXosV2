@@ -57,7 +57,7 @@ typedef struct at86rf215 at86rf215_t;
     // Received-segment bitmap sizing.
     // One bit per SEGMENT_SIZE-byte chunk, covering the worst-case MAX_FILE_SIZE file.
     #define CFDP_MAX_SEGMENTS (MAX_FILE_SIZE / SEGMENT_SIZE) // 128 segments
-    #define CFDP_BITMAP_WORDS (CFDP_MAX_SEGMENTS / 32)       // 4 × uint32_t = 16 bytes
+    #define CFDP_BITMAP_WORDS (CFDP_MAX_SEGMENTS / 32)       // 4 x uint32_t = 16 bytes
 
     #define CFDP_LARGE_BUFF_SZ 8192
     #define CFDP_SMALL_BUFF_SZ 128
@@ -67,12 +67,24 @@ typedef struct at86rf215 at86rf215_t;
 
 // Placed in a struct to ensure that the TCB is placed higher than the stack in memory
 //^ This ensures that stack overflows do not corrupt the TCB (since the stack grows downwards)
+//
+// Static timer storage: two timers per transaction slot (retransmit + inactivity).
+// Kept here so that init_cfdp() can call xTimerCreateStatic() once at startup,
+// eliminating the xTimerCreateStatic() calls that previously ran per-transaction.
 typedef struct {
     StackType_t overflow_buffer[TASK_STACK_OVERFLOW_PADDING];
     StackType_t cfdp_task_stack[CFDP_TASK_STACK_SIZE];
     uint8_t cfdp_command_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
     StaticQueue_t cfdp_task_queue;
     StaticTask_t cfdp_task_tcb;
+
+    // One inactivity timer and one retransmit timer (shared ACK/NAK role) per slot.
+    // Handles are initialised once by init_cfdp() and wired into each transaction
+    // at cfdp_alloc_transaction() time -- no allocation occurs after startup.
+    StaticTimer_t inactivity_timer_mem[MAX_TRANSACTIONS];
+    StaticTimer_t retransmit_timer_mem[MAX_TRANSACTIONS];
+    TimerHandle_t inactivity_timer_handles[MAX_TRANSACTIONS];
+    TimerHandle_t retransmit_timer_handles[MAX_TRANSACTIONS];
 } cfdp_task_memory_t;
 
 typedef enum cfdp_txn_type {
@@ -139,12 +151,15 @@ typedef struct cfdp_transaction {
     cfdp_txn_type_t type;
 
     StaticTimer_t inactivity_timer_mem;
-    StaticTimer_t ack_timer_mem;
-    StaticTimer_t nak_timer_mem;
+    // retransmit_timer is shared between the ACK-wait and NAK-wait roles.
+    // These two roles are mutually exclusive in every execution path:
+    // ack_timer fires while waiting for an EOF-ACK or FIN-ACK; nak_timer fires
+    // while waiting for retransmitted segments.  A transaction is never in both
+    // wait states at the same time, so one timer covers both.
+    StaticTimer_t retransmit_timer_mem;
 
     TimerHandle_t inactivity_timer_handle;
-    TimerHandle_t ack_timer_handle;
-    TimerHandle_t nak_timer_handle;
+    TimerHandle_t retransmit_timer_handle; // covers both ACK-wait and NAK-wait roles
 
     uint8_t ack_retransmit_counter;
     uint8_t nak_retransmit_counter;
@@ -231,7 +246,7 @@ int cfdp_send_metadata(cfdp_transaction_t *transaction);
 int cfdp_send_filedata(cfdp_transaction_t *transaction, uint32_t offset, uint32_t size);
 
 int cfdp_send_fin(cfdp_transaction_t *transaction, uint8_t condition_code);
-int cfdp_send_reject_fin(cfdp_pdu_header_t *header, cfdp_pdu_metadata_t *meta, uint8_t condition_code);
+int cfdp_send_reject_fin(const cfdp_pdu_header_t *header, const cfdp_pdu_metadata_t *meta, uint8_t condition_code);
 int cfdp_send_ack(cfdp_transaction_t *transaction, uint8_t acked_directive_code, uint8_t directive_subtype_code, uint8_t condition_code,
                   uint8_t transaction_status);
 int cfdp_send_eof(cfdp_transaction_t *transaction, uint8_t condition_code);
@@ -240,8 +255,16 @@ int cfdp_send_metadata_nak(cfdp_pdu_header_t *header);
 int cfdp_resend(cfdp_transaction_t *transaction);
 
 void inactivity_timer_callback(TimerHandle_t inactivity_timer_handle);
-void ack_timer_callback(TimerHandle_t ack_timer_handle);
-void nak_timer_callback(TimerHandle_t nak_timer_handle);
+// retransmit_timer_callback handles both EOF-ACK / FIN-ACK retransmits (previously
+// ack_timer_callback) and NAK retransmits (previously nak_timer_callback).
+// The transaction's state field distinguishes which role is active when it fires.
+void retransmit_timer_callback(TimerHandle_t retransmit_timer_handle);
+
+static inline void read_cam_mem(void *dest, size_t sz) {
+    (void)dest;
+    (void)sz;
+    return;
+}
 
 static inline void reset_timer(TimerHandle_t timer_handle) {
     xTimerReset(timer_handle, CFDP_TIMER_TICKS_TO_WAIT);

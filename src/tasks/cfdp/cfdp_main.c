@@ -46,6 +46,18 @@ QueueHandle_t init_cfdp(void) {
         warning("cfdp rtc timer: Hardware initialization failed\n");
     }
 
+    for (int i = 0; i < MAX_TRANSACTIONS; i++) {
+        cfdp_mem.inactivity_timer_handles[i] = xTimerCreateStatic("Inactivity Timer", pdMS_TO_TICKS(TRANSACTION_LIFETIME_MS),
+                                                                  pdFALSE, // one-shot
+                                                                  NULL,    // ID set per-transaction after alloc
+                                                                  inactivity_timer_callback, &cfdp_mem.inactivity_timer_mem[i]);
+
+        cfdp_mem.retransmit_timer_handles[i] = xTimerCreateStatic("Retransmit Timer",            // covers both ACK-wait and NAK-wait roles
+                                                                  pdMS_TO_TICKS(ACK_TIMEOUT_MS), // ACK_TIMEOUT_MS == NAK_TIMEOUT_MS
+                                                                  pdTRUE, // auto-reload (periodic, stopped explicitly when done)
+                                                                  NULL, retransmit_timer_callback, &cfdp_mem.retransmit_timer_mem[i]);
+    }
+
     return cfdp_command_queue_handle;
 }
 
