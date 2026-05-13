@@ -203,5 +203,56 @@ void test_cfdp(void) {
 
     test_log("data[1]: 0x%02x\n", filedata.data.data[1]);
     PVDX_ASSERT(filedata.data.data[1] == 0xFE && "data[1]");
+
+    // finished no error
+    test_log("cfdp fin no error parse test:\n");
+    uint8_t raw_fin[] = {0x03, 0x01, 0x00, 0x06, 0x00};
+    cfdp_pdu_finished_t fin;
+    ret = cfdp_pdu_finished_parse(raw_fin, sizeof(raw_fin), &fin);
+
+    test_log("return value: %d\n", ret);
+    PVDX_ASSERT(ret == 5 && "finished parse return");
+
+    test_log("cfdp fin condition code: %u\n", fin.condition_code);
+    PVDX_ASSERT(fin.condition_code == CFDP_COND_NOERROR && "finished condition code");
+
+    test_log("cfdp fin delivery code: %u\n", fin.delivery_code);
+    PVDX_ASSERT(fin.delivery_code == 0 && "finished delivery code");
+
+    test_log("cfdp fin file status: %u\n", fin.file_status);
+    PVDX_ASSERT(fin.file_status == 0b11 && "finished file status"); // status unreported
+
+    test_log("cfdp fin filestore response len: %u\n", fin.filestore_responses.len);
+    PVDX_ASSERT(fin.filestore_responses.len == 0 && "finished filestore resp len");
+
+    test_log("cfdp fin fault location length: %u\n", fin.fault_entity_id.len);
+    PVDX_ASSERT(fin.fault_entity_id.len == 0 && "finished fault location len");
+
+    // finished error
+    test_log("cfdp fin error parse test:\n");
+
+    uint8_t raw_fin_err[] = {0x37, 0x01, 0x00, 0x06, 0x01, 0x44};
+    ret = cfdp_pdu_finished_parse(raw_fin_err, sizeof(raw_fin_err), &fin);
+
+    test_log("return value: %d\n", ret);
+    PVDX_ASSERT(ret == 6 && "finished parse return");
+
+    test_log("cfdp fin condition code: %u\n", fin.condition_code);
+    PVDX_ASSERT(fin.condition_code == CFDP_COND_INVALID_TRANSMISSION && "finished condition code");
+
+    test_log("cfdp fin delivery code: %u\n", fin.delivery_code);
+    PVDX_ASSERT(fin.delivery_code == 1 && "finished delivery code");
+
+    test_log("cfdp fin file status: %u\n", fin.file_status);
+    PVDX_ASSERT(fin.file_status == 0b11 && "finished file status"); // status unreported
+
+    test_log("cfdp fin filestore response len: %u\n", fin.filestore_responses.len);
+    PVDX_ASSERT(fin.filestore_responses.len == 0 && "finished filestore resp len");
+
+    test_log("cfdp fin fault location length: %u\n", fin.fault_entity_id.len);
+    PVDX_ASSERT(fin.fault_entity_id.len == 1 && "finished fault location len");
+
+    test_log("cfdp fin fault location length: %u\n", fin.fault_entity_id.data);
+    PVDX_ASSERT(*fin.fault_entity_id.data == 0x44 && "finished fault location data");
 }
 // #endif

@@ -57,13 +57,13 @@ void cfdp_put_request(cfdp_put_data_t put_data) {
     txn->checksum_type = 0;
     txn->ack_retransmit_counter = 0;
     txn->nak_retransmit_counter = 0;
-    txn->inactivity_timer_handle = xTimerCreateStatic("Inactivity Timer", pdMS_TO_TICKS(TRANSACTION_LIFETIME_MS), pdFALSE, (void *)txn,
-                                                      &inactivity_timer_callback, &txn->inactivity_timer_mem);
 
+    // Timer handles were pre-created in init_cfdp() and wired into txn by
+    // cfdp_alloc_transaction(). Reset the timer IDs to point to this transaction
+    // now that the struct is fully initialised, then start the inactivity timer.
+    vTimerSetTimerID(txn->inactivity_timer_handle, (void *)txn);
+    vTimerSetTimerID(txn->retransmit_timer_handle, (void *)txn);
     start_timer(txn->inactivity_timer_handle);
-
-    txn->ack_timer_handle =
-        xTimerCreateStatic("EOF ACK Timer", pdMS_TO_TICKS(ACK_TIMEOUT_MS), pdTRUE, (void *)txn, &ack_timer_callback, &txn->ack_timer_mem);
 
     return;
 }
@@ -96,7 +96,7 @@ void cfdp_cancel_request(uint32_t txn_id) {
     }
 
     stop_timer(txn->inactivity_timer_handle);
-    stop_timer(txn->ack_timer_handle);
+    stop_timer(txn->retransmit_timer_handle);
 
     cfdp_txn_store.transactions[store_index].state = (dir == CFDP_SEND) ? CFDP_SEND_STATE_ERR : CFDP_RECV_STATE_ERR;
 
@@ -213,7 +213,7 @@ static void handle_eof_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data, uin
         txn->state = CFDP_RECV_STATE_SEND_NAK;
         txn->checksum = eof.checksum;
         cfdp_send_ack(txn, CFDP_DIR_EOF, 0, CFDP_COND_NOERROR, 0x01);
-        start_timer(txn->nak_timer_handle);
+        start_timer(txn->retransmit_timer_handle);
 
     } else {
         uint32_t computed = (txn->file_data != NULL) ? cfdp_calculate_modular_checksum(txn) : 0;
@@ -264,7 +264,7 @@ static void handle_ack_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data, siz
     ack.condition_code = (pdu_data[2] >> 4) & 0x0F;
     ack.transaction_status = pdu_data[2] & 0x03;
 
-    stop_timer(txn->ack_timer_handle);
+    stop_timer(txn->retransmit_timer_handle);
     txn->ack_retransmit_counter = 0;
 
     if (ack.directive_code == CFDP_DIR_EOF && txn->direction == CFDP_SEND) {
@@ -375,12 +375,10 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz) {
             return;
         }
 
-        if (meta.checksum_type != 0x00 || meta.checksum_type != 0x0F) {
+        if (meta.checksum_type != 0x00 && meta.checksum_type != 0x0F) {
             warning("cfdp: unsported checksum type, rejecting");
             cfdp_send_reject_fin(&header, &meta, CFDP_COND_BAD_CHECKSUM);
         }
-
-        cfdp_handle_metadata_opt(&meta);
 
         cfdp_transaction_t *new_txn = cfdp_alloc_transaction(&cfdp_txn_store);
         if (new_txn == NULL) {
@@ -406,16 +404,11 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz) {
         new_txn->dest_filename = (cfdp_lv_t){.length = 0, .value = NULL};
         new_txn->checksum_type = meta.checksum_type;
 
-        new_txn->inactivity_timer_handle = xTimerCreateStatic("Inactivity Timer", pdMS_TO_TICKS(TRANSACTION_LIFETIME_MS), pdFALSE,
-                                                              (void *)new_txn, &inactivity_timer_callback, &new_txn->inactivity_timer_mem);
-
+        // Timer handles were pre-created in init_cfdp() and wired into new_txn by
+        // cfdp_alloc_transaction(). Set IDs now that the struct is fully initialised.
+        vTimerSetTimerID(new_txn->inactivity_timer_handle, (void *)new_txn);
+        vTimerSetTimerID(new_txn->retransmit_timer_handle, (void *)new_txn);
         start_timer(new_txn->inactivity_timer_handle);
-
-        new_txn->ack_timer_handle = xTimerCreateStatic("FIN ACK Timer", pdMS_TO_TICKS(TRANSACTION_LIFETIME_MS), pdTRUE, (void *)new_txn,
-                                                       &ack_timer_callback, &new_txn->ack_timer_mem);
-
-        new_txn->nak_timer_handle = xTimerCreateStatic("NAK Timer", pdMS_TO_TICKS(TRANSACTION_LIFETIME_MS), pdTRUE, (void *)new_txn,
-                                                       &nak_timer_callback, &new_txn->nak_timer_mem);
 
         uint8_t *data = NULL;
 
@@ -438,7 +431,7 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz) {
         new_txn->file_data = data;
 
         txn = new_txn;
-        // Fall through into the switch — dir_code == CFDP_DIR_METADATA will hit the duplicate-guard and return cleanly.
+        // Fall through into the switch -- dir_code == CFDP_DIR_METADATA will hit the duplicate-guard and return cleanly.
     }
 
     switch (dir_code) {
@@ -491,7 +484,7 @@ cfdp_result_t cfdp_handle_send_state(cfdp_transaction_t *transaction, uint32_t e
                 cfdp_send_eof(transaction, CFDP_COND_NOERROR);
                 if (transaction->reliable_mode) {
                     transaction->state = CFDP_SEND_STATE_WAIT_ACK;
-                    start_timer(transaction->ack_timer_handle);
+                    start_timer(transaction->retransmit_timer_handle);
                     transaction->ack_retransmit_counter = 0;
                 } else {
                     transaction->state = CFDP_SEND_STATE_DONE;
@@ -526,14 +519,14 @@ cfdp_result_t cfdp_handle_recv_state(cfdp_transaction_t *transaction, uint32_t e
             return CFDP_RESULT_IN_PROGRESS;
         case CFDP_RECV_STATE_WAIT_RETRANSMIT:
             if (transaction->nak_buf.size == 0) {
-                stop_timer(transaction->nak_timer_handle);
+                stop_timer(transaction->retransmit_timer_handle);
                 transaction->state = CFDP_RECV_STATE_SEND_FIN;
             }
             return CFDP_RESULT_BLOCKED;
         case CFDP_RECV_STATE_SEND_FIN:
             cfdp_send_fin(transaction, CFDP_COND_NOERROR);
             transaction->state = CFDP_RECV_STATE_WAIT_FIN_ACK;
-            start_timer(transaction->ack_timer_handle);
+            start_timer(transaction->retransmit_timer_handle);
             transaction->ack_retransmit_counter = 0;
 
             return CFDP_RESULT_BLOCKED;
@@ -632,6 +625,13 @@ cfdp_transaction_t *cfdp_alloc_transaction(cfdp_transaction_store_t *txn_store) 
         if (!txn_store->active[i]) {
             txn_store->active[i] = true;
             memset(&txn_store->transactions[i], 0, sizeof(cfdp_transaction_t));
+
+            // Attach the pre-created static timer handles for this slot.
+            // Handles were created once in init_cfdp(); the timer IDs are set
+            // to the transaction pointer by the caller after full initialisation.
+            txn_store->transactions[i].inactivity_timer_handle = cfdp_mem.inactivity_timer_handles[i];
+            txn_store->transactions[i].retransmit_timer_handle = cfdp_mem.retransmit_timer_handles[i];
+
             txn_store->slot_free = false;
             for (int j = 0; j < MAX_TRANSACTIONS; j++) {
                 if (!txn_store->active[j]) {
@@ -754,47 +754,54 @@ void inactivity_timer_callback(TimerHandle_t inactivity_timer_handle) {
     }
 }
 
-void ack_timer_callback(TimerHandle_t ack_timer_handle) {
-    cfdp_transaction_t *txn = (cfdp_transaction_t *)pvTimerGetTimerID(ack_timer_handle);
+// retransmit_timer_callback replaces the former ack_timer_callback and
+// nak_timer_callback.  The transaction's state field tells us which role is
+// active: WAIT_ACK / WAIT_FIN_ACK mean we are retransmitting a PDU waiting
+// for an ACK; WAIT_RETRANSMIT / SEND_NAK mean we are re-sending a NAK.
+// The two roles are mutually exclusive, so a single periodic timer covers both.
+void retransmit_timer_callback(TimerHandle_t retransmit_timer_handle) {
+    cfdp_transaction_t *txn = (cfdp_transaction_t *)pvTimerGetTimerID(retransmit_timer_handle);
 
-    uint8_t cond = CFDP_COND_NOERROR;
+    // --- ACK role (was ack_timer_callback) ---
+    if (txn->state == CFDP_SEND_STATE_WAIT_ACK || txn->state == CFDP_RECV_STATE_WAIT_FIN_ACK) {
+        uint8_t cond = CFDP_COND_NOERROR;
 
-    if (txn->ack_retransmit_counter >= ACK_RETRANSMIT_LIMIT) {
-        if (xTimerStop(ack_timer_handle, 0) != pdPASS) {
-            warning("timer: unable to stop ack timer even though retransmit limit reached");
-            return; // timer double counts, but it gives time for the timer queue to process
+        if (txn->ack_retransmit_counter >= ACK_RETRANSMIT_LIMIT) {
+            if (xTimerStop(retransmit_timer_handle, 0) != pdPASS) {
+                warning("timer: unable to stop retransmit timer even though ACK retransmit limit reached");
+                return; // timer double counts, but it gives time for the timer queue to process
+            }
+
+            txn->state = (txn->direction == CFDP_SEND) ? CFDP_SEND_STATE_ERR : CFDP_RECV_STATE_ERR;
+            cond = CFDP_COND_ACK_LIMIT;
         }
 
-        txn->state = (txn->direction == CFDP_SEND) ? CFDP_SEND_STATE_ERR : CFDP_RECV_STATE_ERR;
+        if (txn->direction == CFDP_SEND) { // EOF-ACK retransmit
+            cfdp_send_eof(txn, cond);
+        } else { // FIN-ACK retransmit
+            cfdp_send_fin(txn, cond);
+        }
 
-        cond = CFDP_COND_ACK_LIMIT;
+        txn->ack_retransmit_counter++;
+        return;
     }
 
-    if (txn->direction == CFDP_SEND) { // EOF-ACK Timer
-        cfdp_send_eof(txn, cond);
-    } else { // FIN-ACK Timer
-        cfdp_send_fin(txn, cond);
-    }
-
-    txn->ack_retransmit_counter++;
-}
-
-void nak_timer_callback(TimerHandle_t nak_timer_handle) {
-    cfdp_transaction_t *txn = (cfdp_transaction_t *)pvTimerGetTimerID(nak_timer_handle);
-
+    // --- NAK role (was nak_timer_callback) ---
     if (txn->direction != CFDP_RECV) {
-        warning("timer: somehow started NAK timer for a send transaction, attempting to stop");
-        xTimerStop(nak_timer_handle, 0);
+        warning("timer: retransmit timer fired for a send transaction in unexpected state, attempting to stop");
+        xTimerStop(retransmit_timer_handle, 0);
         return;
     }
 
     if (txn->nak_retransmit_counter >= NAK_RETRANSMIT_LIMIT) {
         cfdp_send_fin(txn, CFDP_COND_NAK_LIMIT);
 
-        if (xTimerStart(txn->ack_timer_handle, 0) != pdPASS) {
-            warning("timer: unable to start fin timer, even though one was sent");
+        if (xTimerStart(txn->retransmit_timer_handle, 0) != pdPASS) {
+            warning("timer: unable to restart retransmit timer for FIN-ACK wait after NAK limit");
         }
 
+        txn->state = CFDP_RECV_STATE_WAIT_FIN_ACK;
+        txn->ack_retransmit_counter = 0;
         return;
     }
 

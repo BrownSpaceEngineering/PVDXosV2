@@ -183,7 +183,7 @@ int cfdp_pdu_finished_parse(const uint8_t *raw, size_t len, cfdp_pdu_finished_t 
     if (raw == NULL || out == NULL)
         return -1;
 
-    if (len < 4)
+    if (len < 3)
         return -1;
 
     out->condition_code = (raw[0] >> 4) & 0x0F;
@@ -197,6 +197,10 @@ int cfdp_pdu_finished_parse(const uint8_t *raw, size_t len, cfdp_pdu_finished_t 
     uint8_t filestore_responses_len = raw[2];
     if (filestore_responses_type == CFDP_TLV_FILESTORE_REQUEST && len >= 3 + (size_t)filestore_responses_len) {
         cfdp_view_init(&out->filestore_responses, raw + 3, filestore_responses_len);
+    }
+
+    if (out->condition_code != CFDP_COND_NOERROR && out->condition_code != CFDP_COND_BAD_CHECKSUM && len < 5) {
+        return -1;
     }
 
     // fault location
@@ -353,8 +357,11 @@ int cfdp_send_filedata(cfdp_transaction_t *transaction, uint32_t offset, uint32_
     uint8_t *filedata_buff = buff + 16;
 
     uint32_to_big_endian(offset, filedata_buff);
-
-    memcpy(filedata_buff + 4, transaction->file_data + offset, size);
+    if (transaction->type == IMAGE) {
+        read_cam_mem(filedata_buff + 4, size);
+    } else {
+        memcpy(filedata_buff + 4, transaction->file_data + offset, size);
+    }
 
     cfdp_send(transaction, buff, 20 + size);
 
@@ -480,7 +487,7 @@ int cfdp_send_fin(cfdp_transaction_t *transaction, uint8_t condition_code) {
     return 0;
 }
 
-int cfdp_send_reject_fin(cfdp_pdu_header_t *header, cfdp_pdu_metadata_t *meta, uint8_t condition_code) {
+int cfdp_send_reject_fin(const cfdp_pdu_header_t *header, const cfdp_pdu_metadata_t *meta, uint8_t condition_code) {
     if (header == NULL) {
         return -1;
     }
@@ -507,7 +514,7 @@ int cfdp_send_reject_fin(cfdp_pdu_header_t *header, cfdp_pdu_metadata_t *meta, u
     uint32_t fin_size = 1;
 
     if (meta != NULL && meta->options.len > 0) {
-        uint8_t *pos = meta->options.data;
+        const uint8_t *pos = meta->options.data;
         while (true) {
             cfdp_tlv_t tlv;
 
