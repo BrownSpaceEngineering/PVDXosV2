@@ -19,7 +19,7 @@
 
 /* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
 
-void cfdp_put_request(cfdp_txn_type_t type, cfdp_direction_t dir) {
+void cfdp_put_request(cfdp_put_data_t put_data) {
     cfdp_transaction_t *txn = cfdp_alloc_transaction(&cfdp_txn_store);
 
     if (txn == NULL) {
@@ -35,24 +35,25 @@ void cfdp_put_request(cfdp_txn_type_t type, cfdp_direction_t dir) {
         }
     }
 
-    size_t file_size = (type == IMAGE) ? IMAGE_FILE_SZ : TELEMETRY_FILE_SZ;
-    cfdp_state_t state = (dir == CFDP_SEND) ? CFDP_SEND_STATE_METADATA_SEND : CFDP_RECV_STATE_WAIT_EOF;
+    size_t file_size = (put_data.txn_type == IMAGE) ? IMAGE_FILE_SZ : TELEMETRY_FILE_SZ;
+
     uint32_t seq_num = next_seq_num();
 
     memset(txn, 0, sizeof(*txn));
     txn->transaction_id.entity_id = ENTITY_ID_SPACECRAFT;
     txn->transaction_id.seq_num = seq_num;
+    txn->type = put_data.txn_type;
     txn->dest_entity_id = ENTITY_ID_SPACECRAFT;
     txn->file_size = file_size;
     txn->file_offset = 0;
-    txn->state = state;
-    txn->direction = dir;
+    txn->state = CFDP_SEND_STATE_METADATA_SEND;
+    txn->direction = CFDP_SEND;
     txn->reliable_mode = true;
     txn->source_filename.length = 0;
     txn->source_filename.value = NULL;
     txn->dest_filename.length = 0;
     txn->dest_filename.value = NULL;
-    txn->file_data = NULL;
+    txn->file_data = put_data.memory;
     txn->checksum_type = 0;
     txn->ack_retransmit_counter = 0;
     txn->nak_retransmit_counter = 0;
@@ -119,7 +120,7 @@ void exec_command_cfdp_request(command_t *const p_cmd) {
 
     switch (p_cmd->operation) {
         case OPERATION_CFDP_PUT:
-            cfdp_put_request(p_cmd->data.cfdp_request->txn_type, CFDP_SEND);
+            cfdp_put_request(p_cmd->data.cfdp_request->put_data);
             break;
         case OPERATION_CFDP_CANCEL:
             cfdp_cancel_request(p_cmd->data.cfdp_request->txn_id);

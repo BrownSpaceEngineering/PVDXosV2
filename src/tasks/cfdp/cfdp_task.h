@@ -80,9 +80,14 @@ typedef enum cfdp_txn_type {
     TELEMETRY = 1
 } cfdp_txn_type_t;
 
+typedef struct {
+    void *memory;
+    cfdp_txn_type_t txn_type;
+} cfdp_put_data_t;
+
 typedef union cfdp_request_data {
     uint32_t txn_id;
-    cfdp_txn_type_t txn_type;
+    cfdp_put_data_t put_data;
 } cfdp_request_data_t;
 
 typedef enum cfdp_state {
@@ -130,6 +135,8 @@ typedef struct cfdp_nak_buf {
 typedef struct cfdp_transaction {
     cfdp_transaction_id_t transaction_id;
     uint32_t dest_entity_id;
+
+    cfdp_txn_type_t type;
 
     StaticTimer_t inactivity_timer_mem;
     StaticTimer_t ack_timer_mem;
@@ -210,7 +217,7 @@ cfdp_result_t cfdp_handle_send_state(cfdp_transaction_t *transaction, uint32_t e
 cfdp_result_t cfdp_handle_recv_state(cfdp_transaction_t *transaction, uint32_t elapsed_ms);
 cfdp_result_t cfdp_transact(cfdp_transaction_t *txn, uint32_t elapsed_ms);
 
-void cfdp_put_request(cfdp_txn_type_t type, cfdp_direction_t dir);
+void cfdp_put_request(cfdp_put_data_t put_data);
 void cfdp_cancel_request(uint32_t txn_id);
 
 void cfdp_send(cfdp_transaction_t *transaction, const uint8_t *buff, size_t sz);
