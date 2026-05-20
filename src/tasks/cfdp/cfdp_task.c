@@ -57,6 +57,7 @@ void cfdp_put_request(cfdp_put_data_t put_data) {
     txn->checksum_type = 0;
     txn->ack_retransmit_counter = 0;
     txn->nak_retransmit_counter = 0;
+    txn->condition_code = CFDP_COND_NOERROR;
 
     // Timer handles were pre-created in init_cfdp() and wired into txn by
     // cfdp_alloc_transaction(). Reset the timer IDs to point to this transaction
@@ -86,22 +87,25 @@ void cfdp_cancel_request(uint32_t txn_id) {
 
     cfdp_transaction_t *txn = &cfdp_txn_store.transactions[store_index];
 
-    // Fault signaling policy for local cancel requests:
-    // - Send side: transmit EOF with condition = CANCEL_REQ.
-    // - Receive side: transmit Finished with condition = CANCEL_REQ.
     if (dir == CFDP_SEND) {
-        cfdp_send_eof(txn, CFDP_COND_CANCEL_REQ);
+        txn->condition_code = CFDP_COND_CANCEL_REQ;
+        cfdp_send_eof(txn);
     } else {
-        cfdp_send_fin(txn, CFDP_COND_CANCEL_REQ);
+        txn->condition_code = CFDP_COND_CANCEL_REQ;
+        cfdp_send_fin(txn);
     }
 
-    stop_timer(txn->inactivity_timer_handle);
-    stop_timer(txn->retransmit_timer_handle);
+    if (txn->reliable_mode) {
+        txn->state = (dir == CFDP_SEND) ? CFDP_SEND_STATE_WAIT_ACK : CFDP_RECV_STATE_WAIT_FIN_ACK;
+        txn->ack_retransmit_counter = 0;
+        start_timer(txn->retransmit_timer_handle);
+    } else {
+        stop_timer(txn->inactivity_timer_handle);
+        stop_timer(txn->retransmit_timer_handle);
 
-    cfdp_txn_store.transactions[store_index].state = (dir == CFDP_SEND) ? CFDP_SEND_STATE_ERR : CFDP_RECV_STATE_ERR;
-
-    cfdp_txn_store.active[store_index] = false;
-    cfdp_txn_store.slot_free = true;
+        cfdp_txn_store.active[store_index] = false;
+        cfdp_txn_store.slot_free = true;
+    }
 }
 
 /* ---------- NON-DISPATCHABLE FUNCTIONS (do not go through the command dispatcher) ---------- */
@@ -214,13 +218,18 @@ static void handle_eof_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data, uin
         txn->checksum = eof.checksum;
         cfdp_send_ack(txn, CFDP_DIR_EOF, 0, CFDP_COND_NOERROR, 0x01);
         start_timer(txn->retransmit_timer_handle);
-
     } else {
         uint32_t computed = (txn->file_data != NULL) ? cfdp_calculate_modular_checksum(txn) : 0;
         if (txn->checksum_type == 0 && computed != eof.checksum) {
             warning("cfdp: checksum mismatch; computed = 0x%08lx expected = 0x%08lx\n", computed, eof.checksum);
-            cfdp_send_fin(txn, CFDP_COND_FILE_CHECKSUM_FAIL);
-            txn->state = CFDP_RECV_STATE_ERR;
+            txn->condition_code = CFDP_COND_FILE_CHECKSUM_FAIL;
+            cfdp_send_fin(txn);
+            if (!txn->reliable_mode) {
+                txn->state = CFDP_RECV_STATE_ERR;
+                return;
+            }
+            txn->state = CFDP_RECV_STATE_SEND_FIN;
+            start_timer(txn->retransmit_timer_handle);
             return;
         }
         txn->state = txn->reliable_mode ? CFDP_RECV_STATE_SEND_FIN : CFDP_RECV_STATE_DONE;
@@ -265,7 +274,11 @@ static void handle_ack_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data, siz
     if (ack.directive_code == CFDP_DIR_EOF && txn->direction == CFDP_SEND) {
         txn->state = txn->reliable_mode ? CFDP_SEND_STATE_WAIT_FIN : CFDP_SEND_STATE_DONE;
     } else if (ack.directive_code == CFDP_DIR_FINISHED && txn->direction == CFDP_RECV) {
-        txn->state = CFDP_RECV_STATE_DONE;
+        if (ack.condition_code != CFDP_COND_NOERROR) {
+            txn->state = CFDP_RECV_STATE_ERR;
+        } else {
+            txn->state = CFDP_RECV_STATE_DONE;
+        }
     }
 
     reset_timer(txn->inactivity_timer_handle);
@@ -397,6 +410,7 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz) {
         new_txn->source_filename = (cfdp_lv_t){.length = 0, .value = NULL};
         new_txn->dest_filename = (cfdp_lv_t){.length = 0, .value = NULL};
         new_txn->checksum_type = meta.checksum_type;
+        new_txn->condition_code = CFDP_COND_NOERROR;
 
         // Timer handles were pre-created in init_cfdp() and wired into new_txn by
         // cfdp_alloc_transaction(). Set IDs now that the struct is fully initialised.
@@ -475,7 +489,7 @@ cfdp_result_t cfdp_handle_send_state(cfdp_transaction_t *transaction, uint32_t e
                 cfdp_send_filedata(transaction, transaction->file_offset, chunk_size);
                 transaction->file_offset += chunk_size;
             } else {
-                cfdp_send_eof(transaction, CFDP_COND_NOERROR);
+                cfdp_send_eof(transaction);
                 if (transaction->reliable_mode) {
                     transaction->state = CFDP_SEND_STATE_WAIT_ACK;
                     start_timer(transaction->retransmit_timer_handle);
@@ -518,9 +532,14 @@ cfdp_result_t cfdp_handle_recv_state(cfdp_transaction_t *transaction, uint32_t e
             }
             return CFDP_RESULT_BLOCKED;
         case CFDP_RECV_STATE_SEND_FIN:
-            cfdp_send_fin(transaction, CFDP_COND_NOERROR);
+            uint32_t computed = (transaction->file_data != NULL) ? cfdp_calculate_modular_checksum(transaction) : 0;
+            if (transaction->checksum_type == 0 && computed != transaction->checksum) {
+                warning("cfdp: checksum mismatch; computed = 0x%08lx expected = 0x%08lx\n", computed, transaction->checksum);
+                transaction->condition_code = CFDP_COND_FILE_CHECKSUM_FAIL;
+            }
             transaction->state = CFDP_RECV_STATE_WAIT_FIN_ACK;
             start_timer(transaction->retransmit_timer_handle);
+            cfdp_send_fin(transaction);
             transaction->ack_retransmit_counter = 0;
 
             return CFDP_RESULT_BLOCKED;
@@ -741,10 +760,12 @@ void inactivity_timer_callback(TimerHandle_t inactivity_timer_handle) {
 
     if (txn->direction == CFDP_SEND) {
         txn->state = CFDP_SEND_STATE_ERR;
-        cfdp_send_eof(txn, CFDP_COND_INACTIVITY);
+        txn->condition_code = CFDP_COND_INACTIVITY;
+        cfdp_send_eof(txn);
     } else {
         txn->state = CFDP_RECV_STATE_ERR;
-        cfdp_send_fin(txn, CFDP_COND_INACTIVITY);
+        txn->condition_code = CFDP_COND_INACTIVITY;
+        cfdp_send_fin(txn);
     }
 }
 
@@ -758,8 +779,6 @@ void retransmit_timer_callback(TimerHandle_t retransmit_timer_handle) {
 
     // --- ACK role (was ack_timer_callback) ---
     if (txn->state == CFDP_SEND_STATE_WAIT_ACK || txn->state == CFDP_RECV_STATE_WAIT_FIN_ACK) {
-        uint8_t cond = CFDP_COND_NOERROR;
-
         if (txn->ack_retransmit_counter >= ACK_RETRANSMIT_LIMIT) {
             if (xTimerStop(retransmit_timer_handle, 0) != pdPASS) {
                 warning("timer: unable to stop retransmit timer even though ACK retransmit limit reached");
@@ -767,13 +786,13 @@ void retransmit_timer_callback(TimerHandle_t retransmit_timer_handle) {
             }
 
             txn->state = (txn->direction == CFDP_SEND) ? CFDP_SEND_STATE_ERR : CFDP_RECV_STATE_ERR;
-            cond = CFDP_COND_ACK_LIMIT;
+            txn->condition_code = CFDP_COND_ACK_LIMIT;
         }
 
         if (txn->direction == CFDP_SEND) { // EOF-ACK retransmit
-            cfdp_send_eof(txn, cond);
+            cfdp_send_eof(txn);
         } else { // FIN-ACK retransmit
-            cfdp_send_fin(txn, cond);
+            cfdp_send_fin(txn);
         }
 
         txn->ack_retransmit_counter++;
@@ -788,7 +807,8 @@ void retransmit_timer_callback(TimerHandle_t retransmit_timer_handle) {
     }
 
     if (txn->nak_retransmit_counter >= NAK_RETRANSMIT_LIMIT) {
-        cfdp_send_fin(txn, CFDP_COND_NAK_LIMIT);
+        txn->condition_code = CFDP_COND_NAK_LIMIT;
+        cfdp_send_fin(txn);
 
         if (xTimerStart(txn->retransmit_timer_handle, 0) != pdPASS) {
             warning("timer: unable to restart retransmit timer for FIN-ACK wait after NAK limit");

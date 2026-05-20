@@ -151,11 +151,6 @@ typedef struct cfdp_transaction {
     cfdp_txn_type_t type;
 
     StaticTimer_t inactivity_timer_mem;
-    // retransmit_timer is shared between the ACK-wait and NAK-wait roles.
-    // These two roles are mutually exclusive in every execution path:
-    // ack_timer fires while waiting for an EOF-ACK or FIN-ACK; nak_timer fires
-    // while waiting for retransmitted segments.  A transaction is never in both
-    // wait states at the same time, so one timer covers both.
     StaticTimer_t retransmit_timer_mem;
 
     TimerHandle_t inactivity_timer_handle;
@@ -174,6 +169,7 @@ typedef struct cfdp_transaction {
 
     cfdp_state_t state;
     cfdp_direction_t direction;
+    uint8_t condition_code;
 
     bool reliable_mode;
     bool delivery_complete;
@@ -245,11 +241,11 @@ int cfdp_prepare_pdu_header(uint8_t *buff, cfdp_transaction_t *transaction, uint
 int cfdp_send_metadata(cfdp_transaction_t *transaction);
 int cfdp_send_filedata(cfdp_transaction_t *transaction, uint32_t offset, uint32_t size);
 
-int cfdp_send_fin(cfdp_transaction_t *transaction, uint8_t condition_code);
+int cfdp_send_fin(cfdp_transaction_t *transaction);
 int cfdp_send_reject_fin(const cfdp_pdu_header_t *header, const cfdp_pdu_metadata_t *meta, uint8_t condition_code);
 int cfdp_send_ack(cfdp_transaction_t *transaction, uint8_t acked_directive_code, uint8_t directive_subtype_code, uint8_t condition_code,
                   uint8_t transaction_status);
-int cfdp_send_eof(cfdp_transaction_t *transaction, uint8_t condition_code);
+int cfdp_send_eof(cfdp_transaction_t *transaction);
 int cfdp_send_nak(cfdp_transaction_t *transaction);
 int cfdp_send_metadata_nak(cfdp_pdu_header_t *header);
 int cfdp_resend(cfdp_transaction_t *transaction);

@@ -457,13 +457,13 @@ int cfdp_send_metadata_nak(cfdp_pdu_header_t *header) {
  * We always send: condition = NO_ERROR, delivery_code = 0 (complete), file_status = 0b00.
  * No filestore-response or fault-location TLVs are appended.
  */
-int cfdp_send_fin(cfdp_transaction_t *transaction, uint8_t condition_code) {
+int cfdp_send_fin(cfdp_transaction_t *transaction) {
     if (transaction == NULL)
         return -1;
 
     uint32_t buff_sz = 18;
 
-    if (condition_code != CFDP_COND_NOERROR) {
+    if (transaction->condition_code != CFDP_COND_NOERROR) {
         buff_sz += 6;
     }
 
@@ -475,9 +475,9 @@ int cfdp_send_fin(cfdp_transaction_t *transaction, uint8_t condition_code) {
     fin_buff[0] = CFDP_DIR_FINISHED;
 
     uint8_t del_code = (transaction->delivery_complete) ? 0 : 1;
-    fin_buff[1] = (condition_code << 4) | (del_code << 2) | (0x0);
+    fin_buff[1] = (transaction->condition_code << 4) | (del_code << 2) | (0x0);
 
-    if (condition_code != CFDP_COND_NOERROR) {
+    if (transaction->condition_code != CFDP_COND_NOERROR) {
         fin_buff[2] = CFDP_TLV_ENTITY_ID;
         fin_buff[2] = 0x04;
         uint32_to_big_endian(ENTITY_ID_SPACECRAFT, fin_buff + 3);
@@ -599,9 +599,9 @@ int cfdp_send_ack(cfdp_transaction_t *transaction, uint8_t acked_directive_code,
     return 0;
 }
 
-int cfdp_send_eof(cfdp_transaction_t *transaction, uint8_t condition_code) {
+int cfdp_send_eof(cfdp_transaction_t *transaction) {
     size_t fault_location_size = 0;
-    if (condition_code != CFDP_COND_NOERROR) {
+    if (transaction->condition_code != CFDP_COND_NOERROR) {
         fault_location_size = 6;
     }
     // pdu_data_length: 1 (directive) + 1 (condition/spare) + 4 (checksum) + 4 (filesize) + optional fault TLV
@@ -614,12 +614,12 @@ int cfdp_send_eof(cfdp_transaction_t *transaction, uint8_t condition_code) {
 
     // Directive code must be the first byte of the PDU data field (BB Table 5-4, Pg. 78)
     eof_buff[0] = CFDP_DIR_EOF;
-    eof_buff[1] = (condition_code & 0xF) << 4;
+    eof_buff[1] = (transaction->condition_code & 0xF) << 4;
     uint32_to_big_endian(cfdp_calculate_modular_checksum(transaction), eof_buff + 2);
     uint32_to_big_endian(transaction->file_offset, eof_buff + 6);
 
     // We're making all entity IDs 4 Bytes, but we still have to encode TLV Format
-    if (condition_code != CFDP_COND_NOERROR) {
+    if (transaction->condition_code != CFDP_COND_NOERROR) {
         eof_buff[10] = 0x06;
         eof_buff[11] = 0x04;
         uint32_to_big_endian(transaction->transaction_id.entity_id, eof_buff + 12);
