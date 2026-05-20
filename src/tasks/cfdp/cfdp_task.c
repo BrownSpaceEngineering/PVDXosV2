@@ -259,11 +259,6 @@ static void handle_ack_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data, siz
     cfdp_pdu_ack_t ack;
     cfdp_pdu_ack_parse(pdu_data, pdu_data_sz, &ack);
 
-    ack.directive_code = (pdu_data[1] >> 4) & 0x0F;
-    ack.directive_subtype_code = pdu_data[1] & 0x0F;
-    ack.condition_code = (pdu_data[2] >> 4) & 0x0F;
-    ack.transaction_status = pdu_data[2] & 0x03;
-
     stop_timer(txn->retransmit_timer_handle);
     txn->ack_retransmit_counter = 0;
 
@@ -299,8 +294,7 @@ static void handle_nak_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data, siz
     for (uint32_t i = 0; i < seg_count && i < CFDP_MAX_SEGMENT_REQUESTS; i++) {
         const uint8_t *s = nak_body + 8 + (i * 8);
         cfdp_pdu_segment_request_t seg;
-        seg.start_offset = ((uint32_t)s[0] << 24) | ((uint32_t)s[1] << 16) | ((uint32_t)s[2] << 8) | s[3];
-        seg.end_offset = ((uint32_t)s[4] << 24) | ((uint32_t)s[5] << 16) | ((uint32_t)s[6] << 8) | s[7];
+        cfdp_pdu_segment_request_parse(s, 8, &seg);
         cfdp_nak_buf_push(&txn->nak_buf, seg);
     }
     txn->state = CFDP_SEND_STATE_FILE_SEND;
