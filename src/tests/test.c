@@ -254,5 +254,59 @@ void test_cfdp(void) {
 
     test_log("cfdp fin fault location length: %u\n", fin.fault_entity_id.data);
     PVDX_ASSERT(*fin.fault_entity_id.data == 0x44 && "finished fault location data");
+
+    // ack PDU
+    test_log("cfdp ack parse test:\n");
+
+    uint8_t raw_ack[] = {0x51, 0x0D};
+    cfdp_pdu_ack_t ack;
+    ret = cfdp_pdu_ack_parse(raw_ack, sizeof(raw_ack), &ack);
+
+    test_log("return value: %d\n", ret);
+    PVDX_ASSERT_MSG(ret == 2, "ack condition code");
+
+    test_log("cfdp ack dir code of acked pdu: %u\n", ack.directive_code);
+    PVDX_ASSERT_MSG(ack.directive_code == CFDP_DIR_FINISHED, "ack directive code");
+
+    test_log("cfdp ack directive subtype code: %u\n", ack.directive_subtype_code);
+    PVDX_ASSERT_MSG(ack.directive_subtype_code == 0b0001, "ack directive subtype code");
+
+    test_log("cfdp ack condition code: %u\n", ack.condition_code);
+    PVDX_ASSERT_MSG(ack.condition_code == CFDP_COND_NOERROR, "ack condition code");
+
+    test_log("cfdp ack transaction status: %u\n", ack.transaction_status);
+    PVDX_ASSERT_MSG(ack.transaction_status == 0b01, "ack transaction status");
+
+    // nak PDU
+    test_log("cfdp nak parse test:\n");
+
+    uint8_t raw_nak[] = {0x00, 0x00, 0x00, 0x01, 0x01, 0x02, 0x03, 0x04};
+    cfdp_pdu_nak_t nak;
+    ret = cfdp_pdu_nak_parse(raw_nak, sizeof(raw_nak), &nak);
+
+    test_log("return value: %d\n", ret);
+    PVDX_ASSERT_MSG(ret == 8, "nak parse return");
+
+    test_log("cfdp nak start offset: %u\n", nak.start_of_scope);
+    PVDX_ASSERT_MSG(nak.start_of_scope == 0x00000001, "nak start offset");
+
+    test_log("cfdp nak end offset: %u\n", nak.end_of_scope);
+    PVDX_ASSERT_MSG(nak.end_of_scope == 0x01020304, "nak end offset");
+
+    // segment request PDU
+    test_log("cfdp segment request parse test:\n");
+
+    uint8_t raw_seg_req[] = {0x00, 0x00, 0x00, 0x01, 0x01, 0x02, 0x03, 0x04};
+    cfdp_pdu_segment_request_t seg_req;
+    ret = cfdp_pdu_segment_request_parse(raw_seg_req, sizeof(raw_seg_req), &seg_req);
+
+    test_log("return value: %d\n", ret);
+    PVDX_ASSERT_MSG(ret == 8, "segment request parse return");
+
+    test_log("cfdp segment request start offset: %u\n", seg_req.start_offset);
+    PVDX_ASSERT_MSG(seg_req.start_offset == 0x00000001, "segment request start offset");
+
+    test_log("cfdp segment request end offset: %u\n", seg_req.end_offset);
+    PVDX_ASSERT_MSG(seg_req.end_offset == 0x01020304, "segment request end offset");
 }
 // #endif
