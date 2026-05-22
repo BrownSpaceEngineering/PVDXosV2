@@ -1516,7 +1516,7 @@ at86rf215_set_agc(struct at86rf215 *h, at86rf215_radio_t radio,
 
   uint8_t val = (cnf->input << 6) | (cnf->avgs << 4) | (cnf->reset << 3) |
                 (cnf->freeze << 1) | cnf->enable;
-  ret         = at86rf215_reg_write_8(h, val, reg);
+  ret = at86rf215_reg_write_8(h, val, reg);
   if (ret) {
     return ret;
   }
@@ -1723,7 +1723,7 @@ at86rf215_set_aux_settings(struct at86rf215 *h, at86rf215_radio_t radio,
 
   uint8_t val = (cnf->extlnabyp << 7) | (cnf->agcmap << 5) | (cnf->avext << 4) |
                 (cnf->aven << 3) | cnf->pavc;
-  ret         = at86rf215_reg_write_8(h, val, reg);
+  ret = at86rf215_reg_write_8(h, val, reg);
   if (ret) {
     return ret;
   }
@@ -2340,7 +2340,7 @@ bb_conf_mroqpsk(struct at86rf215 *h, at86rf215_radio_t radio,
     return -AT86RF215_INVAL_PARAM;
   }
 
-  /* DM only valid on 100k Chip/s or 200k Chip/s */
+  /* DM only valid on 100k Chip/s or 200k Chip/s, (6.12.2.2) */
   if (conf->qpsk.dm && conf->qpsk.fchip != AT86RF215_MROQPSK_FCHIP_100 &&
       conf->qpsk.fchip != AT86RF215_MROQPSK_FCHIP_200) {
     return -AT86RF215_INVAL_CONF;
@@ -2349,15 +2349,20 @@ bb_conf_mroqpsk(struct at86rf215 *h, at86rf215_radio_t radio,
   if (conf->qpsk.dm && h->priv.version < 3) {
     return -AT86RF215_NOT_SUPPORTED;
   }
-  /* RXM = BOTH only enabled on FCHIP >= 1000k Chip/s */
+  /* RXM = BOTH only enabled on FCHIP >= 1000k Chip/s, (6.12.2.3) */
   if (conf->qpsk.rxm == AT86RF215_MROQPSK_RXM_BOTH &&
       conf->qpsk.fchip != AT86RF215_MROQPSK_FCHIP_1000 &&
       conf->qpsk.fchip != AT86RF215_MROQPSK_FCHIP_2000) {
     return -AT86RF215_INVAL_CONF;
   }
-  /* Rate mode 4 only valid at 2000k chip/s */
-  if (conf->qpsk.drate_mod == AT86RF215_MROQPSK_DRATE_MOD_4 &&
-      conf->qpsk.fchip != AT86RF215_MROQPSK_FCHIP_2000) {
+  /* Rate mode validity depends on chip rate, (Table 6-102) */
+  if ((conf->qpsk.drate_mod == AT86RF215_MROQPSK_DRATE_MOD_4 &&
+       conf->qpsk.fchip != AT86RF215_MROQPSK_FCHIP_2000) ||
+      (conf->qpsk.drate_mod == AT86RF215_MROQPSK_DRATE_MOD_3 &&
+       conf->qpsk.fchip != AT86RF215_MROQPSK_FCHIP_1000 &&
+       conf->qpsk.fchip != AT86RF215_MROQPSK_FCHIP_2000) ||
+      (conf->qpsk.drate_mod == AT86RF215_MROQPSK_DRATE_MOD_2 &&
+       conf->qpsk.fchip == AT86RF215_MROQPSK_FCHIP_100)) {
     return -AT86RF215_INVAL_CONF;
   }
 
@@ -2514,8 +2519,8 @@ at86rf215_bb_enable(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t en)
     return ret;
   }
   const struct at86rf215_bb_conf *conf = &h->priv.bbc[radio];
-  uint8_t  val = conf->pt | ((en & 0x1) << 2) | (conf->fcst << 3) |
-                 (conf->txafcs << 4) | (conf->fcsfe << 6) | (conf->ctx << 3);
+  uint8_t val = conf->pt | ((en & 0x1) << 2) | (conf->fcst << 3) |
+                (conf->txafcs << 4) | (conf->fcsfe << 6) | (conf->ctx << 3);
   uint16_t reg = 0;
   if (radio == AT86RF215_RF09) {
     reg = REG_BBC0_PC;
@@ -2839,7 +2844,7 @@ at86rf215_iq_conf(struct at86rf215 *h, at86rf215_radio_t radio,
   }
   uint8_t val = conf->eec | (conf->cmv1v2 << 1) | (conf->cmv << 2) |
                 (conf->drv << 4) | (conf->extlb << 7);
-  ret         = at86rf215_reg_write_8(h, val, REG_RF_IQIFC0);
+  ret = at86rf215_reg_write_8(h, val, REG_RF_IQIFC0);
   if (ret) {
     return ret;
   }
