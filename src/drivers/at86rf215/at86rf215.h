@@ -419,6 +419,119 @@ typedef enum
 } at86rf215_fsk_fecs_t;
 
 /**
+ * MR-O-QPSK type
+ * Chip rate can be selected with sub-register OQPSKC0.FCHIP
+ */
+typedef enum
+{
+  AT86RF215_MROQPSK_FCHIP_100  = 0, //!< 100k chips/s
+  AT86RF215_MROQPSK_FCHIP_200  = 1, //!< 200k chips/s
+  AT86RF215_MROQPSK_FCHIP_1000 = 2, //!< 1000k chips/s
+  AT86RF215_MROQPSK_FCHIP_2000 = 3, //!< 2000k chips/s
+} at86rf215_mroqpsk_fchip_t;
+
+
+
+/**
+ * MR-O-QPSK data rate modifier
+ * Data rate can be selected with sub-register OQPSKPHRRX.MOD
+ *
+ * Note that some data rates are undefined depending on the chip rate select
+ * for MR-O-QPSK. Check against the AT86RF215 datasheet (pg. 125).
+ */
+typedef enum
+{
+  AT86RF215_MROQPSK_DRATE_MOD_0 = 0, //!< Lowest data rate; always defined
+  AT86RF215_MROQPSK_DRATE_MOD_1 = 1,
+  AT86RF215_MROQPSK_DRATE_MOD_2 = 2,
+  AT86RF215_MROQPSK_DRATE_MOD_3 = 3,
+  AT86RF215_MROQPSK_DRATE_MOD_4 = 4, //!< Highest data rate; may be undefined
+} at86rf215_mroqpsk_data_rate_mod_t;
+
+/**
+ * MR-O-QPSK mod type
+ * Modulation type can be selected with sub-register OQPSKC0.MOD
+ *
+ * Note that OQPSKC0.DM enables direct modulation on MR-O-QPSK mode
+ */
+typedef enum
+{
+  AT86RF215_MROQPSK_BB_RC08 =
+      0, //!< RC-0.8 shaping (raised cosine, roll-off = 0.8)
+  AT86RF215_MROQPSK_BB_RRC08 =
+      1, //!< RRC-0.8 shaping (root raised cosine, roll-off = 0.8)
+} at86rf215_mroqpsk_fshape_mod_t;
+
+/**
+ * Configures receive mode for QPSK
+ */
+typedef enum
+{
+  AT86RF215_MROQPSK_RXM_MROQPSK_ONLY =
+      0, //!< Listen for frames of MR-O-QPSK PHY only
+  AT86RF215_MROQPSK_RXM_LEGACY_ONLY =
+      1, //!< Listen for frames of legacy O-QPSK PHY only (if applicable)
+  AT86RF215_MROQPSK_RXM_BOTH = 2, //!< Listen for both, frames of MR-O-QPSK and
+                                  //!< legacy O-QPSK PHY (if applicable)
+  AT86RF215_MROQPSK_RXM_DISABLED = 3, //!< Disable detection for both PHYs
+} at86rf215_mroqpsk_rxm_t;
+
+/**
+ * Configures the search space of SFD words for MR-O-QPSK
+ */
+typedef enum
+{
+  AT86RF215_MROQPSK_NSFD_SFD1      = 0, //!< Search for SFD_1 only
+  AT86RF215_MROQPSK_NSFD_SFD1_SFD2 = 1, //!< Search for SFD_1 and SFD_2
+  AT86RF215_MROQPSK_NSFD_SFD1_SFD3 = 2, //!< Search for SFD_1 and SFD_3
+  AT86RF215_MROQPSK_NSFD_SFD1_SFD2_SFD3 =
+      3, //!< Search for SFD_1 and SFD_2 and SFD_3
+} at86rf215_mroqpsk_nsfd_t;
+
+/**
+ * Configuration for the AT86RF215 running in MR-O-QPSK mode
+ */
+struct at86rf215_mroqpsk_conf
+{
+  // OQPSKC0
+  at86rf215_mroqpsk_fchip_t fchip; //!< Chip frequency
+  at86rf215_mroqpsk_fshape_mod_t
+          fshape_mod; //!< Configures the impulse response of the shaping filter
+  uint8_t dm : 1;     //!< Set to 1 to enable direct modulation, 0 to disable
+
+  // OQPSKC1
+  uint8_t rxo : 1; //!< Set to 1 to enable receiver override, 0 to disable
+  uint8_t rxoleg
+      : 1; //!< Set to 1 to enable legacy receiver override, 0 to disable
+  uint8_t pdt0 : 3; //!< Preamble detector sensitivity for MR-O-QPSK, lower
+                    //!< values are higher
+  uint8_t pdt1 : 3; //!< Preamble detector sensitivity for legacy O-QPSK, lower
+                    //!< values are higher
+
+  // OQPSKC2
+  uint8_t spc     : 1; //!< 1 enables, 0 disables RX spurious compensation
+  uint8_t rpc     : 1; //!< 1 enables, 0 disables RX power saving
+  uint8_t enprop  : 1; //!< 1 enables, 0 disables proprietary modes.
+  uint8_t fcstleg : 1; //!< 1: FCS type for legacy is 16 bit, 0: FCS type for
+                       //!< legacy is 32 bit
+  at86rf215_mroqpsk_rxm_t rxm; //!< Controls receive mode
+
+  // OQPSKC3
+  uint8_t hrleg : 1; //!< 1 enables, 0 disables a proprietary high data rate
+                     //!< mode for legacy O-QPSK.
+  at86rf215_mroqpsk_nsfd_t nsfd;
+
+  // OQPSKPHRTX
+  uint8_t ppdut : 1; //!< Reflects the PPDU type for the last received MR-O-QPSK
+                     //!< frame. 0 is type 1, 1 is type 2.
+  uint8_t rb0
+      : 1; //!< Reflects the content of the reserved PHR bit RB0 in last frame
+  at86rf215_mroqpsk_data_rate_mod_t
+          drate_mod; //!< Data rate (fchip dependent, see datasheet)
+  uint8_t leg : 1;   //!< 0: transmit MR-O-QPSK, 1: transmit legacy O-QPSK
+};
+
+/**
  * SFD condifuration
  */
 typedef enum
@@ -516,10 +629,10 @@ struct at86rf215_mrfsk_conf
   uint16_t sfd1; //!< 16-bit SFD. Tranmitted after SFD0 if SFD32 is set
   uint8_t  sfd : 1;
   uint8_t  dw  : 1; //!< If set to 1, whitening of the PSDU is enabled
-  uint8_t
-      rb2 : 1; //!< Sets the content of the reserved FSK PHR bit 2 for transmit
-  uint8_t
-      rb1 : 1; //!< Sets the content of the reserved FSK PHR bit 1 for transmit
+  uint8_t  rb2
+      : 1; //!< Sets the content of the reserved FSK PHR bit 2 for transmit
+  uint8_t rb1
+      : 1; //!< Sets the content of the reserved FSK PHR bit 1 for transmit
   uint8_t  dm;
   uint8_t  preemphasis      : 1;
   uint32_t preemphasis_taps : 24;
@@ -535,7 +648,8 @@ struct at86rf215_bb_conf
   at86rf215_phy_t pt;
   union
   {
-    struct at86rf215_mrfsk_conf fsk;
+    struct at86rf215_mrfsk_conf   fsk;
+    struct at86rf215_mroqpsk_conf qpsk;
   };
 };
 
