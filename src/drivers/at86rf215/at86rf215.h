@@ -419,7 +419,7 @@ typedef enum
 } at86rf215_fsk_fecs_t;
 
 /**
- * MR-O-QPSK type
+ * MR-O-QPSK chip rate
  * Chip rate can be selected with sub-register OQPSKC0.FCHIP
  */
 typedef enum
@@ -430,10 +430,8 @@ typedef enum
   AT86RF215_MROQPSK_FCHIP_2000 = 3, //!< 2000k chips/s
 } at86rf215_mroqpsk_fchip_t;
 
-
-
 /**
- * MR-O-QPSK data rate modifier
+ * MR-O-QPSK rate mode
  * Data rate can be selected with sub-register OQPSKPHRRX.MOD
  *
  * Note that some data rates are undefined depending on the chip rate select
