@@ -7,8 +7,8 @@
  * Authors: Tanish Makadia, Ignacio Blancas Rodriguez, Siddharta Laloux
  */
 
-#include "command_dispatcher_task.h"
 #include "display_task.h"
+#include "cmd_dispatcher.h"
 
 // Display Task memory structures
 display_task_memory_t display_mem;
@@ -58,7 +58,9 @@ void main_display(void *pvParameters) {
         {
             // TODO: Add logic for blocking on the result of the display_image command
             command_t display_image_command = get_display_image_command(IMAGE_BUFFER_PVDX);
-            enqueue_command(&display_image_command);
+            while (enqueue_command(&display_image_command) != SUCCESS) {
+                warning("display: Failed to enqueue display image command\n");
+            }
 
             if (display_image_command.result != SUCCESS) {
                 warning("display: Failed to display image. Error code: %d\n", display_image_command.result);
@@ -68,7 +70,9 @@ void main_display(void *pvParameters) {
             // Set the display buffer to the second image
             // TODO: Add logic for blocking on the result of the display_image command
             command_t display_image_command = get_display_image_command(IMAGE_BUFFER_BROWNLOGO);
-            enqueue_command(&display_image_command);
+            while (enqueue_command(&display_image_command) != SUCCESS) {
+                warning("display: Failed to enqueue display image command\n");
+            }
 
             if (display_image_command.result != SUCCESS) {
                 warning("display: Failed to display image. Error code: %d\n", display_image_command.result);
@@ -77,7 +81,10 @@ void main_display(void *pvParameters) {
 
         // Check in with the watchdog task
         if (should_checkin(current_task)) {
-            enqueue_command(&cmd_checkin);
+            while (enqueue_command(&cmd_checkin) != SUCCESS) {
+                warning("display: Failed to enqueue watchdog checkin command\n");
+            }
+
             debug("display: Enqueued watchdog checkin command\n");
         }
     }
