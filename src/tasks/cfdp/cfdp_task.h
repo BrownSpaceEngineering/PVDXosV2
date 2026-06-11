@@ -15,8 +15,6 @@
     #include "tasks/watchdog/watchdog_task.h"
     #include "timers.h"
 
-typedef struct at86rf215 at86rf215_t;
-
     // Memory for the CFDP task
     #define CFDP_TASK_STACK_SIZE 1024 // Size of the stack in words (multiply by 4 to get bytes)
 
@@ -42,22 +40,15 @@ typedef struct at86rf215 at86rf215_t;
     #define MAX_TRANSACTIONS 4
 
     #define CFDP_MAX_SEGMENT_REQUESTS 16
+    #define CFDP_MAX_SEGMENTS (MAX_FILE_SIZE / SEGMENT_SIZE) // 128 segments
 
     #define TX_TIMEOUT_MS 5000UL // max time to wait for a single PDU transmission to complete
-
-    #define IMAGE_BUF 0xFFFFFFFF // placeholder, this probably isn't gonna be how we represent it
-    #define TELEMETRY_BUF 0XFFFFFFFF
 
     // Placeholder sizes until real image/telemetry sources are wired in.
     #define IMAGE_FILE_SZ MAX_FILE_SIZE
     #define TELEMETRY_FILE_SZ MAX_FILE_SIZE
 
-    #define TXN_FRAME 0x1000
-
-    // Received-segment bitmap sizing.
-    // One bit per SEGMENT_SIZE-byte chunk, covering the worst-case MAX_FILE_SIZE file.
-    #define CFDP_MAX_SEGMENTS (MAX_FILE_SIZE / SEGMENT_SIZE) // 128 segments
-    #define CFDP_BITMAP_WORDS (CFDP_MAX_SEGMENTS / 32)       // 4 x uint32_t = 16 bytes
+    #define TXN_FRAME 0x1000 // placeholder
 
     #define CFDP_LARGE_BUFF_SZ 8192
     #define CFDP_SMALL_BUFF_SZ 128
@@ -207,6 +198,10 @@ extern cfdp_transaction_store_t cfdp_txn_store;
 extern cfdp_large_buff_t cfdp_large_buff;
 extern cfdp_small_buffs_t cfdp_small_buffs;
 
+    #if defined(UNITTEST)
+extern uint8_t test_mem[10000];
+    #endif
+
 uint32_t next_seq_num(void);
 
 void uint32_to_big_endian(uint32_t src, uint8_t dst[4]);
@@ -231,7 +226,6 @@ cfdp_result_t cfdp_transact(cfdp_transaction_t *txn, uint32_t elapsed_ms);
 void cfdp_put_request(cfdp_put_data_t put_data);
 void cfdp_cancel_request(uint32_t txn_id);
 
-void cfdp_send(cfdp_transaction_t *transaction, const uint8_t *buff, size_t sz);
 int send(void *buff, size_t sz);
 int recv(void *buff, size_t sz);
 

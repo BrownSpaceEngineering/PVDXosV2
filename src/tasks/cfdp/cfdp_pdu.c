@@ -343,7 +343,7 @@ int cfdp_send_metadata(cfdp_transaction_t *transaction) {
         metadata_buff[8 + i + source_filename_length] = (transaction->dest_filename.value)[i];
     }
 
-    cfdp_send(transaction, buff, pdu_data_length + 16);
+    send(buff, pdu_data_length + 16);
     return 0;
 }
 
@@ -363,7 +363,7 @@ int cfdp_send_filedata(cfdp_transaction_t *transaction, uint32_t offset, uint32_
         memcpy(filedata_buff + 4, transaction->file_data + offset, size);
     }
 
-    cfdp_send(transaction, buff, 20 + size);
+    send(buff, 20 + size);
 
     return size;
 }
@@ -411,7 +411,7 @@ int cfdp_send_nak(cfdp_transaction_t *transaction) {
     uint32_to_big_endian(start_scope, nak_buff + 1); // start_of_scope: beginning of file
     uint32_to_big_endian(end_scope, nak_buff + 5);   // end_of_scope: full file extent
 
-    cfdp_send(transaction, buff, 16 + nak_data_size);
+    send(buff, 16 + nak_data_size);
     return nak_data_size;
 }
 
@@ -483,7 +483,7 @@ int cfdp_send_fin(cfdp_transaction_t *transaction) {
         uint32_to_big_endian(ENTITY_ID_SPACECRAFT, fin_buff + 3);
     }
 
-    cfdp_send(transaction, buff, buff_sz);
+    send(buff, buff_sz);
     return 0;
 }
 
@@ -595,7 +595,7 @@ int cfdp_send_ack(cfdp_transaction_t *transaction, uint8_t acked_directive_code,
     ack_buff[1] = ((acked_directive_code & 0x0F) << 4) | (directive_subtype_code & 0x0F);
     ack_buff[2] = ((condition_code & 0x0F) << 4) | (transaction_status & 0x03);
 
-    cfdp_send(transaction, buff, 19);
+    send(buff, 19);
     return 0;
 }
 
@@ -624,7 +624,7 @@ int cfdp_send_eof(cfdp_transaction_t *transaction) {
         eof_buff[11] = 0x04;
         uint32_to_big_endian(transaction->transaction_id.entity_id, eof_buff + 12);
     }
-    cfdp_send(transaction, buff, 16 + pdu_data_length);
+    send(buff, 16 + pdu_data_length);
     return 0;
 }
 
