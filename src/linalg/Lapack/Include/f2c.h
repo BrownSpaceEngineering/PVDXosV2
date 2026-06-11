@@ -11,7 +11,7 @@
 #include <stdlib.h>
 typedef long int integer;
 typedef unsigned long int uinteger;
-typedef char* address;
+typedef char *address;
 typedef short int shortint;
 typedef float real;
 typedef float floatreal;
@@ -28,8 +28,8 @@ typedef char integer1;
 #ifdef INTEGER_STAR_8                /* Adjust for integer*8. */
 typedef long long longint;           /* system-dependent */
 typedef unsigned long long ulongint; /* system-dependent */
-#define qbit_clear(a, b) ((a) & ~((ulongint)1 << (b)))
-#define qbit_set(a, b) ((a) | ((ulongint)1 << (b)))
+    #define qbit_clear(a, b) ((a) & ~((ulongint)1 << (b)))
+    #define qbit_set(a, b) ((a) | ((ulongint)1 << (b)))
 #endif
 
 #define TRUE_ (1)
@@ -37,7 +37,7 @@ typedef unsigned long long ulongint; /* system-dependent */
 
 /* Extern is for use with -E */
 #ifndef Extern
-#define Extern extern
+    #define Extern extern
 #endif
 
 /* I/O stuff */
@@ -58,16 +58,16 @@ typedef struct {
     flag cierr;
     ftnint ciunit;
     flag ciend;
-    char* cifmt;
+    char *cifmt;
     ftnint cirec;
 } cilist;
 
 /*internal read, write*/
 typedef struct {
     flag icierr;
-    char* iciunit;
+    char *iciunit;
     flag iciend;
-    char* icifmt;
+    char *icifmt;
     ftnint icirlen;
     ftnint icirnum;
 } icilist;
@@ -76,20 +76,20 @@ typedef struct {
 typedef struct {
     flag oerr;
     ftnint ounit;
-    char* ofnm;
+    char *ofnm;
     ftnlen ofnmlen;
-    char* osta;
-    char* oacc;
-    char* ofm;
+    char *osta;
+    char *oacc;
+    char *ofm;
     ftnint orl;
-    char* oblnk;
+    char *oblnk;
 } olist;
 
 /*close*/
 typedef struct {
     flag cerr;
     ftnint cunit;
-    char* csta;
+    char *csta;
 } cllist;
 
 /*rewind, backspace, endfile*/
@@ -102,29 +102,29 @@ typedef struct {
 typedef struct {
     flag inerr;
     ftnint inunit;
-    char* infile;
+    char *infile;
     ftnlen infilen;
-    ftnint* inex; /*parameters in standard's order*/
-    ftnint* inopen;
-    ftnint* innum;
-    ftnint* innamed;
-    char* inname;
+    ftnint *inex; /*parameters in standard's order*/
+    ftnint *inopen;
+    ftnint *innum;
+    ftnint *innamed;
+    char *inname;
     ftnlen innamlen;
-    char* inacc;
+    char *inacc;
     ftnlen inacclen;
-    char* inseq;
+    char *inseq;
     ftnlen inseqlen;
-    char* indir;
+    char *indir;
     ftnlen indirlen;
-    char* infmt;
+    char *infmt;
     ftnlen infmtlen;
-    char* inform;
+    char *inform;
     ftnint informlen;
-    char* inunf;
+    char *inunf;
     ftnlen inunflen;
-    ftnint* inrecl;
-    ftnint* innrec;
-    char* inblank;
+    ftnint *inrecl;
+    ftnint *innrec;
+    char *inblank;
     ftnlen inblanklen;
 } inlist;
 
@@ -146,24 +146,28 @@ typedef union Multitype Multitype;
 /*typedef long int Long;*/ /* No longer used; formerly in Namelist */
 
 struct Vardesc { /* for Namelist */
-    char* name;
-    char* addr;
-    ftnlen* dims;
+    char *name;
+    char *addr;
+    ftnlen *dims;
     int type;
 };
 typedef struct Vardesc Vardesc;
 
 struct Namelist {
-    char* name;
-    Vardesc** vars;
+    char *name;
+    Vardesc **vars;
     int nvars;
 };
 typedef struct Namelist Namelist;
 
 // #define fabs(x) ((x) >= 0 ? (x) : -(x))
 #define dfabs(x) (floatreal) fabs(x)
-#define min(a, b) ((a) <= (b) ? (a) : (b))
-#define max(a, b) ((a) >= (b) ? (a) : (b))
+#ifndef min
+    #define min(a, b) ((a) <= (b) ? (a) : (b))
+#endif
+#ifndef max
+    #define max(a, b) ((a) >= (b) ? (a) : (b))
+#endif
 #define dmin(a, b) (floatreal) min(a, b)
 #define dmax(a, b) (floatreal) max(a, b)
 #define bit_test(a, b) ((a) >> (b) & 1)
@@ -207,23 +211,23 @@ typedef floatreal E_f; /* real function with -R not specified */
 /* undef any lower-case symbols that your C compiler predefines, e.g.: */
 
 #ifndef Skip_f2c_Undefs
-#undef cray
-#undef gcos
-#undef mc68010
-#undef mc68020
-#undef mips
-#undef pdp11
-#undef sgi
-#undef sparc
-#undef sun
-#undef sun2
-#undef sun3
-#undef sun4
-#undef u370
-#undef u3b
-#undef u3b2
-#undef u3b5
-#undef unix
-#undef vax
+    #undef cray
+    #undef gcos
+    #undef mc68010
+    #undef mc68020
+    #undef mips
+    #undef pdp11
+    #undef sgi
+    #undef sparc
+    #undef sun
+    #undef sun2
+    #undef sun3
+    #undef sun4
+    #undef u370
+    #undef u3b
+    #undef u3b2
+    #undef u3b5
+    #undef unix
+    #undef vax
 #endif
 #endif

@@ -563,8 +563,12 @@ void cfdp_send(cfdp_transaction_t *transaction, const uint8_t *buff, size_t sz) 
 }
 
 int send(void *buff, size_t sz) {
+#if defined(UNITTEST)
+    memcpy(test_mem, buff, sz);
+#else
     (void)buff;
     (void)sz;
+#endif
     return 0;
 }
 

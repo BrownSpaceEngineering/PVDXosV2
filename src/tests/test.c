@@ -2,9 +2,14 @@
 #include "tests/test.h"
 
 #include "cfdp/cfdp_pdu.h"
+#include "cfdp/cfdp_task.h"
 #include "linalg/LinearAlgebra/declareFunctions.h"
 #include "logging.h"
 #include "radio/spp.h"
+
+#if defined(UNITTEST)
+uint8_t test_mem[10000];
+#endif
 
 void test_spp(void);
 void test_matrix_product(void);
@@ -308,5 +313,48 @@ void test_cfdp(void) {
 
     test_log("cfdp segment request end offset: %u\n", seg_req.end_offset);
     PVDX_ASSERT_MSG(seg_req.end_offset == 0x01020304, "segment request end offset");
+
+    // Prepare Header Test
+    test_log("cfdp prepare header test:\n");
+
+    cfdp_transaction_t txn = {.checksum_type = 15,
+                              .condition_code = CFDP_COND_NOERROR,
+                              .delivery_complete = false,
+                              .dest_entity_id = 0x1111,
+                              .transaction_id = {.entity_id = 0x2222, .seq_num = 0x1},
+                              .direction = CFDP_SEND,
+                              .file_offset = 0,
+                              .reliable_mode = true,
+                              .type = IMAGE,
+                              .state = CFDP_SEND_STATE_METADATA_SEND};
+
+    uint8_t buff[16];
+
+    ret = cfdp_prepare_pdu_header(buff, &txn, 266, CFDP_DIR_METADATA);
+    test_log("return value: %d\n", ret);
+    PVDX_ASSERT_MSG(ret == 8, "prepare header return");
+
+    cfdp_pdu_header_parse(buff, sizeof(buff), &header);
+
+    test_log("version_number: %d\n", header.version_number);
+    PVDX_ASSERT(header.version_number == CFDP_VERSION_NUMBER && "version_number");
+
+    test_log("pdu_type: %d\n", header.pdu_type);
+    PVDX_ASSERT(header.pdu_type == CFDP_PDU_TYPE_DIRECTIVE && "pdu_type");
+
+    test_log("pdu_data_length: %d\n", header.pdu_data_length);
+    PVDX_ASSERT(header.pdu_data_length == 266 && "pdu_data_length");
+
+    test_log("entity_id_len: %d\n", header.entity_id_len);
+    PVDX_ASSERT(header.entity_id_len == 4 && "entity_id_len");
+
+    test_log("dest_entity_id: %d\n", header.dest_entity_id);
+    PVDX_ASSERT(header.dest_entity_id == 0x1111 && "dest_entity_id");
+
+    test_log("source_entity_id: %d\n", header.source_entity_id);
+    PVDX_ASSERT(header.source_entity_id == 0x2222 && "source_entity_id");
+
+    test_log("transaction_seq: %d\n", header.transaction_seq);
+    PVDX_ASSERT(header.transaction_seq == 0x1 && "transaction_seq");
 }
 // #endif
