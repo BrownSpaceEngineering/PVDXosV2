@@ -8,28 +8,10 @@
  */
 
 #include "test_linalg.h"
-
-#include "linalg/LinearAlgebra/declareFunctions.h"
+#include "stdbool.h"
+#include "declareFunctions.h"
 #include "logging.h"
 
-/**
- * \fn debug_matrix
- *
- * \brief Debug prints a matrix A, with the dimension row x column
- *
- * \param A the matrix to print (as a 1D array in row-major order)
- * \param row the number of rows in the matrix
- * \param column the number of columns in the matrix
- */
-void debug_matrix(float *A, int row, int column) {
-    for (int i = 0; i < row; i++) {
-        for (int j = 0; j < column; j++) {
-            printf("%0.18f ", *(A++));
-        }
-        printf("\n");
-    }
-    printf("\n");
-}
 
 void test_matrix_product(void) {
     test_log("----- testing matrix product -----\n");
