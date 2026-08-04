@@ -2,3 +2,6 @@
 	path = src/libraries/adcs
 	url = git@github.com:BrownSpaceEngineering/adcs-unix-testing.git
 	branch = pvdxos-compatibility
+[submodule "PVDX-SAMD-PinConfig"]
+	path = PVDX-SAMD-PinConfig
+	url = git@github.com:BrownSpaceEngineering/PVDX-SAMD-PinConfig.git

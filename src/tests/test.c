@@ -3,10 +3,13 @@
 #include "adcs_test.h"
 #include "eps.h"
 
-#include "declareFunctions.h"
+#include "ccsds/cfdp_pdu.h"
+#include "ccsds/spp.h"
+#include "linalg/LinearAlgebra/declareFunctions.h"
 #include "logging.h"
-#include "radio/cfdp_pdu.h"
-#include "radio/spp.h"
+
+int tests_passed = 0;
+int tests_total = 0;
 
 void test_spp(void);
 void test_matrix_product_internal(void);
@@ -17,6 +20,7 @@ void tests_run(void) {
     test_matrix_product_internal();
     test_cfdp();
     adcs_test_run_all();
+    test_log("test results: %d/%d passed", tests_passed, tests_total);
 }
 
 // #ifdef UNITTEST
