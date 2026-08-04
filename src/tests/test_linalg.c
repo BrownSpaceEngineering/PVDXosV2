@@ -8,7 +8,7 @@
  */
 
 #include "test_linalg.h"
-
+#include "stdbool.h"
 #include "declareFunctions.h"
 #include "logging.h"
 
