@@ -1,17 +1,26 @@
 # PVDXos
 
-The real-time operating system for Brown Space Engineering's second satellite, Perovskite Visuals and Degradation eXperiment (PVDX).
+The real-time operating system for Brown Space Engineering's second satellite, Perovskite Visuals and Degradation eXperiment ([PVDX](https://www.brown.edu/news/2021-04-21/cubesat)).
 
 ![PVDXos Diagram](pvdxos.png)
 
 # Project Setup and Toolchain Installation Guide
+
+Our OS is designed to run on the SAMD51 microcontroller. Therefore, to run our code, we use a development board with that chip (the Adafruit Grand Central), which the club provides to members.
+
+Some key terms you will see below are:
+
+- SEGGER J-Link - a debug probe which allows us to connect our PCs to the microcontroller and load/debug code.
+- GDB - the GNU Debugger. If you haven't taken Intro Systems yet, you can check out [this video](https://www.youtube.com/watch?v=8kU35Rbquzc) we've co-opted from them to show how it works.
+- Make/Makefile - a tool we use to speed up building the project. Commands which start with `make` are reading from the Makefile in that directory to determine what further commands to execute.
+
+Most new members reading this should start at [Toolchain Installation](#toolchain-installation) below to set up their computer, then come back to Building and Running.
 
 ## Building and Running:
 
 > **Note:** If you're using a factory-new devboard that you've just unboxed, please follow [these instructions](#setting-up-a-brand-new-metro-m4-grand-central-devboard) first before continuing. If you've received a working devboard from another team member, you can continue.
 
 1. **Start the SEGGER GDB Server:**
-
    - run `JLinkGDBServer` from the SEGGER folder containing all the J-Link tools.
    - Before clicking 'OK', make sure the target is set to `ATSAMD51P20A`, and the interface is set to `SWD`
    - WINDOWS/WSL ONLY: The "Localhost Only" checkbox must be unchecked.
@@ -35,24 +44,20 @@ The real-time operating system for Brown Space Engineering's second satellite, P
 ### Windows
 
 1. Install Windows Subsystem for Linux (WSL):
-
    - Run `wsl --install` in PowerShell (as Administrator).
    - Follow prompts and restart your computer as required.
 
 2. Clone the repository into the WSL filesystem. This is important for performance during compilation.
 
 3. Install ARM toolchain for Linux:
-
    - `sudo apt install gcc-arm-none-eabi`
 
 4. Install GDB Multiarch and other build tools:
-
    - `sudo apt install gdb-multiarch`
    - `sudo apt install build-essential`
    - `sudo apt install clang-format`
 
 5. (Optional) Configure VSCode to use clang-format for formatting:
-
    - Install the `clang-format` extension in VSCode.
    - In VSCode properties, set the default formatter to `clang-format`.
    - Enable 'format on save' in the settings.
@@ -63,7 +68,6 @@ The real-time operating system for Brown Space Engineering's second satellite, P
 > **Note:** Skip to step 5 if you have a Mac with an Intel processor.
 
 1. Edit the `~/.zshrc` file:
-
    - You can use `nano ~/.zshrc` to edit this file. Use `CTRL`+`X`, then `Y`, then `Enter` to quit and save.
    - Add these lines to the bottom of the file:
      ```bash
@@ -72,26 +76,21 @@ The real-time operating system for Brown Space Engineering's second satellite, P
      ```
 
 2. Run `source ~/.zshrc`.
-
    - This should enable the `arm` and `intel` commands in your terminal. Test this out by running `intel` and checking that the result of running `arch` is `i386`. Then run `arm` and check that the result of `arch` is `arm64`.
 
 3. Switch into an intel terminal by running the `intel` command you just created, and verify that the `arch` command returns `i386`
 
 4. Install brew in the intel terminal by running the script at https://brew.sh/ and following the prompts
-
    - > **Note:** After the Brew installation is complete, it will prompt you to run two other commands. Remember to copy/paste them into the terminal and run these as well.
 
 5. Install gdb:
-
    - `brew install gdb`
 
 6. Download Arm Developer Tools:
-
    - Download & Install the .pkg from [here](<https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads#:~:text=macOS%20(Apple%20silicon)%20hosted%20cross%20toolchains>).
    - Make sure you're downloading for the right hardware.
 
 7. Add the Arm Developer Tools to your path by adding the following line to the bottom of the `~/.zshrc` (or `~/.bash_profile`) file, similar to step 1
-
    - Add:
      ```bash
      export PATH="/Applications/ArmGNUToolchain/<VersionNumber>/arm-none-eabi/bin/:$PATH"
@@ -99,12 +98,10 @@ The real-time operating system for Brown Space Engineering's second satellite, P
    - IMPORTANT: Remember to replace `<VersionNumber>` with the version number of the toolchain you downloaded. It should be something like '13.2.Rel1'
 
 8. Install other build tools:
-
    - `brew install gnu-sed` (if on mac)
    - `brew install clang-format`
 
 9. (Optional) Configure VSCode to use clang-format for formatting:
-
    - Install the `clang-format` extension in VSCode.
    - In VSCode properties, set the default formatter to `clang-format`.
    - Enable 'format on save' in the settings.
@@ -135,14 +132,12 @@ That should be it. The J-Link GDB Server should now work as expected. Congrats o
 > **Note:** This does not apply to .h files (although, you should still follow step 1)
 
 1. Take 30 full seconds to think about the scope and name of this file:
-
    - Does the name encompass everything the file _could end up_ doing?
    - Is there a distinct logical separation between the role of this file and any other files?
    - Does it follow existing naming conventions (within the folder, and within the project)?
    - Does it belong in the folder you are adding it to? Will the file _always_ be doing things within this category?
 
 2. Modify the `Makefile` to add the new file to the list of objects to be compiled:
-
    - Add the file's name to the OBJS list, with the .o extension instead of .c
    - If the file is in a new folder, add the newly created folder to the EXTRA_VPATH list as well
 
@@ -160,13 +155,13 @@ That should be it. The J-Link GDB Server should now work as expected. Congrats o
    - Because of this, you should not put anything in the ASF folder that is not autogenerated by Atmel Start.
 6. Ideally, there should be nothing to be done after `make update_asf` completes. Make sure you return to the top level of the project before trying to rebuild it.
 7. If you intend to move a change into main, make sure to push your changes to the PVDX-SAMD-PinConfig
-submodule first and update the README.md, so that everyone can keep a consistent base pinconfig on main!
-    - run `git submodule update --init` to set up the submodule within this repo
-    - If you intend to do long-term work with a different config, consider creating a branch off the submodule.
+   submodule first and update the README.md, so that everyone can keep a consistent base pinconfig on main! - run `git submodule update --init` to set up the submodule within this repo - If you intend to do long-term work with a different config, consider creating a branch off the submodule.
 
-## Building Docs 
+## Building Docs
+
 - Make sure you have Doxygen installed on your system (see instructions for installing with a package manager):
-```bash 
+
+```bash
 # macOS
 brew install doxygen
 
@@ -176,19 +171,21 @@ sudo dnf install doxygen
 # debian/ubuntu
 sudo apt install doxygen
 ```
+
 - [Manual Doxygen download](https://www.doxygen.nl/download.html)
 - Build the docs with doxygen:
+
 ```bash
 doxygen Doxyfile
 ```
-- Download the `Live Server` extension on VSCode
-    - Open the `build-docs/html/index.html` file by right clicking -> `Open with Live Server`
-    - A tab in your browser will open with the full docs page
 
+- Download the `Live Server` extension on VSCode
+  - Open the `build-docs/html/index.html` file by right clicking -> `Open with Live Server`
+  - A tab in your browser will open with the full docs page
 
 # Acknowledgements
 
 Many thanks to Daniel Martenson, whose [EmbeddedLapack](https://github.com/DanielMartensson/EmbeddedLapack)
-and [CControl](https://github.com/DanielMartensson/CControl) projects 
-were the basis for the linear algebra subroutines used to implement 
-our ADCS systems. 
+and [CControl](https://github.com/DanielMartensson/CControl) projects
+were the basis for the linear algebra subroutines used to implement
+our ADCS systems.
