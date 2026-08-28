@@ -81,7 +81,9 @@ export OBJS :=                                              	\
 ../src/drivers/photodiode/photodiode_driver.o               	\
 ../src/drivers/rtc/rtc_driver.o                                 \
 ../src/drivers/watchdog/watchdog_driver.o                     	\
-../src/drivers/at86rf215/at86rf215.o								\
+../src/drivers/at86rf215/at86rf215.o							\
+																\
+../src/libraries/cmd_dispatcher/cmd_dispatcher.o 			  	\
                                                             	\
 ../src/tasks/heartbeat/heartbeat_main.o                     	\
                                                             	\
@@ -100,9 +102,6 @@ export OBJS :=                                              	\
                                                             	\
 ../src/tasks/task_manager/task_manager_main.o               	\
 ../src/tasks/task_manager/task_manager_task.o               	\
-                                                            	\
-../src/tasks/command_dispatcher/command_dispatcher_main.o   	\
-../src/tasks/command_dispatcher/command_dispatcher_task.o   	\
                                                             	\
 ../src/tasks/shell/shell_main.o                             	\
 ../src/tasks/shell/shell_helpers.o                          	\
@@ -135,6 +134,8 @@ export EXTRA_VPATH := \
 ../../src/drivers/rtc \
 ../../src/drivers/photodiode \
 ../../src/drivers/watchdog \
+../../src/libraries \
+../../src/libraries/cmd_dispatcher \
 ../../src/tasks \
 ../../src/tasks/watchdog \
 ../../src/tasks/heartbeat \

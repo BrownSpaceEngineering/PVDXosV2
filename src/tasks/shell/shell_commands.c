@@ -10,14 +10,13 @@
 #include "shell_commands.h"
 
 #include <atmel_start.h>
-
-#include "command_dispatcher_task.h"
 #include "display_task.h"
 #include "image_buffers/image_buffer_BrownLogo.h"
 #include "image_buffers/image_buffer_PVDX.h"
 #include "logging.h"
 #include "shell_helpers.h"
 #include "watchdog_task.h"
+#include "cmd_dispatcher.h"
 shell_command_t shell_commands[] = {
     {"help", shell_help, help_help},
     {"echo", shell_echo, help_echo},
@@ -248,7 +247,10 @@ void shell_display(char **args, int arg_count) {
 
     const uint8_t *image_buffers[] = {IMAGE_BUFFER_BROWNLOGO, IMAGE_BUFFER_PVDX};
     command_t display_image_command = get_display_image_command(image_buffers[args[1][0] - '0']);
-    enqueue_command(&display_image_command);
+    
+    while (enqueue_command(&display_image_command) != SUCCESS) {
+        warning("shell: Failed to enqueue display image command\n");
+    }
     terminal_printf("fr\n");
 }
 

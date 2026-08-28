@@ -9,8 +9,8 @@
  */
 
 #include "logging.h"
-#include "tasks/command_dispatcher/command_dispatcher_task.h"
-#include "tasks/heartbeat/heartbeat_task.h"
+#include "heartbeat_task.h"
+#include "cmd_dispatcher.h"
 
 heartbeat_task_memory_t heartbeat_mem                                                                ;
 
@@ -81,5 +81,7 @@ void main_heartbeat(void *pvParameters)                                         
 
         // Check in with the watchdog task
         if (should_checkin(current_task))                                                            {
-            enqueue_command(&cmd_checkin)                                                            ;
+            while (enqueue_command(&cmd_checkin) != SUCCESS) {
+                warning("heartbeat: Failed to enqueue watchdog checkin command\n");
+            }
             debug("heartbeat: Enqueued watchdog checkin command\n")                                  ;}}}
