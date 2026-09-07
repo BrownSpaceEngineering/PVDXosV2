@@ -420,7 +420,10 @@ typedef enum
 
 /**
  * MR-O-QPSK chip rate
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> fd9ac29 (Clarify comment descriptions)
  * Chip rate can be selected with sub-register OQPSKC0.FCHIP
  */
 typedef enum
@@ -433,7 +436,10 @@ typedef enum
 
 /**
  * MR-O-QPSK rate mode
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> fd9ac29 (Clarify comment descriptions)
  * Data rate can be selected with sub-register OQPSKPHRRX.MOD
  *
  * Note that some data rates are undefined depending on the chip rate select
