@@ -497,9 +497,13 @@ typedef enum
 /**
  * Configuration for the AT86RF215 running in MR-O-QPSK mode
 <<<<<<< HEAD
+<<<<<<< HEAD
  *
 =======
 >>>>>>> 600d056 (Implement MR-O-QPSK support in AT86RF215 Driver)
+=======
+ *
+>>>>>>> 102ceed (Correct guards and comments)
  */
 struct at86rf215_mroqpsk_conf
 {
@@ -511,8 +515,8 @@ struct at86rf215_mroqpsk_conf
 
   // OQPSKC1
   uint8_t rxo : 1; //!< Set to 1 to enable receiver override, 0 to disable
-  uint8_t rxoleg
-      : 1; //!< Set to 1 to enable legacy receiver override, 0 to disable
+  uint8_t
+      rxoleg : 1; //!< Set to 1 to enable legacy receiver override, 0 to disable
   uint8_t pdt0 : 3; //!< Preamble detector sensitivity for MR-O-QPSK, lower
                     //!< values are higher
   uint8_t pdt1 : 3; //!< Preamble detector sensitivity for legacy O-QPSK, lower
@@ -532,10 +536,8 @@ struct at86rf215_mroqpsk_conf
   at86rf215_mroqpsk_nsfd_t nsfd;
 
   // OQPSKPHRTX
-  uint8_t ppdut : 1; //!< Reflects the PPDU type for the last received MR-O-QPSK
-                     //!< frame. 0 is type 1, 1 is type 2.
-  uint8_t rb0
-      : 1; //!< Reflects the content of the reserved PHR bit RB0 in last frame
+  uint8_t ppdut : 1; //!< TX PPDU type: 0 = MR-O-QPSK type 1, 1 = type 2
+  uint8_t rb0   : 1; //!< Reserved PHR bit RB0 to transmit
   at86rf215_mroqpsk_data_rate_mod_t
           drate_mod; //!< Data rate (fchip dependent, see datasheet)
   uint8_t leg : 1;   //!< 0: transmit MR-O-QPSK, 1: transmit legacy O-QPSK
@@ -639,10 +641,10 @@ struct at86rf215_mrfsk_conf
   uint16_t sfd1; //!< 16-bit SFD. Tranmitted after SFD0 if SFD32 is set
   uint8_t  sfd : 1;
   uint8_t  dw  : 1; //!< If set to 1, whitening of the PSDU is enabled
-  uint8_t  rb2
-      : 1; //!< Sets the content of the reserved FSK PHR bit 2 for transmit
-  uint8_t rb1
-      : 1; //!< Sets the content of the reserved FSK PHR bit 1 for transmit
+  uint8_t
+      rb2 : 1; //!< Sets the content of the reserved FSK PHR bit 2 for transmit
+  uint8_t
+      rb1 : 1; //!< Sets the content of the reserved FSK PHR bit 1 for transmit
   uint8_t  dm;
   uint8_t  preemphasis      : 1;
   uint32_t preemphasis_taps : 24;
