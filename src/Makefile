@@ -114,6 +114,7 @@ export OBJS :=                                              	\
 																\
 ../src/ccsds/spp.o 										\
 ../src/ccsds/cfdp_pdu.o 									\
+../src/ccsds/uslp.o 									     \
 ../src/tests/test.o                                             \
 																
 

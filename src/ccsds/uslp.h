@@ -12,6 +12,19 @@
 #include <stddef.h>
 #include <stdint.h>
 
+// Transfer Frame Version Number, always 0b1100 for USLP
+// Reference: USLP Blue Book 4.1.2.2.2.2
+#define USLP_TFVN 0b1100
+
+// Values for the Source-or-Destination Identifier
+// Reference: USLP Blue Book 4.1.3.3
+#define USLP_SCID_IS_SOURCE 0
+#define USLP_SCID_IS_DESTINATION 1
+
+// USLP Protocol Identifier (UPID) values
+// Reference: SANA registry, sanaregistry.org/r/uslp_protocol_id
+#define USLP_UPID_SPACE_PACKETS 0b00000
+
 /// USLP Transfer Frame Primary Header
 ///
 /// Reference: USLP Blue Book pg. 70 - ~90
@@ -75,6 +88,7 @@ typedef struct uslp_transfer_frame_view {
     uslp_transfer_frame_primary_header_t primary_header;
     uslp_transfer_frame_data_field_header_t data_field_header;
     uint8_t *datafield;
+    uint16_t datafield_len;
 } uslp_transfer_frame_view_t;
 
 // Quality of Serice (QoS) options
@@ -89,8 +103,11 @@ typedef enum uslp_qos {
  * Reference: USLP Blue book page 3-6
  *
  * - This function is the Service Access Point for USLP
+ *
+ * \param sdu - pointer to the start of the packet to send
+ * \param sdu_len - length, in bytes, of the packet
  */
-int uslp_mapp_request(uint8_t *sdu, uint32_t gmap_id, uint8_t pvn, uint32_t sdu_id, uslp_qos_t qos);
+int uslp_mapp_request(uint8_t *sdu, uint16_t sdu_len, uint32_t gmap_id, uint8_t pvn, uint32_t sdu_id, uslp_qos_t qos);
 
 /**
  * Parsing for USLP Transfer Frames
