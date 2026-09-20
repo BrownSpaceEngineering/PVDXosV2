@@ -44,6 +44,9 @@ test: bootloader_target
 flash_monkey:
 	python3 scripts/flip_rand_bit.py
 
+reset_mcu:
+	JLinkExe -CommanderScript reset.jlink
+
 # this command will start gdb from a breakpoint at main
 # use connect_bl to start from the beginning
 connect:

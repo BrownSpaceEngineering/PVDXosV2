@@ -1,0 +1,6 @@
+device ATSAMD51P20A
+if SWD
+speed 4000
+connect
+reset
+exit
