@@ -65,9 +65,9 @@ Most new members reading this should start at [Toolchain Installation](#toolchai
 
 ### Mac/Linux (Geared towards Mac)
 
-> **Note:** Skip to step 5 if you have a Mac with an Intel processor.
+<!-- **Note:** Skip to step 5 if you have a Mac with an Intel processor.
 
-1. Edit the `~/.zshrc` file:
+ 1. Edit the `~/.zshrc` file:
    - You can use `nano ~/.zshrc` to edit this file. Use `CTRL`+`X`, then `Y`, then `Enter` to quit and save.
    - Add these lines to the bottom of the file:
      ```bash
@@ -78,9 +78,9 @@ Most new members reading this should start at [Toolchain Installation](#toolchai
 2. Run `source ~/.zshrc`.
    - This should enable the `arm` and `intel` commands in your terminal. Test this out by running `intel` and checking that the result of running `arch` is `i386`. Then run `arm` and check that the result of `arch` is `arm64`.
 
-3. Switch into an intel terminal by running the `intel` command you just created, and verify that the `arch` command returns `i386`
+3. Switch into an intel terminal by running the `intel` command you just created, and verify that the `arch` command returns `i386` -->
 
-4. Install brew in the intel terminal by running the script at https://brew.sh/ and following the prompts
+4. Install brew in the terminal by running the script at https://brew.sh/ and following the prompts
    - > **Note:** After the Brew installation is complete, it will prompt you to run two other commands. Remember to copy/paste them into the terminal and run these as well.
 
 5. Install gdb:
