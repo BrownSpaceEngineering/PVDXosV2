@@ -22,7 +22,7 @@ Most new members reading this should start at [Toolchain Installation](#toolchai
 ### Windows
 
 PVDXos uses GCC (GNU C Compiler) to create an executable. GCC can't be ported to Windows, so we need to virtualise a Linux environment 
-for our toolchain. The standard solution is to use WSL (Windows Subsystem for Linux). 
+for our toolchain. One of the standard solution is to use WSL (Windows Subsystem for Linux). 
 
 As such, each instruction needs to be executed either in a Windows environment, or in the virtualised Linux environment. Each of the 
 following steps is thus prepended either by \[🪟WIN\] or \[🐧WSL\] to indicate which environment to run it in. 
@@ -44,6 +44,8 @@ following steps is thus prepended either by \[🪟WIN\] or \[🐧WSL\] to indica
 4. \[🐧WSL\] Install ARM toolchain for Linux:
 
    - `sudo apt install gcc-arm-none-eabi`
+
+   You can enter wsl by typing `wsl` from a windows terminal. 
 
 5. \[🐧WSL\] Install GDB Multiarch and other build tools:
 
