@@ -9,11 +9,10 @@
  */
 
 #include "adcs_task.h"
-#include "command_dispatcher_task.h"
 #include "globals.h"
 #include "logging.h"
 #include "watchdog_task.h"
-
+#include "cmd_dispatcher.h"
 // ADCS Task memory structures
 adcs_task_memory_t adcs_mem;
 
@@ -106,7 +105,9 @@ void main_adcs(void *pvParameters) {
 
         // Check in with the watchdog task
         if (should_checkin(current_task)) {
-            enqueue_command(&cmd_checkin);
+            while (enqueue_command(&cmd_checkin) != SUCCESS) {
+                warning("adcs: Failed to enqueue watchdog checkin command\n");
+            }
             debug("adcs: Enqueued watchdog checkin command\n");
         }
     }
