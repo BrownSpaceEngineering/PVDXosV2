@@ -12,6 +12,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "../drivers/at86rf215/at86rf215.h" // for AT86RF215_MAX_PDU
 #include "globals.h"
 
 // USLP allows up to 64 virtual channels. we probably won't need this many, though, so lower this from 64 as needed
@@ -32,6 +33,15 @@
 // USLP Protocol Identifier (UPID) values
 // Reference: SANA registry, sanaregistry.org/r/uslp_protocol_id
 #define USLP_UPID_SPACE_PACKETS 0b00000
+
+// The radio's frame buffer is 2047 bytes and the length given to the radio
+// must include the checksum the chip appends (up to 4 bytes)
+#define USLP_MAX_FRAME_SIZE (AT86RF215_MAX_PDU - 4) // 2043
+
+// Sizes, in bytes, of the fixed parts of a transfer frame
+// Reference: USLP Blue Book Figure 4-2 (pg. 4-3), Figure 4-4 (pg. 4-13)
+#define USLP_PRIMARY_HEADER_FIXED_SIZE 7 // everything except the VC frame count
+#define USLP_DATA_FIELD_HEADER_SIZE 1    // rule 111 does not use the optional 16-bit pointer
 
 /// USLP Transfer Frame Primary Header
 ///

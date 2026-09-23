@@ -10,11 +10,14 @@
 
 #include "uslp.h"
 
-#include <stdbool.h>
+#include <string.h>
 
-uint32_t vc_frame_counts[USLP_VIRTUAL_CHANNEL_COUNT] = {0};
+static uint8_t vc_frame_counts[64]; // Counter for number of frames for each of the 64 possible vc channels
 
-static bool uslp_send(uslp_transfer_frame_view_t *view);
+// Frames are serialized in place here before being handed to the radio, so that a
+// full-size frame does not have to live on a task's stack.
+// NOTE: only one task may send at a time
+static uint8_t tx_buffer[USLP_MAX_FRAME_SIZE];
 
 bool uslp_mapp_request(uint8_t *sdu, uint16_t sdu_len, uint32_t gmap_id, uint8_t pvn, uint32_t sdu_id, uslp_qos_t qos) {
     // GMAP ID = TFVN (4) | SCID (16) | VCID (6) | MAP ID (4) = 30 bits
@@ -48,14 +51,14 @@ bool uslp_mapp_request(uint8_t *sdu, uint16_t sdu_len, uint32_t gmap_id, uint8_t
     primary_header.frame_length = 0;
 
     if (qos == USLP_QOS_SEQUENCE_CONTROLLED) {
-        return true; // Only expedited works - retransmit is not impleneted within USLP
+        return false; // Only expedited works - retransmit is not impleneted within USLP
     }
 
     primary_header.bypass_sequence_control_flag = qos;
     primary_header.protocol_control_command_flag = 0;
     primary_header.spare = 0;
     primary_header.ocf_flag = 0;
-    primary_header.vc_frame_count_length = 0;
+    primary_header.vc_frame_count_length = 1;
 
     // Create the data field header
     uslp_transfer_frame_data_field_header_t data_header = {0};
@@ -76,7 +79,47 @@ bool uslp_mapp_request(uint8_t *sdu, uint16_t sdu_len, uint32_t gmap_id, uint8_t
  * into the representation for sending over radio
  */
 static bool uslp_send(uslp_transfer_frame_view_t *view) {
-    return 0;
+    const uslp_transfer_frame_primary_header_t *ph = &view->primary_header;
+    uint8_t count_len = ph->vc_frame_count_length; // number of octets the VC frame count occupies
+
+    uint16_t header_len = USLP_PRIMARY_HEADER_FIXED_SIZE + count_len + USLP_DATA_FIELD_HEADER_SIZE;
+    uint32_t total_len = header_len + view->datafield_len;
+
+    if (total_len > USLP_MAX_FRAME_SIZE) {
+        return false; // too large for one frame, and segmentation is not implemented yet
+    }
+
+    // ~~~ Transfer Frame Primary Header ~~~
+    // Every field is packed most significant bit first, so each octet is built by
+    // masking each field down to its width and shifting it into position
+    tx_buffer[0] = (ph->version_num << 4) | (ph->spacecraft_id >> 12);
+    tx_buffer[1] = (ph->spacecraft_id >> 4) & 0xFF;
+    tx_buffer[2] = ((ph->spacecraft_id & 0x0F) << 4) | (ph->src_or_dest << 3) | (ph->virtual_channel_id >> 3);
+    tx_buffer[3] = ((ph->virtual_channel_id & 0x07) << 5) | (ph->map_id << 1) | ph->end_of_frame_primary_header_flag;
+    // Octets 4-5 hold the frame length, which is filled in once the total length is known
+    tx_buffer[6] = (ph->bypass_sequence_control_flag << 7) | (ph->protocol_control_command_flag << 6) | (ph->spare << 4) |
+        (ph->ocf_flag << 3) | count_len;
+
+    // VC frame count, most significant octet first
+    for (uint8_t i = 0; i < count_len; i++) {
+        tx_buffer[USLP_PRIMARY_HEADER_FIXED_SIZE + i] = (ph->vc_frame_count >> (8 * (count_len - 1 - i))) & 0xFF;
+    }
+
+    // ~~~ Transfer Frame Data Field Header ~~~
+    tx_buffer[USLP_PRIMARY_HEADER_FIXED_SIZE + count_len] =
+        (view->data_field_header.tfdz_construction_rules << 5) | view->data_field_header.protocol_identifier;
+
+    // ~~~ Transfer Frame Data Zone ~~~
+    memcpy(&tx_buffer[header_len], view->datafield, view->datafield_len);
+
+    // The frame length field holds the total number of octets in the frame minus one
+    // Reference: USLP Blue Book 4.1.2.7.2
+    uint16_t frame_length = total_len - 1;
+    tx_buffer[4] = frame_length >> 8;
+    tx_buffer[5] = frame_length & 0xFF;
+
+    // TODO: send tx_buffer to comms
+    return true;
 }
 
 bool uslp_transfer_frame_parse(uslp_transfer_frame_t *tf, uint8_t *data, uint32_t len) {
