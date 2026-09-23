@@ -68,7 +68,18 @@ status_t init_arducam_hardware(void) {
     }
     
     arducam_i2c_write(0xFF, &config[0], 1);
-    arducam_i2c_write(0x12, &config[1], 1);
+    arducam_i2c_write(0x12, &config[1], 1); // COM7 = 0x80: sensor soft reset
+
+    // Wait for the sensor to finish resetting before loading the register tables.
+    // Without this, the JPEG/size config is written while the sensor is still
+    // resetting, so the resolution never takes and the sensor stays near its
+    // power-up default (~176x144) regardless of the size table below.
+    //
+    // NOTE: Use vTaskDelay, NOT the ASF delay_ms(). delay_ms() busy-waits on
+    // SysTick and overwrites SysTick->LOAD/VAL, which is the same timer FreeRTOS
+    // uses for its scheduler tick -- calling it from a task corrupts the tick
+    // rate and breaks every RTOS timeout. vTaskDelay yields without touching it.
+    vTaskDelay(pdMS_TO_TICKS(100));
 
     // fmt to jpeg config
     arducam_i2c_multi_write(OV2640_JPEG_INIT);
@@ -76,7 +87,7 @@ status_t init_arducam_hardware(void) {
     arducam_i2c_multi_write(OV2640_JPEG);
     arducam_i2c_write(0xFF, &data[1], 1);
     arducam_i2c_write(0x15, &data[0], 1);
-    arducam_i2c_multi_write(OV2640_1280x1024_JPEG);
+    arducam_i2c_multi_write(OV2640_320x240_JPEG);
 
     return SUCCESS;
 }
