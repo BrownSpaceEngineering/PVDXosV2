@@ -19,6 +19,8 @@ static uint8_t vc_frame_counts[64]; // Counter for number of frames for each of 
 // NOTE: only one task may send at a time
 static uint8_t tx_buffer[USLP_MAX_FRAME_SIZE];
 
+static bool uslp_send(uslp_transfer_frame_view_t *view);
+
 bool uslp_mapp_request(uint8_t *sdu, uint16_t sdu_len, uint32_t gmap_id, uint8_t pvn, uint32_t sdu_id, uslp_qos_t qos) {
     // GMAP ID = TFVN (4) | SCID (16) | VCID (6) | MAP ID (4) = 30 bits
     // tfvn is bits 29-26 (4 bit mask)
@@ -31,7 +33,7 @@ bool uslp_mapp_request(uint8_t *sdu, uint16_t sdu_len, uint32_t gmap_id, uint8_t
     uint8_t map_id = gmap_id & 0x0F;
 
     if (tfvn != USLP_TFVN) {
-        return -1; // USLP TFVN always needs to be 1100
+        return true; // USLP TFVN always needs to be 1100
     }
 
     // Create the primary header based off decoded fields
@@ -46,13 +48,13 @@ bool uslp_mapp_request(uint8_t *sdu, uint16_t sdu_len, uint32_t gmap_id, uint8_t
     primary_header.end_of_frame_primary_header_flag = 0;
     // --------------- Other fields ----------------------------
 
-    primary_header.vc_frame_count = vc_frame_counts[vcid]++; // This needs to be some sort of counter which increments per frame sent
-    // TODO: see if these need non-zero values
-    primary_header.frame_length = 0;
-
     if (qos == USLP_QOS_SEQUENCE_CONTROLLED) {
-        return false; // Only expedited works - retransmit is not impleneted within USLP
+        return true; // Only expedited works - retransmit is not impleneted within USLP
     }
+
+    primary_header.vc_frame_count = vc_frame_counts[vcid]++; // This needs to be some sort of counter which increments per frame sent
+
+    primary_header.frame_length = 0;
 
     primary_header.bypass_sequence_control_flag = qos;
     primary_header.protocol_control_command_flag = 0;
@@ -86,7 +88,7 @@ static bool uslp_send(uslp_transfer_frame_view_t *view) {
     uint32_t total_len = header_len + view->datafield_len;
 
     if (total_len > USLP_MAX_FRAME_SIZE) {
-        return false; // too large for one frame, and segmentation is not implemented yet
+        return true; // too large for one frame, and segmentation is not implemented yet
     }
 
     // ~~~ Transfer Frame Primary Header ~~~
@@ -119,7 +121,7 @@ static bool uslp_send(uslp_transfer_frame_view_t *view) {
     tx_buffer[5] = frame_length & 0xFF;
 
     // TODO: send tx_buffer to comms
-    return true;
+    return false;
 }
 
 bool uslp_transfer_frame_parse(uslp_transfer_frame_t *tf, uint8_t *data, uint32_t len) {
