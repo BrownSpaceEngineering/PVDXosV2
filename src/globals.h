@@ -3,6 +3,9 @@
  *
  * Defines global datatypes, structures and headers.
  *
+ * Trimmed down for the bare-metal camera debug build: all FreeRTOS/task
+ * definitions have been removed since this build runs no scheduler.
+ *
  * Created:
  * Authors: Siddharta Laloux
  */
@@ -10,10 +13,9 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
-#include <FreeRTOS.h>
-#include <queue.h>
 #include <stdbool.h>
-#include <task.h>
+#include <stddef.h>
+#include <stdint.h>
 
 /* ---------- LOGGING CONSTANTS ---------- */
 
@@ -22,12 +24,6 @@
 #else
     #define DEFAULT_LOG_LEVEL DEBUG // The default log level for the system for debug and unit test builds
 #endif
-
-/* ---------- TASK CONSTANTS ---------- */
-
-#define TASK_STACK_OVERFLOW_PADDING 16            // Buffer for the stack size so that overflow doesn't corrupt any TCBs
-#define COMMAND_QUEUE_MAX_COMMANDS 30             // Maximum number of commands that can be queued at once for any task
-#define COMMAND_QUEUE_ITEM_SIZE sizeof(command_t) // Size of each item in command queues
 
 /* ---------- ENUMS ---------- */
 
@@ -49,34 +45,6 @@ typedef enum {
     ERROR_NOT_READY,
 } status_t;
 
-// An enum to represent the different operations that tasks can perform (contained within a command_t)
-// NOTE: The same operation can have different meanings depending on the target task
-typedef enum {
-    // General operations (can be overloaded by any task)
-    OPERATION_POWER_OFF = 0,
-
-    // Watchdog operations
-    OPERATION_CHECKIN, // p_data: TaskHandle_t *handle
-
-    // Task-Manager operations
-    OPERATION_INIT_SUBTASKS,   // p_data: NULL
-    OPERATION_ENABLE_SUBTASK,  // p_data: TaskHandle_t *handle
-    OPERATION_DISABLE_SUBTASK, // p_data: TaskHandle_t *handle
-
-    // Display operations
-    OPERATION_DISPLAY_IMAGE, // p_data: color_t *p_buffer
-    OPERATION_CLEAR_IMAGE,   // p_data: NULL
-
-    // Magnetometer operations
-    OPERATION_READ, // p_data: magnetometer_read_args_t *readings
-
-    // Photodiode operations
-    OPERATION_PHOTODIODE_READ,
-
-    // TESTING
-    TEST_OP, // p_data: char message[]
-} operation_t;
-
 // An enum to represent the different log levels that functions can use
 typedef enum {
     DEBUG = 0,
@@ -84,68 +52,6 @@ typedef enum {
     EVENT,
     WARNING,
 } log_level_t;
-
-// Enum to represent type of task for state diagram.
-typedef enum {
-    OS = 0,
-    SENSOR,
-    ACTUATOR,
-    TESTING,
-} task_type_t;
-
-/*
- * An enum to represent the ID/tag for each hardware device
- */
-
-#define NUM_DEVICES 10 // This **must** be updated to reflect the number of enums
-typedef enum {
-    MAGNETOMETER_ID = 0,
-    PHOTODIODE_ID = 1,
-    GYROSCOPE_ID = 2,
-    MRAM_ID = 3,
-    MAGNETORQUERS_ID = 4,
-    SBAND_ID = 5,
-    UHF_ID = 6,
-    EPS_ID = 7,
-    DISPLAY_ID = 8,
-    CAMERA_ID = 9,
-} device_id_t;
-
-/* ---------- MISCELLANEOUS TASK TYPES ---------- */
-
-// A task-initialisation function; takes in nothing and returns a queue handle.
-typedef QueueHandle_t (*init_function)(void);
-
-/* ---------- STRUCTS ---------- */
-
-// A struct defining a task's lifecycle in the PVDXos RTOS
-typedef struct {
-    const char *const name;             // Name of the task
-    bool enabled;                       // Whether the task is enabled
-    TaskHandle_t handle;                // FreeRTOS handle to the task
-    QueueHandle_t command_queue;        // Command queue associated with the task
-    const init_function init;           // Initialisation function to call before task entry point
-    const TaskFunction_t function;      // Main entry point for the task
-    const uint32_t stack_size;          // Size of the stack in words (multiply by 4 to get bytes)
-    StackType_t *const stack_buffer;    // Buffer for the stack
-    void *pvParameters;                 // Parameters to pass to the task's main function
-    UBaseType_t priority;               // Priority of the task in the RTOS scheduler
-    StaticTask_t *const task_tcb;       // Task control block
-    const uint32_t watchdog_timeout_ms; // How frequently the task should check in with the watchdog (in milliseconds)
-    uint32_t last_checkin_time_ticks;   // Last time the task checked in with the watchdog
-    bool has_registered;                // Whether the task is being monitored by the watchdog (initialized to NULL)
-    const task_type_t task_type;        // Whether the task is OS-integrity, a sensor, or an actuator
-} pvdx_task_t;
-
-// A struct to represent a command that OS tasks can execute
-typedef struct {
-    pvdx_task_t *const target;            // The target task for the command
-    const operation_t operation;          // The operation to perform
-    const void *const p_data;             // Pointer to data needed for the operation
-    const size_t len;                     // Length of the data
-    status_t result;                      // Pointer to the result of the operation
-    void (*callback)(status_t *p_result); // Callback function to call after the operation is complete
-} command_t;
 
 /* ---------- BUILD CONSTANTS ---------- */
 
@@ -161,7 +67,7 @@ typedef struct {
 // Define build date
 #define BUILD_DATE __DATE__
 
-// Define build timame
+// Define build time
 #define BUILD_TIME __TIME__
 
 // IDE-only defines so that the IDE doesn't throw a billion errors for unavailable defines

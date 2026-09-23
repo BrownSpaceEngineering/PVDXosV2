@@ -1,8 +1,0 @@
-#ifndef IMAGE_BUFFER_BROWNLOGO_H
-#define IMAGE_BUFFER_BROWNLOGO_H
-
-#include <stdint.h>
-
-extern const uint8_t IMAGE_BUFFER_BROWNLOGO[8192];
-
-#endif // IMAGE_BUFFER_BROWNLOGO_H

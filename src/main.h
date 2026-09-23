@@ -3,21 +3,15 @@
 
 #include <atmel_start.h>
 #include <driver_init.h>
-#include <hal_adc_sync.h>
+#include <hal_delay.h>
 
 #include "SEGGER_RTT.h"
-#include "cosmic_monkey_task.h"
 #include "globals.h"
 #include "logging.h"
-#include "rtos_start.h"
-#include "task_list.h"
 
 /*
 Standard definitions for main.c
 */
-
-#define BOOTLOADER_MAGIC_NUMBER_ADDRESS (BKUPRAM_ADDR + 0x0)
-#define BOOTLOADER_MAGIC_NUMBER_VALUE (0x50564458UL) // ASCII for 'PVDX'
 
 /*
 Compilation guards to make sure that compilation is being done with the correct flags and correct compiler versions

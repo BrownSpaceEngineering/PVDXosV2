@@ -10,8 +10,10 @@
 #include "arducam_driver.h"
 #include <string.h> // For memcpy
 #include "arducam_registers.h"
-#include "task_list.h"
-#include "watchdog_task.h"
+#include "logging.h"
+
+// Buffer that image bytes are streamed through over RTT channel 2
+uint8_t SEGGER_RTT_IMAGE_BUFFER[SEGGER_RTT_IMAGE_BUFFER_SIZE];
 
 // Buffer for SPI transactions
 uint8_t ardu_spi_rx_buffer[ARDUCAM_SPI_RX_BUF_SIZE] = {0x00};
@@ -39,10 +41,17 @@ status_t init_arducam_hardware(void) {
     gpio_set_pin_direction(CAMERA_CS, GPIO_DIRECTION_OUT);
     gpio_set_pin_level(CAMERA_CS, 1);
 
-    spi_m_sync_set_baudrate(&SPI_CAMERA, 6000000);
+    spi_m_sync_set_baudrate(&SPI_CAMERA, 1000000);
     spi_m_sync_get_io_descriptor(&SPI_CAMERA, &arducam_spi_io);
     spi_m_sync_enable(&SPI_CAMERA);
-    
+
+    // Reset the ArduChip CPLD (capture state machine) into a known-good state
+    // before doing anything else, per the official ArduCAM Mini example.
+    arducam_spi_write(ARDUCHIP_RESET, 0x80);
+    delay_ms(100);
+    arducam_spi_write(ARDUCHIP_RESET, 0x00);
+    delay_ms(100);
+
     // Write and read a known test pattern (0x55) into ArduCHIP internal test register
     arducam_spi_write(ARDUCHIP_TEST1, 0x55);
     int temp = arducam_spi_read(ARDUCHIP_TEST1);
@@ -68,7 +77,12 @@ status_t init_arducam_hardware(void) {
     }
     
     arducam_i2c_write(0xFF, &config[0], 1);
-    arducam_i2c_write(0x12, &config[1], 1);
+    arducam_i2c_write(0x12, &config[1], 1); // COM7 = 0x80: sensor soft reset
+
+    // The official ArduCAM InitCAM() waits 100ms after the soft reset before
+    // loading the register tables. Without it, the JPEG config lands while the
+    // sensor is still resetting and streaming never comes up (CAP_DONE hang).
+    delay_ms(100);
 
     // fmt to jpeg config
     arducam_i2c_multi_write(OV2640_JPEG_INIT);
@@ -76,12 +90,18 @@ status_t init_arducam_hardware(void) {
     arducam_i2c_multi_write(OV2640_JPEG);
     arducam_i2c_write(0xFF, &data[1], 1);
     arducam_i2c_write(0x15, &data[0], 1);
-    arducam_i2c_multi_write(OV2640_1280x1024_JPEG);
+    // Use 320x240 (the known-good ArduCAM example default). Max resolution
+    // (1280x1024) can overrun the ArduChip FIFO / stall the JPEG engine so a
+    // frame never completes and CAP_DONE never asserts. Walk this back up once
+    // capture is confirmed working.
+    arducam_i2c_multi_write(OV2640_320x240_JPEG);
 
-    // ----- REMOVE THIS (only for testing right now) -----
-    // capture();
-    capture_rtt();
-    // ----------------------------------------------------
+    // Set the ArduChip's VSYNC polarity. VSYNC is toggling but CAP_DONE never
+    // asserts, which points at inverted VSYNC polarity: the ArduChip arms but
+    // never sees a valid frame start->end. The 2MP Plus example sets
+    // VSYNC_LEVEL_MASK; the plain 2MP leaves this 0. Trying the opposite (0x00)
+    // polarity here to see if the ArduChip then latches a complete frame.
+    arducam_spi_write(ARDUCHIP_TIM, 0x00);
 
     return SUCCESS;
 }
@@ -207,12 +227,40 @@ void capture(void) {
 }
 
 void capture_rtt(void) {
-    // NOTE: In some versions of the official C++ ArduCam OV2640 driver, the FIFO_CLEAR_MASK is written twice,
-    // while in others, it is written once. This implementation emprically works, so currently it is written twice.
-    arducam_spi_write(ARDUCHIP_FIFO, FIFO_CLEAR_MASK); // Flush the FIFO
-    arducam_spi_write(ARDUCHIP_FIFO, FIFO_CLEAR_MASK); // Clear the capture done flag (uses same clear mask)
-    arducam_spi_write(ARDUCHIP_FIFO, FIFO_START_MASK); // Start capture
-    while (!get_bit(ARDUCHIP_TRIG, CAP_DONE_MASK));    // Wait for capture to finish
+    // Attempt the capture up to ARDUCAM_CAPTURE_MAX_ATTEMPTS times. Over a marginal SPI
+    // link the start/clear writes or the CAP_DONE reads can glitch, leaving the capture
+    // stuck, so we bound each attempt's wait and retry instead of spinning forever.
+    bool capture_done = false;
+
+    for (uint8_t attempt = 1; attempt <= ARDUCAM_CAPTURE_MAX_ATTEMPTS; attempt++) {
+        // NOTE: In some versions of the official C++ ArduCam OV2640 driver, the FIFO_CLEAR_MASK is written twice,
+        // while in others, it is written once. This implementation emprically works, so currently it is written twice.
+        arducam_spi_write(ARDUCHIP_FIFO, FIFO_CLEAR_MASK); // Flush the FIFO
+        arducam_spi_write(ARDUCHIP_FIFO, FIFO_CLEAR_MASK); // Clear the capture done flag (uses same clear mask)
+        arducam_spi_write(ARDUCHIP_FIFO, FIFO_START_MASK); // Start capture
+
+        // Wait for capture to finish, bounded by ARDUCAM_CAPTURE_TIMEOUT_MS
+        uint32_t waited_ms = 0;
+        while (!get_bit(ARDUCHIP_TRIG, CAP_DONE_MASK) && waited_ms < ARDUCAM_CAPTURE_TIMEOUT_MS) {
+            delay_ms(ARDUCAM_CAPTURE_POLL_MS);
+            waited_ms += ARDUCAM_CAPTURE_POLL_MS;
+        }
+
+        if (get_bit(ARDUCHIP_TRIG, CAP_DONE_MASK)) {
+            capture_done = true;
+            break;
+        }
+
+        // Log the failed attempt (include the raw ARDUCHIP_TRIG byte for diagnostics)
+        warning("arducam: capture attempt %u/%u failed - no CAP_DONE after %ums (ARDUCHIP_TRIG=0x%02X)\n",
+                (unsigned)attempt, (unsigned)ARDUCAM_CAPTURE_MAX_ATTEMPTS, (unsigned)waited_ms,
+                (unsigned)(uint8_t)arducam_spi_read(ARDUCHIP_TRIG));
+    }
+
+    if (!capture_done) {
+        warning("arducam: capture failed after %u attempts\n", (unsigned)ARDUCAM_CAPTURE_MAX_ATTEMPTS);
+        return;
+    }
 
     // Read how many bytes were captured
     size_t len = read_fifo_length();
@@ -235,9 +283,11 @@ void capture_rtt(void) {
     uint8_t cmd = BURST_FIFO_READ;
     io_write(arducam_spi_io, &cmd, 1);
 
-    // Send dummy byte before looping (official driver does this)
-    uint8_t dummy = 0x00;
-    io_write(arducam_spi_io, &dummy, 1);
+    // NOTE: Do NOT clock an extra dummy byte here. After the BURST_FIFO_READ
+    // command, the very next clocked byte is the first FIFO byte (the JPEG's
+    // leading 0xFF). An extra io_write() would clock that byte out and discard
+    // it (io_write ignores MISO), shifting the whole image left by one and
+    // corrupting the SOI marker. The read loop below captures the first byte.
 
     // Iteratively transfer image bytes into our rx buffer (and send over RTT)
     const size_t bufferSize = ARDUCAM_SPI_RX_BUF_SIZE;
@@ -250,7 +300,6 @@ void capture_rtt(void) {
         spi_m_sync_transfer(&SPI_CAMERA, &ardu_xfer);
         SEGGER_RTT_Write(CAMERA_RTT_OUTPUT_CHANNEL, ardu_spi_rx_buffer, (unsigned)will_copy);
         len -= will_copy;
-        watchdog_checkin(p_arducam_task);
     }
 
     // Deselect SPI peripheral device
