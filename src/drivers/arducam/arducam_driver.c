@@ -39,7 +39,7 @@ status_t init_arducam_hardware(void) {
     gpio_set_pin_direction(CAMERA_CS, GPIO_DIRECTION_OUT);
     gpio_set_pin_level(CAMERA_CS, 1);
 
-    spi_m_sync_set_baudrate(&SPI_CAMERA, 6000000);
+    spi_m_sync_set_baudrate(&SPI_CAMERA, 1000000);
     spi_m_sync_get_io_descriptor(&SPI_CAMERA, &arducam_spi_io);
     spi_m_sync_enable(&SPI_CAMERA);
     
@@ -77,11 +77,6 @@ status_t init_arducam_hardware(void) {
     arducam_i2c_write(0xFF, &data[1], 1);
     arducam_i2c_write(0x15, &data[0], 1);
     arducam_i2c_multi_write(OV2640_1280x1024_JPEG);
-
-    // ----- REMOVE THIS (only for testing right now) -----
-    // capture();
-    capture_rtt();
-    // ----------------------------------------------------
 
     return SUCCESS;
 }
@@ -235,9 +230,11 @@ void capture_rtt(void) {
     uint8_t cmd = BURST_FIFO_READ;
     io_write(arducam_spi_io, &cmd, 1);
 
-    // Send dummy byte before looping (official driver does this)
-    uint8_t dummy = 0x00;
-    io_write(arducam_spi_io, &dummy, 1);
+    // NOTE: Do NOT clock an extra dummy byte here. After the BURST_FIFO_READ
+    // command, the very next clocked byte is the first FIFO byte (the JPEG's
+    // leading 0xFF). An extra io_write() would clock that byte out and discard
+    // it (io_write ignores MISO), shifting the whole image left by one and
+    // corrupting the SOI marker. The read loop below captures the first byte.
 
     // Iteratively transfer image bytes into our rx buffer (and send over RTT)
     const size_t bufferSize = ARDUCAM_SPI_RX_BUF_SIZE;
