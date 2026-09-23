@@ -13,57 +13,14 @@
 
 
 ### ALL C FILES SHOULD HAVE AN OBJECT FILE LISTED HERE ###
+###
+### This is the bare-metal camera debug build: only the files needed to bring up
+### the MCU, stream logs/images over RTT, and drive the Arducam are compiled.
+### The FreeRTOS library itself is still pulled in by the ASF Makefile, so the
+### rtos_support hooks below must remain to satisfy the linker (the scheduler is
+### never started).
 export OBJS :=                                              	\
-../src/linalg/LinearAlgebra/add.o 								\
-../src/linalg/LinearAlgebra/chol.o 								\
-../src/linalg/LinearAlgebra/cofact.o 							\
-../src/linalg/LinearAlgebra/copy.o 								\
-../src/linalg/LinearAlgebra/cut.o 								\
-../src/linalg/LinearAlgebra/det.o 								\
-../src/linalg/LinearAlgebra/diag.o 								\
-../src/linalg/LinearAlgebra/diagpower.o 						\
-../src/linalg/LinearAlgebra/dot.o 								\
-../src/linalg/LinearAlgebra/eabs.o 								\
-../src/linalg/LinearAlgebra/eig.o 								\
-../src/linalg/LinearAlgebra/eye.o 								\
-../src/linalg/LinearAlgebra/hankel.o 							\
-../src/linalg/LinearAlgebra/horzcat.o 							\
-../src/linalg/LinearAlgebra/insert.o 							\
-../src/linalg/LinearAlgebra/inv.o								\
-../src/linalg/LinearAlgebra/linprog.o 							\
-../src/linalg/LinearAlgebra/linsolve.o 							\
-../src/linalg/LinearAlgebra/lu.o 								\
-../src/linalg/LinearAlgebra/maxvector.o 						\
-../src/linalg/LinearAlgebra/mdiag.o 							\
-../src/linalg/LinearAlgebra/minvector.o 						\
-../src/linalg/LinearAlgebra/move.o 								\
-../src/linalg/LinearAlgebra/mpower.o 							\
-../src/linalg/LinearAlgebra/mul.o 								\
-../src/linalg/LinearAlgebra/norm.o 								\
-../src/linalg/LinearAlgebra/ones.o 								\
-../src/linalg/LinearAlgebra/pinv.o 								\
-../src/linalg/LinearAlgebra/power.o 							\
-../src/linalg/LinearAlgebra/print.o 							\
-../src/linalg/LinearAlgebra/qr.o 								\
-../src/linalg/LinearAlgebra/rank.o 								\
-../src/linalg/LinearAlgebra/repmat.o 							\
-../src/linalg/LinearAlgebra/scale.o 							\
-../src/linalg/LinearAlgebra/sqrte.o 							\
-../src/linalg/LinearAlgebra/sub.o 								\
-../src/linalg/LinearAlgebra/sumrows.o 							\
-../src/linalg/LinearAlgebra/svd.o 								\
-../src/linalg/LinearAlgebra/toeplitz.o 							\
-../src/linalg/LinearAlgebra/tran.o 								\
-../src/linalg/LinearAlgebra/tril.o 								\
-../src/linalg/LinearAlgebra/triu.o 								\
-../src/linalg/LinearAlgebra/vec.o 								\
-../src/linalg/LinearAlgebra/vertcat.o 							\
-../src/linalg/LinearAlgebra/zeros.o 							\
-../src/linalg/LinearAlgebra/eps.o 								\
-																\
 ../src/main.o                                               	\
-                                                            	\
-../src/mutexes/mutexes.o                                    	\
                                                             	\
 ../src/misc/printf/SEGGER_RTT.o                             	\
 ../src/misc/printf/SEGGER_RTT_printf.o                      	\
@@ -75,46 +32,9 @@ export OBJS :=                                              	\
                                                             	\
 ../src/misc/exception_handlers/default_handler.o            	\
 ../src/misc/exception_handlers/specific_handlers.o          	\
-																\
-../src/drivers/display/display_driver.o                       	\
-../src/drivers/magnetometer/magnetometer_driver.o           	\
-../src/drivers/photodiode/photodiode_driver.o               	\
-../src/drivers/watchdog/watchdog_driver.o                     	\
+                                                            	\
 ../src/drivers/arducam/arducam_driver.o                         \
 ../src/drivers/arducam/arducam_registers.o 						\
-                                                            	\
-../src/tasks/heartbeat/heartbeat_main.o                     	\
-                                                            	\
-../src/tasks/watchdog/watchdog_task.o                       	\
-../src/tasks/watchdog/watchdog_main.o                       	\
-                                                            	\
-../src/tasks/cosmic_monkey/cosmic_monkey_main.o             	\
-../src/tasks/cosmic_monkey/cosmic_monkey_task.o             	\
-                                                            	\
-../src/tasks/display/display_task.o                         	\
-../src/tasks/display/display_main.o                         	\
-../src/tasks/display/image_buffers/image_buffer_BrownLogo.o 	\
-../src/tasks/display/image_buffers/image_buffer_PVDX.o      	\
-                                                            	\
-../src/tasks/task_manager/task_manager_main.o               	\
-../src/tasks/task_manager/task_manager_task.o               	\
-                                                            	\
-../src/tasks/command_dispatcher/command_dispatcher_main.o   	\
-../src/tasks/command_dispatcher/command_dispatcher_task.o   	\
-                                                            	\
-../src/tasks/shell/shell_main.o                             	\
-../src/tasks/shell/shell_helpers.o                          	\
-../src/tasks/shell/shell_commands.o                         	\
-                                                            	\
-../src/tasks/arducam/arducam_main.o 							\
-../src/tasks/arducam/arducam_task.o 							\
-																\
-../src/checks/device_checks.o 									\
-../src/tasks/task_list.o                                        \
-																\
-../src/tasks/radio/spp.o 									    \
-../src/tests/test.o                                             \
-																
 
 
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###
@@ -127,29 +47,7 @@ export EXTRA_VPATH := \
 ../../src/misc/logging \
 ../../src/misc/exception_handlers \
 ../../src/drivers \
-../../src/drivers/display \
-../../src/drivers/magnetometer \
-../../src/drivers/magnetorquer \
-../../src/drivers/photodiode \
-../../src/drivers/watchdog \
 ../../src/drivers/arducam \
-../../src/tasks \
-../../src/tasks/watchdog \
-../../src/tasks/heartbeat \
-../../src/tasks/cosmic_monkey \
-../../src/tasks/display \
-../../src/tasks/display/image_buffers \
-../../src/tasks/task_manager \
-../../src/tasks/command_dispatcher \
-../../src/tasks/shell \
-../../src/tasks/arducam \
-../../src/tasks/radio \
-../../src/mutexes \
-../../src/checks \
-../../src/tests \
-../../src/linalg \
-../../src/linalg/Lapack \
-../../src/linalg/LinearAlgebra \
 # $(PATH_TO_CCONTROL_INCLUDES)
 
 

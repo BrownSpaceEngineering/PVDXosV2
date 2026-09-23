@@ -5,7 +5,12 @@
 #include <atmel_start.h>
 #include <driver_init.h>
 #include "globals.h"
-#include "rtos_start.h"
+#include "SEGGER_RTT.h"
+
+// Separate RTT channel for streaming camera image bytes for debugging
+#define CAMERA_RTT_OUTPUT_CHANNEL 2
+#define SEGGER_RTT_IMAGE_BUFFER_SIZE 4096
+extern uint8_t SEGGER_RTT_IMAGE_BUFFER[SEGGER_RTT_IMAGE_BUFFER_SIZE];
 
 struct sensor_reg {
 	uint8_t reg;
@@ -33,6 +38,10 @@ struct sensor_reg {
 
 #define ARDUCHIP_TEST1          0x00  // TEST REGISTER
 
+#define ARDUCHIP_RESET     		0x07  // ArduChip CPLD reset register
+#define ARDUCHIP_TIM       		0x03  // Timing control register
+#define VSYNC_LEVEL_MASK   		0x02  // Tells the ArduChip the sensor VSYNC is active-high
+
 #define ARDUCHIP_TRIG      		0x41
 #define VSYNC_MASK         		0x01
 #define SHUTTER_MASK       		0x02
@@ -41,6 +50,12 @@ struct sensor_reg {
 #define ARDUCAM_SPI_RX_BUF_SIZE 0x1000
 #define ARDUCAM_SPI_TX_BUF_SIZE 0x40
 #define OV2640_MAX_FIFO_SIZE	0x5FFFF
+
+// Capture retry parameters. Over a marginal SPI link the start/clear writes or the
+// CAP_DONE reads can glitch, so we bound each attempt and retry rather than spin forever.
+#define ARDUCAM_CAPTURE_MAX_ATTEMPTS 10   // Number of capture attempts before giving up
+#define ARDUCAM_CAPTURE_TIMEOUT_MS   1000 // Max time to wait for CAP_DONE per attempt
+#define ARDUCAM_CAPTURE_POLL_MS      10   // How often to poll ARDUCHIP_TRIG while waiting
 
 // External IO descriptors
 extern struct io_descriptor *arducam_i2c_io;

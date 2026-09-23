@@ -13,8 +13,10 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
+#include <atmel_start.h> // For NVIC_SystemReset() and delay_ms()
+#include <hal_delay.h>
+
 #include "SEGGER_RTT.h"
-#include "watchdog_task.h"
 
 // Macros for debugging functions so that file and line number info can be included
 
@@ -27,22 +29,22 @@ void fatal_impl(const char *string, ...) {
     va_start(args, string);
     SEGGER_RTT_vprintf(LOGGING_RTT_OUTPUT_CHANNEL, string, &args); // Use vprintf to print with variable arguments
 
-    // To make sure that the message is printed before the watchdog resets the system, print a few more.
+    // To make sure that the message is printed before we reset the system, print a few more.
     warning_impl("FATAL ERROR OCCURRED! RESTARTING SYSTEM...\n");
     warning_impl("FATAL ERROR OCCURRED! RESTARTING SYSTEM...\n");
     warning_impl("FATAL ERROR OCCURRED! RESTARTING SYSTEM...\n");
-    vTaskDelay(pdMS_TO_TICKS(1000)); // Wait for the message to be printed
+    delay_ms(1000); // Wait for the message to be printed
 
-    // Force reboot
-    kick_watchdog();
+    // Force reboot (bare-metal: no watchdog, so trigger a core reset directly)
+    NVIC_SystemReset();
 
     // This line should never be reached, but we include it to adhere to the va_list contract
     va_end(args);
 }
 
 void fatal_no_log_impl(void) {
-    // Force reboot
-    kick_watchdog();
+    // Force reboot (bare-metal: no watchdog, so trigger a core reset directly)
+    NVIC_SystemReset();
 }
 
 void warning_impl(const char *string, ...) {
