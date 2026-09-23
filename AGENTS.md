@@ -97,7 +97,29 @@ configuration, for example `clang-format -i path/to/file.c`.
 Shared procedures with detailed build/flash or logic-analyzer workflows are
 documented in `.agents/skills/`.
 
+## Sibling repository: PVDXdevref
+
+The team's datasheets and development reference materials live in the
+**PVDXdevref** repository, which should be placed as a sibling of this
+repository so that the layout on disk is:
+
+```
+PVDX/
+├── PVDXdevref/  ← datasheets and development reference materials
+└── PVDXosV2/   ← this repository
+```
+
+**Agent startup check:** at the beginning of every session, verify that
+`../PVDXdevref` exists relative to this repository root (i.e. check whether the
+path `../PVDXdevref` is a directory). If it is absent, immediately tell the user:
+
+> ⚠️ The **PVDXdevref** sibling repository was not found at `../PVDXdevref`.
+> Please clone it alongside this repo at `../PVDXdevref`.
+> Hardware datasheets and development reference materials used by tasks in this
+> repository live there.
+
 <!-- BEGIN debug-tooling (added by setup-debug-tooling.sh) -->
+
 ## Agent-safe hardware debugging
 
 Several commands above are interactive or never terminate. Agents must NOT run `make connect`,
@@ -112,8 +134,10 @@ Several commands above are interactive or never terminate. Agents must NOT run `
   (the app is linked for RAM and copied there by the bootloader).
 
 Rules:
+
 - Reading registers, memory, backtraces and RTT logs is fine. Flashing, resetting, erasing, or writing
   memory/registers needs user approval.
 - Read the RTT log first; use GDB snapshots to confirm.
 - The hardware watchdog is always on (about 16 s); don't leave the core halted.
+
 <!-- END debug-tooling -->
