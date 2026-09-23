@@ -12,6 +12,14 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "globals.h"
+
+// USLP allows up to 64 virtual channels. we probably won't need this many, though, so lower this from 64 as needed
+#define USLP_VIRTUAL_CHANNEL_COUNT 64
+
+// VC #63 is explicitly reserved by the protocol for transmitting Only Idle Frames (OID) when running in Fixed-Aligned Mode
+#define USLP_IDLE_ONLY_FRAME_INDEX 63
+
 // Transfer Frame Version Number, always 0b1100 for USLP
 // Reference: USLP Blue Book 4.1.2.2.2.2
 #define USLP_TFVN 0b1100
@@ -106,8 +114,10 @@ typedef enum uslp_qos {
  *
  * \param sdu - pointer to the start of the packet to send
  * \param sdu_len - length, in bytes, of the packet
+ *
+ * \return true on failure, else false
  */
-int uslp_mapp_request(uint8_t *sdu, uint16_t sdu_len, uint32_t gmap_id, uint8_t pvn, uint32_t sdu_id, uslp_qos_t qos);
+bool uslp_mapp_request(uint8_t *sdu, uint16_t sdu_len, uint32_t gmap_id, uint8_t pvn, uint32_t sdu_id, uslp_qos_t qos);
 
 /**
  * Parsing for USLP Transfer Frames

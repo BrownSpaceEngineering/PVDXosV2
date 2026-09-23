@@ -10,9 +10,13 @@
 
 #include "uslp.h"
 
-static int uslp_send(uslp_transfer_frame_view_t *view); // Declaring uslp_send() function
+#include <stdbool.h>
 
-int uslp_mapp_request(uint8_t *sdu, uint16_t sdu_len, uint32_t gmap_id, uint8_t pvn, uint32_t sdu_id, uslp_qos_t qos) {
+uint32_t vc_frame_counts[USLP_VIRTUAL_CHANNEL_COUNT] = {0};
+
+static bool uslp_send(uslp_transfer_frame_view_t *view);
+
+bool uslp_mapp_request(uint8_t *sdu, uint16_t sdu_len, uint32_t gmap_id, uint8_t pvn, uint32_t sdu_id, uslp_qos_t qos) {
     // GMAP ID = TFVN (4) | SCID (16) | VCID (6) | MAP ID (4) = 30 bits
     // tfvn is bits 29-26 (4 bit mask)
     uint8_t tfvn = (gmap_id >> 26) & 0x0F;
@@ -44,7 +48,7 @@ int uslp_mapp_request(uint8_t *sdu, uint16_t sdu_len, uint32_t gmap_id, uint8_t 
     primary_header.frame_length = 0;
 
     if (qos == USLP_QOS_SEQUENCE_CONTROLLED) {
-        return -1; // Only expedited works - retransmit is not impleneted within USLP
+        return true; // Only expedited works - retransmit is not impleneted within USLP
     }
 
     primary_header.bypass_sequence_control_flag = qos;
@@ -71,7 +75,7 @@ int uslp_mapp_request(uint8_t *sdu, uint16_t sdu_len, uint32_t gmap_id, uint8_t 
  * Function for serializing the USLP transfer frame from the internal representation
  * into the representation for sending over radio
  */
-static int uslp_send(uslp_transfer_frame_view_t *view) {
+static bool uslp_send(uslp_transfer_frame_view_t *view) {
     return 0;
 }
 
