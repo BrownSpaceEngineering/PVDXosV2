@@ -41,7 +41,7 @@ static bool (*device_check_functions[NUM_DEVICES])(void) = {
     NULL,                // SBAND_ID
     NULL,                // UHF_ID
     NULL,                // EPS_ID
-    &check_display,      // DISPLAY_ID
+    NULL,                // DISPLAY_ID — init done inside the display task post-scheduler
     NULL,                // CAMERA_ID
 };
 
