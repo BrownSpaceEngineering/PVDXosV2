@@ -12,7 +12,7 @@
 
 #include <string.h>
 
-static uint8_t vc_frame_counts[64]; // Counter for number of frames for each of the 64 possible vc channels
+static uint8_t vc_frame_counts[USLP_VIRTUAL_CHANNEL_COUNT]; // Counter for number of frames for each of the 64 possible vc channels
 
 // Frames are serialized in place here before being handed to the radio, so that a
 // full-size frame does not have to live on a task's stack.
@@ -20,6 +20,26 @@ static uint8_t vc_frame_counts[64]; // Counter for number of frames for each of 
 static uint8_t tx_buffer[USLP_MAX_FRAME_SIZE];
 
 static bool uslp_send(uslp_transfer_frame_view_t *view);
+
+/**
+ * CRC used by the Frame Error Control Field: generator X^16 + X^12 + X^5 + 1 (0x1021), with the
+ * shift register preset to all ones, most significant bit first, and no final inversion.
+ * This is a software copy of the shift register in Figure B-1.
+ *
+ * Reference: USLP Blue Book Annex B
+ */
+static uint16_t uslp_crc16(const uint8_t *data, uint32_t len) {
+    uint16_t crc = 0xFFFF;
+
+    for (uint32_t i = 0; i < len; i++) {
+        crc ^= (uint16_t)data[i] << 8;
+        for (uint8_t bit = 0; bit < 8; bit++) {
+            crc = (crc & 0x8000) ? (uint16_t)((crc << 1) ^ 0x1021) : (uint16_t)(crc << 1);
+        }
+    }
+
+    return crc;
+}
 
 bool uslp_mapp_request(uint8_t *sdu, uint16_t sdu_len, uint32_t gmap_id, uint8_t pvn, uint32_t sdu_id, uslp_qos_t qos) {
     // GMAP ID = TFVN (4) | SCID (16) | VCID (6) | MAP ID (4) = 30 bits
@@ -85,7 +105,7 @@ static bool uslp_send(uslp_transfer_frame_view_t *view) {
     uint8_t count_len = ph->vc_frame_count_length; // number of octets the VC frame count occupies
 
     uint16_t header_len = USLP_PRIMARY_HEADER_FIXED_SIZE + count_len + USLP_DATA_FIELD_HEADER_SIZE;
-    uint32_t total_len = header_len + view->datafield_len;
+    uint32_t total_len = header_len + view->datafield_len + USLP_FECF_SIZE;
 
     if (total_len > USLP_MAX_FRAME_SIZE) {
         return true; // too large for one frame, and segmentation is not implemented yet
@@ -119,6 +139,15 @@ static bool uslp_send(uslp_transfer_frame_view_t *view) {
     uint16_t frame_length = total_len - 1;
     tx_buffer[4] = frame_length >> 8;
     tx_buffer[5] = frame_length & 0xFF;
+
+    // ~~~ Frame Error Control Field ~~~
+    // The CRC covers every octet of the frame ahead of it, so it has to be computed last, once
+    // the frame length has been filled in
+    if (USLP_FECF_SIZE > 0) {
+        uint16_t crc = uslp_crc16(tx_buffer, total_len - USLP_FECF_SIZE);
+        tx_buffer[total_len - 2] = crc >> 8;
+        tx_buffer[total_len - 1] = crc & 0xFF;
+    }
 
     // TODO: send tx_buffer to comms
     return false;
