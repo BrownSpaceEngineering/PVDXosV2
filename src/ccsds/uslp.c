@@ -4,20 +4,27 @@
  * Implementation of the CCSDS Unified Space Data Link Protocol (USLP)
  *
  * Created: 20260503 SUN
- * Updated: 20260503 SUN
- * Authors: Ilan Goldfein
+ * Updated: 20260927 SUN
+ * Authors: Ilan Goldfein, Zach Mahan
  */
 
 #include "uslp.h"
 
 #include <string.h>
 
-static uint8_t vc_frame_counts[USLP_VIRTUAL_CHANNEL_COUNT]; // Counter for number of frames for each of the 64 possible vc channels
+#include "mutexes.h"
+#include "spp.h" // for SPP_VERSION_NUMBER
 
-// Frames are serialized in place here before being handed to the radio, so that a
-// full-size frame does not have to live on a task's stack.
-// NOTE: only one task may send at a time
+/// Counter for number of frames for each of the 64 possible vc channels
+static uint8_t vc_frame_counts[USLP_VIRTUAL_CHANNEL_COUNT];
+
+/// Frames are serialized in place here before being handed to the radio, so that a
+/// full-size frame does not have to live on a task's stack.
 static uint8_t tx_buffer[USLP_MAX_FRAME_SIZE];
+
+/// Guards tx_buffer and vc_frame_counts, which are shared by every task that sends
+static SemaphoreHandle_t uslp_tx_mutex = NULL;
+static StaticSemaphore_t uslp_tx_mutex_buffer;
 
 static bool uslp_send(uslp_transfer_frame_view_t *view);
 
@@ -41,6 +48,14 @@ static uint16_t uslp_crc16(const uint8_t *data, uint32_t len) {
     return crc;
 }
 
+void uslp_init(void) {
+    uslp_tx_mutex = xSemaphoreCreateMutexStatic(&uslp_tx_mutex_buffer);
+
+    if (uslp_tx_mutex == NULL) {
+        fatal("Failed to create USLP tx mutex");
+    }
+}
+
 bool uslp_mapp_request(uint8_t *sdu, uint16_t sdu_len, uint32_t gmap_id, uint8_t pvn, uint32_t sdu_id, uslp_qos_t qos) {
     // GMAP ID = TFVN (4) | SCID (16) | VCID (6) | MAP ID (4) = 30 bits
     // tfvn is bits 29-26 (4 bit mask)
@@ -56,6 +71,18 @@ bool uslp_mapp_request(uint8_t *sdu, uint16_t sdu_len, uint32_t gmap_id, uint8_t
         return true; // USLP TFVN always needs to be 1100
     }
 
+    if (vcid == USLP_IDLE_ONLY_FRAME_INDEX) {
+        return true; // VC 63 is reserved for Only Idle Data frames and may not carry user data
+    }
+
+    if (pvn != SPP_VERSION_NUMBER) {
+        return true; // Space Packets are the only packet type PVDX sends, so the UPID below assumes them
+    }
+
+    if (qos == USLP_QOS_SEQUENCE_CONTROLLED) {
+        return true; // Only expedited works - retransmit is not implemented within USLP
+    }
+
     // Create the primary header based off decoded fields
     uslp_transfer_frame_primary_header_t primary_header = {0};
     primary_header.version_num = USLP_TFVN;
@@ -67,12 +94,6 @@ bool uslp_mapp_request(uint8_t *sdu, uint16_t sdu_len, uint32_t gmap_id, uint8_t
     // Always 0 here: 1 would mean a truncated frame (Annex D), which MAPP never sends
     primary_header.end_of_frame_primary_header_flag = 0;
     // --------------- Other fields ----------------------------
-
-    if (qos == USLP_QOS_SEQUENCE_CONTROLLED) {
-        return true; // Only expedited works - retransmit is not impleneted within USLP
-    }
-
-    primary_header.vc_frame_count = vc_frame_counts[vcid]++; // This needs to be some sort of counter which increments per frame sent
 
     primary_header.frame_length = 0;
 
@@ -88,17 +109,33 @@ bool uslp_mapp_request(uint8_t *sdu, uint16_t sdu_len, uint32_t gmap_id, uint8_t
     data_header.protocol_identifier = USLP_UPID_SPACE_PACKETS;
 
     uslp_transfer_frame_view_t frame = {0};
-    frame.primary_header = primary_header;
     frame.data_field_header = data_header;
     frame.datafield = sdu;
     frame.datafield_len = sdu_len;
 
-    return uslp_send(&frame);
+    // The frame count is read and advanced under the same lock as tx_buffer, so that two tasks
+    // sending on the same VC can never stamp their frames with the same count
+    lock_mutex(uslp_tx_mutex);
+
+    primary_header.vc_frame_count = vc_frame_counts[vcid];
+    frame.primary_header = primary_header;
+
+    bool err = uslp_send(&frame);
+    if (!err) {
+        // Only frames that were actually sent use up a count, so rejected frames don't leave gaps
+        vc_frame_counts[vcid]++;
+    }
+
+    unlock_mutex(uslp_tx_mutex);
+
+    return err;
 }
 
 /**
  * Function for serializing the USLP transfer frame from the internal representation
  * into the representation for sending over radio
+ *
+ * NOTE: the caller must hold uslp_tx_mutex, since this writes into the shared tx_buffer
  */
 static bool uslp_send(uslp_transfer_frame_view_t *view) {
     const uslp_transfer_frame_primary_header_t *ph = &view->primary_header;

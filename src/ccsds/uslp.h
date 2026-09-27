@@ -4,15 +4,18 @@
  * header file for the PVDX implementation of the CCSDS Unified Space Data Link Protocol (USLP)
  *
  * Created: 20260429 SUN
- * Updated: 20260429 THU
+ * Updated: 202600927 THU
  * Authors: Zach Mahan, Ilan Goldfein
  */
+
+#ifndef PVDX_CCSDS_USLP_H
+#define PVDX_CCSDS_USLP_H
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
-#include "../drivers/at86rf215/at86rf215.h" // for AT86RF215_MAX_PDU
+#include "drivers/at86rf215/at86rf215.h" // for AT86RF215_MAX_PDU
 #include "globals.h"
 
 // USLP allows up to 64 virtual channels. we probably won't need this many, though, so lower this from 64 as needed
@@ -124,6 +127,12 @@ typedef enum uslp_qos {
 } uslp_qos_t;
 
 /*
+ * Creates the mutex that serializes access to the USLP transmit path.
+ * Must be called once, before any task calls uslp_mapp_request().
+ */
+void uslp_init(void);
+
+/*
  * MAPP.request function
  * Reference: USLP Blue book page 3-6
  *
@@ -146,3 +155,5 @@ bool uslp_mapp_request(uint8_t *sdu, uint16_t sdu_len, uint32_t gmap_id, uint8_t
  * Reference: USLP Blue Book Figure 4-2 (pg. 91), 4-4 (pg. 101)
  */
 bool uslp_transfer_frame_parse(uslp_transfer_frame_t *tf, uint8_t *data, uint32_t len);
+
+#endif

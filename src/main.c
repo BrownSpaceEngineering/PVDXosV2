@@ -14,6 +14,7 @@
 #include "main.h"
 
 #include "SEGGER_RTT.h"
+#include "ccsds/ccsds.h"
 #include "checks/device_checks.h"
 #include "cosmic_monkey_task.h"
 #include "globals.h"
@@ -74,6 +75,9 @@ int main(void) {
     if (task_list_mutex == NULL) {
         fatal("Failed to create PVDX task list mutex");
     }
+
+    ccsds_init();
+
     if (task_list[0] != p_watchdog_task) {
         fatal("Watchdog is not first in task_list!");
     }
