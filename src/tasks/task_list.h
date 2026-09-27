@@ -10,6 +10,7 @@
 #include "task_manager_task.h"
 #include "watchdog_task.h"
 #include "arducam_task.h"
+#include "magnetometer_task.h"
 
 // Extern defs of task pointers which can be accessed throughout the PVDXos codebase
 extern pvdx_task_t *const p_watchdog_task;
@@ -18,6 +19,7 @@ extern pvdx_task_t *const p_task_manager_task;
 extern pvdx_task_t *const p_shell_task;
 extern pvdx_task_t *const p_display_task;
 extern pvdx_task_t *const p_arducam_task;
+extern pvdx_task_t *const p_magnetometer_task;
 extern pvdx_task_t *const p_heartbeat_task;
 extern pvdx_task_t *const task_list[];
 
