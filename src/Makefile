@@ -109,6 +109,9 @@ export OBJS :=                                              	\
 ../src/tasks/arducam/arducam_main.o 							\
 ../src/tasks/arducam/arducam_task.o 							\
 																\
+../src/tasks/magnetometer/magnetometer_main.o 					\
+../src/tasks/magnetometer/magnetometer_task.o 					\
+																\
 ../src/checks/device_checks.o 									\
 ../src/tasks/task_list.o                                        \
 																\
@@ -143,6 +146,7 @@ export EXTRA_VPATH := \
 ../../src/tasks/command_dispatcher \
 ../../src/tasks/shell \
 ../../src/tasks/arducam \
+../../src/tasks/magnetometer \
 ../../src/tasks/radio \
 ../../src/mutexes \
 ../../src/checks \

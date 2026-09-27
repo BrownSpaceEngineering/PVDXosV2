@@ -1,98 +1,113 @@
 /**
  * magnetometer_driver.c
  *
- * Driver for the RM3100 Magnetometer Sensor from PNICorp
+ * Driver for the RM3100 Magnetometer Sensor from PNICorp — SPI variant.
  *
  * Created: Dec 7, 2023 2:22 AM
  * Authors: Nathan Kim, Alexander Thaep, Siddharta Laloux, Tanish Makadia, Defne Doken, Aidan Wang
+ *
+ * The RM3100 is driven over SPI on the SPI_DISPLAY bus (SERCOM1), which it shares
+ * with the (currently unused) display. Wiring is given by SAMD51 port pin:
+ *
+ *     RM3100 pin        signal   SAMD51 pin (SERCOM1)
+ *     ------------------------------------------------
+ *     1  SCK            SCLK     PC23   (SERCOM1 PAD1)
+ *     2  SO  (MISO)     MISO     PA18   (SERCOM1 PAD2)
+ *     3  SI  (MOSI)     MOSI     PC22   (SERCOM1 PAD0)
+ *     4  SSN (CS)       CS       PB13   (GPIO, driven manually, active LOW)
+ *     10 I2CEN                   -> tie LOW (selects SPI mode)
+ *     12 DVDD / 13 AVDD         -> 3.3V
+ *     7  AVSS / 14 DVSS         -> GND
+ *     5  DRDY                    -> not needed (we poll the STATUS register)
+ *
+ * SPI mode 0 (CPOL=CPHA=0), clock <= 1 MHz (SERCOM1 is ~50 kHz in ASF). A read
+ * sends (0x80 | reg); a write sends (reg & 0x7F) then data. The chip
+ * auto-increments the register pointer and returns a STATUS byte first.
+ *
+ * NOTE: shares SERCOM1 and CS (PB13) with the Display task; that task is assumed
+ * not to run. If the display is ever enabled, this bus needs a mutex.
  */
+
+#include "globals.h"
 
 #include "magnetometer_driver.h"
 
-// https://www.tri-m.com/products/pni/RM3100-User-Manual.pdf
-// https://github.com/inventorandy/atmel-samd21/blob/master/07_I2CTSYS/07_I2CTSYS/ext_tsys01.h#L15
-// https://os.mbed.com/users/ddelsuc/code/RM3100BB_Sample_Code/
+// The RM3100 lives on the SPI_DISPLAY bus (SERCOM1); CS is DISPLAY_CS (PB13).
+#define RM3100_SPI    SPI_DISPLAY
+#define RM3100_CS_PIN DISPLAY_CS
 
-// For future reference, PIN 51 -> SCL & PIN 52 -> SDA
+// Largest single SPI payload (9-byte measurement read) plus the command byte.
+#define RM3100_SPI_MAX 16
 
-struct io_descriptor *rm3100_io;
+// SPI read direction bit applied to the register address byte.
+#define RM3100_SPI_READ 0x80
+
+// STATUS register (0x34) bit 7 == DRDY (data ready).
+#define RM3100_STATUS_DRDY 0x80
+
 static rm3100_power_mode_t m_sensor_mode;
 static uint16_t m_sample_rate;
 static uint16_t m_cycle_count;
 static float m_gain;
 
+static inline void rm3100_cs_select(void) {
+    gpio_set_pin_level(RM3100_CS_PIN, false); // active low
+}
+
+static inline void rm3100_cs_deselect(void) {
+    gpio_set_pin_level(RM3100_CS_PIN, true);
+}
+
 /**
  * \fn init_rm3100
  *
- * \brief Initializes the RM3100 magnetometer sensor by setting up the I2C interface, reading
- *        the handshake and revision ID registers, and setting the cycle count and sample rate.
+ * \brief Brings up the SPI bus and the RM3100: verifies the REVID, programs the
+ *        cycle count, and starts continuous measurement mode.
  *
- * \return `status_t` SUCCESS if the initialization was successful otherwise returns I2C failure
+ * \return `status_t` SUCCESS on success, otherwise an error status.
  */
 status_t init_rm3100(void) {
-    // Initialize I2C
-    i2c_m_sync_set_baudrate(&I2C_MAGNETOMETER_GYRO, 0, 115200);
-    i2c_m_sync_get_io_descriptor(&I2C_MAGNETOMETER_GYRO, &rm3100_io);
-    i2c_m_sync_enable(&I2C_MAGNETOMETER_GYRO);
-    i2c_m_sync_set_slaveaddr(&I2C_MAGNETOMETER_GYRO, RM3100_ADDRESS, I2C_M_SEVEN);
+    // Configure SPI. set_mode() must run while the peripheral is disabled;
+    // spi_m_sync_init() (from atmel_start_init) leaves it disabled.
+    spi_m_sync_set_mode(&RM3100_SPI, SPI_MODE_0);
+    spi_m_sync_enable(&RM3100_SPI);
 
-    uint8_t init_values[4] = {0, 0, 0, 0};
-    uint8_t cycle_values[2] = {0, 0};
+    // Drive CS as a GPIO output, idle high (deselected).
+    gpio_set_pin_function(RM3100_CS_PIN, GPIO_PIN_FUNCTION_OFF);
+    gpio_set_pin_direction(RM3100_CS_PIN, GPIO_DIRECTION_OUT);
+    rm3100_cs_deselect();
 
-    // Read the revision ID and handshake registers
-    if (rm3100_read_reg(NULL, RM3100_REVID_REG, &init_values[0], 1)) {
-        warning("magnetometer: Error reading RM3100 RevID register during initialization\n");
-        return ERROR_I2C_FAILED;
+    // Sanity check: read the revision ID (definitive "is it wired up" test).
+    uint8_t revid = 0;
+    if (rm3100_read_reg(NULL, RM3100_REVID_REG, &revid, 1) != SUCCESS) {
+        warning("magnetometer: SPI read of REVID failed during initialization\n");
+        return ERROR_SPI_TRANSFER_FAILED;
     }
+    if (revid != RM3100_REVID_VALUE) {
+        warning("magnetometer: unexpected REVID 0x%02x (expected 0x%02x)\n", revid, RM3100_REVID_VALUE);
+        return ERROR_SANITY_CHECK_FAILED;
+    }
+    info("magnetometer: REVID = 0x%02x OK\n", revid);
 
-    if (rm3100_read_reg(NULL, RM3100_HSHAKE_REG, &init_values[1], 1)) {
-        warning("magnetometer: Error reading RM3100 handshake register during initialization\n");
-        return ERROR_I2C_FAILED;
-    }
-    if (init_values[0] != RM3100_REVID_VALUE) {
-        warning("magnetometer: Unexpected RM3100 RevID value during initialization\n");
-        return ERROR_I2C_FAILED;
-    }
-    if (init_values[1] != RM3100_HSHAKE_VALUE) {
-        warning("magnetometer: Unexpected RM3100 handshake value during initialization\n");
-        return ERROR_I2C_FAILED;
-    }
-
-    // Read the LROSCADJ and SLPOSCADJ registers
-    if (rm3100_read_reg(NULL, RM3100_LROSCADJ_REG, &init_values[2], 2)) {
-        warning("magnetometer: Error reading RM3100 LROSCADJ register during initialization\n");
-        return ERROR_I2C_FAILED;
-    }
-    if (init_values[2] != RM3100_LROSCADJ_VALUE) {
-        warning("magnetometer: Unexpected RM3100 LROSCADJ register value during initialization\n");
-        return ERROR_I2C_FAILED;
-    }
-    if (init_values[3] != RM3100_SLPOSCADJ_VALUE) {
-        warning("magnetometer: Unexpected RM3100 SLPOSCADJ register value during initialization\n");
-        return ERROR_I2C_FAILED;
-    }
-
-    // Set the cycle count for all three magnetometer axes
+    // Program the cycle count on all three axes.
     mag_change_cycle_count(INITIAL_CC);
 
-    // Attempt to read back the cycle count we just set from one axis as a sanity check
-    if (rm3100_read_reg(NULL, RM3100_CCX1_REG, &cycle_values[0], 2)) {
-        warning("magnetometer: Error reading first part of RM3100 CCX1 cycle-count register during initialization\n");
-        return ERROR_I2C_FAILED;
+    // Read it back as a sanity check.
+    uint8_t cycle_values[2] = {0, 0};
+    if (rm3100_read_reg(NULL, RM3100_CCX1_REG, cycle_values, 2) != SUCCESS) {
+        warning("magnetometer: SPI read of CCX1 failed during initialization\n");
+        return ERROR_SPI_TRANSFER_FAILED;
     }
-
-    m_cycle_count = cycle_values[0];
-    m_cycle_count = (m_cycle_count << 8) | cycle_values[1];
-
+    m_cycle_count = ((uint16_t)cycle_values[0] << 8) | cycle_values[1];
     if (m_cycle_count != INITIAL_CC) {
-        warning("magnetometer: Cycle count value read from RM3100 X-axis does not match expected value\n");
-        return ERROR_I2C_FAILED;
+        warning("magnetometer: cycle count readback %u != expected %u\n", m_cycle_count, INITIAL_CC);
+        return ERROR_SANITY_CHECK_FAILED;
     }
 
-    // Calculate the gain using the cycle count
+    // Gain (LSB/uT) as a function of cycle count.
     m_gain = 0.3671 * m_cycle_count + 1.5;
 
-    // Set the power mode and sample rate
+    // Start measuring.
     if (!SINGLE_MODE) {
         mag_set_power_mode(SENSOR_POWER_MODE_CONTINUOUS);
         mag_set_sample_rate(SAMPLE_RATE);
@@ -106,92 +121,87 @@ status_t init_rm3100(void) {
 /**
  * \fn rm3100_read_reg
  *
- * \brief Reads a register from the RM3100
+ * \brief Reads `size` bytes starting at register `addr` over SPI. The first byte
+ *        the RM3100 returns is the STATUS byte, so register data starts at rx[1].
  *
- * \param p_bytes_read Pointer to a uint32_t to store the number of bytes read.
- *      If NULL, this function returns ERROR_READ_FAILED if the number of bytes
- *      written is not equal to `size`.
- * \param addr Address of the register to read from
- * \param read_buf Buffer to store the read data
- * \param size Number of bytes to read
- *
- * \return `status_t` SUCCESS if the read was successful, or ERROR_READ_FAILED / ERROR_WRITE_FAILED otherwise
+ * \return `status_t` SUCCESS on success, ERROR_READ_FAILED otherwise.
  */
 status_t rm3100_read_reg(int32_t *p_bytes_read, uint8_t addr, uint8_t *read_buf, uint16_t size) {
-    uint8_t write_buf[1] = {addr};
-    int32_t rv;
-
-    if ((rv = io_write(rm3100_io, write_buf, 1)) < 0) {
-        warning("magnetometer: Error in RM3100 Write\n");
-        return ERROR_WRITE_FAILED;
-    }
-    if ((rv = io_read(rm3100_io, read_buf, size)) < 0) {
-        warning("magnetometer: Error in RM3100 Read\n");
+    if (size == 0 || size > RM3100_SPI_MAX - 1) {
         return ERROR_READ_FAILED;
     }
 
-    if (p_bytes_read != NULL) {
-        *p_bytes_read = rv;
-    } else {
-        if (rv != size)
-            return ERROR_READ_FAILED;
+    uint8_t tx[RM3100_SPI_MAX] = {0};
+    uint8_t rx[RM3100_SPI_MAX] = {0};
+    tx[0] = RM3100_SPI_READ | addr;
+
+    struct spi_xfer xfer = {.txbuf = tx, .rxbuf = rx, .size = (uint32_t)size + 1};
+
+    rm3100_cs_select();
+    int32_t rv = spi_m_sync_transfer(&RM3100_SPI, &xfer);
+    rm3100_cs_deselect();
+
+    if (rv < 0) {
+        warning("magnetometer: SPI read failed (addr=0x%02x, rv=%ld)\n", addr, (long)rv);
+        return ERROR_READ_FAILED;
     }
 
+    memcpy(read_buf, &rx[1], size); // drop the leading STATUS byte
+
+    if (p_bytes_read != NULL) {
+        *p_bytes_read = size;
+    }
     return SUCCESS;
 }
 
 /**
  * \fn rm3100_write_reg
  *
- * \brief Writes to a register on the RM3100
+ * \brief Writes `size` bytes to register `addr` over SPI.
  *
- * \param p_bytes_written Pointer to a uint32_t to store the number of bytes written.
- *      If NULL, this function returns ERROR_WRITE_FAILED if the number of bytes
- *      written is not equal to `size`.
- * \param addr Address of the register to write to
- * \param data Data to write to the register
- * \param size Number of bytes to write
- *
- * \return `status_t` SUCCESS if the write was successful, or ERROR_WRITE_FAILED otherwise
+ * \return `status_t` SUCCESS on success, ERROR_WRITE_FAILED otherwise.
  */
 status_t rm3100_write_reg(int32_t *p_bytes_written, uint8_t addr, uint8_t *data, uint16_t size) {
-    uint8_t write_buf[MAX_I2C_WRITE + 1];
-    int32_t rv;
+    if (size > RM3100_SPI_MAX - 1) {
+        return ERROR_WRITE_FAILED;
+    }
 
-    write_buf[0] = addr;
-    memcpy(&(write_buf[1]), data, size);
-    if ((rv = io_write(rm3100_io, write_buf, size + 1)) < 0) {
-        warning("magnetometer: Error in RM3100 Write\n");
+    uint8_t tx[RM3100_SPI_MAX] = {0};
+    uint8_t rx[RM3100_SPI_MAX] = {0};
+    tx[0] = addr & 0x7F; // write: MSB clear
+    memcpy(&tx[1], data, size);
+
+    struct spi_xfer xfer = {.txbuf = tx, .rxbuf = rx, .size = (uint32_t)size + 1};
+
+    rm3100_cs_select();
+    int32_t rv = spi_m_sync_transfer(&RM3100_SPI, &xfer);
+    rm3100_cs_deselect();
+
+    if (rv < 0) {
+        warning("magnetometer: SPI write failed (addr=0x%02x, rv=%ld)\n", addr, (long)rv);
         return ERROR_WRITE_FAILED;
     }
 
     if (p_bytes_written != NULL) {
-        *p_bytes_written = rv;
-    } else {
-        if (rv != size)
-            return ERROR_WRITE_FAILED;
+        *p_bytes_written = size;
     }
-
     return SUCCESS;
 }
 
 /**
  * \fn mag_read_data
  *
- * \brief Reads x,y,z magnetic field data from the RM3100
+ * \brief Reads x,y,z magnetic field data (9 bytes, 24-bit signed per axis).
  *
- * \param raw_readings If not NULL, pointer to a buffer (int32_t array of size
- *      3) to store the raw readings from the magnetometer.
- * \param gain_adj_readings If not NULL, pointer to a buffer (float array of
- *      size 3) to store the gain-adjusted readings from the magnetometer.
+ * \param raw_readings If not NULL, int32_t[3] receiving the raw counts.
+ * \param gain_adj_readings If not NULL, float[3] receiving gain-adjusted values.
  *
- * \return `status_t` SUCCESS if the read was successful, or ERROR_READ_FAILED/ERROR_WRITE_FAILED otherwise
+ * \return `status_t` SUCCESS on success, otherwise an error status.
  */
-status_t mag_read_data(int32_t *const raw_readings, float *const gain_adj_readings) {
+status_t mag_read_data(int32_t *raw_readings, float *gain_adj_readings) {
     int32_t readings[3];
     int8_t m_samples[9];
 
-    // read out sensor data
     ret_err_status(rm3100_read_reg(NULL, RM3100_QX2_REG, (uint8_t *)&m_samples, sizeof(m_samples)),
                    "magnetometer: Read from QX2 Register failed");
 
@@ -213,7 +223,6 @@ status_t mag_read_data(int32_t *const raw_readings, float *const gain_adj_readin
         raw_readings[2] = readings[2];
     }
 
-    // adjust the readings based on the gain
     if (gain_adj_readings != NULL) {
         gain_adj_readings[0] = (float)readings[0] / m_gain;
         gain_adj_readings[1] = (float)readings[1] / m_gain;
@@ -225,19 +234,14 @@ status_t mag_read_data(int32_t *const raw_readings, float *const gain_adj_readin
 
 /**
  * \fn mag_modify_interrupts
-
- * \brief Modifies the RM3100's interrupt settings
  *
- * \param cmm_value Value to write to the CMM (Continuous Measurement Mode) register
- * \param poll_value Value to write to the POLL register
- *
- * \return `status_t` SUCCESS if the write was successful, or ERROR_WRITE_FAILED otherwise
+ * \brief Writes the CMM and POLL registers.
  */
 status_t mag_modify_interrupts(uint8_t cmm_value, uint8_t poll_value) {
     uint8_t data[2] = {cmm_value, poll_value};
 
     ret_err_status(rm3100_write_reg(NULL, RM3100_CMM_REG, &data[0], 1), "magnetometer: Write to CMM Register failed");
-    ret_err_status(rm3100_write_reg(NULL, RM3100_POLL_REG, &data[1], 1), "magnetometer: Read from Poll Register failed");
+    ret_err_status(rm3100_write_reg(NULL, RM3100_POLL_REG, &data[1], 1), "magnetometer: Write to Poll Register failed");
 
     return SUCCESS;
 }
@@ -245,16 +249,11 @@ status_t mag_modify_interrupts(uint8_t cmm_value, uint8_t poll_value) {
 /**
  * \fn mag_set_power_mode
  *
- * \brief Sets the power mode of the RM3100 magnetometer
- *
- * \param mode The power mode to set the RM3100 to
- *
- * \return rm3100_power_mode_t The power mode the RM3100 was set to
+ * \brief Sets the power/measurement mode of the RM3100.
  */
 rm3100_power_mode_t mag_set_power_mode(rm3100_power_mode_t mode) {
     switch (mode) {
         case SENSOR_POWER_MODE_INACTIVE:
-            m_sensor_mode = mode;
             mag_modify_interrupts(RM3100_DISABLED, RM3100_DISABLED);
             break;
         case SENSOR_POWER_MODE_CONTINUOUS:
@@ -272,11 +271,7 @@ rm3100_power_mode_t mag_set_power_mode(rm3100_power_mode_t mode) {
 /**
  * \fn mag_set_sample_rate
  *
- * \brief Sets the sample rate of the RM3100 magnetometer
- *
- * \param sample_rate The sample rate to set the RM3100 to
- *
- * \return uint16_t The sample rate the RM3100 was set to
+ * \brief Sets the continuous-measurement-mode update rate (TMRC register).
  */
 uint16_t mag_set_sample_rate(uint16_t sample_rate) {
     uint64_t i;
@@ -311,7 +306,7 @@ uint16_t mag_set_sample_rate(uint16_t sample_rate) {
         mag_modify_interrupts(RM3100_ENABLED, RM3100_DISABLED);
     }
 
-    if (rm3100_read_reg(NULL, RM3100_TMRC_REG, i2c_buffer, 1)) {
+    if (rm3100_read_reg(NULL, RM3100_TMRC_REG, i2c_buffer, 1) != SUCCESS) {
         warning("magnetometer: Read from TMRC Register failed\n");
     }
 
@@ -321,19 +316,14 @@ uint16_t mag_set_sample_rate(uint16_t sample_rate) {
 /**
  * \fn mag_change_cycle_count
  *
- * \brief Changes the cycle count of the RM3100 magnetometer
- *
- * \param newCC The new cycle count to set the RM3100 to
- *
- * \return `status_t` SUCCESS if the write was successful, or ERROR_WRITE_FAILED otherwise
+ * \brief Sets the cycle count on all three axes.
  */
 status_t mag_change_cycle_count(uint16_t newCC) {
     uint8_t settings[6];
 
-    uint8_t CCMSB = (newCC & 0xFF00) >> 8; // get the most significant byte
-    uint8_t CCLSB = newCC & 0xFF;          // get the least significant byte
+    uint8_t CCMSB = (newCC & 0xFF00) >> 8; // most significant byte
+    uint8_t CCLSB = newCC & 0xFF;          // least significant byte
 
-    /* Initialize settings */
     settings[0] = CCMSB; /* CCPX1 */
     settings[1] = CCLSB; /* CCPX0 */
     settings[2] = CCMSB; /* CCPY1 */
@@ -341,7 +331,6 @@ status_t mag_change_cycle_count(uint16_t newCC) {
     settings[4] = CCMSB; /* CCPZ1 */
     settings[5] = CCLSB; /* CCPZ0 */
 
-    /*  Write register settings */
     ret_err_status(rm3100_write_reg(NULL, RM3100_CCX1_REG, settings, 6), "magnetometer: Write to CCX1 Register failed");
 
     return SUCCESS;
@@ -350,23 +339,20 @@ status_t mag_change_cycle_count(uint16_t newCC) {
 /**
  * \fn magnetometer_read
  *
- * \brief Reads X,Y,Z magnetometer axes
+ * \brief Reads X,Y,Z if the sensor reports data ready (polls STATUS bit 7 over
+ *        SPI rather than a DRDY pin, so no DRDY wire is required).
  *
- * \param raw_readings If not NULL, pointer to a buffer (int32_t array of size 3)
- *                     to store the raw readings from the magnetometer.
- * \param gain_adj_readings If not NULL, pointer to a buffer (float array of size 3)
- *                          to store the gain-adjusted readings from the magnetometer.
- *
- * \return `status_t` SUCCESS if reading was successful, ERROR_READ_FAILED/ERROR_WRITE_FAILED if
- *         there was an I2C communication error, and ERROR_NOT_READY if the magnetometer's DRDY
- *         pin is set to false (indicating that data is not ready to be read).
+ * \return `status_t` SUCCESS if a reading was taken, ERROR_NOT_READY if no new
+ *         data is available yet, or an error status on a bus failure.
  */
 status_t magnetometer_read(int32_t *const raw_readings, float *const gain_adj_readings) {
-    if (gpio_get_pin_level(MAGNETOMETER_DRDY) == 0) {
-        debug("magnetometer: DRDY is false; not ready to read yet...");
+    uint8_t status = 0;
+    ret_err_status(rm3100_read_reg(NULL, RM3100_STATUS_REG, &status, 1), "magnetometer: Read from STATUS Register failed");
+
+    if (!(status & RM3100_STATUS_DRDY)) {
+        debug("magnetometer: data not ready yet (STATUS=0x%02x)\n", status);
         return ERROR_NOT_READY;
     }
 
-    debug("magnetometer: Reading X,Y,Z data");
     return mag_read_data(raw_readings, gain_adj_readings);
 }
