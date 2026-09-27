@@ -1,13 +1,13 @@
 /**
  * main.c
  *
- * Bare-metal entry point for the PVDX camera debug build.
+ * Bare-metal entry point for the PVDX magnetometer debug build.
  *
- * This is a stripped-down harness for debugging the Arducam OV2640: there is no
- * FreeRTOS scheduler, no watchdog, and no other tasks. main() simply brings up
- * the hardware, initializes the camera, and then repeatedly captures a frame and
- * streams it over RTT channel 2 (see capture_rtt() in arducam_driver.c). Log
- * output goes over RTT channel 1.
+ * This is a stripped-down harness for debugging the RM3100 magnetometer: there
+ * is no FreeRTOS scheduler, no watchdog, and no other tasks. main() simply
+ * brings up the hardware, initializes the RM3100 over SPI_DISPLAY
+ * (SERCOM1: MOSI=PC22, SCK=PC23, MISO=PA18; CS=PB13), and then repeatedly reads
+ * X/Y/Z and logs the values over RTT channel 1.
  *
  * Original OS authors: Oren Kohavi, Siddharta Laloux, Tanish Makadia, Yi Liu,
  * Defne Doken, Aidan Wang, Ignacio Blancas Rodriguez
@@ -15,12 +15,12 @@
 
 #include "main.h"
 
-#include "arducam_driver.h"
 #include "globals.h"
 #include "logging.h"
+#include "magnetometer_driver.h"
 
-// Time to wait between successive captures, in milliseconds
-#define CAPTURE_INTERVAL_MS 1000
+// Time to wait between successive readings, in milliseconds
+#define READ_INTERVAL_MS 500
 
 static void PVDX_init(void) {
     // WARNING: Segger RTT channel 0 is pre-configured at compile time according to Segger documentation
@@ -31,12 +31,6 @@ static void PVDX_init(void) {
         LOGGING_RTT_OUTPUT_CHANNEL, "Log Output", SEGGER_RTT_LOG_BUFFER,
         SEGGER_RTT_LOG_BUFFER_SIZE, SEGGER_RTT_MODE_NO_BLOCK_SKIP
     );
-
-    // Image streaming channel (ch. 2)
-    SEGGER_RTT_ConfigUpBuffer(
-        CAMERA_RTT_OUTPUT_CHANNEL, "Image", SEGGER_RTT_IMAGE_BUFFER,
-        SEGGER_RTT_IMAGE_BUFFER_SIZE, SEGGER_RTT_MODE_BLOCK_IF_FIFO_FULL
-    );
 }
 
 int main(void) {
@@ -46,25 +40,43 @@ int main(void) {
     atmel_start_init();
     PVDX_init();
 
-    info("--- Bare-metal Camera Debug Build ---\n");
+    info("--- Bare-metal Magnetometer Debug Build ---\n");
     info("[+] Build Type: %s\n", BUILD_TYPE);
     info("[+] Build Date: %s\n", BUILD_DATE);
     info("[+] Build Time: %s\n", BUILD_TIME);
     info("[+] Built from branch: %s\n", GIT_BRANCH_NAME);
     info("[+] Built from commit: %s\n", GIT_COMMIT_HASH);
 
-    /* ---------- CAMERA INITIALIZATION ---------- */
+    /* ---------- MAGNETOMETER INITIALIZATION ---------- */
 
-    status_t status = init_arducam_hardware();
+    status_t status = init_rm3100();
     if (status != SUCCESS) {
-        warning("[!] init_arducam_hardware() failed (status=%d)\n", status);
+        warning("[!] init_rm3100() failed (status=%d)\n", status);
+    } else {
+        info("[+] RM3100 initialized (continuous mode)\n");
     }
 
-    /* ---------- CAPTURE LOOP ---------- */
+    /* ---------- READ LOOP ---------- */
 
     while (true) {
-        info("--- Capturing frame ---\n");
-        capture_rtt();
-        delay_ms(CAPTURE_INTERVAL_MS);
+        mag_raw_reading_t raw;
+        mag_data_t adj;
+
+        status_t rs = magnetometer_read(&raw, &adj);
+
+        if (rs == SUCCESS) {
+            // Raw counts are always safe to print. The gain-adjusted values are
+            // floats; print their truncated integer part to avoid relying on
+            // %f support in the embedded printf.
+            info("mag raw:   x=%ld y=%ld z=%ld\n", (long)raw.x, (long)raw.y, (long)raw.z);
+            info("mag adj:   x=%ld y=%ld z=%ld (integer part)\n", (long)adj.x, (long)adj.y, (long)adj.z);
+        } else if (rs == ERROR_NOT_READY) {
+            // STATUS DRDY bit clear: no new sample yet this cycle. Poll again shortly.
+            debug("mag: not ready (STATUS DRDY clear)\n");
+        } else {
+            warning("[!] magnetometer_read() failed (status=%d)\n", rs);
+        }
+
+        delay_ms(READ_INTERVAL_MS);
     }
 }

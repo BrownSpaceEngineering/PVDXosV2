@@ -14,8 +14,8 @@
 
 ### ALL C FILES SHOULD HAVE AN OBJECT FILE LISTED HERE ###
 ###
-### This is the bare-metal camera debug build: only the files needed to bring up
-### the MCU, stream logs/images over RTT, and drive the Arducam are compiled.
+### This is the bare-metal magnetometer debug build: only the files needed to
+### bring up the MCU, stream logs over RTT, and drive the RM3100 are compiled.
 ### The FreeRTOS library itself is still pulled in by the ASF Makefile, so the
 ### rtos_support hooks below must remain to satisfy the linker (the scheduler is
 ### never started).
@@ -33,8 +33,7 @@ export OBJS :=                                              	\
 ../src/misc/exception_handlers/default_handler.o            	\
 ../src/misc/exception_handlers/specific_handlers.o          	\
                                                             	\
-../src/drivers/arducam/arducam_driver.o                         \
-../src/drivers/arducam/arducam_registers.o 						\
+../src/drivers/magnetometer/magnetometer_driver.o               \
 
 
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###
@@ -47,7 +46,7 @@ export EXTRA_VPATH := \
 ../../src/misc/logging \
 ../../src/misc/exception_handlers \
 ../../src/drivers \
-../../src/drivers/arducam \
+../../src/drivers/magnetometer \
 # $(PATH_TO_CCONTROL_INCLUDES)
 
 

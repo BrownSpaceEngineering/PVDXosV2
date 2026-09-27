@@ -3,7 +3,7 @@
  *
  * Defines global datatypes, structures and headers.
  *
- * Trimmed down for the bare-metal camera debug build: all FreeRTOS/task
+ * Trimmed down for the bare-metal magnetometer debug build: all FreeRTOS/task
  * definitions have been removed since this build runs no scheduler.
  *
  * Created:
@@ -24,6 +24,21 @@
 #else
     #define DEFAULT_LOG_LEVEL DEBUG // The default log level for the system for debug and unit test builds
 #endif
+
+/* ---------- STRUCTS ---------- */
+
+// integer and float 3d vector types.
+typedef struct {
+    int32_t x;
+    int32_t y;
+    int32_t z;
+} int32_3d_t;
+
+typedef struct {
+    float x;
+    float y;
+    float z;
+} float_3d_t;
 
 /* ---------- ENUMS ---------- */
 
