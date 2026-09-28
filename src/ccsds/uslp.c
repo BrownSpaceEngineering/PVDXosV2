@@ -22,6 +22,11 @@ static uint8_t vc_frame_counts[USLP_VIRTUAL_CHANNEL_COUNT];
 /// full-size frame does not have to live on a task's stack.
 static uint8_t tx_buffer[USLP_MAX_FRAME_SIZE];
 
+#ifdef UNITTEST
+/// Length of the frame currently in tx_buffer, so tests can inspect what was sent
+static uint32_t tx_len = 0;
+#endif
+
 /// Guards tx_buffer and vc_frame_counts, which are shared by every task that sends
 static SemaphoreHandle_t uslp_tx_mutex = NULL;
 static StaticSemaphore_t uslp_tx_mutex_buffer;
@@ -186,10 +191,95 @@ static bool uslp_send(uslp_transfer_frame_view_t *view) {
         tx_buffer[total_len - 1] = crc & 0xFF;
     }
 
+#ifdef UNITTEST
+    tx_len = total_len;
+#endif
+
     // TODO: send tx_buffer to comms
     return false;
 }
 
-bool uslp_transfer_frame_parse(uslp_transfer_frame_t *tf, uint8_t *data, uint32_t len) {
+bool uslp_transfer_frame_parse(uslp_transfer_frame_view_t *view, uint8_t *data, uint32_t len) {
+    if (len < USLP_PRIMARY_HEADER_FIXED_SIZE) {
+        return true; // too short to hold even the fixed part of the primary header
+    }
+
+    // ~~~ Transfer Frame Primary Header ~~~
+    // The inverse of the packing in uslp_send: every field is most significant bit first
+    uslp_transfer_frame_primary_header_t *ph = &view->primary_header;
+    *ph = (uslp_transfer_frame_primary_header_t){0};
+
+    ph->version_num = data[0] >> 4;
+    if (ph->version_num != USLP_TFVN) {
+        return true; // not a USLP frame
+    }
+
+    ph->spacecraft_id = ((data[0] & 0x0F) << 12) | (data[1] << 4) | (data[2] >> 4);
+    ph->src_or_dest = (data[2] >> 3) & 0x01;
+    ph->virtual_channel_id = ((data[2] & 0x07) << 3) | (data[3] >> 5);
+    ph->map_id = (data[3] >> 1) & 0x0F;
+    ph->end_of_frame_primary_header_flag = data[3] & 0x01;
+
+    if (ph->end_of_frame_primary_header_flag) {
+        return true; // truncated frames (Annex D) are not supported
+    }
+
+    ph->frame_length = (data[4] << 8) | data[5];
+    ph->bypass_sequence_control_flag = data[6] >> 7;
+    ph->protocol_control_command_flag = (data[6] >> 6) & 0x01;
+    ph->spare = (data[6] >> 4) & 0x03;
+    ph->ocf_flag = (data[6] >> 3) & 0x01;
+    ph->vc_frame_count_length = data[6] & 0x07;
+
+    // The frame length field holds the total number of octets in the frame minus one
+    // Reference: USLP Blue Book 4.1.2.7.2
+    uint32_t frame_len = (uint32_t)ph->frame_length + 1;
+    if (frame_len > len) {
+        return true; // the frame claims to be longer than the data we were given
+    }
+
+    uint8_t count_len = ph->vc_frame_count_length;
+    uint32_t header_len = USLP_PRIMARY_HEADER_FIXED_SIZE + count_len + USLP_DATA_FIELD_HEADER_SIZE;
+    uint32_t trailer_len = (ph->ocf_flag ? USLP_OCF_SIZE : 0) + USLP_FECF_SIZE;
+
+    if (header_len + trailer_len > frame_len) {
+        return true; // too short to hold the headers and trailer it says it has
+    }
+
+    // ~~~ Frame Error Control Field ~~~
+    // Checked before trusting anything else in the frame
+    if (USLP_FECF_SIZE > 0) {
+        uint16_t received_crc = (data[frame_len - 2] << 8) | data[frame_len - 1];
+        if (uslp_crc16(data, frame_len - USLP_FECF_SIZE) != received_crc) {
+            return true;
+        }
+    }
+
+    // VC frame count, most significant octet first
+    for (uint8_t i = 0; i < count_len; i++) {
+        ph->vc_frame_count = (ph->vc_frame_count << 8) | data[USLP_PRIMARY_HEADER_FIXED_SIZE + i];
+    }
+
+    // ~~~ Transfer Frame Data Field Header ~~~
+    uint8_t dfh = data[USLP_PRIMARY_HEADER_FIXED_SIZE + count_len];
+    view->data_field_header.tfdz_construction_rules = dfh >> 5;
+    view->data_field_header.protocol_identifier = dfh & 0x1F;
+
+    if (view->data_field_header.tfdz_construction_rules <= USLP_TFDZ_CONTINUING_PORTION_OF_MAPA_SDU) {
+        return true; // rules 000-010 add a 16-bit First Header / Last Valid Octet pointer, which is not supported
+    }
+
+    // ~~~ Transfer Frame Data Zone ~~~
+    // Everything between the data field header and the OCF/FECF
+    view->datafield = &data[header_len];
+    view->datafield_len = frame_len - header_len - trailer_len;
+
     return false;
 }
+
+#ifdef UNITTEST
+const uint8_t *uslp_test_last_frame(uint32_t *len) {
+    *len = tx_len;
+    return tx_buffer;
+}
+#endif

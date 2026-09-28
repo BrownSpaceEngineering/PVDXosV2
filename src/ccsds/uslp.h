@@ -53,6 +53,10 @@
 // Reference: USLP Blue Book Annex B
 #define USLP_FECF_SIZE 2
 
+// Size, in bytes, of the Operational Control Field, present when the OCF flag is set
+// Reference: USLP Blue Book 4.1.5
+#define USLP_OCF_SIZE 4
+
 /// USLP Transfer Frame Primary Header
 ///
 /// Reference: USLP Blue Book pg. 70 - ~90
@@ -148,12 +152,32 @@ bool uslp_mapp_request(uint8_t *sdu, uint16_t sdu_len, uint32_t gmap_id, uint8_t
 /**
  * Parsing for USLP Transfer Frames
  *
- * \param tf - unitialized transfer frame to unitialized
+ * - No copy (on success, view->datafield points into data, so data must outlive the view)
+ * - Bytes in data past the end given by the frame length field are ignored
+ * - If the frame carries an Operational Control Field, it is skipped and not included in the datafield
+ * - Truncated frames and the fixed-length TFDZ construction rules (000-010) are not supported
+ *
+ * \param view - transfer frame view to fill in; left unspecified on failure
  * \param data - pointer to start of raw byte-stream data
  * \param len - length, in bytes, of the byte stream
  *
+ * \return true on failure (malformed, unsupported, or failed FECF check), else false
+ *
  * Reference: USLP Blue Book Figure 4-2 (pg. 91), 4-4 (pg. 101)
  */
-bool uslp_transfer_frame_parse(uslp_transfer_frame_t *tf, uint8_t *data, uint32_t len);
+bool uslp_transfer_frame_parse(uslp_transfer_frame_view_t *view, uint8_t *data, uint32_t len);
+
+#ifdef UNITTEST
+/**
+ * Test-only access to the last frame uslp_mapp_request serialized, since there is no radio to capture it from
+ *
+ * - Not locked: only call this while no other task can be sending
+ *
+ * \param len - set to the length, in bytes, of the frame (0 if nothing has been sent)
+ *
+ * \return pointer to the start of the frame
+ */
+const uint8_t *uslp_test_last_frame(uint32_t *len);
+#endif
 
 #endif
