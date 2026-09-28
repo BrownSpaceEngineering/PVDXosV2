@@ -1,8 +1,11 @@
 
 #include "tests/test.h"
 
+#include <string.h>
+
 #include "ccsds/cfdp_pdu.h"
 #include "ccsds/spp.h"
+#include "ccsds/uslp.h"
 #include "linalg/LinearAlgebra/declareFunctions.h"
 #include "logging.h"
 
@@ -12,11 +15,13 @@ int tests_total = 0;
 void test_spp(void);
 void test_matrix_product(void);
 void test_cfdp(void);
+void test_uslp(void);
 
 void tests_run(void) {
     test_spp();
     test_matrix_product();
     test_cfdp();
+    test_uslp();
     test_log("test results: %d/%d passed", tests_passed, tests_total);
 }
 
@@ -216,5 +221,214 @@ void test_cfdp(void) {
 
     test_log("data[1]: 0x%02x\n", filedata.data.data[1]);
     PVDX_ASSERT(filedata.data.data[1] == 0xFE && "data[1]");
+}
+void test_uslp(void) {
+    test_log("----- testing uslp -----\n");
+
+    // All frames below have a valid FECF, so each rejection test fails for the reason it names
+    // rather than on the CRC. The CRCs were generated with CRC-16/CCITT-FALSE (Python's binascii.crc_hqx
+    // with a 0xFFFF preset), independently of uslp.c
+
+    // SCID 0xABCD, VCID 5, MAP 3, expedited, 1-octet VC count of 0, rule 111, UPID 0, carrying an
+    // 8-byte space packet. These are exactly the bytes uslp_mapp_request builds for that packet
+    uint8_t basic[] = {0xCA, 0xBC, 0xD0, 0xA6, 0x00, 0x12, 0x81, 0x00, 0xE0, 0x08,
+                       0x01, 0xC0, 0x00, 0x00, 0x01, 0xAA, 0xBB, 0x08, 0x3B};
+    uint8_t basic_payload[] = {0x08, 0x01, 0xC0, 0x00, 0x00, 0x01, 0xAA, 0xBB};
+    uslp_transfer_frame_view_t view;
+    bool err;
+
+    test_log("uslp parse basic frame test:\n");
+    err = uslp_transfer_frame_parse(&view, basic, sizeof(basic));
+    PVDX_ASSERT_MSG(!err, "basic frame parse\n");
+    PVDX_ASSERT_MSG(view.primary_header.version_num == USLP_TFVN, "basic version_num\n");
+    PVDX_ASSERT_MSG(view.primary_header.spacecraft_id == 0xABCD, "basic spacecraft_id\n");
+    PVDX_ASSERT_MSG(view.primary_header.src_or_dest == USLP_SCID_IS_SOURCE, "basic src_or_dest\n");
+    PVDX_ASSERT_MSG(view.primary_header.virtual_channel_id == 5, "basic virtual_channel_id\n");
+    PVDX_ASSERT_MSG(view.primary_header.map_id == 3, "basic map_id\n");
+    PVDX_ASSERT_MSG(view.primary_header.end_of_frame_primary_header_flag == 0, "basic end_of_frame_primary_header_flag\n");
+    PVDX_ASSERT_MSG(view.primary_header.frame_length == sizeof(basic) - 1, "basic frame_length\n");
+    PVDX_ASSERT_MSG(view.primary_header.bypass_sequence_control_flag == USLP_QOS_EXPEDITED, "basic bypass_sequence_control_flag\n");
+    PVDX_ASSERT_MSG(view.primary_header.protocol_control_command_flag == 0, "basic protocol_control_command_flag\n");
+    PVDX_ASSERT_MSG(view.primary_header.ocf_flag == 0, "basic ocf_flag\n");
+    PVDX_ASSERT_MSG(view.primary_header.vc_frame_count_length == 1, "basic vc_frame_count_length\n");
+    PVDX_ASSERT_MSG(view.primary_header.vc_frame_count == 0, "basic vc_frame_count\n");
+    PVDX_ASSERT_MSG(view.data_field_header.tfdz_construction_rules == USLP_TFDZ_NO_SEGMENT, "basic tfdz_construction_rules\n");
+    PVDX_ASSERT_MSG(view.data_field_header.protocol_identifier == USLP_UPID_SPACE_PACKETS, "basic protocol_identifier\n");
+    PVDX_ASSERT_MSG(view.datafield == &basic[9], "basic datafield points into the input\n");
+    PVDX_ASSERT_MSG(view.datafield_len == sizeof(basic_payload), "basic datafield_len\n");
+    PVDX_ASSERT_MSG(memcmp(view.datafield, basic_payload, sizeof(basic_payload)) == 0, "basic datafield contents\n");
+
+    // SCID 0xFFFF, destination, VCID 62, MAP 15, sequence controlled, protocol control command,
+    // 7-octet VC count of 0x00123456789ABCDE, rule 011, UPID 5, a 3-byte payload, and an OCF of 0xDEADBEEF
+    test_log("uslp parse max-field frame test:\n");
+    uint8_t max[] = {0xCF, 0xFF, 0xFF, 0xDE, 0x00, 0x17, 0x4F, 0x12, 0x34, 0x56, 0x78, 0x9A,
+                     0xBC, 0xDE, 0x65, 0x11, 0x22, 0x33, 0xDE, 0xAD, 0xBE, 0xEF, 0x9D, 0x14};
+    uint8_t max_payload[] = {0x11, 0x22, 0x33};
+    err = uslp_transfer_frame_parse(&view, max, sizeof(max));
+    PVDX_ASSERT_MSG(!err, "max frame parse\n");
+    PVDX_ASSERT_MSG(view.primary_header.spacecraft_id == 0xFFFF, "max spacecraft_id\n");
+    PVDX_ASSERT_MSG(view.primary_header.src_or_dest == USLP_SCID_IS_DESTINATION, "max src_or_dest\n");
+    PVDX_ASSERT_MSG(view.primary_header.virtual_channel_id == 62, "max virtual_channel_id\n");
+    PVDX_ASSERT_MSG(view.primary_header.map_id == 15, "max map_id\n");
+    PVDX_ASSERT_MSG(view.primary_header.bypass_sequence_control_flag == USLP_QOS_SEQUENCE_CONTROLLED, "max bypass_sequence_control_flag\n");
+    PVDX_ASSERT_MSG(view.primary_header.protocol_control_command_flag == 1, "max protocol_control_command_flag\n");
+    PVDX_ASSERT_MSG(view.primary_header.ocf_flag == 1, "max ocf_flag\n");
+    PVDX_ASSERT_MSG(view.primary_header.vc_frame_count_length == 7, "max vc_frame_count_length\n");
+    PVDX_ASSERT_MSG(view.primary_header.vc_frame_count == 0x00123456789ABCDEull, "max vc_frame_count\n");
+    PVDX_ASSERT_MSG(view.data_field_header.tfdz_construction_rules == USLP_TFDZ_BYTE_STREAM, "max tfdz_construction_rules\n");
+    PVDX_ASSERT_MSG(view.data_field_header.protocol_identifier == 5, "max protocol_identifier\n");
+    // The OCF sits between the data zone and the FECF, and must not be counted as data
+    PVDX_ASSERT_MSG(view.datafield_len == sizeof(max_payload), "max datafield_len excludes OCF\n");
+    PVDX_ASSERT_MSG(memcmp(view.datafield, max_payload, sizeof(max_payload)) == 0, "max datafield contents\n");
+
+    // SCID 0x1234, VCID 1, no VC count at all, and an empty data zone
+    test_log("uslp parse empty frame test:\n");
+    uint8_t empty[] = {0xC1, 0x23, 0x40, 0x20, 0x00, 0x09, 0x80, 0xE0, 0xD1, 0x4B};
+    err = uslp_transfer_frame_parse(&view, empty, sizeof(empty));
+    PVDX_ASSERT_MSG(!err, "empty frame parse\n");
+    PVDX_ASSERT_MSG(view.primary_header.spacecraft_id == 0x1234, "empty spacecraft_id\n");
+    PVDX_ASSERT_MSG(view.primary_header.vc_frame_count_length == 0, "empty vc_frame_count_length\n");
+    PVDX_ASSERT_MSG(view.primary_header.vc_frame_count == 0, "empty vc_frame_count\n");
+    PVDX_ASSERT_MSG(view.datafield_len == 0, "empty datafield_len\n");
+
+    test_log("uslp parse length tests:\n");
+    // Bytes after the end given by the frame length field are ignored
+    uint8_t padded[sizeof(basic) + 4] = {0};
+    memcpy(padded, basic, sizeof(basic));
+    err = uslp_transfer_frame_parse(&view, padded, sizeof(padded));
+    PVDX_ASSERT_MSG(!err, "trailing bytes accepted\n");
+    PVDX_ASSERT_MSG(view.datafield_len == sizeof(basic_payload), "trailing bytes not counted as data\n");
+
+    PVDX_ASSERT_MSG(uslp_transfer_frame_parse(&view, basic, sizeof(basic) - 1), "input shorter than frame length rejected\n");
+    PVDX_ASSERT_MSG(uslp_transfer_frame_parse(&view, basic, USLP_PRIMARY_HEADER_FIXED_SIZE - 1), "input shorter than header rejected\n");
+    PVDX_ASSERT_MSG(uslp_transfer_frame_parse(&view, basic, 0), "empty input rejected\n");
+
+    // Header claims a 7-octet VC count and an OCF, but the frame length only covers 10 octets
+    uint8_t too_short[] = {0xC0, 0x00, 0x00, 0x00, 0x00, 0x09, 0x0F, 0x00, 0xB4, 0xC0};
+    PVDX_ASSERT_MSG(uslp_transfer_frame_parse(&view, too_short, sizeof(too_short)), "frame too short for its headers rejected\n");
+
+    test_log("uslp parse FECF tests:\n");
+    uint8_t corrupted[sizeof(basic)];
+
+    memcpy(corrupted, basic, sizeof(basic));
+    corrupted[12] ^= 0x01; // one bit of the data zone
+    PVDX_ASSERT_MSG(uslp_transfer_frame_parse(&view, corrupted, sizeof(corrupted)), "corrupted data zone rejected\n");
+
+    memcpy(corrupted, basic, sizeof(basic));
+    corrupted[1] ^= 0x10; // one bit of the spacecraft ID
+    PVDX_ASSERT_MSG(uslp_transfer_frame_parse(&view, corrupted, sizeof(corrupted)), "corrupted header rejected\n");
+
+    memcpy(corrupted, basic, sizeof(basic));
+    corrupted[sizeof(corrupted) - 1] ^= 0x80; // one bit of the FECF itself
+    PVDX_ASSERT_MSG(uslp_transfer_frame_parse(&view, corrupted, sizeof(corrupted)), "corrupted FECF rejected\n");
+
+    test_log("uslp parse unsupported frame tests:\n");
+    memcpy(corrupted, basic, sizeof(basic));
+    corrupted[0] &= 0x0F; // TFVN 0000 (a TM frame), which is checked before the FECF
+    PVDX_ASSERT_MSG(uslp_transfer_frame_parse(&view, corrupted, sizeof(corrupted)), "wrong TFVN rejected\n");
+
+    // Same as basic, but with the End of Frame Primary Header flag set (a truncated frame)
+    uint8_t truncated[] = {0xCA, 0xBC, 0xD0, 0xA7, 0x00, 0x12, 0x81, 0x00, 0xE0, 0x08,
+                           0x01, 0xC0, 0x00, 0x00, 0x01, 0xAA, 0xBB, 0x73, 0x5A};
+    PVDX_ASSERT_MSG(uslp_transfer_frame_parse(&view, truncated, sizeof(truncated)), "truncated frame rejected\n");
+
+    // Same as basic, but with TFDZ construction rule 000, which needs a First Header Pointer
+    uint8_t rule_000[] = {0xCA, 0xBC, 0xD0, 0xA6, 0x00, 0x12, 0x81, 0x00, 0x00, 0x08,
+                          0x01, 0xC0, 0x00, 0x00, 0x01, 0xAA, 0xBB, 0x4F, 0xAC};
+    PVDX_ASSERT_MSG(uslp_transfer_frame_parse(&view, rule_000, sizeof(rule_000)), "TFDZ rule 000 rejected\n");
+
+#ifdef UNITTEST // uslp_test_last_frame only exists in unit test builds
+    // VC frame counts are module state that persists between calls, so these tests assume nothing
+    // has sent on VCs 5-7 since boot. That holds because tests run before any task is started
+    test_log("uslp mapp request rejection tests:\n");
+    uint32_t gmap_id = ((uint32_t)USLP_TFVN << 26) | (0xABCDu << 10) | (5u << 4) | 3u;
+    uint32_t gmap_id_bad_tfvn = (0xABCDu << 10) | (5u << 4) | 3u;
+    uint32_t gmap_id_idle_vc = ((uint32_t)USLP_TFVN << 26) | (0xABCDu << 10) | ((uint32_t)USLP_IDLE_ONLY_FRAME_INDEX << 4);
+    uint32_t gmap_id_vc6 = ((uint32_t)USLP_TFVN << 26) | (0xABCDu << 10) | (6u << 4);
+    uint32_t gmap_id_vc7 = ((uint32_t)USLP_TFVN << 26) | (0xABCDu << 10) | (7u << 4);
+    const uint8_t *last_frame;
+    uint32_t last_frame_len;
+
+    err = uslp_mapp_request(basic_payload, sizeof(basic_payload), gmap_id_bad_tfvn, SPP_VERSION_NUMBER, 0, USLP_QOS_EXPEDITED);
+    PVDX_ASSERT_MSG(err, "mapp request with wrong TFVN rejected\n");
+
+    err = uslp_mapp_request(basic_payload, sizeof(basic_payload), gmap_id_idle_vc, SPP_VERSION_NUMBER, 0, USLP_QOS_EXPEDITED);
+    PVDX_ASSERT_MSG(err, "mapp request on idle-only VC 63 rejected\n");
+
+    err = uslp_mapp_request(basic_payload, sizeof(basic_payload), gmap_id, 7, 0, USLP_QOS_EXPEDITED);
+    PVDX_ASSERT_MSG(err, "mapp request with non-SPP PVN rejected\n");
+
+    err = uslp_mapp_request(basic_payload, sizeof(basic_payload), gmap_id, SPP_VERSION_NUMBER, 0, USLP_QOS_SEQUENCE_CONTROLLED);
+    PVDX_ASSERT_MSG(err, "mapp request with sequence controlled QoS rejected\n");
+
+    uslp_test_last_frame(&last_frame_len);
+    PVDX_ASSERT_MSG(last_frame_len == 0, "rejected mapp requests send nothing\n");
+
+    // The parser needs a writable buffer, as it would get from the radio
+    static uint8_t sent[USLP_MAX_FRAME_SIZE];
+
+    test_log("uslp mapp request send tests:\n");
+    err = uslp_mapp_request(basic_payload, sizeof(basic_payload), gmap_id, SPP_VERSION_NUMBER, 0, USLP_QOS_EXPEDITED);
+    PVDX_ASSERT_MSG(!err, "mapp request sent\n");
+    last_frame = uslp_test_last_frame(&last_frame_len);
+    // The first frame on VC 5 has a count of 0, so it must match the independently built vector exactly
+    PVDX_ASSERT_MSG(last_frame_len == sizeof(basic), "first frame length\n");
+    PVDX_ASSERT_MSG(memcmp(last_frame, basic, sizeof(basic)) == 0, "first frame matches reference bytes\n");
+
+    err = uslp_mapp_request(basic_payload, sizeof(basic_payload), gmap_id, SPP_VERSION_NUMBER, 0, USLP_QOS_EXPEDITED);
+    PVDX_ASSERT_MSG(!err, "second mapp request sent\n");
+    last_frame = uslp_test_last_frame(&last_frame_len);
+    memcpy(sent, last_frame, last_frame_len);
+    err = uslp_transfer_frame_parse(&view, sent, last_frame_len);
+    PVDX_ASSERT_MSG(!err, "second frame parses\n");
+    PVDX_ASSERT_MSG(view.primary_header.vc_frame_count == 1, "second frame count\n");
+    PVDX_ASSERT_MSG(view.datafield_len == sizeof(basic_payload), "second frame datafield_len\n");
+    PVDX_ASSERT_MSG(memcmp(view.datafield, basic_payload, sizeof(basic_payload)) == 0, "second frame datafield contents\n");
+
+    test_log("uslp mapp request frame size tests:\n");
+    // Largest packet that still fits in one frame with a 1-octet VC count
+    static uint8_t big_payload[USLP_MAX_FRAME_SIZE];
+    uint16_t max_payload_len =
+        USLP_MAX_FRAME_SIZE - USLP_PRIMARY_HEADER_FIXED_SIZE - 1 - USLP_DATA_FIELD_HEADER_SIZE - USLP_FECF_SIZE;
+    for (uint16_t i = 0; i < sizeof(big_payload); i++) {
+        big_payload[i] = (uint8_t)(i * 7);
+    }
+
+    err = uslp_mapp_request(big_payload, max_payload_len + 1, gmap_id, SPP_VERSION_NUMBER, 0, USLP_QOS_EXPEDITED);
+    PVDX_ASSERT_MSG(err, "oversized mapp request rejected\n");
+    uslp_test_last_frame(&last_frame_len);
+    PVDX_ASSERT_MSG(last_frame_len == sizeof(basic), "oversized mapp request sends nothing\n");
+
+    // A rejected frame must not use up a count, so the next frame on VC 5 is 2, not 3
+    err = uslp_mapp_request(basic_payload, sizeof(basic_payload), gmap_id, SPP_VERSION_NUMBER, 0, USLP_QOS_EXPEDITED);
+    PVDX_ASSERT_MSG(!err, "mapp request after oversized request sent\n");
+    last_frame = uslp_test_last_frame(&last_frame_len);
+    memcpy(sent, last_frame, last_frame_len);
+    err = uslp_transfer_frame_parse(&view, sent, last_frame_len);
+    PVDX_ASSERT_MSG(!err, "frame after oversized request parses\n");
+    PVDX_ASSERT_MSG(view.primary_header.vc_frame_count == 2, "no count gap after oversized request\n");
+
+    err = uslp_mapp_request(big_payload, max_payload_len, gmap_id_vc7, SPP_VERSION_NUMBER, 0, USLP_QOS_EXPEDITED);
+    PVDX_ASSERT_MSG(!err, "max size mapp request sent\n");
+    last_frame = uslp_test_last_frame(&last_frame_len);
+    PVDX_ASSERT_MSG(last_frame_len == USLP_MAX_FRAME_SIZE, "max size frame fills USLP_MAX_FRAME_SIZE\n");
+    memcpy(sent, last_frame, last_frame_len);
+    err = uslp_transfer_frame_parse(&view, sent, last_frame_len);
+    PVDX_ASSERT_MSG(!err, "max size frame parses\n");
+    PVDX_ASSERT_MSG(view.primary_header.virtual_channel_id == 7, "max size frame virtual_channel_id\n");
+    PVDX_ASSERT_MSG(view.datafield_len == max_payload_len, "max size frame datafield_len\n");
+    PVDX_ASSERT_MSG(memcmp(view.datafield, big_payload, max_payload_len) == 0, "max size frame datafield contents\n");
+
+    test_log("uslp mapp request per-VC count tests:\n");
+    // Each VC keeps its own count, so VC 6 starts at 0 even though VC 5 has sent 3 frames
+    err = uslp_mapp_request(basic_payload, sizeof(basic_payload), gmap_id_vc6, SPP_VERSION_NUMBER, 0, USLP_QOS_EXPEDITED);
+    PVDX_ASSERT_MSG(!err, "mapp request on VC 6 sent\n");
+    last_frame = uslp_test_last_frame(&last_frame_len);
+    memcpy(sent, last_frame, last_frame_len);
+    err = uslp_transfer_frame_parse(&view, sent, last_frame_len);
+    PVDX_ASSERT_MSG(!err, "VC 6 frame parses\n");
+    PVDX_ASSERT_MSG(view.primary_header.virtual_channel_id == 6, "VC 6 frame virtual_channel_id\n");
+    PVDX_ASSERT_MSG(view.primary_header.vc_frame_count == 0, "VC 6 has its own count\n");
+#endif
 }
 // #endif

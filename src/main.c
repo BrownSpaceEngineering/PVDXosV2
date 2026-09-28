@@ -64,6 +64,8 @@ int main(void) {
 
     info("AT_LEAST_ONE_DEVICE_FAILED: %d\n", check_all_devices_on_startup());
 
+    ccsds_init();
+
 /* -------------------------------------- TESTS ---------------------------------------------- */
 #ifdef UNITTEST
     tests_run();
@@ -75,8 +77,6 @@ int main(void) {
     if (task_list_mutex == NULL) {
         fatal("Failed to create PVDX task list mutex");
     }
-
-    ccsds_init();
 
     if (task_list[0] != p_watchdog_task) {
         fatal("Watchdog is not first in task_list!");
