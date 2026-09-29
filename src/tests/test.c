@@ -231,8 +231,7 @@ void test_uslp(void) {
 
     // SCID 0xABCD, VCID 5, MAP 3, expedited, 1-octet VC count of 0, rule 111, UPID 0, carrying an
     // 8-byte space packet. These are exactly the bytes uslp_mapp_request builds for that packet
-    uint8_t basic[] = {0xCA, 0xBC, 0xD0, 0xA6, 0x00, 0x12, 0x81, 0x00, 0xE0, 0x08,
-                       0x01, 0xC0, 0x00, 0x00, 0x01, 0xAA, 0xBB, 0x08, 0x3B};
+    uint8_t basic[] = {0xCA, 0xBC, 0xD0, 0xA6, 0x00, 0x12, 0x81, 0x00, 0xE0, 0x08, 0x01, 0xC0, 0x00, 0x00, 0x01, 0xAA, 0xBB, 0x08, 0x3B};
     uint8_t basic_payload[] = {0x08, 0x01, 0xC0, 0x00, 0x00, 0x01, 0xAA, 0xBB};
     uslp_transfer_frame_view_t view;
     bool err;
@@ -333,8 +332,7 @@ void test_uslp(void) {
     PVDX_ASSERT_MSG(uslp_transfer_frame_parse(&view, truncated, sizeof(truncated)), "truncated frame rejected\n");
 
     // Same as basic, but with TFDZ construction rule 000, which needs a First Header Pointer
-    uint8_t rule_000[] = {0xCA, 0xBC, 0xD0, 0xA6, 0x00, 0x12, 0x81, 0x00, 0x00, 0x08,
-                          0x01, 0xC0, 0x00, 0x00, 0x01, 0xAA, 0xBB, 0x4F, 0xAC};
+    uint8_t rule_000[] = {0xCA, 0xBC, 0xD0, 0xA6, 0x00, 0x12, 0x81, 0x00, 0x00, 0x08, 0x01, 0xC0, 0x00, 0x00, 0x01, 0xAA, 0xBB, 0x4F, 0xAC};
     PVDX_ASSERT_MSG(uslp_transfer_frame_parse(&view, rule_000, sizeof(rule_000)), "TFDZ rule 000 rejected\n");
 
 #ifdef UNITTEST // uslp_test_last_frame only exists in unit test builds
@@ -388,8 +386,7 @@ void test_uslp(void) {
     test_log("uslp mapp request frame size tests:\n");
     // Largest packet that still fits in one frame with a 1-octet VC count
     static uint8_t big_payload[USLP_MAX_FRAME_SIZE];
-    uint16_t max_payload_len =
-        USLP_MAX_FRAME_SIZE - USLP_PRIMARY_HEADER_FIXED_SIZE - 1 - USLP_DATA_FIELD_HEADER_SIZE - USLP_FECF_SIZE;
+    uint16_t max_payload_len = USLP_MAX_FRAME_SIZE - USLP_PRIMARY_HEADER_FIXED_SIZE - 1 - USLP_DATA_FIELD_HEADER_SIZE - USLP_FECF_SIZE;
     for (uint16_t i = 0; i < sizeof(big_payload); i++) {
         big_payload[i] = (uint8_t)(i * 7);
     }

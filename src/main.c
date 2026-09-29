@@ -102,7 +102,7 @@ int main(void) {
 
 #if defined(UNITTEST) || defined(DEVBUILD)
     #if defined(UNITTEST)
-    cm_args.frequency = 10;
+    cm_args.frequency = 1;
     #endif
     #if defined(DEVBUILD)
     cm_args.frequency = 1; // Bitflips per second
