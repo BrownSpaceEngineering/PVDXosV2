@@ -14,11 +14,15 @@ EXCLUDE_PATHS := $(PVDXOS_DIR)/src/libraries/adcs \
 # generate flags to pass to find to exclude paths from above
 EXCLUDE_FLAGS := $(foreach dir,$(EXCLUDE_PATHS),-not -path "$(dir)/*")
 
-# Discover all c files in src dir
-SRCS := $(shell find $(PVDXOS_DIR)/src -name "*.c" $(EXCLUDE_FLAGS))
+# Root of the source tree, and the build directory that mirrors it
+export SRC_DIR := $(PVDXOS_DIR)/src
+export BUILD_DIR := $(PVDXOS_DIR)/build
 
-# Substitute .c suffix with .o to create output object names
-export OBJS := $(patsubst %.c,%.o,$(SRCS))
+# Discover all c files in src dir
+SRCS := $(shell find $(SRC_DIR) -name "*.c" $(EXCLUDE_FLAGS))
+
+# Map src/foo/bar.c -> build/foo/bar.o so artifacts don't clutter src
+export OBJS := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SRCS))
 
 # Create list of directories to include from
 export EXTRA_VPATH := $(sort $(dir $(SRCS)))
@@ -43,6 +47,10 @@ SHELL := /bin/bash
 #Path to the child makefile
 #This makefile is used to build the ASF files, and is provided by Atmel Start
 CHILD_MAKEFILE_PATH := ../ASF/gcc
+
+# Invoke the child makefile along with build_rules.mk, which adds the rule for
+# compiling src/*.c into BUILD_DIR
+CHILD_MAKE := $(MAKE) -C $(CHILD_MAKEFILE_PATH) -f Makefile -f $(SRC_DIR)/build_rules.mk
 
 # Path to the pinconfig submodule and the .atzip it contains
 PINCONFIG_DIR := ../PVDX-SAMD-PinConfig
@@ -94,7 +102,8 @@ CFLAGS_UNITTEST := -DUNITTEST -DDEVBUILD -Wno-unused-variable
 CFLAGS_RELEASE := -DRELEASE
 
 ### All these variables are exported to the child makefile, and affect its behavior ###
-export SUB_DIRS := $(shell for dir in $(EXTRA_VPATH); do echo $$dir | $(SED) 's|\.\./||g'; done)
+# Build directories the child makefile creates before compiling
+export SUB_DIRS := $(patsubst %/,%,$(sort $(dir $(OBJS))))
 
 export DIR_INCLUDES := $(foreach dir,$(EXTRA_VPATH),-I"$(dir)" )
 
@@ -104,25 +113,38 @@ export DEPS_AS_ARGS := $(patsubst %.o,%.d,$(OBJS_AS_ARGS))
 
 .PHONY: all dev release test clean connect update_asf flash_bootloader
 
+# objects files don't depend on CFLAGS, so switching build types (e.g. dev -> test)
+# would otherwise relink stale objects, so ecord the last build type and clean on change.
+BUILD_TYPE_FILE := $(CHILD_MAKEFILE_PATH)/.build_type
+
+define ensure_build_type
+	@if [ "$$(cat $(BUILD_TYPE_FILE) 2>/dev/null)" != "$(1)" ]; then \
+		$(MAKE) clean && echo "$(1)" > $(BUILD_TYPE_FILE); \
+	fi
+endef
+
 # Default target
 all: dev
 
 dev:
-	@$(MAKE) -C $(CHILD_MAKEFILE_PATH) CFLAGS=" $(CFLAGS_DEV) $(CFLAGS)" \
+	$(call ensure_build_type,dev)
+	@$(CHILD_MAKE) CFLAGS=" $(CFLAGS_DEV) $(CFLAGS)" \
 	&& cp -f ../ASF/gcc/PVDXos.bin ./ \
 	&& cp -f ../ASF/gcc/PVDXos.elf ./ \
 	&& echo " --- Finished Building PVDXos --- " \
 	&& echo " ---  THIS IS THE DEV BUILD! --- "
 
 release: clean #Might as well clean before compiling the release build
-	@$(MAKE) -C $(CHILD_MAKEFILE_PATH) CFLAGS=" $(CFLAGS_RELEASE) $(CFLAGS)" \
+	@echo "release" > $(BUILD_TYPE_FILE)
+	@$(CHILD_MAKE) CFLAGS=" $(CFLAGS_RELEASE) $(CFLAGS)" \
 	&& cp -f ../ASF/gcc/PVDXos.bin ./ \
 	&& cp -f ../ASF/gcc/PVDXos.elf ./ \
 	&& echo " ---  Finished Building PVDXos  --- " \
 	&& echo " --- THIS IS THE RELEASE BUILD! --- "
 
 test:
-	@$(MAKE) -C $(CHILD_MAKEFILE_PATH) CFLAGS=" $(CFLAGS_UNITTEST) $(CFLAGS)" \
+	$(call ensure_build_type,test)
+	@$(CHILD_MAKE) CFLAGS=" $(CFLAGS_UNITTEST) $(CFLAGS)" \
 	&& cp -f ../ASF/gcc/PVDXos.elf ./ \
 	&& cp -f ../ASF/gcc/PVDXos.bin ./ \
 	&& echo " ---   Finished Building PVDXos   --- " \
@@ -130,8 +152,9 @@ test:
 
 # Clean target
 clean:
-	@$(MAKE) -C $(CHILD_MAKEFILE_PATH) clean \
-	&& rm -f ./PVDXos.bin ./PVDXos.elf \
+	@$(CHILD_MAKE) clean \
+	&& rm -rf $(BUILD_DIR) \
+	&& rm -f ./PVDXos.bin ./PVDXos.elf $(BUILD_TYPE_FILE) \
 	&& echo " --- Cleaned Build Files --- "
 
 # this is a cheat, since it's just a nop. Execution stops after 
