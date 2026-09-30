@@ -48,6 +48,9 @@ test: bootloader_target
 flash_monkey:
 	python3 scripts/flip_rand_bit.py
 
+reset_mcu:
+	JLinkExe -CommanderScript reset.jlink
+  
 list_files:
 	make -C src list_files
 
