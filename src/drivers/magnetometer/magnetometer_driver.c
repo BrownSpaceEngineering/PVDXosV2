@@ -6,35 +6,33 @@
  * Created: Dec 7, 2023 2:22 AM
  * Authors: Nathan Kim, Alexander Thaep, Siddharta Laloux, Tanish Makadia, Defne Doken, Aidan Wang
  *
- * The RM3100 is driven over SPI on the SPI_DISPLAY bus (SERCOM1), which it shares
- * with the (currently unused) display. Wiring is given by SAMD51 port pin:
+ * The RM3100 is driven over SPI on the dedicated SPI_MAGNETOMETER_GYRO bus
+ * (SERCOM4). Wiring is given by SAMD51 port pin (matches main's pin config):
  *
- *     RM3100 pin        signal   SAMD51 pin (SERCOM1)
+ *     RM3100 pin        signal   SAMD51 pin (SERCOM4)
  *     ------------------------------------------------
- *     1  SCK            SCLK     PC23   (SERCOM1 PAD1)
- *     2  SO  (MISO)     MISO     PA18   (SERCOM1 PAD2)
- *     3  SI  (MOSI)     MOSI     PC22   (SERCOM1 PAD0)
- *     4  SSN (CS)       CS       PB13   (GPIO, driven manually, active LOW)
+ *     1  SCK            SCLK     PA12   (SERCOM4 PAD1)
+ *     2  SO  (MISO)     MISO     PB14   (SERCOM4 PAD2)
+ *     3  SI  (MOSI)     MOSI     PA13   (SERCOM4 PAD0)
+ *     4  SSN (CS)       CS       PC19   (MAGNETOMETER_CS, GPIO, active LOW)
  *     10 I2CEN                   -> tie LOW (selects SPI mode)
  *     12 DVDD / 13 AVDD         -> 3.3V
  *     7  AVSS / 14 DVSS         -> GND
  *     5  DRDY                    -> not needed (we poll the STATUS register)
  *
- * SPI mode 0 (CPOL=CPHA=0), clock <= 1 MHz (SERCOM1 is ~50 kHz in ASF). A read
+ * SPI mode 0 (CPOL=CPHA=0), clock <= 1 MHz (SERCOM4 is ~50 kHz in ASF). A read
  * sends (0x80 | reg); a write sends (reg & 0x7F) then data. The chip
  * auto-increments the register pointer and returns a STATUS byte first.
- *
- * NOTE: shares SERCOM1 and CS (PB13) with the Display task; that task is assumed
- * not to run. If the display is ever enabled, this bus needs a mutex.
  */
 
 #include "globals.h"
 
 #include "magnetometer_driver.h"
 
-// The RM3100 lives on the SPI_DISPLAY bus (SERCOM1); CS is DISPLAY_CS (PB13).
-#define RM3100_SPI    SPI_DISPLAY
-#define RM3100_CS_PIN DISPLAY_CS
+// The RM3100 lives on the dedicated SPI_MAGNETOMETER_GYRO bus (SERCOM4);
+// CS is MAGNETOMETER_CS (PC19).
+#define RM3100_SPI    SPI_MAGNETOMETER_GYRO
+#define RM3100_CS_PIN MAGNETOMETER_CS
 
 // Largest single SPI payload (9-byte measurement read) plus the command byte.
 #define RM3100_SPI_MAX 16
