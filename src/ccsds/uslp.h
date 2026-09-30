@@ -16,7 +16,6 @@
 #include <stdint.h>
 
 #include "drivers/at86rf215/at86rf215.h" // for AT86RF215_MAX_PDU
-#include "globals.h"
 
 // USLP allows up to 64 virtual channels. we probably won't need this many, though, so lower this from 64 as needed
 #define USLP_VIRTUAL_CHANNEL_COUNT 64
