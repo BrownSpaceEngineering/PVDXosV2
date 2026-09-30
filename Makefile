@@ -1,3 +1,7 @@
+PVDXOS_DIR = $(CURDIR)
+
+export PVDXOS_DIR
+
 ifeq ($(OS),Windows_NT)
 	# Pure Windows (e.g. MSYS2/MinGW). Note that in WSL, $(OS) is *not* Windows_NT.
 	GDBCMD = gdb-multiarch
@@ -43,6 +47,9 @@ test: bootloader_target
 
 flash_monkey:
 	python3 scripts/flip_rand_bit.py
+
+list_files:
+	make -C src list_files
 
 # this command will start gdb from a breakpoint at main
 # use connect_bl to start from the beginning
