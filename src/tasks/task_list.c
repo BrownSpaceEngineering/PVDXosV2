@@ -101,7 +101,7 @@ pvdx_task_t shell_task = {.name = "Shell",
                           .task_type = TESTING};
 
 pvdx_task_t display_task = {.name = "Display",
-                            .enabled = false,
+                            .enabled = true,
                             .handle = NULL,
                             .command_queue = NULL,
                             .init = init_display,

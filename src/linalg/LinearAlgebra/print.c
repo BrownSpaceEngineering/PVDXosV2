@@ -5,6 +5,7 @@
  *      Author: Daniel Mårtensson
  */
 #include "declareFunctions.h"
+#include "logging.h"
 
 /*
  * Print a matrix A, with the dimension row x column
@@ -12,11 +13,11 @@
 void print(float* A, int row, int column) {
     for (int i = 0; i < row; i++) {
         for (int j = 0; j < column; j++) {
-            printf("%0.18f ", *(A++));
+            debug("%0.18f ", *(A++));
         }
-        printf("\n");
+        debug("\n");
     }
-    printf("\n");
+    debug("\n");
 }
 
 /**
@@ -31,9 +32,9 @@ void print(float* A, int row, int column) {
 void debug_matrix(float* A, int row, int column) {
     for (int i = 0; i < row; i++) {
         for (int j = 0; j < column; j++) {
-            printf("%0.18f ", *(A++));
+            test_log("%0.18f ", *(A++));
         }
-        printf("\n");
+        test_log("\n");
     }
-    printf("\n");
+    test_log("\n");
 }

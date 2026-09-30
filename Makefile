@@ -1,3 +1,7 @@
+PVDXOS_DIR = $(CURDIR)
+
+export PVDXOS_DIR
+
 ifeq ($(OS),Windows_NT)
 	# Pure Windows (e.g. MSYS2/MinGW). Note that in WSL, $(OS) is *not* Windows_NT.
 	GDBCMD = gdb-multiarch
@@ -46,6 +50,9 @@ flash_monkey:
 
 reset_mcu:
 	JLinkExe -CommanderScript reset.jlink
+  
+list_files:
+	make -C src list_files
 
 # this command will start gdb from a breakpoint at main
 # use connect_bl to start from the beginning
@@ -63,6 +70,19 @@ connect:
 		-ex "continue" \
 		-ex "break main" \
 		-ex "continue" \
+		bootloader/bootloader1.elf
+
+connect_tasks: 
+	JLinkExe -CommanderScript flash.jlink \
+	&& $(GDBCMD) \
+		-ex "set confirm off" \
+		-ex "add-symbol-file src/PVDXos.elf" \
+		-ex "add-symbol-file bootloader/bootloader2.elf" \
+		-ex "add-symbol-file bootloader/bootloader3.elf" \
+		-ex "set confirm on" \
+		-ex "target remote localhost:2331" \
+		-ex "monitor reset" \
+		-ex "break main" \
 		bootloader/bootloader1.elf
 
 # connect for debugging bootloader
