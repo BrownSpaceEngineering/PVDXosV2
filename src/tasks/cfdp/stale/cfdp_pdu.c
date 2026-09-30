@@ -10,10 +10,7 @@
 
 #include "cfdp_pdu.h"
 
-#include <string.h>
-
 #include "cfdp_task.h"
-#include "cfdp_utils.h"
 
 void cfdp_data_view_clear_data(cfdp_data_view_t *view) {
     view->data = NULL;
@@ -198,19 +195,17 @@ int cfdp_pdu_finished_parse(const uint8_t *raw, size_t len, cfdp_pdu_finished_t 
     cfdp_view_init_empty(&out->filestore_responses);
     uint8_t filestore_responses_type = raw[1];
     uint8_t filestore_responses_len = raw[2];
-
-    if (filestore_responses_type != CFDP_TLV_FILESTORE_REQUEST || len < 3 + (size_t)filestore_responses_len) {
-        return -1;
-    }
-
-    if (filestore_responses_len > 0) {
+    if (filestore_responses_type == CFDP_TLV_FILESTORE_REQUEST && len >= 3 + (size_t)filestore_responses_len) {
         cfdp_view_init(&out->filestore_responses, raw + 3, filestore_responses_len);
     }
 
-    size_t fault_entity_id_offset = 3 + filestore_responses_len;
+    if (out->condition_code != CFDP_COND_NOERROR && out->condition_code != CFDP_COND_BAD_CHECKSUM && len < 5) {
+        return -1;
+    }
 
     // fault location
     cfdp_view_init_empty(&out->fault_entity_id);
+    size_t fault_entity_id_offset = 3 + filestore_responses_len;
     if (!(out->condition_code == CFDP_COND_NOERROR || out->condition_code == CFDP_COND_BAD_CHECKSUM) && len >= fault_entity_id_offset + 2) {
         uint8_t tlv_type = raw[fault_entity_id_offset];
         uint8_t tlv_len = raw[fault_entity_id_offset + 1];
@@ -258,7 +253,7 @@ int cfdp_pdu_nak_parse(const uint8_t *raw, size_t len, cfdp_pdu_nak_t *out) {
     if (raw == NULL || out == NULL)
         return -1;
 
-    if (len < 8)
+    if (len < 16)
         return -1;
 
     out->start_of_scope = ((uint32_t)raw[0] << 24) | ((uint32_t)raw[1] << 16) | ((uint32_t)raw[2] << 8) | raw[3];
@@ -348,8 +343,7 @@ int cfdp_send_metadata(cfdp_transaction_t *transaction) {
         metadata_buff[8 + i + source_filename_length] = (transaction->dest_filename.value)[i];
     }
 
-    cfdp_send(buff, pdu_data_length + 16);
-    info("cfdp: sending metadata\n");
+    send(buff, pdu_data_length + 16);
     return 0;
 }
 
@@ -363,14 +357,13 @@ int cfdp_send_filedata(cfdp_transaction_t *transaction, uint32_t offset, uint32_
     uint8_t *filedata_buff = buff + 16;
 
     uint32_to_big_endian(offset, filedata_buff);
-    /*if (transaction->type == IMAGE) {
+    if (transaction->type == IMAGE) {
         read_cam_mem(filedata_buff + 4, size);
-    } else {*/
-    memcpy(filedata_buff + 4, transaction->file_data + offset, size);
-    //}
+    } else {
+        memcpy(filedata_buff + 4, transaction->file_data + offset, size);
+    }
 
-    cfdp_send(buff, 20 + size);
-    info("cfdp: sending filedata\n");
+    send(buff, 20 + size);
 
     return size;
 }
@@ -418,8 +411,7 @@ int cfdp_send_nak(cfdp_transaction_t *transaction) {
     uint32_to_big_endian(start_scope, nak_buff + 1); // start_of_scope: beginning of file
     uint32_to_big_endian(end_scope, nak_buff + 5);   // end_of_scope: full file extent
 
-    cfdp_send(buff, 16 + nak_data_size);
-    info("cfdp: sending nak\n");
+    send(buff, 16 + nak_data_size);
     return nak_data_size;
 }
 
@@ -428,7 +420,7 @@ int cfdp_send_metadata_nak(cfdp_pdu_header_t *header) {
         return -1;
     }
 
-    uint8_t buff[33] = {0};
+    uint8_t buff[32] = {0};
 
     uint8_t direction = 0b1;
     uint8_t mode = header->transmission_mode;
@@ -440,18 +432,13 @@ int cfdp_send_metadata_nak(cfdp_pdu_header_t *header) {
     uint16_to_big_endian(16, buff + 1);
 
     uint8_t has_segment_metadata = header->segment_metadata_field;
-    buff[3] = 0b00110011 | ((has_segment_metadata & 0x1) << 3); // fix :(
+    buff[3] = 0b00110011 | (has_segment_metadata << 3); // fix :(
 
     uint32_to_big_endian(header->source_entity_id, buff + 4);
     uint32_to_big_endian(header->transaction_seq, buff + 8);
     uint32_to_big_endian(header->dest_entity_id, buff + 12);
 
-    buff[16] = CFDP_DIR_NAK;
-
-    // Entire NAK PDU is 0
-
-    cfdp_send(buff, 32);
-    info("cfdp: sending metadata nak\n");
+    send(buff, 32);
 
     return 32;
 }
@@ -474,17 +461,15 @@ int cfdp_send_fin(cfdp_transaction_t *transaction) {
     if (transaction == NULL)
         return -1;
 
-    uint32_t buff_sz = 20;
+    uint32_t buff_sz = 18;
 
     if (transaction->condition_code != CFDP_COND_NOERROR) {
         buff_sz += 6;
     }
 
-    info("cfdp: txn cond: %d\n", transaction->condition_code);
-
-    // pdu_data_length: 1 (directive) + 1 (flags) + 2 (filestore TLV header, always) + (?error) 6 (fault location TLV)
+    // pdu_data_length: 1 (directive) + 1 (flags byte) + (?error) 6 (fault location TLV)
     uint8_t buff[buff_sz];
-    cfdp_prepare_pdu_header(buff, transaction, buff_sz - 16, CFDP_FILE_DIRECTIVE);
+    cfdp_prepare_pdu_header(buff, transaction, 2, CFDP_FILE_DIRECTIVE);
 
     uint8_t *fin_buff = buff + 16;
     fin_buff[0] = CFDP_DIR_FINISHED;
@@ -492,17 +477,13 @@ int cfdp_send_fin(cfdp_transaction_t *transaction) {
     uint8_t del_code = (transaction->delivery_complete) ? 0 : 1;
     fin_buff[1] = (transaction->condition_code << 4) | (del_code << 2) | (0x0);
 
-    fin_buff[2] = CFDP_TLV_FILESTORE_REQUEST;
-    fin_buff[3] = 0x00;
-
     if (transaction->condition_code != CFDP_COND_NOERROR) {
-        fin_buff[4] = CFDP_TLV_ENTITY_ID;
-        fin_buff[5] = 0x04;
-        uint32_to_big_endian(ENTITY_ID_SPACECRAFT, fin_buff + 6);
+        fin_buff[2] = CFDP_TLV_ENTITY_ID;
+        fin_buff[2] = 0x04;
+        uint32_to_big_endian(ENTITY_ID_SPACECRAFT, fin_buff + 3);
     }
 
-    cfdp_send(buff, buff_sz);
-    info("cfdp: sending fin\n");
+    send(buff, buff_sz);
     return 0;
 }
 
@@ -520,11 +501,12 @@ int cfdp_send_reject_fin(const cfdp_pdu_header_t *header, const cfdp_pdu_metadat
 
     buff[0] = (0b001 << 5) | (direction << 3) | (mode << 2) | (crc_present << 1) | large_file | 0b0;
 
-    buff[3] = 0b00110011; // 4-byte entity IDs and seq num; seg ctrl and seg metadata are 0 for directives
+    uint8_t has_segment_metadata = header->segment_metadata_field;
+    buff[3] = 0b00110011 | (has_segment_metadata << 3); // fix :(
 
-    uint32_to_big_endian(header->source_entity_id, buff + 4);
+    uint32_to_big_endian(header->dest_entity_id, buff + 4);
     uint32_to_big_endian(header->transaction_seq, buff + 8);
-    uint32_to_big_endian(header->dest_entity_id, buff + 12);
+    uint32_to_big_endian(header->source_entity_id, buff + 12);
 
     buff[16] = CFDP_DIR_FINISHED;
 
@@ -541,19 +523,6 @@ int cfdp_send_reject_fin(const cfdp_pdu_header_t *header, const cfdp_pdu_metadat
             }
 
             if (tlv.type == CFDP_TLV_FILESTORE_REQUEST) {
-                // file name LVs must fit inside the TLV, or the copies below overrun buff
-                if (tlv.length < 2 || 2 + tlv.value[1] > tlv.length) {
-                    warning("cfdp: malformed filestore request, skipping\n");
-                    continue;
-                }
-                uint8_t fs_action = (tlv.value[0] >> 4) & 0x0F;
-                if (fs_action == 0b0010 || fs_action == 0b0011 || fs_action == 0b0100) {
-                    if (3 + tlv.value[1] > tlv.length || 3 + tlv.value[1] + tlv.value[2 + tlv.value[1]] > tlv.length) {
-                        warning("cfdp: malformed filestore request, skipping\n");
-                        continue;
-                    }
-                }
-
                 if (17 + fin_size + tlv.length + 6 + 2 >= TXN_FRAME) {
                     warning("cfdp: unable to process all filestore requests");
                     break;
@@ -593,7 +562,7 @@ int cfdp_send_reject_fin(const cfdp_pdu_header_t *header, const cfdp_pdu_metadat
         }
     }
 
-    buff[17] = (condition_code << 4) | (0b0111); // only apply condition code now since it may change.
+    buff[17] = (condition_code << 4) | (0x111); // only apply condition code now since it may change.
 
     // deal with fault location (spacecraft_entity_id)
 
@@ -607,8 +576,7 @@ int cfdp_send_reject_fin(const cfdp_pdu_header_t *header, const cfdp_pdu_metadat
 
     uint16_to_big_endian(fin_size + 1, buff + 1);
 
-    cfdp_send(buff, 17 + fin_size);
-    info("cfdp: sending reject fin\n");
+    send(buff, 17 + fin_size);
 
     return 0;
 }
@@ -627,39 +595,7 @@ int cfdp_send_ack(cfdp_transaction_t *transaction, uint8_t acked_directive_code,
     ack_buff[1] = ((acked_directive_code & 0x0F) << 4) | (directive_subtype_code & 0x0F);
     ack_buff[2] = ((condition_code & 0x0F) << 4) | (transaction_status & 0x03);
 
-    cfdp_send(buff, 19);
-    info("cfdp: sending ack\n");
-    return 0;
-}
-
-int cfdp_send_stale_ack(const cfdp_pdu_header_t *header, uint8_t condition_code) {
-    if (header == NULL)
-        return -1;
-
-    uint8_t buff[19];
-
-    buff[0] = 0b00100000 | ((header->transmission_mode & 0b1) << 2) | ((header->crc & 0b1) << 1) | (header->largefile & 0b1);
-    // Version 1 (001)) : 1, Towards Reciever (0) : 1, Transmission Mode (0/1) : 1, CRC (0/1) : 1, Large File (0/1) : 1.
-
-    uint16_to_big_endian(0x3, &buff[1]); // dir code: 1 byte + pdu len: 2 bytes
-
-    // we push entity IDs/txn seq size to 4 bytes.
-
-    buff[3] = ((header->segmentation_control & 0b1) << 7) | ((0b011) << 4) | ((header->segment_metadata_field & 0b1) << 3) | (0b011);
-    // Segmentation Control (0/1), Entity ID len (3), Segment Metadata present (0/1), Txn Seq Len (3);
-
-    uint32_to_big_endian(header->source_entity_id, &buff[4]);
-    uint32_to_big_endian(header->transaction_seq, &buff[8]);
-    uint32_to_big_endian(header->dest_entity_id, &buff[12]);
-
-    buff[16] = CFDP_DIR_ACK;
-    buff[17] = ((CFDP_DIR_FINISHED & 0xF) << 4) | (0b0001);
-
-    buff[18] = ((condition_code & 0xF) << 4) | 0b10;
-    // Condition Code : 4, Spare : 2, Transaction Status (terminated): 2
-
-    cfdp_send(buff, 19);
-
+    send(buff, 19);
     return 0;
 }
 
@@ -688,8 +624,7 @@ int cfdp_send_eof(cfdp_transaction_t *transaction) {
         eof_buff[11] = 0x04;
         uint32_to_big_endian(transaction->transaction_id.entity_id, eof_buff + 12);
     }
-    cfdp_send(buff, 16 + pdu_data_length);
-    info("cfdp: sending eof\n");
+    send(buff, 16 + pdu_data_length);
     return 0;
 }
 

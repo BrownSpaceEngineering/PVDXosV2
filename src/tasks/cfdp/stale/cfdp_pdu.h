@@ -1,6 +1,10 @@
 #ifndef RADIO_CFDP_PDU
 #define RADIO_CFDP_PDU
 
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
 /*
  * NOTE: For brevity, sources in comments are abbreviated as follows.
  * 1. CFDP Green Book abbreviated to GB.
@@ -9,10 +13,6 @@
  * References to official CCSDS documentation should be cited with page number.
  * Please use these conventions when amending these files.
  */
-
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
 
 // Constants:
 // Version number, always 001, see CFDP Blue Book 727.0-B-5 (Table 5-1, Pg. 75)
@@ -77,7 +77,7 @@
  * CFDP generic variable length field struct
  */
 typedef struct cfdp_data_view {
-    size_t len;
+    uint8_t len;
     const uint8_t *data;
 } cfdp_data_view_t;
 
@@ -221,7 +221,7 @@ typedef struct cfdp_lv {
     const uint8_t *value;
 } cfdp_lv_t;
 
-static inline void cfdp_view_init(cfdp_data_view_t *view, const uint8_t *data, size_t len) {
+static inline void cfdp_view_init(cfdp_data_view_t *view, const uint8_t *data, uint8_t len) {
     view->data = data;
     view->len = len;
 }

@@ -117,6 +117,8 @@ export OBJS :=                                              	\
 ../src/tasks/cfdp/cfdp_main.o 									\
 ../src/tasks/cfdp/cfdp_task.o 									\
 ../src/tasks/cfdp/cfdp_pdu.o 									\
+../src/tasks/cfdp/cfdp_timer.o									\
+../src/tasks/cfdp/cfdp_utils.o									\
 																
 
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###
