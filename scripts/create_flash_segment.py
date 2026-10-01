@@ -9,7 +9,7 @@ start_offset = 0x00010000
 # space reserved for each PVDXos copy
 # - must match APP_FLASH_STEP in bootloader/bootloader.c
 # - it's at least as big as the app's RAM region (0x3E000), so anything the linker accepts fits
-pvdxos_slot_size = 0x00040000
+pvdxos_slot_size = 0x00020000
 
 # Define offsets
 offsets = {

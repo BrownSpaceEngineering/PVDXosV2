@@ -2,6 +2,12 @@
 ################## OBJECT FILE AND INCLUDE PATH DISCOVERY ####################
 ##############################################################################
 
+# root of the repo - the top-level Makefile exports this, but fall back to the
+# parent of this directory so this Makefile can also be invoked directly
+# (e.g. `compiledb make` from src/, which can't see through the top-level Makefile)
+PVDXOS_DIR ?= $(abspath $(CURDIR)/..)
+export PVDXOS_DIR
+
 # list of directories and files to exclude from compilation
 EXCLUDE_PATHS := $(PVDXOS_DIR)/src/libraries/adcs \
 				 $(PVDXOS_DIR)/src/linalg/Lapack \
@@ -123,29 +129,34 @@ define ensure_build_type
 	fi
 endef
 
+# The child make lines below are prefixed with '+' so that they still recurse
+# under `make -n`. Make only does that automatically when $(MAKE) appears
+# literally in the recipe, and without it dry runs (which compiledb relies on)
+# would never see the compile commands.
+
 # Default target
 all: dev
 
 dev:
 	$(call ensure_build_type,dev)
-	@$(CHILD_MAKE) CFLAGS=" $(CFLAGS_DEV) $(CFLAGS)" \
-	&& cp -f ../ASF/gcc/PVDXos.bin ./ \
+	+@$(CHILD_MAKE) CFLAGS=" $(CFLAGS_DEV) $(CFLAGS)"
+	@cp -f ../ASF/gcc/PVDXos.bin ./ \
 	&& cp -f ../ASF/gcc/PVDXos.elf ./ \
 	&& echo " --- Finished Building PVDXos --- " \
 	&& echo " ---  THIS IS THE DEV BUILD! --- "
 
 release: clean #Might as well clean before compiling the release build
 	@echo "release" > $(BUILD_TYPE_FILE)
-	@$(CHILD_MAKE) CFLAGS=" $(CFLAGS_RELEASE) $(CFLAGS)" \
-	&& cp -f ../ASF/gcc/PVDXos.bin ./ \
+	+@$(CHILD_MAKE) CFLAGS=" $(CFLAGS_RELEASE) $(CFLAGS)"
+	@cp -f ../ASF/gcc/PVDXos.bin ./ \
 	&& cp -f ../ASF/gcc/PVDXos.elf ./ \
 	&& echo " ---  Finished Building PVDXos  --- " \
 	&& echo " --- THIS IS THE RELEASE BUILD! --- "
 
 test:
 	$(call ensure_build_type,test)
-	@$(CHILD_MAKE) CFLAGS=" $(CFLAGS_UNITTEST) $(CFLAGS)" \
-	&& cp -f ../ASF/gcc/PVDXos.elf ./ \
+	+@$(CHILD_MAKE) CFLAGS=" $(CFLAGS_UNITTEST) $(CFLAGS)"
+	@cp -f ../ASF/gcc/PVDXos.elf ./ \
 	&& cp -f ../ASF/gcc/PVDXos.bin ./ \
 	&& echo " ---   Finished Building PVDXos   --- " \
 	&& echo " --- THIS IS THE UNIT TEST BUILD! --- "
