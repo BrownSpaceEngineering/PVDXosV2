@@ -187,7 +187,7 @@ int cfdp_pdu_finished_parse(const uint8_t *raw, size_t len, cfdp_pdu_finished_t 
         return -1;
 
     if (len < 3)
-        return -1;
+        return -2;
 
     out->condition_code = (raw[0] >> 4) & 0x0F;
     // 1 bit spare
@@ -199,8 +199,8 @@ int cfdp_pdu_finished_parse(const uint8_t *raw, size_t len, cfdp_pdu_finished_t 
     uint8_t filestore_responses_type = raw[1];
     uint8_t filestore_responses_len = raw[2];
 
-    if (filestore_responses_type != CFDP_TLV_FILESTORE_REQUEST || len < 3 + (size_t)filestore_responses_len) {
-        return -1;
+    if (filestore_responses_type != CFDP_TLV_FILESTORE_RESPONSE || len < 3 + (size_t)filestore_responses_len) {
+        return -3;
     }
 
     if (filestore_responses_len > 0) {
@@ -211,13 +211,20 @@ int cfdp_pdu_finished_parse(const uint8_t *raw, size_t len, cfdp_pdu_finished_t 
 
     // fault location
     cfdp_view_init_empty(&out->fault_entity_id);
-    if (!(out->condition_code == CFDP_COND_NOERROR || out->condition_code == CFDP_COND_BAD_CHECKSUM) && len >= fault_entity_id_offset + 2) {
+    if (out->condition_code != CFDP_COND_NOERROR && out->condition_code != CFDP_COND_BAD_CHECKSUM) {
+        if (len < fault_entity_id_offset + 2)
+            return -4;
+
         uint8_t tlv_type = raw[fault_entity_id_offset];
         uint8_t tlv_len = raw[fault_entity_id_offset + 1];
 
-        if (tlv_type == CFDP_TLV_ENTITY_ID && len >= fault_entity_id_offset + 2 + tlv_len) {
-            cfdp_view_init(&out->fault_entity_id, raw + fault_entity_id_offset + 2, tlv_len);
-        }
+        if (tlv_type != CFDP_TLV_ENTITY_ID)
+            return -5;
+
+        if (len < fault_entity_id_offset + 2 + tlv_len)
+            return -6;
+
+        cfdp_view_init(&out->fault_entity_id, raw + fault_entity_id_offset + 2, tlv_len);
     }
 
     return (int)len;
@@ -311,7 +318,7 @@ int cfdp_prepare_pdu_header(uint8_t *buff, cfdp_transaction_t *transaction, uint
     uint32_to_big_endian(transaction->transaction_id.seq_num, buff + 8);
     uint32_to_big_endian(transaction->dest_entity_id, buff + 12);
 
-    return 0;
+    return 16;
 }
 
 int cfdp_send_metadata(cfdp_transaction_t *transaction) {
@@ -492,7 +499,7 @@ int cfdp_send_fin(cfdp_transaction_t *transaction) {
     uint8_t del_code = (transaction->delivery_complete) ? 0 : 1;
     fin_buff[1] = (transaction->condition_code << 4) | (del_code << 2) | (0x0);
 
-    fin_buff[2] = CFDP_TLV_FILESTORE_REQUEST;
+    fin_buff[2] = CFDP_TLV_FILESTORE_RESPONSE;
     fin_buff[3] = 0x00;
 
     if (transaction->condition_code != CFDP_COND_NOERROR) {
