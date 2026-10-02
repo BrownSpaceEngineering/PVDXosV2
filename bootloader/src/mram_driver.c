@@ -37,6 +37,13 @@ _|"""""|_|"""""|_|"""""|_|"""""|
 
 // #define COSMIC_MRAM
 
+typedef enum {
+    MRAM_OK = 0,                        // No issues
+    MRAM_BAD_ID = 1u << 1,              // Device ID does not match expected value
+    MRAM_FAIL_BLOCK_PROT = 1u << 2,     // Block protection not disabled
+    MRAM_FAIL_PERSIST = 1u << 3,        // Persistence mode not enabled
+} mram_init_status_t;
+
 // ---------------------- SPI Helpers ----------------------
 
 void mram_fatal(void) { while (1); }
@@ -201,7 +208,11 @@ void write_vol_reg(uint8_t mram, uint8_t reg, uint8_t reg_val) {
 
 // ---------------------- Core Operations ----------------------
 
-void check_device_id(uint8_t mram) {
+void mram_init_report_err(uint8_t mram, mram_init_status_t status) {
+    // TODO: figure out what to do when reporting an error.
+}
+
+mram_init_status_t check_device_id(uint8_t mram) {
     uint8_t cmd = CMD_RDID;
     uint8_t id[3] = {0};
     mram_select(mram);
@@ -211,11 +222,13 @@ void check_device_id(uint8_t mram) {
 
     if (id[0] != 0x6B || id[1] != 0xBB || id[2] != 0x14) {
         // invalid device ID
-        mram_fatal();
+        return MRAM_BAD_ID;
+    } else {
+        return MRAM_OK;
     }
 }
 
-void disable_block_protection(uint8_t mram) {
+mram_init_status_t disable_block_protection(uint8_t mram) {
     uint8_t status = read_status(mram);
 
     if (status & 0x0C) {
@@ -226,11 +239,13 @@ void disable_block_protection(uint8_t mram) {
     status = read_status(mram);
     if ((status & 0x0C) != 0) {
         // block protection not disabled
-        mram_fatal();
+        return MRAM_FAIL_BLOCK_PROT;
+    } else {
+        return MRAM_OK;
     }
 }
 
-void set_persistent_mode(uint8_t mram) {
+mram_init_status_t set_persistent_mode(uint8_t mram) {
     uint8_t reg_val = read_nonvol_reg(mram, PMM_REG);
 
     if (!(reg_val & 0x03)) {
@@ -241,7 +256,9 @@ void set_persistent_mode(uint8_t mram) {
     reg_val = read_vol_reg(mram, PMM_REG);
     if (!(reg_val & 0x03)) {
         // persistent mode not enabled
-        mram_fatal();
+        return MRAM_FAIL_PERSIST;
+    } else {
+        return MRAM_OK;
     }
 }
 
@@ -315,10 +332,23 @@ void mram_init(void) {
 
     delay_ms(50);
 
+    uint8_t healthy_mrams = 0;
+
     for (uint8_t mram = 1; mram <= 3; mram++) {
-        check_device_id(mram);
-        disable_block_protection(mram);
-        set_persistent_mode(mram);
+        mram_init_status_t init_status = MRAM_OK;
+        init_status |= check_device_id(mram);
+        init_status |= disable_block_protection(mram);
+        init_status |= set_persistent_mode(mram);
+
+        if (init_status == MRAM_OK) {
+            healthy_mrams |= 1u << (mram - 1);
+        } else {
+            mram_init_report_err(mram, init_status);
+        }
+    }
+
+    if (healthy_mrams == 0) {
+        mram_fatal();
     }
 
     // for (int i = 0; i < 100; i++) {
