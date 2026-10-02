@@ -1,5 +1,5 @@
 /**
- * src/task/rado/spp.h
+ * src/ccsds/spp.h
  *
  * header file for the PVDX implementation of the CCSDS Space Pactket Protocol (SPP)
  *

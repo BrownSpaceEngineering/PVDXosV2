@@ -488,7 +488,6 @@ typedef enum
 
 /**
  * Configuration for the AT86RF215 running in MR-O-QPSK mode
- *
  */
 struct at86rf215_mroqpsk_conf
 {
@@ -500,8 +499,8 @@ struct at86rf215_mroqpsk_conf
 
   // OQPSKC1
   uint8_t rxo : 1; //!< Set to 1 to enable receiver override, 0 to disable
-  uint8_t
-      rxoleg : 1; //!< Set to 1 to enable legacy receiver override, 0 to disable
+  uint8_t rxoleg
+      : 1; //!< Set to 1 to enable legacy receiver override, 0 to disable
   uint8_t pdt0 : 3; //!< Preamble detector sensitivity for MR-O-QPSK, lower
                     //!< values are higher
   uint8_t pdt1 : 3; //!< Preamble detector sensitivity for legacy O-QPSK, lower
@@ -608,12 +607,12 @@ struct at86rf215_mrfsk_conf
   uint8_t               pri   : 1;
   uint8_t               fecie : 1;
   at86rf215_fsk_fecs_t  fecs;
-  uint8_t sfd_threshold : 4;      //!< Lower values increase the SFD detector
+  uint8_t sfd_threshold      : 4; //!< Lower values increase the SFD detector
                                   //!< sensitivity
   uint8_t preamble_threshold : 4; //!< Lower values increase the preamble
                                   //!< detector sensitivity
-  uint8_t sfdq  : 1;   //!< Set to 1 to use hard decision, 0 to use soft
-  uint8_t sfd32 : 1;   //!< If set t0 0, receiver searches for two 16-bit SFD
+  uint8_t sfdq    : 1; //!< Set to 1 to use hard decision, 0 to use soft
+  uint8_t sfd32   : 1; //!< If set t0 0, receiver searches for two 16-bit SFD
                        //!< fields configured with {FSKSFD0H;FSKSFD0L} and
                        //!< {FSKSFD1H;FSKSFD1L}.  If set to 1, the FSK receiver
                        //!< searches for a single 32-bit SFD
@@ -626,10 +625,10 @@ struct at86rf215_mrfsk_conf
   uint16_t sfd1; //!< 16-bit SFD. Tranmitted after SFD0 if SFD32 is set
   uint8_t  sfd : 1;
   uint8_t  dw  : 1; //!< If set to 1, whitening of the PSDU is enabled
-  uint8_t
-      rb2 : 1; //!< Sets the content of the reserved FSK PHR bit 2 for transmit
-  uint8_t
-      rb1 : 1; //!< Sets the content of the reserved FSK PHR bit 1 for transmit
+  uint8_t  rb2
+      : 1; //!< Sets the content of the reserved FSK PHR bit 2 for transmit
+  uint8_t rb1
+      : 1; //!< Sets the content of the reserved FSK PHR bit 1 for transmit
   uint8_t  dm;
   uint8_t  preemphasis      : 1;
   uint32_t preemphasis_taps : 24;
