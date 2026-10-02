@@ -25,7 +25,7 @@ def write_checksummed_segment(flash: bytearray, offset: int, path: str, size: in
     
     flash[offset:offset + size] = segment
 
-    checksum = crc32(flash[0:offset + size - 4])
+    checksum = crc32(flash[offset:offset + size - 4])
     flash[offset + size - 4:offset + size] = checksum
 
 def write_normal_segment(flash: bytearray, offset: int, path: str, size: int):
@@ -37,7 +37,7 @@ def write_normal_segment(flash: bytearray, offset: int, path: str, size: int):
     
     flash[offset:offset + size] = segment
 
-flash = bytearray([0x00] * 0x80000)
+flash = bytearray([0xFF] * 0x80000)
 
 for i in range(BOOTLOADER_COUNT):
     write_checksummed_segment(flash, i * BOOTLOADER_SIZE, f"bootloader/src/bootloader{i + 1}.bin", 0x3000)
