@@ -4,6 +4,7 @@
 // Includes
 #include <atmel_start.h>
 #include <driver_init.h>
+#include "watchdog/watchdog_task.h"
 
 #include "drivers/at86rf215/at86rf215.h"
 #include "globals.h"
