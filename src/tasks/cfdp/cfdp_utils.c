@@ -16,12 +16,14 @@ int cfdp_send(void *buff, size_t sz) {
     (void)buff;
     (void)sz;
 #endif
+    // TODO: send to radio board
     return 0;
 }
 
 int cfdp_recv(void *buff, size_t sz) {
     (void)buff;
     (void)sz;
+    // TODO: receive from radio board
     return 0;
 }
 

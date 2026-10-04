@@ -1,6 +1,7 @@
 #include "cfdp_timer.h"
 
 #include "cfdp_task.h"
+#include "command_dispatcher_task.h"
 
 // --------- Timer Init (Ran in CFDP Task) ---------
 void init_cfdp_timers(cfdp_task_memory_t *mem) {
@@ -87,7 +88,7 @@ void inactivity_timer_callback(TimerHandle_t timer) {
                                 .data_type = CMD_CFDP_TIMEOUT,
                                 .operation = OPERATION_CFDP_TIMEOUT_INACTIVITY,
                                 .result = NO_STATUS_RETURN};
-    (void)cmd;
+    enqueue_command(&cmd);
 }
 
 void retransmit_timer_callback(TimerHandle_t timer) {
@@ -97,5 +98,5 @@ void retransmit_timer_callback(TimerHandle_t timer) {
                                 .data_type = CMD_CFDP_TIMEOUT,
                                 .operation = OPERATION_CFDP_TIMEOUT_RETRANSMIT,
                                 .result = NO_STATUS_RETURN};
-    (void)cmd;
+    enqueue_command(&cmd);
 }

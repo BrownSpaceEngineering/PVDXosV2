@@ -21,12 +21,6 @@ static inline void uint16_to_big_endian(uint16_t src, uint8_t dst[2]) {
     dst[1] = src & 0xFF;
 }
 
-static inline void read_cam_mem(void *dest, size_t sz) {
-    (void)dest;
-    (void)sz;
-    return;
-}
-
 typedef struct {
     uint32_t src_entity_id;
     uint32_t seq_num;

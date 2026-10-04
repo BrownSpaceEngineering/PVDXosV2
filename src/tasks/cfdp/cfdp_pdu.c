@@ -370,11 +370,8 @@ int cfdp_send_filedata(cfdp_transaction_t *transaction, uint32_t offset, uint32_
     uint8_t *filedata_buff = buff + 16;
 
     uint32_to_big_endian(offset, filedata_buff);
-    /*if (transaction->type == IMAGE) {
-        read_cam_mem(filedata_buff + 4, size);
-    } else {*/
+
     memcpy(filedata_buff + 4, transaction->file_data + offset, size);
-    //}
 
     cfdp_send(buff, 20 + size);
     info("cfdp: sending filedata\n");
