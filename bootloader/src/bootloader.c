@@ -3,9 +3,6 @@
 #include "watchdog_driver.h"
 
 #define FLASH_OS_BASE_ADDRESS (0x00020000)  // Address of OS in flash (after bootloaders)
-                                            // Note: in final version, OS copies will only be in MRAM
-                                            // so this will be unused!
-
 #define RAM_OS_BASE_ADDRESS (0x20000000)    // Where to load OS into RAM
 #define BOOTLOADER_SIZE (0x3000)            // Size of each bootloader in the chain
 
@@ -44,25 +41,24 @@ int main(void) {
 
     watchdog_setup();
 
-#if defined(MRAM_OS_WRITE) || defined(MRAM_OS_READ)
-    mram_init();
-#endif
+    bool mram_ok = mram_init();
 
     char *os_flash_src = (char *)FLASH_OS_BASE_ADDRESS;
     char *os_dst = (char *)RAM_OS_BASE_ADDRESS;
 
+// only for debugging; will not be present in final
 #ifdef MRAM_OS_WRITE
     mram_write_bytes(MRAM_OS_BASE_ADDRESS, (uint8_t *)os_flash_src, MRAM_OS_SIZE);
     mram_write_bytes(MRAM_FLASH_BASE_ADDRESS, (uint8_t *)0x00000000, MRAM_FLASH_SIZE);
 #endif
 
-#ifdef MRAM_OS_READ
-    mram_read_bytes(MRAM_OS_BASE_ADDRESS, (uint8_t *)os_dst, MRAM_OS_SIZE);
-#else
-    for (long i = 0; i < MRAM_OS_SIZE; i++) {
-        os_dst[i] = os_flash_src[i];
+    if (mram_ok) {
+        mram_read_bytes(MRAM_OS_BASE_ADDRESS, (uint8_t *)os_dst, MRAM_OS_SIZE);
+    } else {
+        for (long i = 0; i < MRAM_OS_SIZE; i++) {
+            os_dst[i] = os_flash_src[i];
+        }
     }
-#endif
 
     go_to_app();
     __builtin_unreachable();

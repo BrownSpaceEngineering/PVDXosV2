@@ -7,7 +7,7 @@
 // Set this flag to load the OS from MRAM on boot and reflash the bootloaders from MRAM
 // #define MRAM_OS_READ
 
-#define MRAM_OS_BASE_ADDRESS    (0x00000000)
+#define MRAM_OS_BASE_ADDRESS    (0x00020000)
 #define MRAM_OS_SIZE            (0x20000)
 
 #define MRAM_FLASH_BASE_ADDRESS (0x00020000)
@@ -17,7 +17,7 @@
 #include "hal_gpio.h"
 #include "hal_delay.h"
 
-void mram_init(void);
+bool mram_init(void);
 void mram_read_bytes(uint32_t address, uint8_t *data, uint32_t size);
 void mram_write_bytes(uint32_t address, const uint8_t *data, uint32_t size);
 uint32_t crc32(const uint8_t *block, uint32_t size);

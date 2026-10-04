@@ -46,7 +46,26 @@ typedef enum {
 
 // ---------------------- SPI Helpers ----------------------
 
-void mram_fatal(void) { while (1); }
+/**
+ * @brief Halts execution and waits for the watchdog to reboot the system.
+ * @warning Should only be called when a reboot will definitely fix the fatal
+ *          state. If the fatal state is unrecoverable, use
+ *          `mram_complete_fatal` instead.
+ */
+void mram_recoverable_fatal(void) { while (1); }
+
+/**
+ * @brief Sets the MRAM state to fatal to prevent functions from using MRAM
+ *        inappropriately. Does not reboot the system.
+ */
+void mram_complete_fatal(void) {
+    /**
+     * TODO: Figure out what to do in case of unrecoverable failure.
+     * Consider a function bool mram_is_fatal(void) that returns the status;
+     * every exposed function should call that function and only proceed if the
+     * result is false.
+     */
+}
 
 static inline void mram_select(uint8_t mram) {
     if (mram == 1) {
@@ -56,7 +75,7 @@ static inline void mram_select(uint8_t mram) {
     } else if (mram == 3) {
         gpio_set_pin_level(MRAM3_CS, false);
     } else {
-        mram_fatal();
+        mram_recoverable_fatal();
     }
 }
 
@@ -68,7 +87,7 @@ static inline void mram_deselect(uint8_t mram) {
     } else if (mram == 3) {
         gpio_set_pin_level(MRAM3_CS, true);
     } else {
-        mram_fatal();
+        mram_recoverable_fatal();
     }
 }
 
@@ -262,6 +281,12 @@ mram_init_status_t set_persistent_mode(uint8_t mram) {
     }
 }
 
+/**
+ * @brief Writes data to all MRAM modules.
+ * @param address Destination address.
+ * @param data Data to be written.
+ * @param size Size of data to be written, in bytes.
+ */
 void mram_write_bytes(uint32_t address, const uint8_t *data, uint32_t size) {
     for (uint8_t mram = 1; mram <= 3; mram++) {
         write_bytes(mram, address, data, size);
@@ -272,7 +297,7 @@ void mram_write_bytes(uint32_t address, const uint8_t *data, uint32_t size) {
 
 void mram_read_bytes(uint32_t address, uint8_t *data, uint32_t size) {
     if (size % PAGE_SIZE != 0) {
-        mram_fatal();
+        mram_recoverable_fatal();
     }
     uint32_t npages = size / PAGE_SIZE;
 
@@ -315,14 +340,18 @@ void test_writes_reads(uint32_t addr, int salt) {
     for (uint32_t i = 0; i < NUM_BYTES; i++) {
         if (recv_data[i] != send_data[i]) {
             // test failed
-            mram_fatal();
+            mram_recoverable_fatal();
         }
     }
 }
 
 // ---------------------- Main ----------------------
 
-void mram_init(void) {
+/**
+ * @brief Initializes MRAM modules.
+ * @return `true` if at least one MRAM module is functional, otherwise `false`.
+ */
+bool mram_init(void) {
     atmel_start_init();
     spi_m_sync_enable(&SPI_MRAM);
 
@@ -347,43 +376,14 @@ void mram_init(void) {
         }
     }
 
-    if (healthy_mrams == 0) {
-        mram_fatal();
-    }
-
-    // for (int i = 0; i < 100; i++) {
-    //     test_writes_reads(0x000980, i+3);
-    //     test_writes_reads(0x000f00, i+7);
-    // }
-
-    // while (1) {
-    //     delay_ms(1000);
-    // }
+    return healthy_mrams != 0;
 }
 
-
-// bool crc32_table_ready = false;
-
-// void crc32_init_table(void) {
-//     for (uint32_t i = 0; i < 256; i++) {
-//         uint32_t crc = i;
-//         for (int j = 0; j < 8; j++) {
-//             uint32_t xor_val;
-//             if (crc & 1) {
-//                 xor_val = 0xEDB88320;
-//             } else xor_val = 0;
-//             crc = (crc >> 1) ^ xor_val;
-//         }
-//         crc32_table[i] = crc;
-//     }
-//     crc32_table_ready = true;
-// }
+// ---------------------- CRC-32 ----------------------
 
 uint32_t crc32_table[256];
 
 uint32_t crc32(const uint8_t *block, uint32_t size) {
-    // crc32_init_table();
-
     for (uint32_t i = 0; i < 256; i++) {
         uint32_t crc = i;
         for (int j = 0; j < 8; j++) {
