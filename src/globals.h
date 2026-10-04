@@ -24,7 +24,12 @@
     #define DEFAULT_LOG_LEVEL DEBUG // The default log level for the system for debug and unit test builds
 #endif
 
-#define SEGGER_RTT_LOG_BUFFER_SIZE 2048 // How big the RTT buffer is for logging (this buffer is flushed to the host regularly)
+#if defined(UNITTEST)
+    // Tests run right after boot, before a host can attach and drain the buffer, so all of their output must fit at once
+    #define SEGGER_RTT_LOG_BUFFER_SIZE 12288
+#else
+    #define SEGGER_RTT_LOG_BUFFER_SIZE 2048 // How big the RTT buffer is for logging (this buffer is flushed to the host regularly)
+#endif
 
 /* ---------- TASK CONSTANTS ---------- */
 
