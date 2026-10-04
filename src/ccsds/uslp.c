@@ -111,8 +111,8 @@ bool uslp_mapp_request(uint8_t *sdu, uint16_t sdu_len, uint32_t gmap_id, uint8_t
     uslp_transfer_frame_primary_header_t primary_header = {0};
     primary_header.version_num = USLP_TFVN;
     primary_header.spacecraft_id = scid;
-    // Frames sent by PVDX carry PVDX's own SCID, so the SCID is the source
-    primary_header.src_or_dest = USLP_SCID_IS_SOURCE;
+    //  PVDX is always destination (1)
+    primary_header.src_or_dest = USLP_SCID_IS_DESTINATION;
     primary_header.virtual_channel_id = vcid;
     primary_header.map_id = map_id;
     // Always 0 here: 1 would mean a truncated frame (Annex D), which MAPP never sends
