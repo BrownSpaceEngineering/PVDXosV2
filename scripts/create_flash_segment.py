@@ -23,7 +23,7 @@ def write_checksummed_segment(flash: bytearray, offset: int, path: str, size: in
     if len(segment) >= size:
         raise Exception("Segment binary too large")
     
-    flash[offset:offset + size] = segment
+    flash[offset:offset + len(segment)] = segment
 
     checksum = crc32(flash[offset:offset + size - 4])
     flash[offset + size - 4:offset + size] = checksum
@@ -35,7 +35,7 @@ def write_normal_segment(flash: bytearray, offset: int, path: str, size: int):
     if len(segment) >= size:
         raise Exception("Segment binary too large")
     
-    flash[offset:offset + size] = segment
+    flash[offset:offset + len(segment)] = segment
 
 flash = bytearray([0xFF] * 0x80000)
 
