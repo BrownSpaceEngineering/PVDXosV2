@@ -40,17 +40,36 @@ static bool uslp_send(uslp_transfer_frame_view_t *view);
  *
  * Reference: USLP Blue Book Annex B
  */
-static uint16_t uslp_crc16(const uint8_t *data, uint32_t len) {
-    uint16_t crc = 0xFFFF;
-
-    for (uint32_t i = 0; i < len; i++) {
-        crc ^= (uint16_t)data[i] << 8;
-        for (uint8_t bit = 0; bit < 8; bit++) {
-            crc = (crc & 0x8000) ? (uint16_t)((crc << 1) ^ 0x1021) : (uint16_t)(crc << 1);
+uint32_t uslp_crc(const uint8_t *data, size_t length, bool is_crc32) {
+    if (is_crc32) {
+        // Standard CRC-32 (IEEE 802.3) polynomial representation
+        uint32_t crc = 0xFFFFFFFF;
+        for (size_t i = 0; i < length; ++i) {
+            crc ^= data[i];
+            for (int j = 0; j < 8; ++j) {
+                if (crc & 1) {
+                    crc = (crc >> 1) ^ 0xEDB88320;
+                } else {
+                    crc >>= 1;
+                }
+            }
         }
+        return ~crc;
+    } else {
+        // Standard CRC-16-CCITT polynomial representation (0x1021)
+        uint16_t crc = 0xFFFF;
+        for (size_t i = 0; i < length; ++i) {
+            crc ^= (uint16_t)((data[i]) << 8);
+            for (int j = 0; j < 8; ++j) {
+                if (crc & 0x8000) {
+                    crc = (crc << 1) ^ 0x1021;
+                } else {
+                    crc <<= 1;
+                }
+            }
+        }
+        return crc;
     }
-
-    return crc;
 }
 
 void uslp_init(void) {
@@ -186,9 +205,16 @@ static bool uslp_send(uslp_transfer_frame_view_t *view) {
     // The CRC covers every octet of the frame ahead of it, so it has to be computed last, once
     // the frame length has been filled in
     if (USLP_FECF_SIZE > 0) {
-        uint16_t crc = uslp_crc16(tx_buffer, total_len - USLP_FECF_SIZE);
-        tx_buffer[total_len - 2] = crc >> 8;
-        tx_buffer[total_len - 1] = crc & 0xFF;
+        uint32_t crc = uslp_crc(tx_buffer, total_len - USLP_FECF_SIZE, /*is_crc32=*/USLP_IS_CRC32);
+        if (USLP_IS_CRC32) {
+            tx_buffer[total_len - 4] = crc >> 24;
+            tx_buffer[total_len - 3] = crc >> 16;
+            tx_buffer[total_len - 2] = crc >> 8;
+            tx_buffer[total_len - 1] = crc & 0xFF;
+        } else {
+            tx_buffer[total_len - 2] = crc >> 8;
+            tx_buffer[total_len - 1] = crc & 0xFF;
+        }
     }
 
 #ifdef UNITTEST
@@ -249,8 +275,13 @@ bool uslp_transfer_frame_parse(uslp_transfer_frame_view_t *view, uint8_t *data, 
     // ~~~ Frame Error Control Field ~~~
     // Checked before trusting anything else in the frame
     if (USLP_FECF_SIZE > 0) {
-        uint16_t received_crc = (data[frame_len - 2] << 8) | data[frame_len - 1];
-        if (uslp_crc16(data, frame_len - USLP_FECF_SIZE) != received_crc) {
+        uint32_t received_crc = 0;
+        if (USLP_IS_CRC32) {
+            received_crc = (data[frame_len - 4] << 24) | (data[frame_len - 3] << 16) | (data[frame_len - 2] << 8) | data[frame_len - 1];
+        } else {
+            received_crc = (data[frame_len - 2] << 8) | data[frame_len - 1];
+        }
+        if (uslp_crc(data, frame_len - USLP_FECF_SIZE, /*is_crc32=*/USLP_IS_CRC32) != received_crc) {
             return true;
         }
     }
