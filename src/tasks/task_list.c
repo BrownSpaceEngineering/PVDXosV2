@@ -10,6 +10,7 @@
 
 #include "task_list.h"
 
+#include "at86_test_task.h"
 #include "command_dispatcher_task.h"
 #include "display_task.h"
 #include "globals.h"
@@ -134,6 +135,22 @@ pvdx_task_t heartbeat_task = {
     .task_type = OS // ACTUATOR
 };
 
+pvdx_task_t at86_test_task = {.name = "AT86Test",
+                              .enabled = true,
+                              .handle = NULL,
+                              .command_queue = NULL,
+                              .init = NULL,
+                              .function = main_at86_test,
+                              .stack_size = AT86_TEST_TASK_STACK_SIZE,
+                              .stack_buffer = at86_test_mem.at86_test_task_stack,
+                              .pvParameters = NULL,
+                              .priority = 2,
+                              .task_tcb = &at86_test_mem.at86_test_task_tcb,
+                              .watchdog_timeout_ms = 10000,
+                              .last_checkin_time_ticks = 0xDEADBEEF,
+                              .has_registered = false,
+                              .task_type = TESTING};
+
 // and define their constant pointers
 pvdx_task_t *const p_watchdog_task = &watchdog_task;
 pvdx_task_t *const p_command_dispatcher_task = &command_dispatcher_task;
@@ -142,6 +159,7 @@ pvdx_task_t *const p_adcs_task = &adcs_task;
 pvdx_task_t *const p_shell_task = &shell_task;
 pvdx_task_t *const p_display_task = &display_task;
 pvdx_task_t *const p_heartbeat_task = &heartbeat_task;
+pvdx_task_t *const p_at86_test_task = &at86_test_task;
 pvdx_task_t *const task_list_null_terminator = NULL;
 
 // Global list of all tasks running on PVDXos (see `pvdx_task_t` definition in globals.h)
@@ -151,8 +169,8 @@ pvdx_task_t *const task_list_null_terminator = NULL;
 // NOTE: Watchdog task must be first in the list, Command Dispatcher second, and Task Manager third.
 // If you change the order of any of these, make sure that main.c reflects the change and update this comment.
 pvdx_task_t *task_list[] = {
-    p_watchdog_task, p_command_dispatcher_task, p_task_manager_task,       p_adcs_task, p_shell_task,
-    p_display_task,  p_heartbeat_task,          task_list_null_terminator,
+    p_watchdog_task,  p_command_dispatcher_task, p_task_manager_task,       p_adcs_task, p_shell_task, p_display_task,
+    p_heartbeat_task, p_at86_test_task,          task_list_null_terminator,
 };
 
 /**
