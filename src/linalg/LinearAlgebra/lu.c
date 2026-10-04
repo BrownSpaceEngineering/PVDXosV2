@@ -5,6 +5,8 @@
  *      Author: Daniel Mårtensson
  */
 
+#include <utils.h>
+
 #include "declareFunctions.h"
 // #include <utils.h>
 
@@ -13,8 +15,7 @@
  * and U matrix, size column x column. Don't forget that the P matrix is the pivot matrix and have
  * the size row x row
  */
-void lu(float* A, float* L, float* U, float* P, int row, int column) {
-
+void lu(float *A, float *L, float *U, float *P, int row, int column) {
     /*
      * Solve PA = LU - Same as MATLAB/Octave
      * Normally, this subroutine compute A = PLU, but it's much better to follow the
@@ -40,15 +41,13 @@ void lu(float* A, float* L, float* U, float* P, int row, int column) {
     tran(A_, column, row);
 
     if (column > row) {
-
         // Create U matrix
         memset(U, 0, row * column * sizeof(float));
         for (int i = 0; i < row; i++) {
             for (int j = 0; j < column; j++) {
                 // This will create a upper triangular matrix.
                 if (j >= i) {
-                    *((U + i * (row - (row - column))) + j)
-                        = *((A_ + i * (row - (row - column))) + j); // Lower traingular of A_
+                    *((U + i * (row - (row - column))) + j) = *((A_ + i * (row - (row - column))) + j); // Lower traingular of A_
                 }
             }
         }
@@ -59,15 +58,13 @@ void lu(float* A, float* L, float* U, float* P, int row, int column) {
             for (int j = 0; j < column; j++) {
                 // This will create a lower triangular matrix.
                 if (j < i) {
-                    *((L + i * (row)) + j)
-                        = *((A_ + i * (row - (row - column))) + j); // Lower traingular of A_
+                    *((L + i * (row)) + j) = *((A_ + i * (row - (row - column))) + j); // Lower traingular of A_
                 } else if (j == i)
                     *((L + i * (row)) + j) = 1; // Only on diagonal
             }
         }
 
     } else {
-
         // Create U matrix
         triu(A_, U, 0, column, column);
 
@@ -77,8 +74,7 @@ void lu(float* A, float* L, float* U, float* P, int row, int column) {
             for (int j = 0; j < column; j++) {
                 // This will create a lower triangular matrix.
                 if (j < i) {
-                    *((L + i * (row - (row - column))) + j)
-                        = *((A_ + i * (row - (row - column))) + j); // Lower traingular of A_
+                    *((L + i * (row - (row - column))) + j) = *((A_ + i * (row - (row - column))) + j); // Lower traingular of A_
                 } else if (j == i)
                     *((L + i * (row - (row - column))) + j) = 1; // Only on diagonal
             }
@@ -88,16 +84,14 @@ void lu(float* A, float* L, float* U, float* P, int row, int column) {
     /*
      * Insert all values 1 to row to our IPIV integer vector
      */
-    for (int i = 0; i < row; i++)
-        IPIV[i] = i + 1;
+    for (int i = 0; i < row; i++) IPIV[i] = i + 1;
 
     /*
      * Change the IPIV - Swap the values
      */
 
     for (int i = 1; i <= fmin(row, column); i++) {
-        int temp = IPIV[(int)IPIV_d[i]
-                        - 1]; // the IPIV_d have values from index 1 to index column, that's why - 1
+        int temp = IPIV[(int)IPIV_d[i] - 1]; // the IPIV_d have values from index 1 to index column, that's why - 1
         // printf("IPIV %d\n", IPIV[i-1]); // test it!
         IPIV[(int)IPIV_d[i] - 1] = IPIV[i - 1];
         IPIV[i - 1] = temp;

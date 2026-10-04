@@ -1,9 +1,5 @@
-#ifndef RADIO_CFDP
-#define RADIO_CFDP
-
-#include <stddef.h>
-#include <stdint.h>
-#include <stdbool.h>
+#ifndef RADIO_CFDP_PDU
+#define RADIO_CFDP_PDU
 
 /*
  * NOTE: For brevity, sources in comments are abbreviated as follows.
@@ -14,25 +10,29 @@
  * Please use these conventions when amending these files.
  */
 
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
 // Constants:
 // Version number, always 001, see CFDP Blue Book 727.0-B-5 (Table 5-1, Pg. 75)
 #define CFDP_VERSION_NUMBER 0b001
 
 // For Entity ID field of EOF PDU. Perhaps unneeded.
-#define ENTITY_ID_SPACECRAFT 0x01
+#define ENTITY_ID_SPACECRAFT 0x50564485 // hex for ascii PVDX
 #define ENTITY_ID_GROUND 0x02
 
 // Currently Supported PDU types
 #define CFDP_PDU_TYPE_DIRECTIVE 0
-#define CFDP_PDU_TYPE_FILEDATA  1
+#define CFDP_PDU_TYPE_FILEDATA 1
 
 // Directive codes (Table 5-4, Pg. 78)
-#define CFDP_DIR_EOF      0x04
+#define CFDP_DIR_EOF 0x04
 #define CFDP_DIR_FINISHED 0x05
-#define CFDP_DIR_ACK      0x06
+#define CFDP_DIR_ACK 0x06
 #define CFDP_DIR_METADATA 0x07
-#define CFDP_DIR_NAK      0x08
-#define CFDP_DIR_PROMPT   0x09
+#define CFDP_DIR_NAK 0x08
+#define CFDP_DIR_PROMPT 0x09
 #define CFDP_DIR_KEEPALIVE 0x0C
 
 // Condition Codes (Table 5-5, Pg. 79)
@@ -77,7 +77,7 @@
  * CFDP generic variable length field struct
  */
 typedef struct cfdp_data_view {
-    uint8_t len;
+    size_t len;
     const uint8_t *data;
 } cfdp_data_view_t;
 
@@ -100,9 +100,9 @@ typedef struct cfdp_pdu_header {
     uint8_t segmentation_control : 1;
     uint8_t entity_id_len : 3;
     uint8_t segment_metadata_field : 1;
-    cfdp_data_view_t source_entity_id;
-    cfdp_data_view_t transaction_seq;
-    cfdp_data_view_t dest_entity_id;
+    uint32_t source_entity_id;
+    uint32_t transaction_seq;
+    uint32_t dest_entity_id;
 } cfdp_pdu_header_t;
 
 /*
@@ -146,6 +146,62 @@ typedef struct cfdp_pdu_eof {
 } cfdp_pdu_eof_t;
 
 /*
+ * CFDP Finished PDU structure; BB Pg. 80-81
+ */
+typedef struct cfdp_pdu_finished {
+    uint8_t condition_code : 4;
+    uint8_t : 1;               // spare
+    uint8_t delivery_code : 1; // 1 : Data Incomplete, 0 : Data Complete
+    uint8_t file_status : 2;
+    cfdp_data_view_t filestore_responses; // needed?
+    cfdp_data_view_t fault_entity_id;
+} cfdp_pdu_finished_t;
+
+/*
+ * CFDP Ack PDU structure; BB Pg. 82
+ */
+typedef struct cfdp_pdu_ack {
+    uint8_t directive_code : 4;
+    uint8_t directive_subtype_code : 4;
+    uint8_t condition_code : 4;
+    uint8_t : 2;
+    uint8_t transaction_status : 2; // 00 : undefined, 01 : acitve, 10 : terminated, 11 : unrecognized
+} cfdp_pdu_ack_t;
+
+/*
+ * CFDP Segment Request PDU; BB 5.2.6.2, Pg. 84
+ */
+typedef struct cfdp_pdu_segment_request {
+    uint32_t start_offset;
+    uint32_t end_offset;
+} cfdp_pdu_segment_request_t;
+
+/*
+ * CFDP NAK PDU; BB 5.2.6.1, Pg. 84
+ */
+typedef struct cfdp_pdu_nak {
+    uint32_t start_of_scope; // FSS field
+    uint32_t end_of_scope;   // FSS field
+    /*uint32_t segment_request_count;
+    cfdp_pdu_segment_request_t segment_requests[CFDP_MAX_SEGMENT_REQUESTS];*/
+} cfdp_pdu_nak_t;
+
+/*
+ * CFDP Prompt PDU; BB Pg. 84
+ */
+typedef struct cfdp_pdu_prompt {
+    uint8_t response_required : 1;
+    uint8_t : 7; // spare
+} cfdp_pdu_prompt_t;
+
+/*
+ * CFDP Keep Alive PDU; BB Pg. 85
+ */
+typedef struct cfdp_pdu_keep_alive {
+    uint32_t progress; // offset from file
+} cfdp_pdu_keep_alive_t;
+
+/*
  * Format for parsing TLV objects
  */
 typedef struct cfdp_tlv {
@@ -155,17 +211,17 @@ typedef struct cfdp_tlv {
 } cfdp_tlv_t;
 
 /*
-* Format for parsing LV objects
-* NOTE: CFDP BB separates the notion of "LV" from "Variable".
-* I don't see a clear reasoning for this, so I may change
-* cfdp_data_view_t to cfdp_lv_t broadly.
-*/
+ * Format for parsing LV objects
+ * NOTE: CFDP BB separates the notion of "LV" from "Variable".
+ * I don't see a clear reasoning for this, so I may change
+ * cfdp_data_view_t to cfdp_lv_t broadly.
+ */
 typedef struct cfdp_lv {
     uint8_t length;
     const uint8_t *value;
 } cfdp_lv_t;
 
-static inline void cfdp_view_init(cfdp_data_view_t *view, const uint8_t *data, uint8_t len) {
+static inline void cfdp_view_init(cfdp_data_view_t *view, const uint8_t *data, size_t len) {
     view->data = data;
     view->len = len;
 }
@@ -181,11 +237,6 @@ static inline uint64_t cfdp_view_to_uint(const cfdp_data_view_t *view) {
         result = (result << 8) | view->data[i];
     }
     return result;
-}
-
-static inline void cfdp_transaction_id_init(const cfdp_pdu_header_t *header, cfdp_transaction_id_t *out) {
-    out->entity_id = cfdp_view_to_uint(&header->source_entity_id);
-    out->seq_num = cfdp_view_to_uint(&header->transaction_seq);
 }
 
 static inline bool cfdp_tlv_next(const uint8_t **pos, const uint8_t *end, cfdp_tlv_t *out) {
@@ -212,5 +263,17 @@ int cfdp_pdu_metadata_parse(const uint8_t *raw, size_t len, cfdp_pdu_metadata_t 
 int cfdp_pdu_filedata_parse(const uint8_t *raw, size_t len, bool large_file, bool has_segment_metadata, cfdp_pdu_filedata_t *out);
 
 int cfdp_pdu_eof_parse(const uint8_t *raw, size_t len, bool large_file, cfdp_pdu_eof_t *out);
+
+int cfdp_pdu_finished_parse(const uint8_t *raw, size_t len, cfdp_pdu_finished_t *out);
+
+int cfdp_pdu_ack_parse(const uint8_t *raw, size_t len, cfdp_pdu_ack_t *out);
+
+int cfdp_pdu_segment_request_parse(const uint8_t *raw, size_t len, cfdp_pdu_segment_request_t *out);
+
+int cfdp_pdu_nak_parse(const uint8_t *raw, size_t len, cfdp_pdu_nak_t *out);
+
+int cfdp_pdu_prompt_parse(const uint8_t *raw, size_t len, cfdp_pdu_prompt_t *out);
+
+int cfdp_pdu_keep_alive_parse(const uint8_t *raw, size_t len, cfdp_pdu_keep_alive_t *out);
 
 #endif
