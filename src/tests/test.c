@@ -3,6 +3,7 @@
 
 #include "cfdp/cfdp_pdu.h"
 #include "cfdp/cfdp_task.h"
+#include "cfdp/cfdp_utils.h"
 #include "linalg/LinearAlgebra/declareFunctions.h"
 #include "logging.h"
 #include "radio/spp.h"
@@ -353,5 +354,220 @@ void test_cfdp(void) {
 
     test_log("transaction_seq: %d\n", header.transaction_seq);
     PVDX_ASSERT(header.transaction_seq == 0x1 && "transaction_seq");
+
+    // ------- CFDP SEND TESTS ---------
+
+    // Send Metadata Test
+    txn = (cfdp_transaction_t){0};
+
+    txn.file_size = 0xDEADBEEF;
+    txn.state = CFDP_SEND_STATE_METADATA_SEND;
+    txn.reliable_mode = true;
+    txn.checksum_type = 0;
+
+    ret = cfdp_send_metadata(&txn);
+
+    test_log("metadata return: %d\n", ret);
+    PVDX_ASSERT(ret == 0 && "metadata_return");
+
+    uint8_t *md_raw = &test_mem[17];
+
+    test_log("metadata byte 1: %x\n", md_raw[0]);
+    PVDX_ASSERT(md_raw[0] == 0x00 && "closure + checksum type");
+
+    test_log("metadata filesize: b1: %x b2: %x b3: %x b4: %x (Big Endian)\n", md_raw[1], md_raw[2], md_raw[3], md_raw[4]);
+    PVDX_ASSERT(md_raw[1] == 0xDE && md_raw[2] == 0xAD && md_raw[3] == 0xBE && md_raw[4] == 0xEF && "file size");
+
+    // Send Filedata/EOF Test
+    txn = (cfdp_transaction_t){0};
+    txn.file_size = 0x01;
+    txn.condition_code = 0; // No ERROR
+    uint8_t data = 0xCC;
+    txn.file_data = &data;
+    txn.checksum_type = 15;
+    txn.source_filename = (cfdp_lv_t){.length = 0, .value = NULL};
+    txn.dest_filename = (cfdp_lv_t){.length = 0, .value = NULL};
+
+    // Filedata
+    ret = cfdp_send_filedata(&txn, 0, 1);
+
+    test_log("filedata return: %d\n", ret);
+    PVDX_ASSERT(ret == 1 && "filedata return");
+
+    uint8_t *fd_raw = &test_mem[16];
+
+    test_log("fd offset: b1: %x b2: %x b3: %x b4: %x (Big Endian)\n", fd_raw[0], fd_raw[1], fd_raw[2], fd_raw[3]);
+    PVDX_ASSERT(fd_raw[0] == 0x00 && fd_raw[1] == 0x00 && fd_raw[2] == 0x00 && fd_raw[3] == 0x00 && "offset");
+
+    test_log("fd data: %x\n", fd_raw[4]);
+    PVDX_ASSERT(fd_raw[4] == 0xCC && "file_data");
+
+    txn.file_offset = 1;
+
+    // EOF
+    ret = cfdp_send_eof(&txn);
+
+    test_log("eof return: %d\n", ret);
+    PVDX_ASSERT(ret == 0 && "eof_return");
+
+    uint8_t *eof_raw = &test_mem[17];
+
+    test_log("eof byte 1: %x\n", md_raw[0]);
+    PVDX_ASSERT(eof_raw[0] == 0 && "condition code");
+
+    test_log("eof checksum: b1: %x b2: %x b3: %x b4: %x (Big Endian)\n", eof_raw[1], eof_raw[2], eof_raw[3], eof_raw[4]);
+    PVDX_ASSERT(eof_raw[1] == 0xCC && eof_raw[2] == 0x00 && eof_raw[3] == 0x00 && eof_raw[4] == 0x00 && "checksum");
+
+    test_log("eof file size: b1: %x b2: %x b3: %x b4: %x (Big Endian)\n", eof_raw[5], eof_raw[6], eof_raw[7], eof_raw[8]);
+    PVDX_ASSERT(eof_raw[5] == 0x00 && eof_raw[6] == 0x00 && eof_raw[7] == 0x00 && eof_raw[8] == 0x01 && "file_size");
+
+    // Send FIN Test (delivery complete, no error)
+    txn = (cfdp_transaction_t){0};
+
+    txn.reliable_mode = true;
+    txn.condition_code = CFDP_COND_NOERROR;
+    txn.delivery_complete = true;
+
+    ret = cfdp_send_fin(&txn);
+
+    test_log("fin return: %d\n", ret);
+    PVDX_ASSERT(ret == 0 && "fin_return");
+
+    test_log("fin directive code: %x\n", test_mem[16]);
+    PVDX_ASSERT(test_mem[16] == 0x05 && "fin directive code");
+
+    uint8_t *fin_raw = &test_mem[17];
+
+    test_log("fin flags byte: %x\n", fin_raw[0]);
+    // condition code (4b) | spare (1b) | delivery code (1b) | file status (2b, hardcoded to 0)
+    PVDX_ASSERT(fin_raw[0] == 0x00 && "no error + data complete + file status 0");
+
+    test_log("fin filestore response TLV: type: %x length: %x\n", fin_raw[1], fin_raw[2]);
+    PVDX_ASSERT(fin_raw[1] == CFDP_TLV_FILESTORE_RESPONSE && fin_raw[2] == 0x00 && "empty filestore response TLV");
+
+    // Send FIN with error / incomplete delivery
+    txn.condition_code = 5; // File checksum failure
+    txn.delivery_complete = false;
+
+    ret = cfdp_send_fin(&txn);
+
+    test_log("fin (error) return: %d\n", ret);
+    PVDX_ASSERT(ret == 0 && "fin_error_return");
+
+    test_log("fin (error) directive code: %x\n", test_mem[16]);
+    PVDX_ASSERT(test_mem[16] == 0x05 && "fin (error) directive code");
+
+    test_log("fin (error) flags byte: %x\n", fin_raw[0]);
+    PVDX_ASSERT(fin_raw[0] == 0x54 && "checksum failure + data incomplete + file status 0");
+
+    test_log("fin (error) filestore response TLV: type: %x length: %x\n", fin_raw[1], fin_raw[2]);
+    PVDX_ASSERT(fin_raw[1] == CFDP_TLV_FILESTORE_RESPONSE && fin_raw[2] == 0x00 && "empty filestore response TLV");
+
+    test_log("fin (error) fault location TLV: type: %x length: %x\n", fin_raw[3], fin_raw[4]);
+    PVDX_ASSERT(fin_raw[3] == CFDP_TLV_ENTITY_ID && fin_raw[4] == 0x04 && "entity id TLV header");
+
+    test_log("fin (error) fault entity id: b1: %x b2: %x b3: %x b4: %x (Big Endian)\n", fin_raw[5], fin_raw[6], fin_raw[7], fin_raw[8]);
+    PVDX_ASSERT(fin_raw[5] == ((ENTITY_ID_SPACECRAFT >> 24) & 0xFF) && fin_raw[6] == ((ENTITY_ID_SPACECRAFT >> 16) & 0xFF) &&
+                fin_raw[7] == ((ENTITY_ID_SPACECRAFT >> 8) & 0xFF) && fin_raw[8] == (ENTITY_ID_SPACECRAFT & 0xFF) &&
+                "fault location entity id");
+
+    // Send ACK (of EOF) Test
+    txn = (cfdp_transaction_t){0};
+
+    txn.reliable_mode = true;
+    txn.direction = CFDP_RECV; // receiver acknowledging the sender's EOF
+
+    ret = cfdp_send_ack(&txn, 0x04 /* EOF */, 0 /* subtype */, 0 /* No error */, 2 /* terminated */);
+
+    test_log("ack return: %d\n", ret);
+    PVDX_ASSERT(ret == 0 && "ack_return");
+
+    test_log("ack directive code: %x\n", test_mem[16]);
+    PVDX_ASSERT(test_mem[16] == 0x06 && "ack directive code");
+
+    uint8_t *ack_raw = &test_mem[17];
+
+    test_log("ack byte 1: %x\n", ack_raw[0]);
+    PVDX_ASSERT(ack_raw[0] == 0x40 && "acked directive code (EOF) + subtype");
+
+    test_log("ack byte 2: %x\n", ack_raw[1]);
+    PVDX_ASSERT(ack_raw[1] == 0x02 && "condition code + transaction status (terminated)");
+
+    // Send ACK (of FIN) Test
+    txn.direction = CFDP_SEND; // sender acknowledging the receiver's FIN
+
+    ret = cfdp_send_ack(&txn, 0x05 /* FIN */, 1 /* subtype */, 0 /* No error */, 3 /* unrecognized */);
+
+    test_log("ack (fin) return: %d\n", ret);
+    PVDX_ASSERT(ret == 0 && "ack_fin_return");
+
+    test_log("ack (fin) directive code: %x\n", test_mem[16]);
+    PVDX_ASSERT(test_mem[16] == 0x06 && "ack (fin) directive code");
+
+    test_log("ack (fin) byte 1: %x byte 2: %x\n", ack_raw[0], ack_raw[1]);
+    PVDX_ASSERT(ack_raw[0] == 0x51 && ack_raw[1] == 0x03 && "FIN ack: directive/subtype + transaction status");
+
+    // Send Stale ACK Test (acknowledges a FIN for a transaction that has already been cleared)
+    cfdp_pdu_header_t stale_header = {0};
+    stale_header.version_number = 1;
+    stale_header.pdu_type = 0; // File directive
+    stale_header.direction = 1;
+    stale_header.transmission_mode = 0; // Acknowledged
+    stale_header.crc = 0;
+    stale_header.largefile = 0;
+    stale_header.entity_id_len = 3; // 4 byte IDs
+    stale_header.source_entity_id = 0x0A0B0C0D;
+    stale_header.transaction_seq = 0x01020304;
+    stale_header.dest_entity_id = 0x00000042;
+
+    ret = cfdp_send_stale_ack(&stale_header, 0x00);
+
+    test_log("stale ack return: %d\n", ret);
+    PVDX_ASSERT(ret == 0 && "stale_ack_return");
+
+    test_log("stale ack directive code: %x\n", test_mem[16]);
+    PVDX_ASSERT(test_mem[16] == 0x06 && "stale ack directive code");
+
+    test_log("stale ack byte 1: %x byte 2: %x\n", ack_raw[0], ack_raw[1]);
+    PVDX_ASSERT(ack_raw[0] == 0x51 && ack_raw[1] == 0x02 && "acked directive (FIN) + subtype + no error + terminated");
+
+    // Stale ACK with a condition code
+    ret = cfdp_send_stale_ack(&stale_header, 0x05);
+
+    test_log("stale ack (cc) return: %d\n", ret);
+    PVDX_ASSERT(ret == 0 && "stale_ack_cc_return");
+
+    test_log("stale ack (cc) byte 1: %x byte 2: %x\n", ack_raw[0], ack_raw[1]);
+    PVDX_ASSERT(ack_raw[0] == 0x51 && ack_raw[1] == 0x52 && "FIN ack + condition code 5 + terminated");
+
+    // Stale ACK with NULL header
+    ret = cfdp_send_stale_ack(NULL, 0x00);
+
+    test_log("stale ack (null) return: %d\n", ret);
+    PVDX_ASSERT(ret == -1 && "stale_ack_null_return");
+
+    // Send Metadata NAK Test
+    cfdp_pdu_header_t md_nak_header = stale_header; // same values, direction is set by the function
+
+    ret = cfdp_send_metadata_nak(&md_nak_header);
+
+    test_log("metadata nak return: %d\n", ret);
+    PVDX_ASSERT(ret == 33 && "metadata_nak_return (bytes sent)");
+
+    test_log("metadata nak directive code: %x\n", test_mem[16]);
+    PVDX_ASSERT(test_mem[16] == 0x08 && "metadata nak directive code");
+
+    uint8_t *mnak_raw = &test_mem[17];
+
+    test_log("metadata nak body (all 15 bytes should be zero)\n");
+    for (int i = 0; i < 16; i++) {
+        PVDX_ASSERT(mnak_raw[i] == 0x00 && "metadata nak body zeroed");
+    }
+
+    // Metadata NAK with NULL header
+    ret = cfdp_send_metadata_nak(NULL);
+
+    test_log("metadata nak (null) return: %d\n", ret);
+    PVDX_ASSERT(ret == -1 && "metadata_nak_null_return");
 }
 // #endif
