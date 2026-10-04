@@ -188,10 +188,6 @@ extern cfdp_transaction_store_t cfdp_txn_store;
 extern cfdp_large_buff_t cfdp_large_buff;
 extern cfdp_small_buffs_t cfdp_small_buffs;
 
-#if defined(UNITTEST)
-extern uint8_t test_mem[10000];
-#endif
-
 QueueHandle_t init_cfdp(void);
 void main_cfdp(void *pvParameters);
 

@@ -6,7 +6,7 @@
 #define CFDP_SAVED_TXNS 8
 
 #ifdef UNITTEST
-extern uint8_t test_mem[10000];
+extern uint8_t test_mem[512];
 #endif
 
 static inline void uint32_to_big_endian(uint32_t src, uint8_t dst[4]) {

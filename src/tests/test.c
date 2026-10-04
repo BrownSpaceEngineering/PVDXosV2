@@ -17,7 +17,7 @@ int tests_total = 0;
 #include "logging.h"
 
 #if defined(UNITTEST)
-uint8_t test_mem[10000];
+uint8_t test_mem[512];
 #endif
 
 void test_spp(void);
@@ -60,6 +60,7 @@ void test_spp(void) {
     PVDX_ASSERT_MSG(packet.header.data_length == 0xAA, "data_length");
 }
 
+#ifdef UNITTEST
 void test_cfdp(void) {
     test_log("----- testing cfdp -----\n");
 
@@ -513,6 +514,7 @@ void test_cfdp(void) {
     test_log("metadata nak (null) return: %d\n", ret);
     PVDX_ASSERT(ret == -1 && "metadata_nak_null_return");
 }
+#endif // !UNITTEST
 void test_uslp(void) {
     test_log("----- testing uslp -----\n");
 

@@ -162,12 +162,6 @@ typedef struct Namelist Namelist;
 
 // #define fabs(x) ((x) >= 0 ? (x) : -(x))
 #define dfabs(x) (floatreal) fabs(x)
-#ifndef min
-    #define min(a, b) ((a) <= (b) ? (a) : (b))
-#endif
-#ifndef max
-    #define max(a, b) ((a) >= (b) ? (a) : (b))
-#endif
 #define dmin(a, b) (floatreal) min(a, b)
 #define dmax(a, b) (floatreal) max(a, b)
 #define bit_test(a, b) ((a) >> (b) & 1)
