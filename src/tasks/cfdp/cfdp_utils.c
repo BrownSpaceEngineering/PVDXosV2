@@ -10,8 +10,12 @@ uint32_t next_seq_num(void) {
 }
 
 int cfdp_send(void *buff, size_t sz) {
+#if defined(UNITTEST)
+    memcpy(test_mem, buff, sz);
+#else
     (void)buff;
     (void)sz;
+#endif
     return 0;
 }
 

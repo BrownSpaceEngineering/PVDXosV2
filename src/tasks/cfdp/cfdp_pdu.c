@@ -457,10 +457,10 @@ int cfdp_send_metadata_nak(cfdp_pdu_header_t *header) {
 
     // Entire NAK PDU is 0
 
-    cfdp_send(buff, 32);
+    cfdp_send(buff, 33);
     info("cfdp: sending metadata nak\n");
 
-    return 32;
+    return 33;
 }
 
 /**
