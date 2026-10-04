@@ -82,7 +82,7 @@ void TIMER_0_example(void)
 /**
  * Example of using SPI_MRAM to write "Hello World" using the IO abstraction.
  */
-static uint8_t example_SPI_MRAM[13] = "Hello World!";
+static uint8_t example_SPI_MRAM[12] = "Hello World";
 
 void SPI_MRAM_example(void)
 {
@@ -96,7 +96,7 @@ void SPI_MRAM_example(void)
 /**
  * Example of using SPI_DISPLAY to write "Hello World" using the IO abstraction.
  */
-static uint8_t example_SPI_DISPLAY[13] = "Hello World!";
+static uint8_t example_SPI_DISPLAY[12] = "Hello World";
 
 void SPI_DISPLAY_example(void)
 {
@@ -110,7 +110,7 @@ void SPI_DISPLAY_example(void)
 /**
  * Example of using SPI_CAMERA to write "Hello World" using the IO abstraction.
  */
-static uint8_t example_SPI_CAMERA[13] = "Hello World!";
+static uint8_t example_SPI_CAMERA[12] = "Hello World";
 
 void SPI_CAMERA_example(void)
 {
@@ -128,13 +128,13 @@ void I2C_SBAND_example(void)
 	i2c_m_sync_get_io_descriptor(&I2C_SBAND, &I2C_SBAND_io);
 	i2c_m_sync_enable(&I2C_SBAND);
 	i2c_m_sync_set_slaveaddr(&I2C_SBAND, 0x12, I2C_M_SEVEN);
-	io_write(I2C_SBAND_io, (uint8_t *)"Hello World!", 12);
+	io_write(I2C_SBAND_io, (uint8_t *)"Hello World", 12);
 }
 
 /**
  * Example of using SPI_MAGNETOMETER_GYRO to write "Hello World" using the IO abstraction.
  */
-static uint8_t example_SPI_MAGNETOMETER_GYRO[13] = "Hello World!";
+static uint8_t example_SPI_MAGNETOMETER_GYRO[12] = "Hello World";
 
 void SPI_MAGNETOMETER_GYRO_example(void)
 {
@@ -148,7 +148,7 @@ void SPI_MAGNETOMETER_GYRO_example(void)
 /**
  * Example of using SPI_SBAND to write "Hello World" using the IO abstraction.
  */
-static uint8_t example_SPI_SBAND[13] = "Hello World!";
+static uint8_t example_SPI_SBAND[12] = "Hello World";
 
 void SPI_SBAND_example(void)
 {
@@ -172,7 +172,7 @@ void I2C_CAMERA_example(void)
 /**
  * Example of using SPI_UHF to write "Hello World" using the IO abstraction.
  */
-static uint8_t example_SPI_UHF[13] = "Hello World!";
+static uint8_t example_SPI_UHF[12] = "Hello World";
 
 void SPI_UHF_example(void)
 {
