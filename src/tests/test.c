@@ -12,6 +12,7 @@
 #include "logging.h"
 #include "telemetry/telemetry.h"
 #include "tests/test_pmb.h"
+#include "tests/test_at86.h"
 
 int tests_passed = 0;
 int tests_total = 0;
@@ -41,12 +42,15 @@ void tests_run(void) {
 #ifdef TEST_PMB
     test_pmb();
 #endif
-  #ifdef TEST_FLOAT
+#ifdef TEST_FLOAT
     test_float();
 #endif
 #ifdef TEST_TELEMETRY
     test_telemetry_downlink();
     test_telemetry_uplink();
+#endif
+#ifdef TEST_AT86
+    test_at86();
 #endif
     test_log("test results: %d/%d passed", tests_passed, tests_total);
 }
