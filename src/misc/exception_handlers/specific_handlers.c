@@ -328,9 +328,10 @@ void GMAC_Handler(void) {
     PVDX_default_handler();
 }
 #endif
-void TCC0_0_Handler(void) {
-    PVDX_default_handler();
-}
+// TCC0_0_Handler is defined by ASF's hpl_tcc.c in this config; let the ASF version win.
+// void TCC0_0_Handler(void) {
+//     PVDX_default_handler();
+// }
 void TCC0_1_Handler(void) {
     PVDX_default_handler();
 }
@@ -349,9 +350,10 @@ void TCC0_5_Handler(void) {
 void TCC0_6_Handler(void) {
     PVDX_default_handler();
 }
-void TCC1_0_Handler(void) {
-    PVDX_default_handler();
-}
+// TCC1_0_Handler is defined by ASF's hpl_tcc.c in this config; let the ASF version win.
+// void TCC1_0_Handler(void) {
+//     PVDX_default_handler();
+// }
 void TCC1_1_Handler(void) {
     PVDX_default_handler();
 }
