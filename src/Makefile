@@ -34,6 +34,8 @@ export OBJS :=                                              	\
 ../src/misc/exception_handlers/specific_handlers.o          	\
                                                             	\
 ../src/drivers/magnetometer/magnetometer_driver.o               \
+../src/drivers/fuel_gauge/fuel_gauge_driver.o                   \
+../src/tests/test.o                                             \
 
 
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###
@@ -47,6 +49,8 @@ export EXTRA_VPATH := \
 ../../src/misc/exception_handlers \
 ../../src/drivers \
 ../../src/drivers/magnetometer \
+../../src/drivers/fuel_gauge \
+../../src/tests \
 # $(PATH_TO_CCONTROL_INCLUDES)
 
 

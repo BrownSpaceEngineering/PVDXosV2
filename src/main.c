@@ -1,13 +1,12 @@
 /**
  * main.c
  *
- * Bare-metal entry point for the PVDX magnetometer debug build.
+ * Bare-metal entry point for the PVDX driver development build.
  *
- * This is a stripped-down harness for debugging the RM3100 magnetometer: there
- * is no FreeRTOS scheduler, no watchdog, and no other tasks. main() simply
- * brings up the hardware, initializes the RM3100 over SPI_DISPLAY
- * (SERCOM1: MOSI=PC22, SCK=PC23, MISO=PA18; CS=PB13), and then repeatedly reads
- * X/Y/Z and logs the values over RTT channel 1.
+ * This is a stripped-down harness for bringing up new drivers: there is no
+ * FreeRTOS scheduler, no watchdog, and no other tasks. main() simply brings up
+ * the hardware and logging, then drops into an idle loop. Add driver init and
+ * exercise code as needed.
  *
  * Original OS authors: Oren Kohavi, Siddharta Laloux, Tanish Makadia, Yi Liu,
  * Defne Doken, Aidan Wang, Ignacio Blancas Rodriguez
@@ -15,12 +14,10 @@
 
 #include "main.h"
 
+#include "fuel_gauge_driver.h"
 #include "globals.h"
 #include "logging.h"
-#include "magnetometer_driver.h"
-
-// Time to wait between successive readings, in milliseconds
-#define READ_INTERVAL_MS 500
+#include "tests/test.h"
 
 static void PVDX_init(void) {
     // WARNING: Segger RTT channel 0 is pre-configured at compile time according to Segger documentation
@@ -40,43 +37,49 @@ int main(void) {
     atmel_start_init();
     PVDX_init();
 
-    info("--- Bare-metal Magnetometer Debug Build ---\n");
+    info("--- Bare-metal Driver Development Build ---\n");
     info("[+] Build Type: %s\n", BUILD_TYPE);
     info("[+] Build Date: %s\n", BUILD_DATE);
     info("[+] Build Time: %s\n", BUILD_TIME);
     info("[+] Built from branch: %s\n", GIT_BRANCH_NAME);
     info("[+] Built from commit: %s\n", GIT_COMMIT_HASH);
 
-    /* ---------- MAGNETOMETER INITIALIZATION ---------- */
+#ifdef UNITTEST
+    // Hardware-in-the-loop tests; then idle (skip the normal telemetry loop).
+    tests_run();
+    while (true) {
+        delay_ms(1000);
+    }
+#endif
 
-    status_t status = init_rm3100();
-    if (status != SUCCESS) {
-        warning("[!] init_rm3100() failed (status=%d)\n", status);
+    /* ---------- DRIVER BRING-UP ---------- */
+
+    status_t fg_status = init_fuel_gauges();
+    if (fg_status != SUCCESS) {
+        warning("[!] init_fuel_gauges() failed (status=%d)\n", fg_status);
     } else {
-        info("[+] RM3100 initialized (continuous mode)\n");
+        info("[+] Fuel gauges initialized\n");
     }
 
     /* ---------- READ LOOP ---------- */
 
     while (true) {
-        mag_raw_reading_t raw;
-        mag_data_t adj;
+        fg_reading_t packs[FG_NUM_PACKS];
+        fg_read_all(packs);
 
-        status_t rs = magnetometer_read(&raw, &adj);
-
-        if (rs == SUCCESS) {
-            // Raw counts are always safe to print. The gain-adjusted values are
-            // floats; print their truncated integer part to avoid relying on
+        for (int i = 0; i < FG_NUM_PACKS; i++) {
+            // Values are floats; print the truncated integer part to avoid relying on
             // %f support in the embedded printf.
-            info("mag raw:   x=%ld y=%ld z=%ld\n", (long)raw.x, (long)raw.y, (long)raw.z);
-            info("mag adj:   x=%ld y=%ld z=%ld (integer part)\n", (long)adj.x, (long)adj.y, (long)adj.z);
-        } else if (rs == ERROR_NOT_READY) {
-            // STATUS DRDY bit clear: no new sample yet this cycle. Poll again shortly.
-            debug("mag: not ready (STATUS DRDY clear)\n");
-        } else {
-            warning("[!] magnetometer_read() failed (status=%d)\n", rs);
+            info("pack %d: SOC=%ld%% V=%ld mV I=%ld mA T=%ld C\n", i + 1,
+                 (long)packs[i].soc_pct, (long)(packs[i].pack_voltage * 1000.0f),
+                 (long)(packs[i].current_a * 1000.0f), (long)packs[i].temp_c);
         }
 
-        delay_ms(READ_INTERVAL_MS);
+        if (fg_alrt_asserted()) {
+            warning("[!] fuel-gauge ALRT asserted - scanning\n");
+            fg_scan_alerts();
+        }
+
+        delay_ms(1000);
     }
 }
