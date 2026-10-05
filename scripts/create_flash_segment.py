@@ -19,9 +19,6 @@ offsets = {
     "checksum1": 0x00009000,
     "checksum2": 0x00009004,
     "checksum3": 0x00009008,
-    "pvdxos_1": start_offset,
-    "pvdxos_2": start_offset + 1 * pvdxos_slot_size,
-    "pvdxos_3": start_offset + 2 * pvdxos_slot_size,
 }
 
 
@@ -46,14 +43,19 @@ bootloader_sum = sum(bootloader) % 256
 bootloaders.append(bootloader)
 bootloader_sums.append(bootloader_sum)
 
+# PVDXos dynamic sizing
+
 with open(pvdxos_path, "rb") as f:
     pvdxos = f.read()
 
-# oversized image would overwrite the start of the next copy and corrupt
-if len(pvdxos) > pvdxos_slot_size:
-    raise SystemExit(
-        f"error: {pvdxos_path} is {len(pvdxos)} bytes, but each PVDXos slot is only {pvdxos_slot_size} bytes"
-    )
+pvdxos_size = len(pvdxos)
+pvdxos_slot_size = pvdxos_slot_size + 0x10 #padding 
+
+offsets.update({
+    "pvdxos_1": start_offset,
+    "pvdxos_2": start_offset + 1 * pvdxos_slot_size,
+    "pvdxos_3": start_offset + 2 * pvdxos_slot_size,
+})
 
 # Create flash image buffer (large enough to hold everything)
 flash_size = offsets["pvdxos_3"] + pvdxos_slot_size
