@@ -7,6 +7,7 @@
 #include "ccsds/uslp.h"
 #include "linalg/LinearAlgebra/declareFunctions.h"
 #include "logging.h"
+#include "tests/test_ina226.h"
 
 int tests_passed = 0;
 int tests_total = 0;
@@ -30,6 +31,7 @@ void tests_run(void) {
     test_matrix_product();
     test_cfdp();
     test_uslp();
+    test_ina226();
     test_log("test results: %d/%d passed", tests_passed, tests_total);
 }
 
