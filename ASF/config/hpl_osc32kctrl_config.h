@@ -7,7 +7,7 @@
 // <e> RTC Source configuration
 // <id> enable_rtc_source
 #ifndef CONF_RTCCTRL_CONFIG
-#define CONF_RTCCTRL_CONFIG 0
+#define CONF_RTCCTRL_CONFIG 1
 #endif
 
 // <h> RTC source control

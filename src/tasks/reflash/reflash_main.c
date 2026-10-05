@@ -4,7 +4,10 @@
 
 #include "FreeRTOS.h"
 
-extern struct flash_descriptor FLASH_0;
+// NOTE: the flash HAL (FLASH_0 / flash_erase / flash_write) was removed from the
+// regenerated ASF. Commented out to keep the build green; reflash-to-internal-flash
+// is non-functional until the flash HAL is re-added.
+// extern struct flash_descriptor FLASH_0;
 
 #define FLASH_BLOCK_SIZE 512
 #define FLASK_BLOCK_COUNT (MRAM_FLASH_SIZE / FLASH_BLOCK_SIZE)
@@ -58,8 +61,8 @@ void reflash_bootloaders(bool sched_running) {
                 __disable_irq();
             }
 
-            flash_erase(&FLASH_0, i * FLASH_BLOCK_SIZE, 1);
-            flash_write(&FLASH_0, i * FLASH_BLOCK_SIZE, mram_block, FLASH_BLOCK_SIZE);
+            // flash_erase(&FLASH_0, i * FLASH_BLOCK_SIZE, 1);
+            // flash_write(&FLASH_0, i * FLASH_BLOCK_SIZE, mram_block, FLASH_BLOCK_SIZE);
 
             if (sched_running) {
                 //taskEXIT_CRITICAL();

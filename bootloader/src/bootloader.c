@@ -18,6 +18,17 @@
 int main(void);
 void go_to_app(void);
 
+// The root ASF (copied into the bootloader) builds FreeRTOS with
+// configCHECK_FOR_STACK_OVERFLOW=2, so the linker needs this hook. The bootloader
+// never starts the scheduler, so it should never actually be called — stub it to
+// satisfy the link. (TaskHandle_t is a void*; declared loosely to avoid pulling in
+// FreeRTOS headers.)
+void vApplicationStackOverflowHook(void *xTask, signed char *pcTaskName) {
+    (void)xTask;
+    (void)pcTaskName;
+    while (1);
+}
+
 int main(void) {
     uint8_t bootloader_index = (BOOTLOADER_INDEX);
     // If no bootloader flag was defined, panic

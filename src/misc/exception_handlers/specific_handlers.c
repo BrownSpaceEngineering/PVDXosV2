@@ -91,9 +91,11 @@ void SUPC_1_Handler(void) {
 void WDT_Handler(void) {
     PVDX_default_handler();
 }
-void RTC_Handler(void) {
-    PVDX_default_handler();
-}
+// RTC_Handler is now provided by the regenerated ASF (hpl_rtc.c) for TIMER_0.
+// Duplicate stub commented out to resolve multiple-definition link error.
+// void RTC_Handler(void) {
+//     PVDX_default_handler();
+// }
 void EIC_0_Handler(void) {
     PVDX_default_handler();
 }
@@ -324,9 +326,11 @@ void GMAC_Handler(void) {
     PVDX_default_handler();
 }
 #endif
-void TCC0_0_Handler(void) {
-    PVDX_default_handler();
-}
+// TCC0_0_Handler is now provided by the regenerated ASF (hpl_tcc.c).
+// Duplicate stub commented out to resolve multiple-definition link error.
+// void TCC0_0_Handler(void) {
+//     PVDX_default_handler();
+// }
 void TCC0_1_Handler(void) {
     PVDX_default_handler();
 }
@@ -345,9 +349,11 @@ void TCC0_5_Handler(void) {
 void TCC0_6_Handler(void) {
     PVDX_default_handler();
 }
-void TCC1_0_Handler(void) {
-    PVDX_default_handler();
-}
+// TCC1_0_Handler is now provided by the regenerated ASF (hpl_tcc.c).
+// Duplicate stub commented out to resolve multiple-definition link error.
+// void TCC1_0_Handler(void) {
+//     PVDX_default_handler();
+// }
 void TCC1_1_Handler(void) {
     PVDX_default_handler();
 }

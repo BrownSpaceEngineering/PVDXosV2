@@ -17,6 +17,7 @@
 #include "SEGGER_RTT.h"
 #include "checks/device_checks.h"
 #include "cosmic_monkey_task.h"
+#include "driver_init.h"
 #include "globals.h"
 #include "logging.h"
 #include "rtos_start.h"
@@ -61,6 +62,37 @@ void report_reset_cause(void) {
     }
 }
 
+// Standalone MRAM smoke test: read the Read-ID (0x9F) of each of the 3 MRAMs over
+// SPI_MRAM and log it. A good EM008LX returns 6B BB 14. Runs at OS startup; does
+// not use the mram_driver (which fatal-hangs on a bad ID).
+static void test_mram(void) {
+    const uint32_t cs_pins[3] = {MRAM1_CS, MRAM2_CS, MRAM3_CS};
+
+    spi_m_sync_enable(&SPI_MRAM);
+    gpio_set_pin_level(MRAM1_CS, true);
+    gpio_set_pin_level(MRAM2_CS, true);
+    gpio_set_pin_level(MRAM3_CS, true);
+    delay_ms(50);
+
+    for (int i = 0; i < 3; i++) {
+        // Mirror the driver's check_device_id exactly: write 0x9F, then read 3 bytes,
+        // as two transfers with CS held low across both (same NULL-buffer pattern as
+        // the driver's spi_write()/spi_read()).
+        uint8_t cmd = 0x9F;
+        uint8_t id[3] = {0};
+        struct spi_xfer wr = {.txbuf = &cmd, .rxbuf = NULL, .size = 1};
+        struct spi_xfer rd = {.txbuf = NULL, .rxbuf = id, .size = 3};
+
+        gpio_set_pin_level(cs_pins[i], false);
+        int32_t rc_w = spi_m_sync_transfer(&SPI_MRAM, &wr);
+        int32_t rc_r = spi_m_sync_transfer(&SPI_MRAM, &rd);
+        gpio_set_pin_level(cs_pins[i], true);
+
+        info("[MRAM TEST] MRAM%d ID = %02x %02x %02x (expect 6B BB 14) [rc %ld/%ld]\n", i + 1, id[0], id[1], id[2],
+             (long)rc_w, (long)rc_r);
+    }
+}
+
 int main(void) {
     /* ---------- HARDWARE & LOGGING INITIALIZATION ---------- */
 
@@ -75,6 +107,9 @@ int main(void) {
     info_impl("[+] Built from branch: %s\n", GIT_BRANCH_NAME);
     info_impl("[+] Built from commit: %s\n", GIT_COMMIT_HASH);
     report_reset_cause();
+
+    // Standalone MRAM ID test (runs before anything that touches MRAM).
+    test_mram();
 
     reflash_bootloaders(false);
 

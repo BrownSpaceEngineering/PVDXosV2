@@ -7,73 +7,76 @@
  */
 
 #include "driver_examples.h"
-
 #include "driver_init.h"
 #include "utils.h"
 
 /**
  * Example of using ADC_0 to generate waveform.
  */
-void ADC_0_example(void) {
-    uint8_t buffer[2];
-
-    adc_sync_enable_channel(&ADC_0, 0);
-
-    while (1) {
-        adc_sync_read_channel(&ADC_0, 0, buffer, 2);
-    }
-}
-
-static uint8_t src_data[512];
-static uint8_t chk_data[512];
-/**
- * Example of using FLASH_0 to read and write Flash main array.
- */
-void FLASH_0_example(void)
+void ADC_0_example(void)
 {
-	uint32_t page_size;
-	uint16_t i;
+	uint8_t buffer[2];
 
-	/* Init source data */
-	page_size = flash_get_page_size(&FLASH_0);
+	adc_sync_enable_channel(&ADC_0, 0);
 
-	for (i = 0; i < page_size; i++) {
-		src_data[i] = i;
+	while (1) {
+		adc_sync_read_channel(&ADC_0, 0, buffer, 2);
 	}
-
-	/* Write data to flash */
-	flash_write(&FLASH_0, 0x3200, src_data, page_size);
-
-	/* Read data from flash */
-	flash_read(&FLASH_0, 0x3200, chk_data, page_size);
 }
 
-void I2C_SBAND_example(void)
+/**
+ * Example of using ADC_1 to generate waveform.
+ */
+void ADC_1_example(void)
 {
-	struct io_descriptor *I2C_SBAND_io;
+	uint8_t buffer[2];
 
-    i2c_m_sync_get_io_descriptor(&I2C_SBAND, &I2C_SBAND_io);
-    i2c_m_sync_enable(&I2C_SBAND);
-    i2c_m_sync_set_slaveaddr(&I2C_SBAND, 0x12, I2C_M_SEVEN);
-    io_write(I2C_SBAND_io, (uint8_t *)"Hello World!", 12);
+	adc_sync_enable_channel(&ADC_1, 0);
+
+	while (1) {
+		adc_sync_read_channel(&ADC_1, 0, buffer, 2);
+	}
 }
 
-void I2C_MAG_GYRO_example(void) {
-    struct io_descriptor *I2C_MAG_GYRO_io;
+/**
+ * Example of using DAC_0 to generate waveform.
+ */
+void DAC_0_example(void)
+{
+	uint16_t i = 0;
 
-    i2c_m_sync_get_io_descriptor(&I2C_MAG_GYRO, &I2C_MAG_GYRO_io);
-    i2c_m_sync_enable(&I2C_MAG_GYRO);
-    i2c_m_sync_set_slaveaddr(&I2C_MAG_GYRO, 0x12, I2C_M_SEVEN);
-    io_write(I2C_MAG_GYRO_io, (uint8_t *)"Hello World!", 12);
+	dac_sync_enable_channel(&DAC_0, 0);
+
+	for (;;) {
+		dac_sync_write(&DAC_0, 0, &i, 1);
+		i = (i + 1) % 1024;
+	}
 }
 
-void I2C_CAMERA_example(void) {
-    struct io_descriptor *I2C_CAMERA_io;
+static struct timer_task TIMER_0_task1, TIMER_0_task2;
+/**
+ * Example of using TIMER_0.
+ */
+static void TIMER_0_task1_cb(const struct timer_task *const timer_task)
+{
+}
 
-    i2c_m_sync_get_io_descriptor(&I2C_CAMERA, &I2C_CAMERA_io);
-    i2c_m_sync_enable(&I2C_CAMERA);
-    i2c_m_sync_set_slaveaddr(&I2C_CAMERA, 0x12, I2C_M_SEVEN);
-    io_write(I2C_CAMERA_io, (uint8_t *)"Hello World!", 12);
+static void TIMER_0_task2_cb(const struct timer_task *const timer_task)
+{
+}
+
+void TIMER_0_example(void)
+{
+	TIMER_0_task1.interval = 100;
+	TIMER_0_task1.cb       = TIMER_0_task1_cb;
+	TIMER_0_task1.mode     = TIMER_TASK_REPEAT;
+	TIMER_0_task2.interval = 200;
+	TIMER_0_task2.cb       = TIMER_0_task2_cb;
+	TIMER_0_task2.mode     = TIMER_TASK_REPEAT;
+
+	timer_add_task(&TIMER_0, &TIMER_0_task1);
+	timer_add_task(&TIMER_0, &TIMER_0_task2);
+	timer_start(&TIMER_0);
 }
 
 /**
@@ -81,12 +84,13 @@ void I2C_CAMERA_example(void) {
  */
 static uint8_t example_SPI_MRAM[13] = "Hello World!";
 
-void SPI_MRAM_example(void) {
-    struct io_descriptor *io;
-    spi_m_sync_get_io_descriptor(&SPI_MRAM, &io);
+void SPI_MRAM_example(void)
+{
+	struct io_descriptor *io;
+	spi_m_sync_get_io_descriptor(&SPI_MRAM, &io);
 
-    spi_m_sync_enable(&SPI_MRAM);
-    io_write(io, example_SPI_MRAM, 12);
+	spi_m_sync_enable(&SPI_MRAM);
+	io_write(io, example_SPI_MRAM, 12);
 }
 
 /**
@@ -94,12 +98,13 @@ void SPI_MRAM_example(void) {
  */
 static uint8_t example_SPI_DISPLAY[13] = "Hello World!";
 
-void SPI_DISPLAY_example(void) {
-    struct io_descriptor *io;
-    spi_m_sync_get_io_descriptor(&SPI_DISPLAY, &io);
+void SPI_DISPLAY_example(void)
+{
+	struct io_descriptor *io;
+	spi_m_sync_get_io_descriptor(&SPI_DISPLAY, &io);
 
-    spi_m_sync_enable(&SPI_DISPLAY);
-    io_write(io, example_SPI_DISPLAY, 12);
+	spi_m_sync_enable(&SPI_DISPLAY);
+	io_write(io, example_SPI_DISPLAY, 12);
 }
 
 /**
@@ -107,46 +112,132 @@ void SPI_DISPLAY_example(void) {
  */
 static uint8_t example_SPI_CAMERA[13] = "Hello World!";
 
-void SPI_CAMERA_example(void) {
-    struct io_descriptor *io;
-    spi_m_sync_get_io_descriptor(&SPI_CAMERA, &io);
+void SPI_CAMERA_example(void)
+{
+	struct io_descriptor *io;
+	spi_m_sync_get_io_descriptor(&SPI_CAMERA, &io);
 
-    spi_m_sync_enable(&SPI_CAMERA);
-    io_write(io, example_SPI_CAMERA, 12);
+	spi_m_sync_enable(&SPI_CAMERA);
+	io_write(io, example_SPI_CAMERA, 12);
 }
 
-void delay_example(void) {
-    delay_ms(5000);
+void I2C_SBAND_example(void)
+{
+	struct io_descriptor *I2C_SBAND_io;
+
+	i2c_m_sync_get_io_descriptor(&I2C_SBAND, &I2C_SBAND_io);
+	i2c_m_sync_enable(&I2C_SBAND);
+	i2c_m_sync_set_slaveaddr(&I2C_SBAND, 0x12, I2C_M_SEVEN);
+	io_write(I2C_SBAND_io, (uint8_t *)"Hello World!", 12);
+}
+
+/**
+ * Example of using SPI_MAGNETOMETER_GYRO to write "Hello World" using the IO abstraction.
+ */
+static uint8_t example_SPI_MAGNETOMETER_GYRO[13] = "Hello World!";
+
+void SPI_MAGNETOMETER_GYRO_example(void)
+{
+	struct io_descriptor *io;
+	spi_m_sync_get_io_descriptor(&SPI_MAGNETOMETER_GYRO, &io);
+
+	spi_m_sync_enable(&SPI_MAGNETOMETER_GYRO);
+	io_write(io, example_SPI_MAGNETOMETER_GYRO, 12);
+}
+
+/**
+ * Example of using SPI_SBAND to write "Hello World" using the IO abstraction.
+ */
+static uint8_t example_SPI_SBAND[13] = "Hello World!";
+
+void SPI_SBAND_example(void)
+{
+	struct io_descriptor *io;
+	spi_m_sync_get_io_descriptor(&SPI_SBAND, &io);
+
+	spi_m_sync_enable(&SPI_SBAND);
+	io_write(io, example_SPI_SBAND, 12);
+}
+
+void I2C_CAMERA_example(void)
+{
+	struct io_descriptor *I2C_CAMERA_io;
+
+	i2c_m_sync_get_io_descriptor(&I2C_CAMERA, &I2C_CAMERA_io);
+	i2c_m_sync_enable(&I2C_CAMERA);
+	i2c_m_sync_set_slaveaddr(&I2C_CAMERA, 0x12, I2C_M_SEVEN);
+	io_write(I2C_CAMERA_io, (uint8_t *)"Hello World!", 12);
+}
+
+/**
+ * Example of using SPI_UHF to write "Hello World" using the IO abstraction.
+ */
+static uint8_t example_SPI_UHF[13] = "Hello World!";
+
+void SPI_UHF_example(void)
+{
+	struct io_descriptor *io;
+	spi_m_sync_get_io_descriptor(&SPI_UHF, &io);
+
+	spi_m_sync_enable(&SPI_UHF);
+	io_write(io, example_SPI_UHF, 12);
+}
+
+void delay_example(void)
+{
+	delay_ms(5000);
+}
+
+/**
+ * Example of using MAGNETORQUER_1.
+ */
+void MAGNETORQUER_1_example(void)
+{
+	pwm_set_parameters(&MAGNETORQUER_1, 10000, 5000);
+	pwm_enable(&MAGNETORQUER_1);
+}
+
+/**
+ * Example of using MAGNETORQUER_2.
+ */
+void MAGNETORQUER_2_example(void)
+{
+	pwm_set_parameters(&MAGNETORQUER_2, 10000, 5000);
+	pwm_enable(&MAGNETORQUER_2);
 }
 
 /**
  * Example of using RAND_0 to generate waveform.
  */
-void RAND_0_example(void) {
-    uint32_t random_n[4];
-    rand_sync_enable(&RAND_0);
-    random_n[0] = rand_sync_read32(&RAND_0);
-    random_n[1] = rand_sync_read32(&RAND_0);
-    rand_sync_read_buf32(&RAND_0, &random_n[2], 2);
-    if (random_n[0] == random_n[1]) {
-        /* halt */
-        while (1);
-    }
-    if (random_n[2] == random_n[3]) {
-        /* halt */
-        while (1);
-    }
+void RAND_0_example(void)
+{
+	uint32_t random_n[4];
+	rand_sync_enable(&RAND_0);
+	random_n[0] = rand_sync_read32(&RAND_0);
+	random_n[1] = rand_sync_read32(&RAND_0);
+	rand_sync_read_buf32(&RAND_0, &random_n[2], 2);
+	if (random_n[0] == random_n[1]) {
+		/* halt */
+		while (1)
+			;
+	}
+	if (random_n[2] == random_n[3]) {
+		/* halt */
+		while (1)
+			;
+	}
 }
 
 /**
  * Example of using WDT_0.
  */
-void WDT_0_example(void) {
-    uint32_t clk_rate;
-    uint16_t timeout_period;
+void WDT_0_example(void)
+{
+	uint32_t clk_rate;
+	uint16_t timeout_period;
 
-    clk_rate = 1000;
-    timeout_period = 4096;
-    wdt_set_timeout_period(&WDT_0, clk_rate, timeout_period);
-    wdt_enable(&WDT_0);
+	clk_rate       = 1000;
+	timeout_period = 4096;
+	wdt_set_timeout_period(&WDT_0, clk_rate, timeout_period);
+	wdt_enable(&WDT_0);
 }

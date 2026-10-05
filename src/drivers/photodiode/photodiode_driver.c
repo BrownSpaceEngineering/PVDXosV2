@@ -11,8 +11,11 @@
 
 // Photodiode system constants
 #define PHOTODIODE_COUNT 22   // Number of photodiodes (8 mux + 14 direct)
-#define PHOTODIODE_S0_PIN (Photodiode_MUX_S0 & 0x1Fu)
-#define PHOTODIODE_MUX_MASK (0xFu << PHOTODIODE_S0_PIN)
+// NOTE: Photodiode_MUX_S0 no longer exists in the regenerated ASF (mux pins were
+// replaced by direct PHD_x ADC channels). Mux addressing is commented out until
+// the driver is reworked for the new pin layout.
+// #define PHOTODIODE_S0_PIN (Photodiode_MUX_S0 & 0x1Fu)
+// #define PHOTODIODE_MUX_MASK (0xFu << PHOTODIODE_S0_PIN)
 
 /**
  * \fn init_photodiode_hardware
@@ -73,13 +76,16 @@ status_t set_multiplexer_outputs(int_fast8_t output) {
     if (output & (~0xF)) { // Only the four least significant bits should be set
         return ERROR_SANITY_CHECK_FAILED;
     }
-    static int_fast8_t current_output = 0xF;
 
     debug("photodiode_driver: Setting multiplexer output to " PRIxFAST8 "\n", output);
 
-    int_fast8_t toggles_needed = output ^ current_output;
-    PORT->Group[GPIO_PORTC].OUTTGL.reg = toggles_needed << PHOTODIODE_S0_PIN;
-    current_output = output;
+    // NOTE: mux hardware addressing disabled — the mux select pins (Photodiode_MUX_S0..)
+    // no longer exist in the regenerated ASF. Reinstate once the driver is reworked
+    // for the new PHD_x ADC pin layout.
+    // static int_fast8_t current_output = 0xF;
+    // int_fast8_t toggles_needed = output ^ current_output;
+    // PORT->Group[GPIO_PORTC].OUTTGL.reg = toggles_needed << PHOTODIODE_S0_PIN;
+    // current_output = output;
 
     debug("photodiode_driver: MUX output set to " PRIxFAST8 "\n", output);
 
