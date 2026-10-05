@@ -7,6 +7,7 @@
 #include "ccsds/uslp.h"
 #include "linalg/LinearAlgebra/declareFunctions.h"
 #include "logging.h"
+#include "tests/test_ina226.h"
 
 int tests_passed = 0;
 int tests_total = 0;
@@ -38,6 +39,7 @@ void tests_run(void) {
 #ifdef TEST_USLP
     test_uslp();
 #endif
+    test_ina226();
     test_log("test results: %d/%d passed", tests_passed, tests_total);
 }
 
@@ -640,7 +642,7 @@ void test_uslp(void) {
     uint8_t rule_000[] = {0xCA, 0xBC, 0xD0, 0xA6, 0x00, 0x12, 0x81, 0x00, 0x00, 0x08, 0x01, 0xC0, 0x00, 0x00, 0x01, 0xAA, 0xBB, 0x4F, 0xAC};
     PVDX_ASSERT_MSG(uslp_transfer_frame_parse(&view, rule_000, sizeof(rule_000)), "TFDZ rule 000 rejected\n");
 
-#ifdef UNITTEST // uslp_test_last_frame only exists in unit test builds
+    #ifdef UNITTEST // uslp_test_last_frame only exists in unit test builds
     // VC frame counts are module state that persists between calls, so these tests assume nothing
     // has sent on VCs 5-7 since boot. That holds because tests run before any task is started
     test_log("uslp mapp request rejection tests:\n");
@@ -731,7 +733,7 @@ void test_uslp(void) {
     PVDX_ASSERT_MSG(!err, "VC 6 frame parses\n");
     PVDX_ASSERT_MSG(view.primary_header.virtual_channel_id == 6, "VC 6 frame virtual_channel_id\n");
     PVDX_ASSERT_MSG(view.primary_header.vc_frame_count == 0, "VC 6 has its own count\n");
-#endif
+    #endif
 }
 #endif // TEST_USLP
 // #endif
