@@ -1,0 +1,97 @@
+{
+ "source": "FinalCompute.atzip",
+ "spiDriver": {
+  "user_label": "NEW",
+  "definition": "Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::SERCOM0::driver_config_definition::SPI.Master::HAL:Driver:SPI.Master.Sync",
+  "functionality": "SPI",
+  "api": "HAL:Driver:SPI_Master_Sync",
+  "configuration": {
+   "spi_master_advanced": false,
+   "spi_master_arch_cpha": "Sample input on leading edge",
+   "spi_master_arch_cpol": "SCK is low when idle",
+   "spi_master_arch_dbgstop": "Keep running",
+   "spi_master_arch_dord": "MSB first",
+   "spi_master_arch_ibon": "In data stream",
+   "spi_master_arch_runstdby": false,
+   "spi_master_baud_rate": 50000,
+   "spi_master_character_size": "8 bits",
+   "spi_master_dummybyte": 511,
+   "spi_master_rx_enable": true
+  },
+  "optional_signals": [],
+  "variant": {
+   "specification": "TXPO=0, RXPO=2",
+   "required_signals": []
+  },
+  "clocks": {
+   "domain_group": {
+    "nodes": [
+     {
+      "name": "Core",
+      "input": "Generic clock generator 0",
+      "external": false,
+      "external_frequency": 0
+     },
+     {
+      "name": "Slow",
+      "input": "Generic clock generator 3",
+      "external": false,
+      "external_frequency": 0
+     }
+    ],
+    "configuration": {
+     "core_gclk_selection": "Generic clock generator 0",
+     "slow_gclk_selection": "Generic clock generator 3"
+    }
+   }
+  }
+ },
+ "i2cDriver": {
+  "user_label": "NEW",
+  "definition": "Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::SERCOM3::driver_config_definition::I2C.Master.Standard~2FFast-mode::HAL:Driver:I2C.Master.Sync",
+  "functionality": "I2C",
+  "api": "HAL:Driver:I2C_Master_Sync",
+  "configuration": {
+   "i2c_master_advanced": false,
+   "i2c_master_arch_dbgstop": "Keep running",
+   "i2c_master_arch_inactout": "Disabled",
+   "i2c_master_arch_lowtout": false,
+   "i2c_master_arch_mexttoen": false,
+   "i2c_master_arch_runstdby": false,
+   "i2c_master_arch_sdahold": "300-600ns hold time",
+   "i2c_master_arch_sexttoen": false,
+   "i2c_master_arch_trise": 215,
+   "i2c_master_baud_rate": 100000
+  },
+  "optional_signals": [],
+  "variant": {
+   "specification": "SDA=0, SCL=1",
+   "required_signals": []
+  },
+  "clocks": {
+   "domain_group": {
+    "nodes": [
+     {
+      "name": "Core",
+      "input": "Generic clock generator 0",
+      "external": false,
+      "external_frequency": 0
+     },
+     {
+      "name": "Slow",
+      "input": "Generic clock generator 3",
+      "external": false,
+      "external_frequency": 0
+     }
+    ],
+    "configuration": {
+     "core_gclk_selection": "Generic clock generator 0",
+     "slow_gclk_selection": "Generic clock generator 3"
+    }
+   }
+  }
+ },
+ "sercomSpiBlock": "#include <peripheral_clk_config.h>\n\n// Enable configuration of module\n#ifndef CONF_SERCOM_{{N}}_SPI_ENABLE\n#define CONF_SERCOM_{{N}}_SPI_ENABLE 1\n#endif\n\n// Set module in SPI Master mode\n#ifndef CONF_SERCOM_{{N}}_SPI_MODE\n#define CONF_SERCOM_{{N}}_SPI_MODE 0x03\n#endif\n\n// <h> Basic Configuration\n\n// <q> Receive buffer enable\n// <i> Enable receive buffer to receive data from slave (RXEN)\n// <id> spi_master_rx_enable\n#ifndef CONF_SERCOM_{{N}}_SPI_RXEN\n#define CONF_SERCOM_{{N}}_SPI_RXEN 0x1\n#endif\n\n// <o> Character Size\n// <i> Bit size for all characters sent over the SPI bus (CHSIZE)\n// <0x0=>8 bits\n// <0x1=>9 bits\n// <id> spi_master_character_size\n#ifndef CONF_SERCOM_{{N}}_SPI_CHSIZE\n#define CONF_SERCOM_{{N}}_SPI_CHSIZE 0x0\n#endif\n// <o> Baud rate <1-18000000>\n// <i> The SPI data transfer rate\n// <id> spi_master_baud_rate\n#ifndef CONF_SERCOM_{{N}}_SPI_BAUD\n#define CONF_SERCOM_{{N}}_SPI_BAUD 50000\n#endif\n\n// </h>\n\n// <e> Advanced Configuration\n// <id> spi_master_advanced\n#ifndef CONF_SERCOM_{{N}}_SPI_ADVANCED\n#define CONF_SERCOM_{{N}}_SPI_ADVANCED 0\n#endif\n\n// <o> Dummy byte <0x00-0x1ff>\n// <id> spi_master_dummybyte\n// <i> Dummy byte used when reading data from the slave without sending any data\n#ifndef CONF_SERCOM_{{N}}_SPI_DUMMYBYTE\n#define CONF_SERCOM_{{N}}_SPI_DUMMYBYTE 0x1ff\n#endif\n\n// <o> Data Order\n// <0=>MSB first\n// <1=>LSB first\n// <i> I least significant or most significant bit is shifted out first (DORD)\n// <id> spi_master_arch_dord\n#ifndef CONF_SERCOM_{{N}}_SPI_DORD\n#define CONF_SERCOM_{{N}}_SPI_DORD 0x0\n#endif\n\n// <o> Clock Polarity\n// <0=>SCK is low when idle\n// <1=>SCK is high when idle\n// <i> Determines if the leading edge is rising or falling with a corresponding opposite edge at the trailing edge. (CPOL)\n// <id> spi_master_arch_cpol\n#ifndef CONF_SERCOM_{{N}}_SPI_CPOL\n#define CONF_SERCOM_{{N}}_SPI_CPOL 0x0\n#endif\n\n// <o> Clock Phase\n// <0x0=>Sample input on leading edge\n// <0x1=>Sample input on trailing edge\n// <i> Determines if input data is sampled on leading or trailing SCK edge. (CPHA)\n// <id> spi_master_arch_cpha\n#ifndef CONF_SERCOM_{{N}}_SPI_CPHA\n#define CONF_SERCOM_{{N}}_SPI_CPHA 0x0\n#endif\n\n// <o> Immediate Buffer Overflow Notification\n// <i> Controls when OVF is asserted (IBON)\n// <0x0=>In data stream\n// <0x1=>On buffer overflow\n// <id> spi_master_arch_ibon\n#ifndef CONF_SERCOM_{{N}}_SPI_IBON\n#define CONF_SERCOM_{{N}}_SPI_IBON 0x0\n#endif\n\n// <q> Run in stand-by\n// <i> Module stays active in stand-by sleep mode. (RUNSTDBY)\n// <id> spi_master_arch_runstdby\n#ifndef CONF_SERCOM_{{N}}_SPI_RUNSTDBY\n#define CONF_SERCOM_{{N}}_SPI_RUNSTDBY 0x0\n#endif\n\n// <o> Debug Stop Mode\n// <i> Behavior of the baud-rate generator when CPU is halted by external debugger. (DBGSTOP)\n// <0=>Keep running\n// <1=>Halt\n// <id> spi_master_arch_dbgstop\n#ifndef CONF_SERCOM_{{N}}_SPI_DBGSTOP\n#define CONF_SERCOM_{{N}}_SPI_DBGSTOP 0\n#endif\n\n// </e>\n\n// Address mode disabled in master mode\n#ifndef CONF_SERCOM_{{N}}_SPI_AMODE_EN\n#define CONF_SERCOM_{{N}}_SPI_AMODE_EN 0\n#endif\n\n#ifndef CONF_SERCOM_{{N}}_SPI_AMODE\n#define CONF_SERCOM_{{N}}_SPI_AMODE 0\n#endif\n\n#ifndef CONF_SERCOM_{{N}}_SPI_ADDR\n#define CONF_SERCOM_{{N}}_SPI_ADDR 0\n#endif\n\n#ifndef CONF_SERCOM_{{N}}_SPI_ADDRMASK\n#define CONF_SERCOM_{{N}}_SPI_ADDRMASK 0\n#endif\n\n#ifndef CONF_SERCOM_{{N}}_SPI_SSDE\n#define CONF_SERCOM_{{N}}_SPI_SSDE 0\n#endif\n\n#ifndef CONF_SERCOM_{{N}}_SPI_MSSEN\n#define CONF_SERCOM_{{N}}_SPI_MSSEN 0x0\n#endif\n\n#ifndef CONF_SERCOM_{{N}}_SPI_PLOADEN\n#define CONF_SERCOM_{{N}}_SPI_PLOADEN 0\n#endif\n\n// <o> Receive Data Pinout\n// <0x0=>PAD[0]\n// <0x1=>PAD[1]\n// <0x2=>PAD[2]\n// <0x3=>PAD[3]\n// <id> spi_master_rxpo\n#ifndef CONF_SERCOM_{{N}}_SPI_RXPO\n#define CONF_SERCOM_{{N}}_SPI_RXPO 2\n#endif\n\n// <o> Transmit Data Pinout\n// <0x0=>PAD[0,1]_DO_SCK\n// <0x1=>PAD[2,3]_DO_SCK\n// <0x2=>PAD[3,1]_DO_SCK\n// <0x3=>PAD[0,3]_DO_SCK\n// <id> spi_master_txpo\n#ifndef CONF_SERCOM_{{N}}_SPI_TXPO\n#define CONF_SERCOM_{{N}}_SPI_TXPO 0\n#endif\n\n// Calculate baud register value from requested baudrate value\n#ifndef CONF_SERCOM_{{N}}_SPI_BAUD_RATE\n#define CONF_SERCOM_{{N}}_SPI_BAUD_RATE ((float)CONF_GCLK_SERCOM{{N}}_CORE_FREQUENCY / (float)(2 * CONF_SERCOM_{{N}}_SPI_BAUD)) - 1\n#endif\n\n",
+ "sercomI2cBlock": "#include <peripheral_clk_config.h>\n\n#ifndef SERCOM_I2CM_CTRLA_MODE_I2C_MASTER\n#define SERCOM_I2CM_CTRLA_MODE_I2C_MASTER (5 << 2)\n#endif\n\n#ifndef CONF_SERCOM_{{N}}_I2CM_ENABLE\n#define CONF_SERCOM_{{N}}_I2CM_ENABLE 1\n#endif\n\n// <h> Basic\n\n// <o> I2C Bus clock speed (Hz) <1-400000>\n// <i> I2C Bus clock (SCL) speed measured in Hz\n// <id> i2c_master_baud_rate\n#ifndef CONF_SERCOM_{{N}}_I2CM_BAUD\n#define CONF_SERCOM_{{N}}_I2CM_BAUD 100000\n#endif\n\n// </h>\n\n// <e> Advanced\n// <id> i2c_master_advanced\n#ifndef CONF_SERCOM_{{N}}_I2CM_ADVANCED_CONFIG\n#define CONF_SERCOM_{{N}}_I2CM_ADVANCED_CONFIG 0\n#endif\n\n// <o> TRise (ns) <0-300>\n// <i> Determined by the bus impedance, check electric characteristics in the datasheet\n// <i> Standard Fast Mode: typical 215ns, max 300ns\n// <i> Fast Mode +: typical 60ns, max 100ns\n// <i> High Speed Mode: typical 20ns, max 40ns\n// <id> i2c_master_arch_trise\n\n#ifndef CONF_SERCOM_{{N}}_I2CM_TRISE\n#define CONF_SERCOM_{{N}}_I2CM_TRISE 215\n#endif\n\n// <q> Master SCL Low Extended Time-Out (MEXTTOEN)\n// <i> This enables the master SCL low extend time-out\n// <id> i2c_master_arch_mexttoen\n#ifndef CONF_SERCOM_{{N}}_I2CM_MEXTTOEN\n#define CONF_SERCOM_{{N}}_I2CM_MEXTTOEN 0\n#endif\n\n// <q> Slave SCL Low Extend Time-Out (SEXTTOEN)\n// <i> Enables the slave SCL low extend time-out. If SCL is cumulatively held low for greater than 25ms from the initial START to a STOP, the slave will release its clock hold if enabled and reset the internal state machine\n// <id> i2c_master_arch_sexttoen\n#ifndef CONF_SERCOM_{{N}}_I2CM_SEXTTOEN\n#define CONF_SERCOM_{{N}}_I2CM_SEXTTOEN 0\n#endif\n\n// <q> SCL Low Time-Out (LOWTOUT)\n// <i> Enables SCL low time-out. If SCL is held low for 25ms-35ms, the master will release it's clock hold\n// <id> i2c_master_arch_lowtout\n#ifndef CONF_SERCOM_{{N}}_I2CM_LOWTOUT\n#define CONF_SERCOM_{{N}}_I2CM_LOWTOUT 0\n#endif\n\n// <o> Inactive Time-Out (INACTOUT)\n// <0x0=>Disabled\n// <0x1=>5-6 SCL cycle time-out(50-60us)\n// <0x2=>10-11 SCL cycle time-out(100-110us)\n// <0x3=>20-21 SCL cycle time-out(200-210us)\n// <i> Defines if inactivity time-out should be enabled, and how long the time-out should be\n// <id> i2c_master_arch_inactout\n#ifndef CONF_SERCOM_{{N}}_I2CM_INACTOUT\n#define CONF_SERCOM_{{N}}_I2CM_INACTOUT 0x0\n#endif\n\n// <o> SDA Hold Time (SDAHOLD)\n// <0=>Disabled\n// <1=>50-100ns hold time\n// <2=>300-600ns hold time\n// <3=>400-800ns hold time\n// <i> Defines the SDA hold time with respect to the negative edge of SCL\n// <id> i2c_master_arch_sdahold\n#ifndef CONF_SERCOM_{{N}}_I2CM_SDAHOLD\n#define CONF_SERCOM_{{N}}_I2CM_SDAHOLD 0x2\n#endif\n\n// <q> Run in stand-by\n// <i> Determine if the module shall run in standby sleep mode\n// <id> i2c_master_arch_runstdby\n#ifndef CONF_SERCOM_{{N}}_I2CM_RUNSTDBY\n#define CONF_SERCOM_{{N}}_I2CM_RUNSTDBY 0\n#endif\n\n// <o> Debug Stop Mode\n// <i> Behavior of the baud-rate generator when CPU is halted by external debugger.\n// <0=>Keep running\n// <1=>Halt\n// <id> i2c_master_arch_dbgstop\n#ifndef CONF_SERCOM_{{N}}_I2CM_DEBUG_STOP_MODE\n#define CONF_SERCOM_{{N}}_I2CM_DEBUG_STOP_MODE 0\n#endif\n\n// </e>\n\n#ifndef CONF_SERCOM_{{N}}_I2CM_SPEED\n#define CONF_SERCOM_{{N}}_I2CM_SPEED 0x00 // Speed: Standard/Fast mode\n#endif\n#if CONF_SERCOM_{{N}}_I2CM_TRISE < 215 || CONF_SERCOM_{{N}}_I2CM_TRISE > 300\n#warning Bad I2C Rise time for Standard/Fast mode, reset to 215ns\n#undef CONF_SERCOM_{{N}}_I2CM_TRISE\n#define CONF_SERCOM_{{N}}_I2CM_TRISE 215U\n#endif\n\n//                  gclk_freq - (i2c_scl_freq * 10) - (gclk_freq * i2c_scl_freq * Trise)\n// BAUD + BAUDLOW = --------------------------------------------------------------------\n//                  i2c_scl_freq\n// BAUD:    register value low  [7:0]\n// BAUDLOW: register value high [15:8], only used for odd BAUD + BAUDLOW\n#define CONF_SERCOM_{{N}}_I2CM_BAUD_BAUDLOW                                                                                \\\n\t(((CONF_GCLK_SERCOM{{N}}_CORE_FREQUENCY - (CONF_SERCOM_{{N}}_I2CM_BAUD * 10U)                                              \\\n\t   - (CONF_SERCOM_{{N}}_I2CM_TRISE * (CONF_SERCOM_{{N}}_I2CM_BAUD / 100U) * (CONF_GCLK_SERCOM{{N}}_CORE_FREQUENCY / 10000U)    \\\n\t      / 1000U))                                                                                                    \\\n\t      * 10U                                                                                                        \\\n\t  + 5U)                                                                                                            \\\n\t / (CONF_SERCOM_{{N}}_I2CM_BAUD * 10U))\n#ifndef CONF_SERCOM_{{N}}_I2CM_BAUD_RATE\n#if CONF_SERCOM_{{N}}_I2CM_BAUD_BAUDLOW > (0xFF * 2)\n#warning Requested I2C baudrate too low, please check\n#define CONF_SERCOM_{{N}}_I2CM_BAUD_RATE 0xFF\n#elif CONF_SERCOM_{{N}}_I2CM_BAUD_BAUDLOW <= 1\n#warning Requested I2C baudrate too high, please check\n#define CONF_SERCOM_{{N}}_I2CM_BAUD_RATE 1\n#else\n#define CONF_SERCOM_{{N}}_I2CM_BAUD_RATE                                                                                   \\\n\t((CONF_SERCOM_{{N}}_I2CM_BAUD_BAUDLOW & 0x1)                                                                           \\\n\t     ? (CONF_SERCOM_{{N}}_I2CM_BAUD_BAUDLOW / 2) + ((CONF_SERCOM_{{N}}_I2CM_BAUD_BAUDLOW / 2 + 1) << 8)                    \\\n\t     : (CONF_SERCOM_{{N}}_I2CM_BAUD_BAUDLOW / 2))\n#endif\n#endif\n\n",
+ "sercomClockBlock": "// <y> Core Clock Source\n// <id> core_gclk_selection\n\n// <GCLK_PCHCTRL_GEN_GCLK0_Val\"> Generic clock generator 0\n\n// <GCLK_PCHCTRL_GEN_GCLK1_Val\"> Generic clock generator 1\n\n// <GCLK_PCHCTRL_GEN_GCLK2_Val\"> Generic clock generator 2\n\n// <GCLK_PCHCTRL_GEN_GCLK3_Val\"> Generic clock generator 3\n\n// <GCLK_PCHCTRL_GEN_GCLK4_Val\"> Generic clock generator 4\n\n// <GCLK_PCHCTRL_GEN_GCLK5_Val\"> Generic clock generator 5\n\n// <GCLK_PCHCTRL_GEN_GCLK6_Val\"> Generic clock generator 6\n\n// <GCLK_PCHCTRL_GEN_GCLK7_Val\"> Generic clock generator 7\n\n// <GCLK_PCHCTRL_GEN_GCLK8_Val\"> Generic clock generator 8\n\n// <GCLK_PCHCTRL_GEN_GCLK9_Val\"> Generic clock generator 9\n\n// <GCLK_PCHCTRL_GEN_GCLK10_Val\"> Generic clock generator 10\n\n// <GCLK_PCHCTRL_GEN_GCLK11_Val\"> Generic clock generator 11\n\n// <i> Select the clock source for CORE.\n#ifndef CONF_GCLK_SERCOM{{N}}_CORE_SRC\n#define CONF_GCLK_SERCOM{{N}}_CORE_SRC GCLK_PCHCTRL_GEN_GCLK0_Val\n#endif\n\n// <y> Slow Clock Source\n// <id> slow_gclk_selection\n\n// <GCLK_PCHCTRL_GEN_GCLK0_Val\"> Generic clock generator 0\n\n// <GCLK_PCHCTRL_GEN_GCLK1_Val\"> Generic clock generator 1\n\n// <GCLK_PCHCTRL_GEN_GCLK2_Val\"> Generic clock generator 2\n\n// <GCLK_PCHCTRL_GEN_GCLK3_Val\"> Generic clock generator 3\n\n// <GCLK_PCHCTRL_GEN_GCLK4_Val\"> Generic clock generator 4\n\n// <GCLK_PCHCTRL_GEN_GCLK5_Val\"> Generic clock generator 5\n\n// <GCLK_PCHCTRL_GEN_GCLK6_Val\"> Generic clock generator 6\n\n// <GCLK_PCHCTRL_GEN_GCLK7_Val\"> Generic clock generator 7\n\n// <GCLK_PCHCTRL_GEN_GCLK8_Val\"> Generic clock generator 8\n\n// <GCLK_PCHCTRL_GEN_GCLK9_Val\"> Generic clock generator 9\n\n// <GCLK_PCHCTRL_GEN_GCLK10_Val\"> Generic clock generator 10\n\n// <GCLK_PCHCTRL_GEN_GCLK11_Val\"> Generic clock generator 11\n\n// <i> Select the slow clock source.\n#ifndef CONF_GCLK_SERCOM{{N}}_SLOW_SRC\n#define CONF_GCLK_SERCOM{{N}}_SLOW_SRC GCLK_PCHCTRL_GEN_GCLK3_Val\n#endif\n\n/**\n * \\def CONF_GCLK_SERCOM{{N}}_CORE_FREQUENCY\n * \\brief SERCOM{{N}}'s Core Clock frequency\n */\n#ifndef CONF_GCLK_SERCOM{{N}}_CORE_FREQUENCY\n#define CONF_GCLK_SERCOM{{N}}_CORE_FREQUENCY 12000000\n#endif\n\n/**\n * \\def CONF_GCLK_SERCOM{{N}}_SLOW_FREQUENCY\n * \\brief SERCOM{{N}}'s Slow Clock frequency\n */\n#ifndef CONF_GCLK_SERCOM{{N}}_SLOW_FREQUENCY\n#define CONF_GCLK_SERCOM{{N}}_SLOW_FREQUENCY 32768\n#endif\n\n"
+}

@@ -1,0 +1,3880 @@
+{
+ "device": "SAMD51P20A",
+ "pins": [
+  "PA00",
+  "PA01",
+  "PA02",
+  "PA03",
+  "PA04",
+  "PA05",
+  "PA06",
+  "PA07",
+  "PA08",
+  "PA09",
+  "PA10",
+  "PA11",
+  "PA12",
+  "PA13",
+  "PA14",
+  "PA15",
+  "PA16",
+  "PA17",
+  "PA18",
+  "PA19",
+  "PA20",
+  "PA21",
+  "PA22",
+  "PA23",
+  "PA24",
+  "PA25",
+  "PA27",
+  "PA30",
+  "PA31",
+  "PB00",
+  "PB01",
+  "PB02",
+  "PB03",
+  "PB04",
+  "PB05",
+  "PB06",
+  "PB07",
+  "PB08",
+  "PB09",
+  "PB10",
+  "PB11",
+  "PB12",
+  "PB13",
+  "PB14",
+  "PB15",
+  "PB16",
+  "PB17",
+  "PB18",
+  "PB19",
+  "PB20",
+  "PB21",
+  "PB22",
+  "PB23",
+  "PB24",
+  "PB25",
+  "PB26",
+  "PB27",
+  "PB28",
+  "PB29",
+  "PB30",
+  "PB31",
+  "PC00",
+  "PC01",
+  "PC02",
+  "PC03",
+  "PC04",
+  "PC05",
+  "PC06",
+  "PC07",
+  "PC10",
+  "PC11",
+  "PC12",
+  "PC13",
+  "PC14",
+  "PC15",
+  "PC16",
+  "PC17",
+  "PC18",
+  "PC19",
+  "PC20",
+  "PC21",
+  "PC22",
+  "PC23",
+  "PC24",
+  "PC25",
+  "PC26",
+  "PC27",
+  "PC28",
+  "PC30",
+  "PC31",
+  "PD00",
+  "PD01",
+  "PD08",
+  "PD09",
+  "PD10",
+  "PD11",
+  "PD12",
+  "PD20",
+  "PD21"
+ ],
+ "functions": {
+  "PA00": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT0",
+    "macro": "PINMUX_PA00A_EIC_EXTINT0"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM1",
+    "signal": "PAD0",
+    "macro": "PINMUX_PA00D_SERCOM1_PAD0"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC2",
+    "signal": "WO0",
+    "macro": "PINMUX_PA00E_TC2_WO0"
+   }
+  ],
+  "PA01": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT1",
+    "macro": "PINMUX_PA01A_EIC_EXTINT1"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM1",
+    "signal": "PAD1",
+    "macro": "PINMUX_PA01D_SERCOM1_PAD1"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC2",
+    "signal": "WO1",
+    "macro": "PINMUX_PA01E_TC2_WO1"
+   }
+  ],
+  "PA02": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT2",
+    "macro": "PINMUX_PA02A_EIC_EXTINT2"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "AIN0",
+    "macro": "PINMUX_PA02B_ADC0_AIN0"
+   },
+   {
+    "func": "B",
+    "peripheral": "DAC",
+    "signal": "VOUT0",
+    "macro": "PINMUX_PA02B_DAC_VOUT0"
+   }
+  ],
+  "PA03": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT3",
+    "macro": "PINMUX_PA03A_EIC_EXTINT3"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "AIN1",
+    "macro": "PINMUX_PA03B_ADC0_AIN1"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "PTCXY0",
+    "macro": "PINMUX_PA03B_ADC0_PTCXY0"
+   },
+   {
+    "func": "B",
+    "peripheral": "ANAREF",
+    "signal": "VREF0",
+    "macro": "PINMUX_PA03B_ANAREF_VREF0"
+   }
+  ],
+  "PA04": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT4",
+    "macro": "PINMUX_PA04A_EIC_EXTINT4"
+   },
+   {
+    "func": "B",
+    "peripheral": "AC",
+    "signal": "AIN0",
+    "macro": "PINMUX_PA04B_AC_AIN0"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "AIN4",
+    "macro": "PINMUX_PA04B_ADC0_AIN4"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "PTCXY3",
+    "macro": "PINMUX_PA04B_ADC0_PTCXY3"
+   },
+   {
+    "func": "B",
+    "peripheral": "ANAREF",
+    "signal": "VREF1",
+    "macro": "PINMUX_PA04B_ANAREF_VREF1"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM0",
+    "signal": "PAD0",
+    "macro": "PINMUX_PA04D_SERCOM0_PAD0"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC0",
+    "signal": "WO0",
+    "macro": "PINMUX_PA04E_TC0_WO0"
+   },
+   {
+    "func": "N",
+    "peripheral": "CCL",
+    "signal": "IN0",
+    "macro": "PINMUX_PA04N_CCL_IN0"
+   }
+  ],
+  "PA05": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT5",
+    "macro": "PINMUX_PA05A_EIC_EXTINT5"
+   },
+   {
+    "func": "B",
+    "peripheral": "AC",
+    "signal": "AIN1",
+    "macro": "PINMUX_PA05B_AC_AIN1"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "AIN5",
+    "macro": "PINMUX_PA05B_ADC0_AIN5"
+   },
+   {
+    "func": "B",
+    "peripheral": "DAC",
+    "signal": "VOUT1",
+    "macro": "PINMUX_PA05B_DAC_VOUT1"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM0",
+    "signal": "PAD1",
+    "macro": "PINMUX_PA05D_SERCOM0_PAD1"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC0",
+    "signal": "WO1",
+    "macro": "PINMUX_PA05E_TC0_WO1"
+   },
+   {
+    "func": "N",
+    "peripheral": "CCL",
+    "signal": "IN1",
+    "macro": "PINMUX_PA05N_CCL_IN1"
+   }
+  ],
+  "PA06": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT6",
+    "macro": "PINMUX_PA06A_EIC_EXTINT6"
+   },
+   {
+    "func": "B",
+    "peripheral": "AC",
+    "signal": "AIN2",
+    "macro": "PINMUX_PA06B_AC_AIN2"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "AIN6",
+    "macro": "PINMUX_PA06B_ADC0_AIN6"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "PTCXY4",
+    "macro": "PINMUX_PA06B_ADC0_PTCXY4"
+   },
+   {
+    "func": "B",
+    "peripheral": "ANAREF",
+    "signal": "VREF2",
+    "macro": "PINMUX_PA06B_ANAREF_VREF2"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM0",
+    "signal": "PAD2",
+    "macro": "PINMUX_PA06D_SERCOM0_PAD2"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC1",
+    "signal": "WO0",
+    "macro": "PINMUX_PA06E_TC1_WO0"
+   },
+   {
+    "func": "I",
+    "peripheral": "SDHC0",
+    "signal": "SDCD",
+    "macro": "PINMUX_PA06I_SDHC0_SDCD"
+   },
+   {
+    "func": "N",
+    "peripheral": "CCL",
+    "signal": "IN2",
+    "macro": "PINMUX_PA06N_CCL_IN2"
+   }
+  ],
+  "PA07": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT7",
+    "macro": "PINMUX_PA07A_EIC_EXTINT7"
+   },
+   {
+    "func": "B",
+    "peripheral": "AC",
+    "signal": "AIN3",
+    "macro": "PINMUX_PA07B_AC_AIN3"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "AIN7",
+    "macro": "PINMUX_PA07B_ADC0_AIN7"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "PTCXY5",
+    "macro": "PINMUX_PA07B_ADC0_PTCXY5"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM0",
+    "signal": "PAD3",
+    "macro": "PINMUX_PA07D_SERCOM0_PAD3"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC1",
+    "signal": "WO1",
+    "macro": "PINMUX_PA07E_TC1_WO1"
+   },
+   {
+    "func": "I",
+    "peripheral": "SDHC0",
+    "signal": "SDWP",
+    "macro": "PINMUX_PA07I_SDHC0_SDWP"
+   },
+   {
+    "func": "N",
+    "peripheral": "CCL",
+    "signal": "OUT0",
+    "macro": "PINMUX_PA07N_CCL_OUT0"
+   }
+  ],
+  "PA08": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "NMI",
+    "macro": "PINMUX_PA08A_EIC_NMI"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "AIN8",
+    "macro": "PINMUX_PA08B_ADC0_AIN8"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "PTCXY6",
+    "macro": "PINMUX_PA08B_ADC0_PTCXY6"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC1",
+    "signal": "AIN2",
+    "macro": "PINMUX_PA08B_ADC1_AIN2"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM0",
+    "signal": "PAD0",
+    "macro": "PINMUX_PA08C_SERCOM0_PAD0"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM2",
+    "signal": "PAD1",
+    "macro": "PINMUX_PA08D_SERCOM2_PAD1"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC0",
+    "signal": "WO0",
+    "macro": "PINMUX_PA08E_TC0_WO0"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC0",
+    "signal": "WO0",
+    "macro": "PINMUX_PA08F_TCC0_WO0"
+   },
+   {
+    "func": "G",
+    "peripheral": "TCC1",
+    "signal": "WO4",
+    "macro": "PINMUX_PA08G_TCC1_WO4"
+   },
+   {
+    "func": "H",
+    "peripheral": "QSPI",
+    "signal": "DATA0",
+    "macro": "PINMUX_PA08H_QSPI_DATA0"
+   },
+   {
+    "func": "I",
+    "peripheral": "SDHC0",
+    "signal": "SDCMD",
+    "macro": "PINMUX_PA08I_SDHC0_SDCMD"
+   },
+   {
+    "func": "J",
+    "peripheral": "I2S",
+    "signal": "MCK0",
+    "macro": "PINMUX_PA08J_I2S_MCK0"
+   },
+   {
+    "func": "N",
+    "peripheral": "CCL",
+    "signal": "IN3",
+    "macro": "PINMUX_PA08N_CCL_IN3"
+   }
+  ],
+  "PA09": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT9",
+    "macro": "PINMUX_PA09A_EIC_EXTINT9"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "AIN9",
+    "macro": "PINMUX_PA09B_ADC0_AIN9"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "PTCXY7",
+    "macro": "PINMUX_PA09B_ADC0_PTCXY7"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC1",
+    "signal": "AIN3",
+    "macro": "PINMUX_PA09B_ADC1_AIN3"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM0",
+    "signal": "PAD1",
+    "macro": "PINMUX_PA09C_SERCOM0_PAD1"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM2",
+    "signal": "PAD0",
+    "macro": "PINMUX_PA09D_SERCOM2_PAD0"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC0",
+    "signal": "WO1",
+    "macro": "PINMUX_PA09E_TC0_WO1"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC0",
+    "signal": "WO1",
+    "macro": "PINMUX_PA09F_TCC0_WO1"
+   },
+   {
+    "func": "G",
+    "peripheral": "TCC1",
+    "signal": "WO5",
+    "macro": "PINMUX_PA09G_TCC1_WO5"
+   },
+   {
+    "func": "H",
+    "peripheral": "QSPI",
+    "signal": "DATA1",
+    "macro": "PINMUX_PA09H_QSPI_DATA1"
+   },
+   {
+    "func": "I",
+    "peripheral": "SDHC0",
+    "signal": "SDDAT0",
+    "macro": "PINMUX_PA09I_SDHC0_SDDAT0"
+   },
+   {
+    "func": "J",
+    "peripheral": "I2S",
+    "signal": "FS0",
+    "macro": "PINMUX_PA09J_I2S_FS0"
+   },
+   {
+    "func": "N",
+    "peripheral": "CCL",
+    "signal": "IN4",
+    "macro": "PINMUX_PA09N_CCL_IN4"
+   }
+  ],
+  "PA10": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT10",
+    "macro": "PINMUX_PA10A_EIC_EXTINT10"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "AIN10",
+    "macro": "PINMUX_PA10B_ADC0_AIN10"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "PTCXY8",
+    "macro": "PINMUX_PA10B_ADC0_PTCXY8"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM0",
+    "signal": "PAD2",
+    "macro": "PINMUX_PA10C_SERCOM0_PAD2"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM2",
+    "signal": "PAD2",
+    "macro": "PINMUX_PA10D_SERCOM2_PAD2"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC1",
+    "signal": "WO0",
+    "macro": "PINMUX_PA10E_TC1_WO0"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC0",
+    "signal": "WO2",
+    "macro": "PINMUX_PA10F_TCC0_WO2"
+   },
+   {
+    "func": "G",
+    "peripheral": "TCC1",
+    "signal": "WO6",
+    "macro": "PINMUX_PA10G_TCC1_WO6"
+   },
+   {
+    "func": "H",
+    "peripheral": "QSPI",
+    "signal": "DATA2",
+    "macro": "PINMUX_PA10H_QSPI_DATA2"
+   },
+   {
+    "func": "I",
+    "peripheral": "SDHC0",
+    "signal": "SDDAT1",
+    "macro": "PINMUX_PA10I_SDHC0_SDDAT1"
+   },
+   {
+    "func": "J",
+    "peripheral": "I2S",
+    "signal": "SCK0",
+    "macro": "PINMUX_PA10J_I2S_SCK0"
+   },
+   {
+    "func": "M",
+    "peripheral": "GCLK",
+    "signal": "IO4",
+    "macro": "PINMUX_PA10M_GCLK_IO4"
+   },
+   {
+    "func": "N",
+    "peripheral": "CCL",
+    "signal": "IN5",
+    "macro": "PINMUX_PA10N_CCL_IN5"
+   }
+  ],
+  "PA11": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT11",
+    "macro": "PINMUX_PA11A_EIC_EXTINT11"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "AIN11",
+    "macro": "PINMUX_PA11B_ADC0_AIN11"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "PTCXY9",
+    "macro": "PINMUX_PA11B_ADC0_PTCXY9"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM0",
+    "signal": "PAD3",
+    "macro": "PINMUX_PA11C_SERCOM0_PAD3"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM2",
+    "signal": "PAD3",
+    "macro": "PINMUX_PA11D_SERCOM2_PAD3"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC1",
+    "signal": "WO1",
+    "macro": "PINMUX_PA11E_TC1_WO1"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC0",
+    "signal": "WO3",
+    "macro": "PINMUX_PA11F_TCC0_WO3"
+   },
+   {
+    "func": "G",
+    "peripheral": "TCC1",
+    "signal": "WO7",
+    "macro": "PINMUX_PA11G_TCC1_WO7"
+   },
+   {
+    "func": "H",
+    "peripheral": "QSPI",
+    "signal": "DATA3",
+    "macro": "PINMUX_PA11H_QSPI_DATA3"
+   },
+   {
+    "func": "I",
+    "peripheral": "SDHC0",
+    "signal": "SDDAT2",
+    "macro": "PINMUX_PA11I_SDHC0_SDDAT2"
+   },
+   {
+    "func": "J",
+    "peripheral": "I2S",
+    "signal": "SDO",
+    "macro": "PINMUX_PA11J_I2S_SDO"
+   },
+   {
+    "func": "M",
+    "peripheral": "GCLK",
+    "signal": "IO5",
+    "macro": "PINMUX_PA11M_GCLK_IO5"
+   },
+   {
+    "func": "N",
+    "peripheral": "CCL",
+    "signal": "OUT1",
+    "macro": "PINMUX_PA11N_CCL_OUT1"
+   }
+  ],
+  "PA12": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT12",
+    "macro": "PINMUX_PA12A_EIC_EXTINT12"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM2",
+    "signal": "PAD0",
+    "macro": "PINMUX_PA12C_SERCOM2_PAD0"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM4",
+    "signal": "PAD1",
+    "macro": "PINMUX_PA12D_SERCOM4_PAD1"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC2",
+    "signal": "WO0",
+    "macro": "PINMUX_PA12E_TC2_WO0"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC0",
+    "signal": "WO6",
+    "macro": "PINMUX_PA12F_TCC0_WO6"
+   },
+   {
+    "func": "G",
+    "peripheral": "TCC1",
+    "signal": "WO2",
+    "macro": "PINMUX_PA12G_TCC1_WO2"
+   },
+   {
+    "func": "I",
+    "peripheral": "SDHC0",
+    "signal": "SDCD",
+    "macro": "PINMUX_PA12I_SDHC0_SDCD"
+   },
+   {
+    "func": "K",
+    "peripheral": "PCC",
+    "signal": "DEN1",
+    "macro": "PINMUX_PA12K_PCC_DEN1"
+   },
+   {
+    "func": "M",
+    "peripheral": "AC",
+    "signal": "CMP0",
+    "macro": "PINMUX_PA12M_AC_CMP0"
+   }
+  ],
+  "PA13": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT13",
+    "macro": "PINMUX_PA13A_EIC_EXTINT13"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM2",
+    "signal": "PAD1",
+    "macro": "PINMUX_PA13C_SERCOM2_PAD1"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM4",
+    "signal": "PAD0",
+    "macro": "PINMUX_PA13D_SERCOM4_PAD0"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC2",
+    "signal": "WO1",
+    "macro": "PINMUX_PA13E_TC2_WO1"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC0",
+    "signal": "WO7",
+    "macro": "PINMUX_PA13F_TCC0_WO7"
+   },
+   {
+    "func": "G",
+    "peripheral": "TCC1",
+    "signal": "WO3",
+    "macro": "PINMUX_PA13G_TCC1_WO3"
+   },
+   {
+    "func": "I",
+    "peripheral": "SDHC0",
+    "signal": "SDWP",
+    "macro": "PINMUX_PA13I_SDHC0_SDWP"
+   },
+   {
+    "func": "K",
+    "peripheral": "PCC",
+    "signal": "DEN2",
+    "macro": "PINMUX_PA13K_PCC_DEN2"
+   },
+   {
+    "func": "M",
+    "peripheral": "AC",
+    "signal": "CMP1",
+    "macro": "PINMUX_PA13M_AC_CMP1"
+   }
+  ],
+  "PA14": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT14",
+    "macro": "PINMUX_PA14A_EIC_EXTINT14"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM2",
+    "signal": "PAD2",
+    "macro": "PINMUX_PA14C_SERCOM2_PAD2"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM4",
+    "signal": "PAD2",
+    "macro": "PINMUX_PA14D_SERCOM4_PAD2"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC3",
+    "signal": "WO0",
+    "macro": "PINMUX_PA14E_TC3_WO0"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC2",
+    "signal": "WO0",
+    "macro": "PINMUX_PA14F_TCC2_WO0"
+   },
+   {
+    "func": "G",
+    "peripheral": "TCC1",
+    "signal": "WO2",
+    "macro": "PINMUX_PA14G_TCC1_WO2"
+   },
+   {
+    "func": "K",
+    "peripheral": "PCC",
+    "signal": "CLK",
+    "macro": "PINMUX_PA14K_PCC_CLK"
+   },
+   {
+    "func": "M",
+    "peripheral": "GCLK",
+    "signal": "IO0",
+    "macro": "PINMUX_PA14M_GCLK_IO0"
+   }
+  ],
+  "PA15": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT15",
+    "macro": "PINMUX_PA15A_EIC_EXTINT15"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM2",
+    "signal": "PAD3",
+    "macro": "PINMUX_PA15C_SERCOM2_PAD3"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM4",
+    "signal": "PAD3",
+    "macro": "PINMUX_PA15D_SERCOM4_PAD3"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC3",
+    "signal": "WO1",
+    "macro": "PINMUX_PA15E_TC3_WO1"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC2",
+    "signal": "WO1",
+    "macro": "PINMUX_PA15F_TCC2_WO1"
+   },
+   {
+    "func": "G",
+    "peripheral": "TCC1",
+    "signal": "WO3",
+    "macro": "PINMUX_PA15G_TCC1_WO3"
+   },
+   {
+    "func": "M",
+    "peripheral": "GCLK",
+    "signal": "IO1",
+    "macro": "PINMUX_PA15M_GCLK_IO1"
+   }
+  ],
+  "PA16": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT0",
+    "macro": "PINMUX_PA16A_EIC_EXTINT0"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "PTCXY10",
+    "macro": "PINMUX_PA16B_ADC0_PTCXY10"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM1",
+    "signal": "PAD0",
+    "macro": "PINMUX_PA16C_SERCOM1_PAD0"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM3",
+    "signal": "PAD1",
+    "macro": "PINMUX_PA16D_SERCOM3_PAD1"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC2",
+    "signal": "WO0",
+    "macro": "PINMUX_PA16E_TC2_WO0"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC1",
+    "signal": "WO0",
+    "macro": "PINMUX_PA16F_TCC1_WO0"
+   },
+   {
+    "func": "G",
+    "peripheral": "TCC0",
+    "signal": "WO4",
+    "macro": "PINMUX_PA16G_TCC0_WO4"
+   },
+   {
+    "func": "K",
+    "peripheral": "PCC",
+    "signal": "DATA0",
+    "macro": "PINMUX_PA16K_PCC_DATA0"
+   },
+   {
+    "func": "M",
+    "peripheral": "GCLK",
+    "signal": "IO2",
+    "macro": "PINMUX_PA16M_GCLK_IO2"
+   },
+   {
+    "func": "N",
+    "peripheral": "CCL",
+    "signal": "IN0",
+    "macro": "PINMUX_PA16N_CCL_IN0"
+   }
+  ],
+  "PA17": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT1",
+    "macro": "PINMUX_PA17A_EIC_EXTINT1"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "PTCXY11",
+    "macro": "PINMUX_PA17B_ADC0_PTCXY11"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM1",
+    "signal": "PAD1",
+    "macro": "PINMUX_PA17C_SERCOM1_PAD1"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM3",
+    "signal": "PAD0",
+    "macro": "PINMUX_PA17D_SERCOM3_PAD0"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC2",
+    "signal": "WO1",
+    "macro": "PINMUX_PA17E_TC2_WO1"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC1",
+    "signal": "WO1",
+    "macro": "PINMUX_PA17F_TCC1_WO1"
+   },
+   {
+    "func": "G",
+    "peripheral": "TCC0",
+    "signal": "WO5",
+    "macro": "PINMUX_PA17G_TCC0_WO5"
+   },
+   {
+    "func": "K",
+    "peripheral": "PCC",
+    "signal": "DATA1",
+    "macro": "PINMUX_PA17K_PCC_DATA1"
+   },
+   {
+    "func": "M",
+    "peripheral": "GCLK",
+    "signal": "IO3",
+    "macro": "PINMUX_PA17M_GCLK_IO3"
+   },
+   {
+    "func": "N",
+    "peripheral": "CCL",
+    "signal": "IN1",
+    "macro": "PINMUX_PA17N_CCL_IN1"
+   }
+  ],
+  "PA18": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT2",
+    "macro": "PINMUX_PA18A_EIC_EXTINT2"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "PTCXY12",
+    "macro": "PINMUX_PA18B_ADC0_PTCXY12"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM1",
+    "signal": "PAD2",
+    "macro": "PINMUX_PA18C_SERCOM1_PAD2"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM3",
+    "signal": "PAD2",
+    "macro": "PINMUX_PA18D_SERCOM3_PAD2"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC3",
+    "signal": "WO0",
+    "macro": "PINMUX_PA18E_TC3_WO0"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC1",
+    "signal": "WO2",
+    "macro": "PINMUX_PA18F_TCC1_WO2"
+   },
+   {
+    "func": "G",
+    "peripheral": "TCC0",
+    "signal": "WO6",
+    "macro": "PINMUX_PA18G_TCC0_WO6"
+   },
+   {
+    "func": "K",
+    "peripheral": "PCC",
+    "signal": "DATA2",
+    "macro": "PINMUX_PA18K_PCC_DATA2"
+   },
+   {
+    "func": "M",
+    "peripheral": "AC",
+    "signal": "CMP0",
+    "macro": "PINMUX_PA18M_AC_CMP0"
+   },
+   {
+    "func": "N",
+    "peripheral": "CCL",
+    "signal": "IN2",
+    "macro": "PINMUX_PA18N_CCL_IN2"
+   }
+  ],
+  "PA19": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT3",
+    "macro": "PINMUX_PA19A_EIC_EXTINT3"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "PTCXY13",
+    "macro": "PINMUX_PA19B_ADC0_PTCXY13"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM1",
+    "signal": "PAD3",
+    "macro": "PINMUX_PA19C_SERCOM1_PAD3"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM3",
+    "signal": "PAD3",
+    "macro": "PINMUX_PA19D_SERCOM3_PAD3"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC3",
+    "signal": "WO1",
+    "macro": "PINMUX_PA19E_TC3_WO1"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC1",
+    "signal": "WO3",
+    "macro": "PINMUX_PA19F_TCC1_WO3"
+   },
+   {
+    "func": "G",
+    "peripheral": "TCC0",
+    "signal": "WO7",
+    "macro": "PINMUX_PA19G_TCC0_WO7"
+   },
+   {
+    "func": "K",
+    "peripheral": "PCC",
+    "signal": "DATA3",
+    "macro": "PINMUX_PA19K_PCC_DATA3"
+   },
+   {
+    "func": "M",
+    "peripheral": "AC",
+    "signal": "CMP1",
+    "macro": "PINMUX_PA19M_AC_CMP1"
+   },
+   {
+    "func": "N",
+    "peripheral": "CCL",
+    "signal": "OUT0",
+    "macro": "PINMUX_PA19N_CCL_OUT0"
+   }
+  ],
+  "PA20": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT4",
+    "macro": "PINMUX_PA20A_EIC_EXTINT4"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "PTCXY14",
+    "macro": "PINMUX_PA20B_ADC0_PTCXY14"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM5",
+    "signal": "PAD2",
+    "macro": "PINMUX_PA20C_SERCOM5_PAD2"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM3",
+    "signal": "PAD2",
+    "macro": "PINMUX_PA20D_SERCOM3_PAD2"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC7",
+    "signal": "WO0",
+    "macro": "PINMUX_PA20E_TC7_WO0"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC1",
+    "signal": "WO4",
+    "macro": "PINMUX_PA20F_TCC1_WO4"
+   },
+   {
+    "func": "G",
+    "peripheral": "TCC0",
+    "signal": "WO0",
+    "macro": "PINMUX_PA20G_TCC0_WO0"
+   },
+   {
+    "func": "I",
+    "peripheral": "SDHC1",
+    "signal": "SDCMD",
+    "macro": "PINMUX_PA20I_SDHC1_SDCMD"
+   },
+   {
+    "func": "J",
+    "peripheral": "I2S",
+    "signal": "FS0",
+    "macro": "PINMUX_PA20J_I2S_FS0"
+   },
+   {
+    "func": "K",
+    "peripheral": "PCC",
+    "signal": "DATA4",
+    "macro": "PINMUX_PA20K_PCC_DATA4"
+   }
+  ],
+  "PA21": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT5",
+    "macro": "PINMUX_PA21A_EIC_EXTINT5"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "PTCXY15",
+    "macro": "PINMUX_PA21B_ADC0_PTCXY15"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM5",
+    "signal": "PAD3",
+    "macro": "PINMUX_PA21C_SERCOM5_PAD3"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM3",
+    "signal": "PAD3",
+    "macro": "PINMUX_PA21D_SERCOM3_PAD3"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC7",
+    "signal": "WO1",
+    "macro": "PINMUX_PA21E_TC7_WO1"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC1",
+    "signal": "WO5",
+    "macro": "PINMUX_PA21F_TCC1_WO5"
+   },
+   {
+    "func": "G",
+    "peripheral": "TCC0",
+    "signal": "WO1",
+    "macro": "PINMUX_PA21G_TCC0_WO1"
+   },
+   {
+    "func": "I",
+    "peripheral": "SDHC1",
+    "signal": "SDCK",
+    "macro": "PINMUX_PA21I_SDHC1_SDCK"
+   },
+   {
+    "func": "J",
+    "peripheral": "I2S",
+    "signal": "SDO",
+    "macro": "PINMUX_PA21J_I2S_SDO"
+   },
+   {
+    "func": "K",
+    "peripheral": "PCC",
+    "signal": "DATA5",
+    "macro": "PINMUX_PA21K_PCC_DATA5"
+   }
+  ],
+  "PA22": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT6",
+    "macro": "PINMUX_PA22A_EIC_EXTINT6"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "PTCXY16",
+    "macro": "PINMUX_PA22B_ADC0_PTCXY16"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM3",
+    "signal": "PAD0",
+    "macro": "PINMUX_PA22C_SERCOM3_PAD0"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM5",
+    "signal": "PAD1",
+    "macro": "PINMUX_PA22D_SERCOM5_PAD1"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC4",
+    "signal": "WO0",
+    "macro": "PINMUX_PA22E_TC4_WO0"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC1",
+    "signal": "WO6",
+    "macro": "PINMUX_PA22F_TCC1_WO6"
+   },
+   {
+    "func": "G",
+    "peripheral": "TCC0",
+    "signal": "WO2",
+    "macro": "PINMUX_PA22G_TCC0_WO2"
+   },
+   {
+    "func": "J",
+    "peripheral": "I2S",
+    "signal": "SDI",
+    "macro": "PINMUX_PA22J_I2S_SDI"
+   },
+   {
+    "func": "K",
+    "peripheral": "PCC",
+    "signal": "DATA6",
+    "macro": "PINMUX_PA22K_PCC_DATA6"
+   },
+   {
+    "func": "N",
+    "peripheral": "CCL",
+    "signal": "IN6",
+    "macro": "PINMUX_PA22N_CCL_IN6"
+   }
+  ],
+  "PA23": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT7",
+    "macro": "PINMUX_PA23A_EIC_EXTINT7"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "PTCXY17",
+    "macro": "PINMUX_PA23B_ADC0_PTCXY17"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM3",
+    "signal": "PAD1",
+    "macro": "PINMUX_PA23C_SERCOM3_PAD1"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM5",
+    "signal": "PAD0",
+    "macro": "PINMUX_PA23D_SERCOM5_PAD0"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC4",
+    "signal": "WO1",
+    "macro": "PINMUX_PA23E_TC4_WO1"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC1",
+    "signal": "WO7",
+    "macro": "PINMUX_PA23F_TCC1_WO7"
+   },
+   {
+    "func": "G",
+    "peripheral": "TCC0",
+    "signal": "WO3",
+    "macro": "PINMUX_PA23G_TCC0_WO3"
+   },
+   {
+    "func": "H",
+    "peripheral": "USB",
+    "signal": "SOF_1KHZ",
+    "macro": "PINMUX_PA23H_USB_SOF_1KHZ"
+   },
+   {
+    "func": "J",
+    "peripheral": "I2S",
+    "signal": "FS1",
+    "macro": "PINMUX_PA23J_I2S_FS1"
+   },
+   {
+    "func": "K",
+    "peripheral": "PCC",
+    "signal": "DATA7",
+    "macro": "PINMUX_PA23K_PCC_DATA7"
+   },
+   {
+    "func": "N",
+    "peripheral": "CCL",
+    "signal": "IN7",
+    "macro": "PINMUX_PA23N_CCL_IN7"
+   }
+  ],
+  "PA24": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT8",
+    "macro": "PINMUX_PA24A_EIC_EXTINT8"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM3",
+    "signal": "PAD2",
+    "macro": "PINMUX_PA24C_SERCOM3_PAD2"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM5",
+    "signal": "PAD2",
+    "macro": "PINMUX_PA24D_SERCOM5_PAD2"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC5",
+    "signal": "WO0",
+    "macro": "PINMUX_PA24E_TC5_WO0"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC2",
+    "signal": "WO2",
+    "macro": "PINMUX_PA24F_TCC2_WO2"
+   },
+   {
+    "func": "G",
+    "peripheral": "PDEC",
+    "signal": "QDI0",
+    "macro": "PINMUX_PA24G_PDEC_QDI0"
+   },
+   {
+    "func": "H",
+    "peripheral": "USB",
+    "signal": "DM",
+    "macro": "PINMUX_PA24H_USB_DM"
+   },
+   {
+    "func": "N",
+    "peripheral": "CCL",
+    "signal": "IN8",
+    "macro": "PINMUX_PA24N_CCL_IN8"
+   }
+  ],
+  "PA25": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT9",
+    "macro": "PINMUX_PA25A_EIC_EXTINT9"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM3",
+    "signal": "PAD3",
+    "macro": "PINMUX_PA25C_SERCOM3_PAD3"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM5",
+    "signal": "PAD3",
+    "macro": "PINMUX_PA25D_SERCOM5_PAD3"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC5",
+    "signal": "WO1",
+    "macro": "PINMUX_PA25E_TC5_WO1"
+   },
+   {
+    "func": "G",
+    "peripheral": "PDEC",
+    "signal": "QDI1",
+    "macro": "PINMUX_PA25G_PDEC_QDI1"
+   },
+   {
+    "func": "H",
+    "peripheral": "USB",
+    "signal": "DP",
+    "macro": "PINMUX_PA25H_USB_DP"
+   },
+   {
+    "func": "N",
+    "peripheral": "CCL",
+    "signal": "OUT2",
+    "macro": "PINMUX_PA25N_CCL_OUT2"
+   }
+  ],
+  "PA27": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT11",
+    "macro": "PINMUX_PA27A_EIC_EXTINT11"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "PTCXY18",
+    "macro": "PINMUX_PA27B_ADC0_PTCXY18"
+   },
+   {
+    "func": "M",
+    "peripheral": "GCLK",
+    "signal": "IO1",
+    "macro": "PINMUX_PA27M_GCLK_IO1"
+   }
+  ],
+  "PA30": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT14",
+    "macro": "PINMUX_PA30A_EIC_EXTINT14"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "PTCXY19",
+    "macro": "PINMUX_PA30B_ADC0_PTCXY19"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM7",
+    "signal": "PAD2",
+    "macro": "PINMUX_PA30C_SERCOM7_PAD2"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM1",
+    "signal": "PAD2",
+    "macro": "PINMUX_PA30D_SERCOM1_PAD2"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC6",
+    "signal": "WO0",
+    "macro": "PINMUX_PA30E_TC6_WO0"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC2",
+    "signal": "WO0",
+    "macro": "PINMUX_PA30F_TCC2_WO0"
+   },
+   {
+    "func": "H",
+    "peripheral": "CM4",
+    "signal": "SWCLK",
+    "macro": "PINMUX_PA30H_CM4_SWCLK"
+   },
+   {
+    "func": "M",
+    "peripheral": "GCLK",
+    "signal": "IO0",
+    "macro": "PINMUX_PA30M_GCLK_IO0"
+   },
+   {
+    "func": "N",
+    "peripheral": "CCL",
+    "signal": "IN3",
+    "macro": "PINMUX_PA30N_CCL_IN3"
+   }
+  ],
+  "PA31": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT15",
+    "macro": "PINMUX_PA31A_EIC_EXTINT15"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM7",
+    "signal": "PAD3",
+    "macro": "PINMUX_PA31C_SERCOM7_PAD3"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM1",
+    "signal": "PAD3",
+    "macro": "PINMUX_PA31D_SERCOM1_PAD3"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC6",
+    "signal": "WO1",
+    "macro": "PINMUX_PA31E_TC6_WO1"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC2",
+    "signal": "WO1",
+    "macro": "PINMUX_PA31F_TCC2_WO1"
+   },
+   {
+    "func": "N",
+    "peripheral": "CCL",
+    "signal": "OUT1",
+    "macro": "PINMUX_PA31N_CCL_OUT1"
+   }
+  ],
+  "PB00": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT0",
+    "macro": "PINMUX_PB00A_EIC_EXTINT0"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "AIN12",
+    "macro": "PINMUX_PB00B_ADC0_AIN12"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "PTCXY30",
+    "macro": "PINMUX_PB00B_ADC0_PTCXY30"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM5",
+    "signal": "PAD2",
+    "macro": "PINMUX_PB00D_SERCOM5_PAD2"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC7",
+    "signal": "WO0",
+    "macro": "PINMUX_PB00E_TC7_WO0"
+   },
+   {
+    "func": "N",
+    "peripheral": "CCL",
+    "signal": "IN1",
+    "macro": "PINMUX_PB00N_CCL_IN1"
+   }
+  ],
+  "PB01": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT1",
+    "macro": "PINMUX_PB01A_EIC_EXTINT1"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "AIN13",
+    "macro": "PINMUX_PB01B_ADC0_AIN13"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "PTCXY31",
+    "macro": "PINMUX_PB01B_ADC0_PTCXY31"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM5",
+    "signal": "PAD3",
+    "macro": "PINMUX_PB01D_SERCOM5_PAD3"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC7",
+    "signal": "WO1",
+    "macro": "PINMUX_PB01E_TC7_WO1"
+   },
+   {
+    "func": "N",
+    "peripheral": "CCL",
+    "signal": "IN2",
+    "macro": "PINMUX_PB01N_CCL_IN2"
+   }
+  ],
+  "PB02": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT2",
+    "macro": "PINMUX_PB02A_EIC_EXTINT2"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "AIN14",
+    "macro": "PINMUX_PB02B_ADC0_AIN14"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "PTCXY20",
+    "macro": "PINMUX_PB02B_ADC0_PTCXY20"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM5",
+    "signal": "PAD0",
+    "macro": "PINMUX_PB02D_SERCOM5_PAD0"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC6",
+    "signal": "WO0",
+    "macro": "PINMUX_PB02E_TC6_WO0"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC2",
+    "signal": "WO2",
+    "macro": "PINMUX_PB02F_TCC2_WO2"
+   },
+   {
+    "func": "N",
+    "peripheral": "CCL",
+    "signal": "OUT0",
+    "macro": "PINMUX_PB02N_CCL_OUT0"
+   }
+  ],
+  "PB03": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT3",
+    "macro": "PINMUX_PB03A_EIC_EXTINT3"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "AIN15",
+    "macro": "PINMUX_PB03B_ADC0_AIN15"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "PTCXY21",
+    "macro": "PINMUX_PB03B_ADC0_PTCXY21"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM5",
+    "signal": "PAD1",
+    "macro": "PINMUX_PB03D_SERCOM5_PAD1"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC6",
+    "signal": "WO1",
+    "macro": "PINMUX_PB03E_TC6_WO1"
+   }
+  ],
+  "PB04": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT4",
+    "macro": "PINMUX_PB04A_EIC_EXTINT4"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "PTCXY22",
+    "macro": "PINMUX_PB04B_ADC0_PTCXY22"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC1",
+    "signal": "AIN6",
+    "macro": "PINMUX_PB04B_ADC1_AIN6"
+   }
+  ],
+  "PB05": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT5",
+    "macro": "PINMUX_PB05A_EIC_EXTINT5"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "PTCXY23",
+    "macro": "PINMUX_PB05B_ADC0_PTCXY23"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC1",
+    "signal": "AIN7",
+    "macro": "PINMUX_PB05B_ADC1_AIN7"
+   }
+  ],
+  "PB06": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT6",
+    "macro": "PINMUX_PB06A_EIC_EXTINT6"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "PTCXY24",
+    "macro": "PINMUX_PB06B_ADC0_PTCXY24"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC1",
+    "signal": "AIN8",
+    "macro": "PINMUX_PB06B_ADC1_AIN8"
+   },
+   {
+    "func": "N",
+    "peripheral": "CCL",
+    "signal": "IN6",
+    "macro": "PINMUX_PB06N_CCL_IN6"
+   }
+  ],
+  "PB07": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT7",
+    "macro": "PINMUX_PB07A_EIC_EXTINT7"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "PTCXY25",
+    "macro": "PINMUX_PB07B_ADC0_PTCXY25"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC1",
+    "signal": "AIN9",
+    "macro": "PINMUX_PB07B_ADC1_AIN9"
+   },
+   {
+    "func": "N",
+    "peripheral": "CCL",
+    "signal": "IN7",
+    "macro": "PINMUX_PB07N_CCL_IN7"
+   }
+  ],
+  "PB08": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT8",
+    "macro": "PINMUX_PB08A_EIC_EXTINT8"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "AIN2",
+    "macro": "PINMUX_PB08B_ADC0_AIN2"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "PTCXY1",
+    "macro": "PINMUX_PB08B_ADC0_PTCXY1"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC1",
+    "signal": "AIN0",
+    "macro": "PINMUX_PB08B_ADC1_AIN0"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM4",
+    "signal": "PAD0",
+    "macro": "PINMUX_PB08D_SERCOM4_PAD0"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC4",
+    "signal": "WO0",
+    "macro": "PINMUX_PB08E_TC4_WO0"
+   },
+   {
+    "func": "N",
+    "peripheral": "CCL",
+    "signal": "IN8",
+    "macro": "PINMUX_PB08N_CCL_IN8"
+   }
+  ],
+  "PB09": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT9",
+    "macro": "PINMUX_PB09A_EIC_EXTINT9"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "AIN3",
+    "macro": "PINMUX_PB09B_ADC0_AIN3"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "PTCXY2",
+    "macro": "PINMUX_PB09B_ADC0_PTCXY2"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC1",
+    "signal": "AIN1",
+    "macro": "PINMUX_PB09B_ADC1_AIN1"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM4",
+    "signal": "PAD1",
+    "macro": "PINMUX_PB09D_SERCOM4_PAD1"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC4",
+    "signal": "WO1",
+    "macro": "PINMUX_PB09E_TC4_WO1"
+   },
+   {
+    "func": "N",
+    "peripheral": "CCL",
+    "signal": "OUT2",
+    "macro": "PINMUX_PB09N_CCL_OUT2"
+   }
+  ],
+  "PB10": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT10",
+    "macro": "PINMUX_PB10A_EIC_EXTINT10"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM4",
+    "signal": "PAD2",
+    "macro": "PINMUX_PB10D_SERCOM4_PAD2"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC5",
+    "signal": "WO0",
+    "macro": "PINMUX_PB10E_TC5_WO0"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC0",
+    "signal": "WO4",
+    "macro": "PINMUX_PB10F_TCC0_WO4"
+   },
+   {
+    "func": "G",
+    "peripheral": "TCC1",
+    "signal": "WO0",
+    "macro": "PINMUX_PB10G_TCC1_WO0"
+   },
+   {
+    "func": "H",
+    "peripheral": "QSPI",
+    "signal": "SCK",
+    "macro": "PINMUX_PB10H_QSPI_SCK"
+   },
+   {
+    "func": "I",
+    "peripheral": "SDHC0",
+    "signal": "SDDAT3",
+    "macro": "PINMUX_PB10I_SDHC0_SDDAT3"
+   },
+   {
+    "func": "J",
+    "peripheral": "I2S",
+    "signal": "SDI",
+    "macro": "PINMUX_PB10J_I2S_SDI"
+   },
+   {
+    "func": "M",
+    "peripheral": "GCLK",
+    "signal": "IO4",
+    "macro": "PINMUX_PB10M_GCLK_IO4"
+   },
+   {
+    "func": "N",
+    "peripheral": "CCL",
+    "signal": "IN11",
+    "macro": "PINMUX_PB10N_CCL_IN11"
+   }
+  ],
+  "PB11": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT11",
+    "macro": "PINMUX_PB11A_EIC_EXTINT11"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM4",
+    "signal": "PAD3",
+    "macro": "PINMUX_PB11D_SERCOM4_PAD3"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC5",
+    "signal": "WO1",
+    "macro": "PINMUX_PB11E_TC5_WO1"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC0",
+    "signal": "WO5",
+    "macro": "PINMUX_PB11F_TCC0_WO5"
+   },
+   {
+    "func": "G",
+    "peripheral": "TCC1",
+    "signal": "WO1",
+    "macro": "PINMUX_PB11G_TCC1_WO1"
+   },
+   {
+    "func": "H",
+    "peripheral": "QSPI",
+    "signal": "CS",
+    "macro": "PINMUX_PB11H_QSPI_CS"
+   },
+   {
+    "func": "I",
+    "peripheral": "SDHC0",
+    "signal": "SDCK",
+    "macro": "PINMUX_PB11I_SDHC0_SDCK"
+   },
+   {
+    "func": "J",
+    "peripheral": "I2S",
+    "signal": "FS1",
+    "macro": "PINMUX_PB11J_I2S_FS1"
+   },
+   {
+    "func": "M",
+    "peripheral": "GCLK",
+    "signal": "IO5",
+    "macro": "PINMUX_PB11M_GCLK_IO5"
+   },
+   {
+    "func": "N",
+    "peripheral": "CCL",
+    "signal": "OUT1",
+    "macro": "PINMUX_PB11N_CCL_OUT1"
+   }
+  ],
+  "PB12": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT12",
+    "macro": "PINMUX_PB12A_EIC_EXTINT12"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "PTCXY26",
+    "macro": "PINMUX_PB12B_ADC0_PTCXY26"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM4",
+    "signal": "PAD0",
+    "macro": "PINMUX_PB12C_SERCOM4_PAD0"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC4",
+    "signal": "WO0",
+    "macro": "PINMUX_PB12E_TC4_WO0"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC3",
+    "signal": "WO0",
+    "macro": "PINMUX_PB12F_TCC3_WO0"
+   },
+   {
+    "func": "G",
+    "peripheral": "TCC0",
+    "signal": "WO0",
+    "macro": "PINMUX_PB12G_TCC0_WO0"
+   },
+   {
+    "func": "I",
+    "peripheral": "SDHC0",
+    "signal": "SDCD",
+    "macro": "PINMUX_PB12I_SDHC0_SDCD"
+   },
+   {
+    "func": "J",
+    "peripheral": "I2S",
+    "signal": "SCK1",
+    "macro": "PINMUX_PB12J_I2S_SCK1"
+   },
+   {
+    "func": "M",
+    "peripheral": "GCLK",
+    "signal": "IO6",
+    "macro": "PINMUX_PB12M_GCLK_IO6"
+   }
+  ],
+  "PB13": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT13",
+    "macro": "PINMUX_PB13A_EIC_EXTINT13"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "PTCXY27",
+    "macro": "PINMUX_PB13B_ADC0_PTCXY27"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM4",
+    "signal": "PAD1",
+    "macro": "PINMUX_PB13C_SERCOM4_PAD1"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC4",
+    "signal": "WO1",
+    "macro": "PINMUX_PB13E_TC4_WO1"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC3",
+    "signal": "WO1",
+    "macro": "PINMUX_PB13F_TCC3_WO1"
+   },
+   {
+    "func": "G",
+    "peripheral": "TCC0",
+    "signal": "WO1",
+    "macro": "PINMUX_PB13G_TCC0_WO1"
+   },
+   {
+    "func": "I",
+    "peripheral": "SDHC0",
+    "signal": "SDWP",
+    "macro": "PINMUX_PB13I_SDHC0_SDWP"
+   },
+   {
+    "func": "J",
+    "peripheral": "I2S",
+    "signal": "MCK1",
+    "macro": "PINMUX_PB13J_I2S_MCK1"
+   },
+   {
+    "func": "M",
+    "peripheral": "GCLK",
+    "signal": "IO7",
+    "macro": "PINMUX_PB13M_GCLK_IO7"
+   }
+  ],
+  "PB14": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT14",
+    "macro": "PINMUX_PB14A_EIC_EXTINT14"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "PTCXY28",
+    "macro": "PINMUX_PB14B_ADC0_PTCXY28"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM4",
+    "signal": "PAD2",
+    "macro": "PINMUX_PB14C_SERCOM4_PAD2"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC5",
+    "signal": "WO0",
+    "macro": "PINMUX_PB14E_TC5_WO0"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC4",
+    "signal": "WO0",
+    "macro": "PINMUX_PB14F_TCC4_WO0"
+   },
+   {
+    "func": "G",
+    "peripheral": "TCC0",
+    "signal": "WO2",
+    "macro": "PINMUX_PB14G_TCC0_WO2"
+   },
+   {
+    "func": "K",
+    "peripheral": "PCC",
+    "signal": "DATA8",
+    "macro": "PINMUX_PB14K_PCC_DATA8"
+   },
+   {
+    "func": "M",
+    "peripheral": "GCLK",
+    "signal": "IO0",
+    "macro": "PINMUX_PB14M_GCLK_IO0"
+   },
+   {
+    "func": "N",
+    "peripheral": "CCL",
+    "signal": "IN9",
+    "macro": "PINMUX_PB14N_CCL_IN9"
+   }
+  ],
+  "PB15": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT15",
+    "macro": "PINMUX_PB15A_EIC_EXTINT15"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC0",
+    "signal": "PTCXY29",
+    "macro": "PINMUX_PB15B_ADC0_PTCXY29"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM4",
+    "signal": "PAD3",
+    "macro": "PINMUX_PB15C_SERCOM4_PAD3"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC5",
+    "signal": "WO1",
+    "macro": "PINMUX_PB15E_TC5_WO1"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC4",
+    "signal": "WO1",
+    "macro": "PINMUX_PB15F_TCC4_WO1"
+   },
+   {
+    "func": "G",
+    "peripheral": "TCC0",
+    "signal": "WO3",
+    "macro": "PINMUX_PB15G_TCC0_WO3"
+   },
+   {
+    "func": "K",
+    "peripheral": "PCC",
+    "signal": "DATA9",
+    "macro": "PINMUX_PB15K_PCC_DATA9"
+   },
+   {
+    "func": "M",
+    "peripheral": "GCLK",
+    "signal": "IO1",
+    "macro": "PINMUX_PB15M_GCLK_IO1"
+   },
+   {
+    "func": "N",
+    "peripheral": "CCL",
+    "signal": "IN10",
+    "macro": "PINMUX_PB15N_CCL_IN10"
+   }
+  ],
+  "PB16": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT0",
+    "macro": "PINMUX_PB16A_EIC_EXTINT0"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM5",
+    "signal": "PAD0",
+    "macro": "PINMUX_PB16C_SERCOM5_PAD0"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC6",
+    "signal": "WO0",
+    "macro": "PINMUX_PB16E_TC6_WO0"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC3",
+    "signal": "WO0",
+    "macro": "PINMUX_PB16F_TCC3_WO0"
+   },
+   {
+    "func": "G",
+    "peripheral": "TCC0",
+    "signal": "WO4",
+    "macro": "PINMUX_PB16G_TCC0_WO4"
+   },
+   {
+    "func": "I",
+    "peripheral": "SDHC1",
+    "signal": "SDCD",
+    "macro": "PINMUX_PB16I_SDHC1_SDCD"
+   },
+   {
+    "func": "J",
+    "peripheral": "I2S",
+    "signal": "SCK0",
+    "macro": "PINMUX_PB16J_I2S_SCK0"
+   },
+   {
+    "func": "M",
+    "peripheral": "GCLK",
+    "signal": "IO2",
+    "macro": "PINMUX_PB16M_GCLK_IO2"
+   },
+   {
+    "func": "N",
+    "peripheral": "CCL",
+    "signal": "IN11",
+    "macro": "PINMUX_PB16N_CCL_IN11"
+   }
+  ],
+  "PB17": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT1",
+    "macro": "PINMUX_PB17A_EIC_EXTINT1"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM5",
+    "signal": "PAD1",
+    "macro": "PINMUX_PB17C_SERCOM5_PAD1"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC6",
+    "signal": "WO1",
+    "macro": "PINMUX_PB17E_TC6_WO1"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC3",
+    "signal": "WO1",
+    "macro": "PINMUX_PB17F_TCC3_WO1"
+   },
+   {
+    "func": "G",
+    "peripheral": "TCC0",
+    "signal": "WO5",
+    "macro": "PINMUX_PB17G_TCC0_WO5"
+   },
+   {
+    "func": "I",
+    "peripheral": "SDHC1",
+    "signal": "SDWP",
+    "macro": "PINMUX_PB17I_SDHC1_SDWP"
+   },
+   {
+    "func": "J",
+    "peripheral": "I2S",
+    "signal": "MCK0",
+    "macro": "PINMUX_PB17J_I2S_MCK0"
+   },
+   {
+    "func": "M",
+    "peripheral": "GCLK",
+    "signal": "IO3",
+    "macro": "PINMUX_PB17M_GCLK_IO3"
+   },
+   {
+    "func": "N",
+    "peripheral": "CCL",
+    "signal": "OUT3",
+    "macro": "PINMUX_PB17N_CCL_OUT3"
+   }
+  ],
+  "PB18": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT2",
+    "macro": "PINMUX_PB18A_EIC_EXTINT2"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM5",
+    "signal": "PAD2",
+    "macro": "PINMUX_PB18C_SERCOM5_PAD2"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM7",
+    "signal": "PAD2",
+    "macro": "PINMUX_PB18D_SERCOM7_PAD2"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC1",
+    "signal": "WO0",
+    "macro": "PINMUX_PB18F_TCC1_WO0"
+   },
+   {
+    "func": "G",
+    "peripheral": "PDEC",
+    "signal": "QDI0",
+    "macro": "PINMUX_PB18G_PDEC_QDI0"
+   },
+   {
+    "func": "I",
+    "peripheral": "SDHC1",
+    "signal": "SDDAT0",
+    "macro": "PINMUX_PB18I_SDHC1_SDDAT0"
+   },
+   {
+    "func": "M",
+    "peripheral": "GCLK",
+    "signal": "IO4",
+    "macro": "PINMUX_PB18M_GCLK_IO4"
+   }
+  ],
+  "PB19": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT3",
+    "macro": "PINMUX_PB19A_EIC_EXTINT3"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM5",
+    "signal": "PAD3",
+    "macro": "PINMUX_PB19C_SERCOM5_PAD3"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM7",
+    "signal": "PAD3",
+    "macro": "PINMUX_PB19D_SERCOM7_PAD3"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC1",
+    "signal": "WO1",
+    "macro": "PINMUX_PB19F_TCC1_WO1"
+   },
+   {
+    "func": "G",
+    "peripheral": "PDEC",
+    "signal": "QDI1",
+    "macro": "PINMUX_PB19G_PDEC_QDI1"
+   },
+   {
+    "func": "I",
+    "peripheral": "SDHC1",
+    "signal": "SDDAT1",
+    "macro": "PINMUX_PB19I_SDHC1_SDDAT1"
+   },
+   {
+    "func": "M",
+    "peripheral": "GCLK",
+    "signal": "IO5",
+    "macro": "PINMUX_PB19M_GCLK_IO5"
+   }
+  ],
+  "PB20": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT4",
+    "macro": "PINMUX_PB20A_EIC_EXTINT4"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM3",
+    "signal": "PAD0",
+    "macro": "PINMUX_PB20C_SERCOM3_PAD0"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM7",
+    "signal": "PAD1",
+    "macro": "PINMUX_PB20D_SERCOM7_PAD1"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC1",
+    "signal": "WO2",
+    "macro": "PINMUX_PB20F_TCC1_WO2"
+   },
+   {
+    "func": "G",
+    "peripheral": "PDEC",
+    "signal": "QDI2",
+    "macro": "PINMUX_PB20G_PDEC_QDI2"
+   },
+   {
+    "func": "I",
+    "peripheral": "SDHC1",
+    "signal": "SDDAT2",
+    "macro": "PINMUX_PB20I_SDHC1_SDDAT2"
+   },
+   {
+    "func": "M",
+    "peripheral": "GCLK",
+    "signal": "IO6",
+    "macro": "PINMUX_PB20M_GCLK_IO6"
+   }
+  ],
+  "PB21": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT5",
+    "macro": "PINMUX_PB21A_EIC_EXTINT5"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM3",
+    "signal": "PAD1",
+    "macro": "PINMUX_PB21C_SERCOM3_PAD1"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM7",
+    "signal": "PAD0",
+    "macro": "PINMUX_PB21D_SERCOM7_PAD0"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC1",
+    "signal": "WO3",
+    "macro": "PINMUX_PB21F_TCC1_WO3"
+   },
+   {
+    "func": "I",
+    "peripheral": "SDHC1",
+    "signal": "SDDAT3",
+    "macro": "PINMUX_PB21I_SDHC1_SDDAT3"
+   },
+   {
+    "func": "M",
+    "peripheral": "GCLK",
+    "signal": "IO7",
+    "macro": "PINMUX_PB21M_GCLK_IO7"
+   }
+  ],
+  "PB22": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT6",
+    "macro": "PINMUX_PB22A_EIC_EXTINT6"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM1",
+    "signal": "PAD2",
+    "macro": "PINMUX_PB22C_SERCOM1_PAD2"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM5",
+    "signal": "PAD2",
+    "macro": "PINMUX_PB22D_SERCOM5_PAD2"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC7",
+    "signal": "WO0",
+    "macro": "PINMUX_PB22E_TC7_WO0"
+   },
+   {
+    "func": "G",
+    "peripheral": "PDEC",
+    "signal": "QDI2",
+    "macro": "PINMUX_PB22G_PDEC_QDI2"
+   },
+   {
+    "func": "H",
+    "peripheral": "USB",
+    "signal": "SOF_1KHZ",
+    "macro": "PINMUX_PB22H_USB_SOF_1KHZ"
+   },
+   {
+    "func": "M",
+    "peripheral": "GCLK",
+    "signal": "IO0",
+    "macro": "PINMUX_PB22M_GCLK_IO0"
+   },
+   {
+    "func": "N",
+    "peripheral": "CCL",
+    "signal": "IN0",
+    "macro": "PINMUX_PB22N_CCL_IN0"
+   }
+  ],
+  "PB23": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT7",
+    "macro": "PINMUX_PB23A_EIC_EXTINT7"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM1",
+    "signal": "PAD3",
+    "macro": "PINMUX_PB23C_SERCOM1_PAD3"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM5",
+    "signal": "PAD3",
+    "macro": "PINMUX_PB23D_SERCOM5_PAD3"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC7",
+    "signal": "WO1",
+    "macro": "PINMUX_PB23E_TC7_WO1"
+   },
+   {
+    "func": "G",
+    "peripheral": "PDEC",
+    "signal": "QDI0",
+    "macro": "PINMUX_PB23G_PDEC_QDI0"
+   },
+   {
+    "func": "M",
+    "peripheral": "GCLK",
+    "signal": "IO1",
+    "macro": "PINMUX_PB23M_GCLK_IO1"
+   },
+   {
+    "func": "N",
+    "peripheral": "CCL",
+    "signal": "OUT0",
+    "macro": "PINMUX_PB23N_CCL_OUT0"
+   }
+  ],
+  "PB24": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT8",
+    "macro": "PINMUX_PB24A_EIC_EXTINT8"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM0",
+    "signal": "PAD0",
+    "macro": "PINMUX_PB24C_SERCOM0_PAD0"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM2",
+    "signal": "PAD1",
+    "macro": "PINMUX_PB24D_SERCOM2_PAD1"
+   },
+   {
+    "func": "G",
+    "peripheral": "PDEC",
+    "signal": "QDI1",
+    "macro": "PINMUX_PB24G_PDEC_QDI1"
+   },
+   {
+    "func": "M",
+    "peripheral": "AC",
+    "signal": "CMP0",
+    "macro": "PINMUX_PB24M_AC_CMP0"
+   }
+  ],
+  "PB25": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT9",
+    "macro": "PINMUX_PB25A_EIC_EXTINT9"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM0",
+    "signal": "PAD1",
+    "macro": "PINMUX_PB25C_SERCOM0_PAD1"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM2",
+    "signal": "PAD0",
+    "macro": "PINMUX_PB25D_SERCOM2_PAD0"
+   },
+   {
+    "func": "G",
+    "peripheral": "PDEC",
+    "signal": "QDI2",
+    "macro": "PINMUX_PB25G_PDEC_QDI2"
+   },
+   {
+    "func": "M",
+    "peripheral": "AC",
+    "signal": "CMP1",
+    "macro": "PINMUX_PB25M_AC_CMP1"
+   }
+  ],
+  "PB26": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT12",
+    "macro": "PINMUX_PB26A_EIC_EXTINT12"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM2",
+    "signal": "PAD0",
+    "macro": "PINMUX_PB26C_SERCOM2_PAD0"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM4",
+    "signal": "PAD1",
+    "macro": "PINMUX_PB26D_SERCOM4_PAD1"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC1",
+    "signal": "WO2",
+    "macro": "PINMUX_PB26F_TCC1_WO2"
+   }
+  ],
+  "PB27": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT13",
+    "macro": "PINMUX_PB27A_EIC_EXTINT13"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM2",
+    "signal": "PAD1",
+    "macro": "PINMUX_PB27C_SERCOM2_PAD1"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM4",
+    "signal": "PAD0",
+    "macro": "PINMUX_PB27D_SERCOM4_PAD0"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC1",
+    "signal": "WO3",
+    "macro": "PINMUX_PB27F_TCC1_WO3"
+   }
+  ],
+  "PB28": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT14",
+    "macro": "PINMUX_PB28A_EIC_EXTINT14"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM2",
+    "signal": "PAD2",
+    "macro": "PINMUX_PB28C_SERCOM2_PAD2"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM4",
+    "signal": "PAD2",
+    "macro": "PINMUX_PB28D_SERCOM4_PAD2"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC1",
+    "signal": "WO4",
+    "macro": "PINMUX_PB28F_TCC1_WO4"
+   },
+   {
+    "func": "J",
+    "peripheral": "I2S",
+    "signal": "SCK1",
+    "macro": "PINMUX_PB28J_I2S_SCK1"
+   }
+  ],
+  "PB29": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT15",
+    "macro": "PINMUX_PB29A_EIC_EXTINT15"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM2",
+    "signal": "PAD3",
+    "macro": "PINMUX_PB29C_SERCOM2_PAD3"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM4",
+    "signal": "PAD3",
+    "macro": "PINMUX_PB29D_SERCOM4_PAD3"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC1",
+    "signal": "WO5",
+    "macro": "PINMUX_PB29F_TCC1_WO5"
+   },
+   {
+    "func": "J",
+    "peripheral": "I2S",
+    "signal": "MCK1",
+    "macro": "PINMUX_PB29J_I2S_MCK1"
+   }
+  ],
+  "PB30": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT14",
+    "macro": "PINMUX_PB30A_EIC_EXTINT14"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM7",
+    "signal": "PAD0",
+    "macro": "PINMUX_PB30C_SERCOM7_PAD0"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM5",
+    "signal": "PAD1",
+    "macro": "PINMUX_PB30D_SERCOM5_PAD1"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC0",
+    "signal": "WO0",
+    "macro": "PINMUX_PB30E_TC0_WO0"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC4",
+    "signal": "WO0",
+    "macro": "PINMUX_PB30F_TCC4_WO0"
+   },
+   {
+    "func": "G",
+    "peripheral": "TCC0",
+    "signal": "WO6",
+    "macro": "PINMUX_PB30G_TCC0_WO6"
+   },
+   {
+    "func": "H",
+    "peripheral": "CM4",
+    "signal": "SWO",
+    "macro": "PINMUX_PB30H_CM4_SWO"
+   }
+  ],
+  "PB31": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT15",
+    "macro": "PINMUX_PB31A_EIC_EXTINT15"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM7",
+    "signal": "PAD1",
+    "macro": "PINMUX_PB31C_SERCOM7_PAD1"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM5",
+    "signal": "PAD0",
+    "macro": "PINMUX_PB31D_SERCOM5_PAD0"
+   },
+   {
+    "func": "E",
+    "peripheral": "TC0",
+    "signal": "WO1",
+    "macro": "PINMUX_PB31E_TC0_WO1"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC4",
+    "signal": "WO1",
+    "macro": "PINMUX_PB31F_TCC4_WO1"
+   },
+   {
+    "func": "G",
+    "peripheral": "TCC0",
+    "signal": "WO7",
+    "macro": "PINMUX_PB31G_TCC0_WO7"
+   }
+  ],
+  "PC00": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT0",
+    "macro": "PINMUX_PC00A_EIC_EXTINT0"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC1",
+    "signal": "AIN10",
+    "macro": "PINMUX_PC00B_ADC1_AIN10"
+   }
+  ],
+  "PC01": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT1",
+    "macro": "PINMUX_PC01A_EIC_EXTINT1"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC1",
+    "signal": "AIN11",
+    "macro": "PINMUX_PC01B_ADC1_AIN11"
+   }
+  ],
+  "PC02": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT2",
+    "macro": "PINMUX_PC02A_EIC_EXTINT2"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC1",
+    "signal": "AIN4",
+    "macro": "PINMUX_PC02B_ADC1_AIN4"
+   }
+  ],
+  "PC03": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT3",
+    "macro": "PINMUX_PC03A_EIC_EXTINT3"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC1",
+    "signal": "AIN5",
+    "macro": "PINMUX_PC03B_ADC1_AIN5"
+   }
+  ],
+  "PC04": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT4",
+    "macro": "PINMUX_PC04A_EIC_EXTINT4"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM6",
+    "signal": "PAD0",
+    "macro": "PINMUX_PC04C_SERCOM6_PAD0"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC0",
+    "signal": "WO0",
+    "macro": "PINMUX_PC04F_TCC0_WO0"
+   }
+  ],
+  "PC05": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT5",
+    "macro": "PINMUX_PC05A_EIC_EXTINT5"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM6",
+    "signal": "PAD1",
+    "macro": "PINMUX_PC05C_SERCOM6_PAD1"
+   }
+  ],
+  "PC06": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT6",
+    "macro": "PINMUX_PC06A_EIC_EXTINT6"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM6",
+    "signal": "PAD2",
+    "macro": "PINMUX_PC06C_SERCOM6_PAD2"
+   },
+   {
+    "func": "I",
+    "peripheral": "SDHC0",
+    "signal": "SDCD",
+    "macro": "PINMUX_PC06I_SDHC0_SDCD"
+   }
+  ],
+  "PC07": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT9",
+    "macro": "PINMUX_PC07A_EIC_EXTINT9"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM6",
+    "signal": "PAD3",
+    "macro": "PINMUX_PC07C_SERCOM6_PAD3"
+   },
+   {
+    "func": "I",
+    "peripheral": "SDHC0",
+    "signal": "SDWP",
+    "macro": "PINMUX_PC07I_SDHC0_SDWP"
+   }
+  ],
+  "PC10": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT10",
+    "macro": "PINMUX_PC10A_EIC_EXTINT10"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM6",
+    "signal": "PAD2",
+    "macro": "PINMUX_PC10C_SERCOM6_PAD2"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM7",
+    "signal": "PAD2",
+    "macro": "PINMUX_PC10D_SERCOM7_PAD2"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC0",
+    "signal": "WO0",
+    "macro": "PINMUX_PC10F_TCC0_WO0"
+   },
+   {
+    "func": "G",
+    "peripheral": "TCC1",
+    "signal": "WO4",
+    "macro": "PINMUX_PC10G_TCC1_WO4"
+   }
+  ],
+  "PC11": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT11",
+    "macro": "PINMUX_PC11A_EIC_EXTINT11"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM6",
+    "signal": "PAD3",
+    "macro": "PINMUX_PC11C_SERCOM6_PAD3"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM7",
+    "signal": "PAD3",
+    "macro": "PINMUX_PC11D_SERCOM7_PAD3"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC0",
+    "signal": "WO1",
+    "macro": "PINMUX_PC11F_TCC0_WO1"
+   },
+   {
+    "func": "G",
+    "peripheral": "TCC1",
+    "signal": "WO5",
+    "macro": "PINMUX_PC11G_TCC1_WO5"
+   }
+  ],
+  "PC12": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT12",
+    "macro": "PINMUX_PC12A_EIC_EXTINT12"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM7",
+    "signal": "PAD0",
+    "macro": "PINMUX_PC12C_SERCOM7_PAD0"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM6",
+    "signal": "PAD1",
+    "macro": "PINMUX_PC12D_SERCOM6_PAD1"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC0",
+    "signal": "WO2",
+    "macro": "PINMUX_PC12F_TCC0_WO2"
+   },
+   {
+    "func": "G",
+    "peripheral": "TCC1",
+    "signal": "WO6",
+    "macro": "PINMUX_PC12G_TCC1_WO6"
+   },
+   {
+    "func": "K",
+    "peripheral": "PCC",
+    "signal": "DATA10",
+    "macro": "PINMUX_PC12K_PCC_DATA10"
+   }
+  ],
+  "PC13": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT13",
+    "macro": "PINMUX_PC13A_EIC_EXTINT13"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM7",
+    "signal": "PAD1",
+    "macro": "PINMUX_PC13C_SERCOM7_PAD1"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM6",
+    "signal": "PAD0",
+    "macro": "PINMUX_PC13D_SERCOM6_PAD0"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC0",
+    "signal": "WO3",
+    "macro": "PINMUX_PC13F_TCC0_WO3"
+   },
+   {
+    "func": "G",
+    "peripheral": "TCC1",
+    "signal": "WO7",
+    "macro": "PINMUX_PC13G_TCC1_WO7"
+   },
+   {
+    "func": "K",
+    "peripheral": "PCC",
+    "signal": "DATA11",
+    "macro": "PINMUX_PC13K_PCC_DATA11"
+   }
+  ],
+  "PC14": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT14",
+    "macro": "PINMUX_PC14A_EIC_EXTINT14"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM7",
+    "signal": "PAD2",
+    "macro": "PINMUX_PC14C_SERCOM7_PAD2"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM6",
+    "signal": "PAD2",
+    "macro": "PINMUX_PC14D_SERCOM6_PAD2"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC0",
+    "signal": "WO4",
+    "macro": "PINMUX_PC14F_TCC0_WO4"
+   },
+   {
+    "func": "G",
+    "peripheral": "TCC1",
+    "signal": "WO0",
+    "macro": "PINMUX_PC14G_TCC1_WO0"
+   },
+   {
+    "func": "K",
+    "peripheral": "PCC",
+    "signal": "DATA12",
+    "macro": "PINMUX_PC14K_PCC_DATA12"
+   }
+  ],
+  "PC15": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT15",
+    "macro": "PINMUX_PC15A_EIC_EXTINT15"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM7",
+    "signal": "PAD3",
+    "macro": "PINMUX_PC15C_SERCOM7_PAD3"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM6",
+    "signal": "PAD3",
+    "macro": "PINMUX_PC15D_SERCOM6_PAD3"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC0",
+    "signal": "WO5",
+    "macro": "PINMUX_PC15F_TCC0_WO5"
+   },
+   {
+    "func": "G",
+    "peripheral": "TCC1",
+    "signal": "WO1",
+    "macro": "PINMUX_PC15G_TCC1_WO1"
+   },
+   {
+    "func": "K",
+    "peripheral": "PCC",
+    "signal": "DATA13",
+    "macro": "PINMUX_PC15K_PCC_DATA13"
+   }
+  ],
+  "PC16": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT0",
+    "macro": "PINMUX_PC16A_EIC_EXTINT0"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM6",
+    "signal": "PAD0",
+    "macro": "PINMUX_PC16C_SERCOM6_PAD0"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM0",
+    "signal": "PAD1",
+    "macro": "PINMUX_PC16D_SERCOM0_PAD1"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC0",
+    "signal": "WO0",
+    "macro": "PINMUX_PC16F_TCC0_WO0"
+   },
+   {
+    "func": "G",
+    "peripheral": "PDEC",
+    "signal": "QDI0",
+    "macro": "PINMUX_PC16G_PDEC_QDI0"
+   }
+  ],
+  "PC17": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT1",
+    "macro": "PINMUX_PC17A_EIC_EXTINT1"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM6",
+    "signal": "PAD1",
+    "macro": "PINMUX_PC17C_SERCOM6_PAD1"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM0",
+    "signal": "PAD0",
+    "macro": "PINMUX_PC17D_SERCOM0_PAD0"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC0",
+    "signal": "WO1",
+    "macro": "PINMUX_PC17F_TCC0_WO1"
+   },
+   {
+    "func": "G",
+    "peripheral": "PDEC",
+    "signal": "QDI1",
+    "macro": "PINMUX_PC17G_PDEC_QDI1"
+   }
+  ],
+  "PC18": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT2",
+    "macro": "PINMUX_PC18A_EIC_EXTINT2"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM6",
+    "signal": "PAD2",
+    "macro": "PINMUX_PC18C_SERCOM6_PAD2"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM0",
+    "signal": "PAD2",
+    "macro": "PINMUX_PC18D_SERCOM0_PAD2"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC0",
+    "signal": "WO2",
+    "macro": "PINMUX_PC18F_TCC0_WO2"
+   },
+   {
+    "func": "G",
+    "peripheral": "PDEC",
+    "signal": "QDI2",
+    "macro": "PINMUX_PC18G_PDEC_QDI2"
+   }
+  ],
+  "PC19": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT3",
+    "macro": "PINMUX_PC19A_EIC_EXTINT3"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM6",
+    "signal": "PAD3",
+    "macro": "PINMUX_PC19C_SERCOM6_PAD3"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM0",
+    "signal": "PAD3",
+    "macro": "PINMUX_PC19D_SERCOM0_PAD3"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC0",
+    "signal": "WO3",
+    "macro": "PINMUX_PC19F_TCC0_WO3"
+   }
+  ],
+  "PC20": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT4",
+    "macro": "PINMUX_PC20A_EIC_EXTINT4"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC0",
+    "signal": "WO4",
+    "macro": "PINMUX_PC20F_TCC0_WO4"
+   },
+   {
+    "func": "I",
+    "peripheral": "SDHC1",
+    "signal": "SDCD",
+    "macro": "PINMUX_PC20I_SDHC1_SDCD"
+   },
+   {
+    "func": "N",
+    "peripheral": "CCL",
+    "signal": "IN9",
+    "macro": "PINMUX_PC20N_CCL_IN9"
+   }
+  ],
+  "PC21": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT5",
+    "macro": "PINMUX_PC21A_EIC_EXTINT5"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC0",
+    "signal": "WO5",
+    "macro": "PINMUX_PC21F_TCC0_WO5"
+   },
+   {
+    "func": "I",
+    "peripheral": "SDHC1",
+    "signal": "SDWP",
+    "macro": "PINMUX_PC21I_SDHC1_SDWP"
+   },
+   {
+    "func": "N",
+    "peripheral": "CCL",
+    "signal": "IN10",
+    "macro": "PINMUX_PC21N_CCL_IN10"
+   }
+  ],
+  "PC22": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT6",
+    "macro": "PINMUX_PC22A_EIC_EXTINT6"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM1",
+    "signal": "PAD0",
+    "macro": "PINMUX_PC22C_SERCOM1_PAD0"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM3",
+    "signal": "PAD1",
+    "macro": "PINMUX_PC22D_SERCOM3_PAD1"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC0",
+    "signal": "WO6",
+    "macro": "PINMUX_PC22F_TCC0_WO6"
+   }
+  ],
+  "PC23": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT7",
+    "macro": "PINMUX_PC23A_EIC_EXTINT7"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM1",
+    "signal": "PAD1",
+    "macro": "PINMUX_PC23C_SERCOM1_PAD1"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM3",
+    "signal": "PAD0",
+    "macro": "PINMUX_PC23D_SERCOM3_PAD0"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC0",
+    "signal": "WO7",
+    "macro": "PINMUX_PC23F_TCC0_WO7"
+   }
+  ],
+  "PC24": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT8",
+    "macro": "PINMUX_PC24A_EIC_EXTINT8"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM0",
+    "signal": "PAD2",
+    "macro": "PINMUX_PC24C_SERCOM0_PAD2"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM2",
+    "signal": "PAD2",
+    "macro": "PINMUX_PC24D_SERCOM2_PAD2"
+   },
+   {
+    "func": "H",
+    "peripheral": "CM4",
+    "signal": "TRACEDATA3",
+    "macro": "PINMUX_PC24H_CM4_TRACEDATA3"
+   }
+  ],
+  "PC25": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT9",
+    "macro": "PINMUX_PC25A_EIC_EXTINT9"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM0",
+    "signal": "PAD3",
+    "macro": "PINMUX_PC25C_SERCOM0_PAD3"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM2",
+    "signal": "PAD3",
+    "macro": "PINMUX_PC25D_SERCOM2_PAD3"
+   },
+   {
+    "func": "H",
+    "peripheral": "CM4",
+    "signal": "TRACEDATA2",
+    "macro": "PINMUX_PC25H_CM4_TRACEDATA2"
+   }
+  ],
+  "PC26": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT10",
+    "macro": "PINMUX_PC26A_EIC_EXTINT10"
+   },
+   {
+    "func": "H",
+    "peripheral": "CM4",
+    "signal": "TRACEDATA1",
+    "macro": "PINMUX_PC26H_CM4_TRACEDATA1"
+   }
+  ],
+  "PC27": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT11",
+    "macro": "PINMUX_PC27A_EIC_EXTINT11"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM1",
+    "signal": "PAD0",
+    "macro": "PINMUX_PC27C_SERCOM1_PAD0"
+   },
+   {
+    "func": "H",
+    "peripheral": "CM4",
+    "signal": "TRACECLK",
+    "macro": "PINMUX_PC27H_CM4_TRACECLK"
+   },
+   {
+    "func": "M",
+    "peripheral": "CM4",
+    "signal": "SWO",
+    "macro": "PINMUX_PC27M_CM4_SWO"
+   },
+   {
+    "func": "N",
+    "peripheral": "CCL",
+    "signal": "IN4",
+    "macro": "PINMUX_PC27N_CCL_IN4"
+   }
+  ],
+  "PC28": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT12",
+    "macro": "PINMUX_PC28A_EIC_EXTINT12"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM1",
+    "signal": "PAD1",
+    "macro": "PINMUX_PC28C_SERCOM1_PAD1"
+   },
+   {
+    "func": "H",
+    "peripheral": "CM4",
+    "signal": "TRACEDATA0",
+    "macro": "PINMUX_PC28H_CM4_TRACEDATA0"
+   },
+   {
+    "func": "N",
+    "peripheral": "CCL",
+    "signal": "IN5",
+    "macro": "PINMUX_PC28N_CCL_IN5"
+   }
+  ],
+  "PC30": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT14",
+    "macro": "PINMUX_PC30A_EIC_EXTINT14"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC1",
+    "signal": "AIN12",
+    "macro": "PINMUX_PC30B_ADC1_AIN12"
+   }
+  ],
+  "PC31": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT15",
+    "macro": "PINMUX_PC31A_EIC_EXTINT15"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC1",
+    "signal": "AIN13",
+    "macro": "PINMUX_PC31B_ADC1_AIN13"
+   }
+  ],
+  "PD00": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT0",
+    "macro": "PINMUX_PD00A_EIC_EXTINT0"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC1",
+    "signal": "AIN14",
+    "macro": "PINMUX_PD00B_ADC1_AIN14"
+   }
+  ],
+  "PD01": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT1",
+    "macro": "PINMUX_PD01A_EIC_EXTINT1"
+   },
+   {
+    "func": "B",
+    "peripheral": "ADC1",
+    "signal": "AIN15",
+    "macro": "PINMUX_PD01B_ADC1_AIN15"
+   }
+  ],
+  "PD08": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT3",
+    "macro": "PINMUX_PD08A_EIC_EXTINT3"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM7",
+    "signal": "PAD0",
+    "macro": "PINMUX_PD08C_SERCOM7_PAD0"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM6",
+    "signal": "PAD1",
+    "macro": "PINMUX_PD08D_SERCOM6_PAD1"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC0",
+    "signal": "WO1",
+    "macro": "PINMUX_PD08F_TCC0_WO1"
+   }
+  ],
+  "PD09": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT4",
+    "macro": "PINMUX_PD09A_EIC_EXTINT4"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM7",
+    "signal": "PAD1",
+    "macro": "PINMUX_PD09C_SERCOM7_PAD1"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM6",
+    "signal": "PAD0",
+    "macro": "PINMUX_PD09D_SERCOM6_PAD0"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC0",
+    "signal": "WO2",
+    "macro": "PINMUX_PD09F_TCC0_WO2"
+   }
+  ],
+  "PD10": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT5",
+    "macro": "PINMUX_PD10A_EIC_EXTINT5"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM7",
+    "signal": "PAD2",
+    "macro": "PINMUX_PD10C_SERCOM7_PAD2"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM6",
+    "signal": "PAD2",
+    "macro": "PINMUX_PD10D_SERCOM6_PAD2"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC0",
+    "signal": "WO3",
+    "macro": "PINMUX_PD10F_TCC0_WO3"
+   }
+  ],
+  "PD11": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT6",
+    "macro": "PINMUX_PD11A_EIC_EXTINT6"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM7",
+    "signal": "PAD3",
+    "macro": "PINMUX_PD11C_SERCOM7_PAD3"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM6",
+    "signal": "PAD3",
+    "macro": "PINMUX_PD11D_SERCOM6_PAD3"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC0",
+    "signal": "WO4",
+    "macro": "PINMUX_PD11F_TCC0_WO4"
+   }
+  ],
+  "PD12": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT7",
+    "macro": "PINMUX_PD12A_EIC_EXTINT7"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC0",
+    "signal": "WO5",
+    "macro": "PINMUX_PD12F_TCC0_WO5"
+   }
+  ],
+  "PD20": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT10",
+    "macro": "PINMUX_PD20A_EIC_EXTINT10"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM1",
+    "signal": "PAD2",
+    "macro": "PINMUX_PD20C_SERCOM1_PAD2"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM3",
+    "signal": "PAD2",
+    "macro": "PINMUX_PD20D_SERCOM3_PAD2"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC1",
+    "signal": "WO0",
+    "macro": "PINMUX_PD20F_TCC1_WO0"
+   },
+   {
+    "func": "I",
+    "peripheral": "SDHC1",
+    "signal": "SDCD",
+    "macro": "PINMUX_PD20I_SDHC1_SDCD"
+   }
+  ],
+  "PD21": [
+   {
+    "func": "A",
+    "peripheral": "EIC",
+    "signal": "EXTINT11",
+    "macro": "PINMUX_PD21A_EIC_EXTINT11"
+   },
+   {
+    "func": "C",
+    "peripheral": "SERCOM1",
+    "signal": "PAD3",
+    "macro": "PINMUX_PD21C_SERCOM1_PAD3"
+   },
+   {
+    "func": "D",
+    "peripheral": "SERCOM3",
+    "signal": "PAD3",
+    "macro": "PINMUX_PD21D_SERCOM3_PAD3"
+   },
+   {
+    "func": "F",
+    "peripheral": "TCC1",
+    "signal": "WO1",
+    "macro": "PINMUX_PD21F_TCC1_WO1"
+   },
+   {
+    "func": "I",
+    "peripheral": "SDHC1",
+    "signal": "SDWP",
+    "macro": "PINMUX_PD21I_SDHC1_SDWP"
+   }
+  ]
+ }
+}

@@ -81,6 +81,10 @@ configuration, for example `clang-format -i path/to/file.c`.
   the `PVDX-SAMD-PinConfig` submodule and run `make -C src update_asf` only
   when intentionally replacing ASF; that target deletes and recreates `ASF/`
   and requires an `.atzip` file in the submodule.
+- Atmel START is offline. Edit the `.atzip` with the browser tool in
+  `tools/pinconfig/` (TypeScript, pnpm). Its README gives the steps. If you
+  change the tool, run `pnpm test` in that folder. The golden tests require
+  byte-identical output for real Atmel START exports.
 - Firmware builds require GNU99 and exactly one build-type macro. Compiler
   warnings are errors, and branch plus abbreviated commit metadata is compiled
   into the application.

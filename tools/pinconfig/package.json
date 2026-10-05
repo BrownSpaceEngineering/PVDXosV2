@@ -1,0 +1,27 @@
+{
+  "name": "pvdx-pinconfig",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Pin and ASF configurator for the PVDX SAMD51P20A board. Replaces Atmel START.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "gen-pinmux": "node scripts/gen-pinmux.ts ../../ASF/samd51a/include/pio/samd51p20a.h src/data/samd51p20a.json",
+    "gen-templates": "node scripts/gen-templates.ts ../../PVDX-SAMD-PinConfig/FinalCompute.atzip src/data/templates.json",
+    "regen": "node scripts/regen.ts"
+  },
+  "dependencies": {
+    "jszip": "^3.10.2",
+    "yaml": "^2.9.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.2",
+    "vitest": "^5.0.3"
+  }
+}

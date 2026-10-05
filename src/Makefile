@@ -213,6 +213,8 @@ update_asf:
 	&& echo "(6.6) ASF Makefile: Project name updated to PVDXos" \
 	&& rm -f ../ASF/main.c \
 	&& echo "(7) ASF main.c removed" \
+	&& $(SED) -i 's/\[12\] = "Hello World!"/[13] = "Hello World!"/' ../ASF/examples/driver_examples.c \
+	&& echo "(7.1) ASF driver_examples.c: SPI example buffers sized for the NUL terminator (GCC 15 -Werror)" \
 	&& $(SED) -i 's|// <h> Basic|#define configSUPPORT_STATIC_ALLOCATION 1\n#define INCLUDE_xQueueGetMutexHolder 1|' ../ASF/config/FreeRTOSConfig.h \
 	&& echo "(8.1) ASF FreeRTOSConfig.h: Static allocation & QueueGetMutexHolder enabled" \
 	&& $(SED) -i 's|#define INCLUDE_uxTaskGetStackHighWaterMark 0|#define INCLUDE_uxTaskGetStackHighWaterMark 1|' ../ASF/config/FreeRTOSConfig.h \
