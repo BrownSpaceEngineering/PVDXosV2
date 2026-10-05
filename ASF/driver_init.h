@@ -25,18 +25,27 @@ extern "C" {
 
 #include <hal_adc_sync.h>
 
+#include <hal_dac_sync.h>
+
 #include <hal_timer.h>
 #include <hal_spi_m_sync.h>
 #include <hal_spi_m_sync.h>
 #include <hal_spi_m_sync.h>
 
 #include <hal_i2c_m_sync.h>
+#include <hal_spi_m_sync.h>
+#include <hal_spi_m_sync.h>
 
 #include <hal_i2c_m_sync.h>
-
-#include <hal_i2c_m_sync.h>
+#include <hal_spi_m_sync.h>
 
 #include <hal_delay.h>
+
+#include <hal_pwm.h>
+#include <hpl_tcc.h>
+
+#include <hal_pwm.h>
+#include <hpl_tcc.h>
 
 #include <hal_rand_sync.h>
 
@@ -44,17 +53,24 @@ extern "C" {
 
 extern struct adc_sync_descriptor ADC_0;
 
-extern struct adc_sync_descriptor   ADC_1;
+extern struct adc_sync_descriptor ADC_1;
+
+extern struct dac_sync_descriptor   DAC_0;
 extern struct timer_descriptor      TIMER_0;
 extern struct spi_m_sync_descriptor SPI_MRAM;
 extern struct spi_m_sync_descriptor SPI_DISPLAY;
 extern struct spi_m_sync_descriptor SPI_CAMERA;
 
-extern struct i2c_m_sync_desc I2C_SBAND;
+extern struct i2c_m_sync_desc       I2C_SBAND;
+extern struct spi_m_sync_descriptor SPI_MAGNETOMETER_GYRO;
+extern struct spi_m_sync_descriptor SPI_SBAND;
 
-extern struct i2c_m_sync_desc I2C_MAGNETOMETER_GYRO;
+extern struct i2c_m_sync_desc       I2C_CAMERA;
+extern struct spi_m_sync_descriptor SPI_UHF;
 
-extern struct i2c_m_sync_desc I2C_CAMERA;
+extern struct pwm_descriptor MAGNETORQUER_1;
+
+extern struct pwm_descriptor MAGNETORQUER_2;
 
 extern struct rand_sync_desc RAND_0;
 
@@ -67,6 +83,10 @@ void ADC_0_init(void);
 void ADC_1_PORT_init(void);
 void ADC_1_CLOCK_init(void);
 void ADC_1_init(void);
+
+void DAC_0_PORT_init(void);
+void DAC_0_CLOCK_init(void);
+void DAC_0_init(void);
 
 void SPI_MRAM_PORT_init(void);
 void SPI_MRAM_CLOCK_init(void);
@@ -84,15 +104,31 @@ void I2C_SBAND_CLOCK_init(void);
 void I2C_SBAND_init(void);
 void I2C_SBAND_PORT_init(void);
 
-void I2C_MAGNETOMETER_GYRO_CLOCK_init(void);
-void I2C_MAGNETOMETER_GYRO_init(void);
-void I2C_MAGNETOMETER_GYRO_PORT_init(void);
+void SPI_MAGNETOMETER_GYRO_PORT_init(void);
+void SPI_MAGNETOMETER_GYRO_CLOCK_init(void);
+void SPI_MAGNETOMETER_GYRO_init(void);
+
+void SPI_SBAND_PORT_init(void);
+void SPI_SBAND_CLOCK_init(void);
+void SPI_SBAND_init(void);
 
 void I2C_CAMERA_CLOCK_init(void);
 void I2C_CAMERA_init(void);
 void I2C_CAMERA_PORT_init(void);
 
+void SPI_UHF_PORT_init(void);
+void SPI_UHF_CLOCK_init(void);
+void SPI_UHF_init(void);
+
 void delay_driver_init(void);
+
+void MAGNETORQUER_1_PORT_init(void);
+void MAGNETORQUER_1_CLOCK_init(void);
+void MAGNETORQUER_1_init(void);
+
+void MAGNETORQUER_2_PORT_init(void);
+void MAGNETORQUER_2_CLOCK_init(void);
+void MAGNETORQUER_2_init(void);
 
 void RAND_0_CLOCK_init(void);
 void RAND_0_init(void);
