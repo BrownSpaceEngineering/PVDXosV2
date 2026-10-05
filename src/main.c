@@ -14,6 +14,7 @@
 #include "main.h"
 
 #include "SEGGER_RTT.h"
+#include "ccsds/ccsds.h"
 #include "checks/device_checks.h"
 #include "cosmic_monkey_task.h"
 #include "globals.h"
@@ -63,6 +64,8 @@ int main(void) {
 
     info("AT_LEAST_ONE_DEVICE_FAILED: %d\n", check_all_devices_on_startup());
 
+    ccsds_init();
+
 /* -------------------------------------- TESTS ---------------------------------------------- */
 #ifdef UNITTEST
     tests_run();
@@ -74,6 +77,7 @@ int main(void) {
     if (task_list_mutex == NULL) {
         fatal("Failed to create PVDX task list mutex");
     }
+
     if (task_list[0] != p_watchdog_task) {
         fatal("Watchdog is not first in task_list!");
     }
@@ -98,7 +102,7 @@ int main(void) {
 
 #if defined(UNITTEST) || defined(DEVBUILD)
     #if defined(UNITTEST)
-    cm_args.frequency = 10;
+    cm_args.frequency = 1;
     #endif
     #if defined(DEVBUILD)
     cm_args.frequency = 1; // Bitflips per second

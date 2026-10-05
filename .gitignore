@@ -1,5 +1,6 @@
 #IDE Junk
 .vscode
+.idea/
 
 # Object files
 *.o
@@ -48,3 +49,6 @@ logs/*
 #Compilation Database
 compile_commands.json
 .cache
+
+# Build artifacts
+/build
