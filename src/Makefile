@@ -35,6 +35,7 @@ export OBJS :=                                              	\
                                                             	\
 ../src/drivers/magnetometer/magnetometer_driver.o               \
 ../src/drivers/fuel_gauge/fuel_gauge_driver.o                   \
+../src/drivers/thermistor/thermistor_driver.o                  \
 ../src/tests/test.o                                             \
 
 
@@ -50,6 +51,7 @@ export EXTRA_VPATH := \
 ../../src/drivers \
 ../../src/drivers/magnetometer \
 ../../src/drivers/fuel_gauge \
+../../src/drivers/thermistor \
 ../../src/tests \
 # $(PATH_TO_CCONTROL_INCLUDES)
 

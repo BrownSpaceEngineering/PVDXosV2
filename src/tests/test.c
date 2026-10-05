@@ -15,6 +15,7 @@
 
 #include "fuel_gauge_driver.h"
 #include "logging.h"
+#include "thermistor_driver.h"
 
 int tests_passed = 0;
 int tests_total = 0;
@@ -80,7 +81,39 @@ static void test_fuel_gauge_hw(void) {
     PVDX_ASSERT_MSG(!fg_alrt_asserted(), "ALRT asserted at idle (a gauge is alarming, or pin stuck low)\n");
 }
 
+// ---- Thermistor plausible-reading band (tune for the bench environment) ----
+#define THERM_TEST_C_MIN (-20.0f)
+#define THERM_TEST_C_MAX 60.0f
+
+static void test_thermistor_hw(void) {
+    test_log("----- testing thermistors + heaters (hardware) -----\n");
+
+    PVDX_ASSERT_MSG(init_thermistors() == SUCCESS, "init_thermistors failed\n");
+
+    for (uint8_t i = 0; i < THERM_COUNT; i++) {
+        // A disconnected/open thermistor rails the ADC to 0 or full-scale; a strict
+        // in-range code is the "only passes when connected" gate.
+        uint16_t code = 0;
+        status_t raw_rc = therm_read_raw(i, &code);
+        PVDX_ASSERT_MSG(raw_rc == SUCCESS, "therm_read_raw failed\n");
+        test_log("therm %u: code=%u\n", i, code);
+        PVDX_ASSERT_MSG(code > 0 && (float)code < THERM_ADC_FS, "ADC code railed - thermistor open/short?\n");
+
+        float t = 0.0f;
+        status_t t_rc = therm_read_celsius(i, &t);
+        PVDX_ASSERT_MSG(t_rc == SUCCESS, "therm_read_celsius failed\n");
+        test_log("therm %u: %ld C\n", i, (long)t);
+        PVDX_ASSERT_MSG(t >= THERM_TEST_C_MIN && t <= THERM_TEST_C_MAX, "temperature implausible\n");
+    }
+
+    // Tie the control output to live readings: at normal lab ambient (> setpoint+hyst = 6C)
+    // both heaters must settle OFF. (Assumes the bench is warmer than the heater band.)
+    heater_control_update();
+    PVDX_ASSERT_MSG(!heater_is_on(0) && !heater_is_on(1), "heater ON at warm ambient (check wiring/polarity)\n");
+}
+
 void tests_run(void) {
     test_fuel_gauge_hw();
+    test_thermistor_hw();
     test_log("test results: %d/%d passed\n", tests_passed, tests_total);
 }

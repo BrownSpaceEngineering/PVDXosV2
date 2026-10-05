@@ -18,6 +18,7 @@
 #include "globals.h"
 #include "logging.h"
 #include "tests/test.h"
+#include "thermistor_driver.h"
 
 static void PVDX_init(void) {
     // WARNING: Segger RTT channel 0 is pre-configured at compile time according to Segger documentation
@@ -61,6 +62,13 @@ int main(void) {
         info("[+] Fuel gauges initialized\n");
     }
 
+    status_t th_status = init_thermistors();
+    if (th_status != SUCCESS) {
+        warning("[!] init_thermistors() failed (status=%d)\n", th_status);
+    } else {
+        info("[+] Thermistors initialized\n");
+    }
+
     /* ---------- READ LOOP ---------- */
 
     while (true) {
@@ -79,6 +87,15 @@ int main(void) {
             warning("[!] fuel-gauge ALRT asserted - scanning\n");
             fg_scan_alerts();
         }
+
+        // Thermistors + closed-loop heater control.
+        float temps[THERM_COUNT];
+        therm_read_all(temps);
+        for (int i = 0; i < THERM_COUNT; i++) {
+            info("therm %d: %ld C\n", i, (long)temps[i]);
+        }
+        heater_control_update();
+        info("heaters: 1=%s 2=%s\n", heater_is_on(0) ? "ON" : "off", heater_is_on(1) ? "ON" : "off");
 
         delay_ms(1000);
     }
