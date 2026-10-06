@@ -105,7 +105,7 @@ CFLAGS += -Wno-unused-parameter #Because some ASF functions have unused paramete
 # Build-specific flags
 CFLAGS_DEV := -DDEVBUILD
 CFLAGS_UNITTEST := -DUNITTEST -DDEVBUILD -Wno-unused-variable 
-CFLAGS_RELEASE := -DRELEASE
+CFLAGS_RELEASE := -DRELEASE -O2
 
 ### All these variables are exported to the child makefile, and affect its behavior ###
 # Build directories the child makefile creates before compiling
