@@ -15,10 +15,18 @@
 typedef struct {
     char callsign[TELEMETRY_CALLSIGN_LENGTH];
     uint32_t state;
-    uint32_t timestamp;
+    uint32_t timestamp; // time since last boot
     uint32_t message_size;
 } preamble_t;
 
-bool serialize_telemetry(); // Function to serialize all telemetry data
+typedef struct {
+    uint8_t revid_register;
+    uint8_t bist_register;
+    uint32_t timestamp; // time when reading was taken
+    int32_t raw_readings[3];
+    float gain_adjusted_readings[3];
+} magnetometer_data_t;
+
+bool serialize_telemetry(size_t buf_size, uint8_t *buf, preamble_t *pre); // Function to serialize all telemetry data
 
 #endif
