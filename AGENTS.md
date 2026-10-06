@@ -9,10 +9,13 @@ Adafruit Grand Central development board.
 
 - `bootloader/` contains three independently linked `0x3000`-byte bootloader
   images at flash offsets `0x00000000`, `0x00003000`, and `0x00006000`.
-  `startup.c` validates checksums and falls through to the next copy if needed.
-  `bootloader.c` byte-wise majority-votes application copies at
-  `0x00010000`, `0x00020000`, and `0x00030000`, copies the result to RAM at
-  `0x20000000`, sets VTOR, and jumps to it.
+  `startup.c` validates checksums (stored at `0x0000E000`) and falls through to
+  the next copy if needed.
+  `bootloader.c` byte-wise majority-votes three back-to-back application
+  copies starting at `0x00010000`, copies the result to RAM at `0x20000000`,
+  sets VTOR, and jumps to it. Each copy's slot is the image size rounded up to
+  the 8 KB NVM erase block; the slot size is stored three times at `0x0000E00C`
+  and majority-voted by the bootloader.
 - `src/` is the application; `src/src_ram.ld` links it for RAM execution after
   the bootloader copy. `src/main.c` initializes Atmel Start hardware, logging,
   startup checks, tasks, and FreeRTOS.
