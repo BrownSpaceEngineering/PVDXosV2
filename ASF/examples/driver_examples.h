@@ -16,6 +16,8 @@ void ADC_0_example(void);
 
 void ADC_1_example(void);
 
+void DAC_0_example(void);
+
 void TIMER_0_example(void);
 
 void I2C_SBAND_example(void);
@@ -23,6 +25,10 @@ void I2C_SBAND_example(void);
 void I2C_CAMERA_example(void);
 
 void delay_example(void);
+
+void MAGNETORQUER_1_example(void);
+
+void MAGNETORQUER_2_example(void);
 
 void RAND_0_example(void);
 

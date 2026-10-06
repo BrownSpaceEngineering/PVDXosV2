@@ -13,9 +13,9 @@ extern "C" {
 #endif /* __cplusplus */
 
 #include <FreeRTOS.h>
-#include <hal_rtos.h>
-#include <semphr.h>
 #include <task.h>
+#include <semphr.h>
+#include <hal_rtos.h>
 
 void FREERTOS_V1000_0_example(void);
 

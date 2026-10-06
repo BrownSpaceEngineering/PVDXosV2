@@ -322,9 +322,7 @@ void GMAC_Handler(void) {
     PVDX_default_handler();
 }
 #endif
-void TCC0_0_Handler(void) {
-    PVDX_default_handler();
-}
+// TCC0_0_Handler is defined by ASF (hpl_tcc.c) for the magnetorquer PWM
 void TCC0_1_Handler(void) {
     PVDX_default_handler();
 }
@@ -343,9 +341,7 @@ void TCC0_5_Handler(void) {
 void TCC0_6_Handler(void) {
     PVDX_default_handler();
 }
-void TCC1_0_Handler(void) {
-    PVDX_default_handler();
-}
+// TCC1_0_Handler is defined by ASF (hpl_tcc.c) for the magnetorquer PWM
 void TCC1_1_Handler(void) {
     PVDX_default_handler();
 }

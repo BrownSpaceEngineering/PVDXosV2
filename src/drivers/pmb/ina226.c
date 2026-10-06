@@ -1,60 +1,34 @@
 #include "ina226.h"
 
-#if !defined(UNITTEST)
-// TODO: remove once Atmel START generates I2C_FUELGAUGE_PEROVSKITE (SERCOM6 on PD08/PD09) in driver_init.c.
-// Until then this descriptor is uninitialized and must not be used on hardware.
-struct i2c_m_sync_desc I2C_FUELGAUGE_PEROVSKITE;
+#include "hal_delay.h"
+#include "pmb_i2c.h"
 
 status_t ina226_write_reg(uint8_t reg, uint16_t value) {
-    uint8_t buf[3];
-    buf[0] = reg;
-    buf[1] = (uint8_t)((value >> 8) & 0xFF);
-    buf[2] = (uint8_t)(value & 0xFF);
-
-    struct _i2c_m_msg msg = {
-        .addr = INA226_I2C_ADDR,
-        .len = sizeof(buf),
-        .buffer = buf,
-        .flags = I2C_M_SEVEN | I2C_M_STOP,
-    };
-    if (_i2c_m_sync_transfer(&INA226_I2C.device, &msg) != 0) {
-        return ERROR_I2C_FAILED;
-    }
-    return SUCCESS;
+    uint8_t buf[2] = {(uint8_t)(value >> 8), (uint8_t)(value & 0xFF)}; /* INA226 is MSB first */
+    return pmb_i2c_write_reg(INA226_I2C_ADDR, reg, buf, sizeof(buf));
 }
 
 status_t ina226_read_reg(uint8_t reg, uint16_t *value) {
-    uint8_t data_buf[2] = {0};
-
-    struct _i2c_m_msg wr = {
-        .addr = INA226_I2C_ADDR,
-        .len = 1,
-        .buffer = &reg,
-        .flags = I2C_M_SEVEN,
-    };
-    struct _i2c_m_msg rd = {
-        .addr = INA226_I2C_ADDR,
-        .len = sizeof(data_buf),
-        .buffer = data_buf,
-        .flags = I2C_M_SEVEN | I2C_M_RD | I2C_M_STOP,
-    };
-    if (_i2c_m_sync_transfer(&INA226_I2C.device, &wr) != 0)
-        return ERROR_I2C_FAILED;
-    if (_i2c_m_sync_transfer(&INA226_I2C.device, &rd) != 0)
-        return ERROR_I2C_FAILED;
-
-    /* INA226 sends MSB first */
-    *value = ((uint16_t)data_buf[0] << 8) | (uint16_t)data_buf[1];
+    uint8_t buf[2] = {0};
+    status_t status = pmb_i2c_read_reg(INA226_I2C_ADDR, reg, buf, sizeof(buf));
+    if (status != SUCCESS) {
+        return status;
+    }
+    *value = ((uint16_t)buf[0] << 8) | (uint16_t)buf[1];
     return SUCCESS;
 }
-#endif // !UNITTEST
 
 /**
- * Verifies the device ID, resets it, then writes the default configuration and calibration.
+ * Enables the I2C bus, verifies the device ID, resets it, then writes the default configuration and calibration.
  */
 status_t ina226_init(void) {
+    status_t status = pmb_i2c_init();
+    if (status != SUCCESS) {
+        return status;
+    }
+
     uint16_t mfg_id = 0;
-    status_t status = ina226_read_reg(INA226_MANUFACTURER_ID, &mfg_id);
+    status = ina226_read_reg(INA226_MANUFACTURER_ID, &mfg_id);
     if (status != SUCCESS) {
         warning("ina226: failed to read manufacturer ID\n");
         return status;
@@ -109,6 +83,32 @@ status_t ina226_conversion_ready(bool *ready) {
         return status;
     }
     *ready = (me & INA226_ME_CVRF) != 0;
+    return SUCCESS;
+}
+
+/**
+ * Waits until a conversion that started after this call has completed, so the next read reflects the
+ * current input. The conversion in flight when called may include samples taken before an input change,
+ * so it is discarded and the following one is waited for. Busy-waits in 1 ms steps.
+ */
+status_t ina226_wait_for_fresh_conversion(uint32_t timeout_ms) {
+    bool ready = false;
+    status_t status = ina226_conversion_ready(&ready); // Clears any stale flag
+    if (status != SUCCESS) {
+        return status;
+    }
+    for (int completed = 0; completed < 2;) {
+        if (timeout_ms-- == 0) {
+            return ERROR_NOT_READY;
+        }
+        delay_ms(1);
+        if ((status = ina226_conversion_ready(&ready)) != SUCCESS) {
+            return status;
+        }
+        if (ready) {
+            completed++;
+        }
+    }
     return SUCCESS;
 }
 
