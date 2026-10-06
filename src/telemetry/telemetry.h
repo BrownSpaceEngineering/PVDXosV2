@@ -27,6 +27,7 @@ typedef struct {
     float gain_adjusted_readings[3];
 } magnetometer_data_t;
 
-bool serialize_telemetry(size_t buf_size, uint8_t *buf, preamble_t *pre); // Function to serialize all telemetry data
+bool serialize_telemetry(size_t buf_size, uint8_t *buf, preamble_t *pre,
+                         magnetometer_data_t *mag); // Function to serialize all telemetry data
 
 #endif
