@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-static uint8_t telemetry_buf[TELEMETRY_PACKET_SIZE];
+// static uint8_t telemetry_buf[TELEMETRY_PACKET_SIZE];
 
 /**
  * Writes a uint32_t into buf at *offset, big-endian (most significant byte first)
@@ -32,17 +32,25 @@ static bool put_uint32(uint8_t *buf, size_t buf_len, size_t *offset, uint32_t va
 /**
  * Function for serializing the telemetry preamble
  */
-static bool serialize_preamble(preamble_t *preamble, uint8_t *buf, uint8_t buf_size) {
-    size_t offset = 0;
-    memcpy(buf, preamble->callsign, TELEMETRY_CALLSIGN_LENGTH);
-    offset += TELEMETRY_CALLSIGN_LENGTH;
-    put_uint32(buf, buf_size, &offset, preamble->state);
-    put_uint32(buf, buf_size, &offset, preamble->timestamp);
-    put_uint32(buf, buf_size, &offset, preamble->message_size);
-    return true;
+static bool serialize_preamble(preamble_t *preamble, uint8_t *buf, size_t buf_size, size_t *offset) {
+    if (buf_size < TELEMETRY_CALLSIGN_LENGTH || *offset > buf_size - TELEMETRY_CALLSIGN_LENGTH) {
+        return true;
+    }
+    memcpy((buf + *offset), preamble->callsign, TELEMETRY_CALLSIGN_LENGTH);
+    *offset += TELEMETRY_CALLSIGN_LENGTH;
+    if (put_uint32(buf, buf_size, offset, preamble->state)) {
+        return true;
+    }
+    if (put_uint32(buf, buf_size, offset, preamble->timestamp)) {
+        return true;
+    }
+    if (put_uint32(buf, buf_size, offset, preamble->message_size)) {
+        return true;
+    }
+    return false;
 }
 
-bool serialize_telemetry() {
-    preamble_t pre = {0};
-    return serialize_preamble(&pre, telemetry_buf, TELEMETRY_PACKET_SIZE);
+bool serialize_telemetry(size_t buf_size, uint8_t *buf, preamble_t *pre) {
+    size_t buf_offset = 0;
+    return serialize_preamble(pre, buf, buf_size, &buf_offset);
 }

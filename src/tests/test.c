@@ -15,6 +15,7 @@ int tests_total = 0;
 #include "cfdp/cfdp_utils.h"
 #include "linalg/LinearAlgebra/declareFunctions.h"
 #include "logging.h"
+#include "telemetry/telemetry.h"
 
 #if defined(UNITTEST)
 uint8_t test_mem[512];
@@ -24,6 +25,7 @@ void test_spp(void);
 void test_matrix_product(void);
 void test_cfdp(void);
 void test_uslp(void);
+void test_telemetry_downlink(void);
 
 void tests_run(void) {
 #ifdef TEST_SPP
@@ -37,6 +39,9 @@ void tests_run(void) {
 #endif
 #ifdef TEST_USLP
     test_uslp();
+#endif
+#ifdef TEST_TELEMETRY
+    test_telemetry_downlink();
 #endif
     test_log("test results: %d/%d passed", tests_passed, tests_total);
 }
@@ -640,7 +645,7 @@ void test_uslp(void) {
     uint8_t rule_000[] = {0xCA, 0xBC, 0xD0, 0xA6, 0x00, 0x12, 0x81, 0x00, 0x00, 0x08, 0x01, 0xC0, 0x00, 0x00, 0x01, 0xAA, 0xBB, 0x4F, 0xAC};
     PVDX_ASSERT_MSG(uslp_transfer_frame_parse(&view, rule_000, sizeof(rule_000)), "TFDZ rule 000 rejected\n");
 
-#ifdef UNITTEST // uslp_test_last_frame only exists in unit test builds
+    #ifdef UNITTEST // uslp_test_last_frame only exists in unit test builds
     // VC frame counts are module state that persists between calls, so these tests assume nothing
     // has sent on VCs 5-7 since boot. That holds because tests run before any task is started
     test_log("uslp mapp request rejection tests:\n");
@@ -731,7 +736,50 @@ void test_uslp(void) {
     PVDX_ASSERT_MSG(!err, "VC 6 frame parses\n");
     PVDX_ASSERT_MSG(view.primary_header.virtual_channel_id == 6, "VC 6 frame virtual_channel_id\n");
     PVDX_ASSERT_MSG(view.primary_header.vc_frame_count == 0, "VC 6 has its own count\n");
-#endif
+    #endif
 }
 #endif // TEST_USLP
+
+#ifdef TEST_TELEMETRY
+void test_telemetry_downlink(void) {
+    test_log("----- testing telemetry downlink -----\n");
+
+    // Every byte is distinct so a swapped or shifted field shows up clearly
+    preamble_t pre = {0};
+    memcpy(pre.callsign, TELEMETRY_CALLSIGN, TELEMETRY_CALLSIGN_LENGTH);
+    pre.state = 0x01020304;
+    pre.timestamp = 0x0A0B0C0D;
+    pre.message_size = 0x11223344;
+
+    // "BSEBSE" in ASCII, then each uint32 big-endian
+    uint8_t expected[] = {0x42, 0x53, 0x45, 0x42, 0x53, 0x45, // callsign
+                          0x01, 0x02, 0x03, 0x04,             // state
+                          0x0A, 0x0B, 0x0C, 0x0D,             // timestamp
+                          0x11, 0x22, 0x33, 0x44};            // message_size
+
+    // Buffers are larger than needed, so a bug that writes too far can't corrupt the stack
+    uint8_t buf[64];
+    bool err;
+
+    test_log("telemetry preamble serialize test:\n");
+    memset(buf, 0, sizeof(buf));
+    err = serialize_telemetry(sizeof(expected), buf, &pre);
+    PVDX_ASSERT_MSG(!err, "preamble serialize succeeds\n");
+    PVDX_ASSERT_MSG(memcmp(buf, expected, sizeof(expected)) == 0, "preamble bytes\n");
+    PVDX_ASSERT_MSG(buf[sizeof(expected)] == 0, "nothing written past the preamble\n");
+
+    // The task will call this every few seconds, so a second call must produce the same bytes
+    test_log("telemetry preamble serialize twice test:\n");
+    memset(buf, 0, sizeof(buf));
+    err = serialize_telemetry(sizeof(expected), buf, &pre);
+    PVDX_ASSERT_MSG(!err, "second serialize succeeds\n");
+    PVDX_ASSERT_MSG(memcmp(buf, expected, sizeof(expected)) == 0, "second preamble bytes\n");
+
+    // Claim the buffer is only 10 bytes: callsign + state fit, timestamp doesn't
+    test_log("telemetry preamble buffer too small test:\n");
+    err = serialize_telemetry(10, buf, &pre);
+    PVDX_ASSERT_MSG(err, "too-small buffer is rejected\n");
+}
+#endif // TEST_TELEMETRY
+
 // #endif
