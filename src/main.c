@@ -33,6 +33,46 @@ static void PVDX_init(void) {
     );
 }
 
+// The SERCOM6 I2C pins: PD09 = SDA (PAD0), PD08 = SCL (PAD1).
+#define PIN_SDA GPIO(GPIO_PORTD, 9)
+#define PIN_SCL GPIO(GPIO_PORTD, 8)
+
+// Continuity/bring-up aid: drives PD09/PD08 as plain GPIO so each line can be traced with a
+// multimeter to the gauge's SDA/SCL pins. Overrides the I2C pinmux and LOOPS FOREVER, so it
+// runs instead of normal bring-up. Watch RTT ch.1 to know the current state, or set a
+// breakpoint and single-step. Expected at the gauge pin: HIGH ~= 3.3 V, LOW ~= 0 V.
+// Remove the call in main() to return to normal boot.
+static void pin_toggle_test(void) {
+    gpio_set_pin_function(PIN_SDA, GPIO_PIN_FUNCTION_OFF);
+    gpio_set_pin_function(PIN_SCL, GPIO_PIN_FUNCTION_OFF);
+    gpio_set_pin_direction(PIN_SDA, GPIO_DIRECTION_OUT);
+    gpio_set_pin_direction(PIN_SCL, GPIO_DIRECTION_OUT);
+
+    info("[PIN TEST] Driving PD09(SDA)/PD08(SCL) as GPIO. Probe at the gauge's SDA/SCL pins.\n");
+
+    while (true) {
+        gpio_set_pin_level(PIN_SDA, true);
+        gpio_set_pin_level(PIN_SCL, false);
+        info("[PIN TEST] PD09(SDA)=HIGH  PD08(SCL)=LOW\n");
+        delay_ms(3000);
+
+        gpio_set_pin_level(PIN_SDA, false);
+        gpio_set_pin_level(PIN_SCL, true);
+        info("[PIN TEST] PD09(SDA)=LOW   PD08(SCL)=HIGH\n");
+        delay_ms(3000);
+
+        gpio_set_pin_level(PIN_SDA, true);
+        gpio_set_pin_level(PIN_SCL, true);
+        info("[PIN TEST] PD09(SDA)=HIGH  PD08(SCL)=HIGH\n");
+        delay_ms(3000);
+
+        gpio_set_pin_level(PIN_SDA, false);
+        gpio_set_pin_level(PIN_SCL, false);
+        info("[PIN TEST] PD09(SDA)=LOW   PD08(SCL)=LOW\n");
+        delay_ms(3000);
+    }
+}
+
 int main(void) {
     /* ---------- HARDWARE & LOGGING INITIALIZATION ---------- */
 
@@ -47,6 +87,9 @@ int main(void) {
     info("[+] Built from branch: %s\n", GIT_BRANCH_NAME);
     info("[+] Built from commit: %s\n", GIT_COMMIT_HASH);
 
+    // Pin continuity probe (loops forever). Remove this call to resume normal boot.
+    pin_toggle_test();
+
 #ifdef UNITTEST
     // Hardware-in-the-loop tests; then idle (skip the normal telemetry loop).
     tests_run();
@@ -56,6 +99,8 @@ int main(void) {
 #endif
 
     /* ---------- DRIVER BRING-UP ---------- */
+
+    fg_i2c_scan();
 
     status_t fg_status = init_fuel_gauges();
     if (fg_status != SUCCESS) {
