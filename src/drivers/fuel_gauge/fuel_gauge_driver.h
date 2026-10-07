@@ -77,4 +77,8 @@ void fg_scan_alerts(void);
 // Useful for probing arbitrary registers (DevName, per-cell voltages) and bring-up debug.
 status_t fg_read_raw(uint8_t channel, uint16_t reg, uint16_t *out);
 
+// Bring-up diagnostic: enables the bus and probes every 7-bit address (0x08-0x77),
+// logging which ones ACK. A directly-wired MAX17205 should ACK at 0x36 (and 0x0B).
+void fg_i2c_scan(void);
+
 #endif // FUEL_GAUGE_DRIVER_H

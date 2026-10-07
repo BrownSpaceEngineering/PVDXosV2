@@ -72,6 +72,24 @@ static void fg_mux_disable(void) {
 
 // ---------------------- MAX17205 register access ----------------------
 
+// Maps an ASF I2C return code (hal_i2c_m_sync.h) to a short description, so a failed
+// transfer says *why* instead of collapsing to a generic error. The key distinction:
+// NACK = nobody acknowledged the address (chip silent/absent), vs BUS = an electrical
+// fault on the lines.
+static const char *fg_i2c_err_str(int32_t rc) {
+    switch (rc) {
+        case I2C_OK: return "OK";
+        case I2C_ACK: return "ACK";
+        case I2C_NACK: return "NACK (no device ACKed this address)";
+        case I2C_ERR_ARBLOST: return "ARBLOST (arbitration lost)";
+        case I2C_ERR_BAD_ADDRESS: return "BAD_ADDRESS";
+        case I2C_ERR_BUS: return "BUS ERROR (SDA/SCL electrical fault)";
+        case I2C_ERR_BUSY: return "BUSY";
+        case I2c_ERR_PACKAGE_COLLISION: return "PACKAGE_COLLISION";
+        default: return "unknown";
+    }
+}
+
 // Reads a 16-bit little-endian register from the currently-selected gauge.
 static status_t fg_read_reg16(uint16_t reg, uint16_t *out) {
     uint8_t slave = (reg < 0x100) ? FG_MAX_ADDR_LOW : FG_MAX_ADDR_HIGH;
@@ -79,8 +97,10 @@ static status_t fg_read_reg16(uint16_t reg, uint16_t *out) {
     uint8_t buf[2] = {0};
 
     i2c_m_sync_set_slaveaddr(&FG_I2C, slave, I2C_M_SEVEN);
-    if (i2c_m_sync_cmd_read(&FG_I2C, reg_byte, buf, 2) != 0) {
-        warning("fuel_gauge: read reg 0x%03x (slave 0x%02x) failed\n", reg, slave);
+    int32_t rc = i2c_m_sync_cmd_read(&FG_I2C, reg_byte, buf, 2);
+    if (rc != 0) {
+        warning("fuel_gauge: read reg 0x%03x (slave 0x%02x) failed rc=%ld %s\n", reg, slave, (long)rc,
+                fg_i2c_err_str(rc));
         return ERROR_I2C_FAILED;
     }
     *out = (uint16_t)buf[0] | ((uint16_t)buf[1] << 8);
@@ -129,10 +149,10 @@ status_t init_fuel_gauges(void) {
     gpio_set_pin_pull_mode(EPS_IRQ, GPIO_PULL_UP);
 
     for (uint8_t ch = 0; ch < FG_NUM_PACKS; ch++) {
-        if (fg_mux_select(ch) != SUCCESS) {
-            warning("fuel_gauge: gauge %u unreachable (mux select failed)\n", ch + 1);
-            continue;
-        }
+        // if (fg_mux_select(ch) != SUCCESS) {
+        //     warning("fuel_gauge: gauge %u unreachable (mux select failed)\n", ch + 1);
+        //     continue;
+        // }
 
         uint16_t status = 0, packcfg = 0, npackcfg = 0, designcap = 0, ndesigncap = 0;
         status_t rs = SUCCESS, rp = SUCCESS, rn = SUCCESS, rd = SUCCESS, rnd = SUCCESS;
@@ -220,6 +240,31 @@ status_t fg_read_raw(uint8_t channel, uint16_t reg, uint16_t *out) {
     rc = fg_read_reg16(reg, out);
     fg_mux_disable();
     return rc;
+}
+
+// ---------------------- Bring-up diagnostic ----------------------
+
+void fg_i2c_scan(void) {
+    i2c_m_sync_enable(&FG_I2C);
+    info("fuel_gauge: I2C scan (SERCOM6)...\n");
+
+    uint8_t found = 0;
+    // Full 7-bit space 0x00-0x7F (includes the normally-reserved 0x00-0x07 / 0x78-0x7F).
+    for (uint8_t addr = 0x00; addr <= 0x7F; addr++) {
+        // Presence probe via a WRITE: START, addr+W, one memory-address byte, STOP. The
+        // MAX17205 read protocol requires a memory-address write before any read, so a bare
+        // read is not a valid transaction for it and can false-negative; a write needs only
+        // the address ACK and matches the datasheet write protocol. transfer() returns 0
+        // iff the address was ACKed.
+        uint8_t reg = 0x00;
+        struct _i2c_m_msg msg = {.addr = addr, .flags = I2C_M_STOP, .len = 1, .buffer = &reg};
+        if (i2c_m_sync_transfer(&FG_I2C, &msg) == 0) {
+            info("fuel_gauge: ACK at 0x%02x\n", addr);
+            found++;
+        }
+    }
+
+    info("fuel_gauge: scan done (%u device(s) responded)\n", found);
 }
 
 // ---------------------- ALRT (polled) ----------------------
