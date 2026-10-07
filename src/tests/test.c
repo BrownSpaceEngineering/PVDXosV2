@@ -12,9 +12,12 @@
 #include "tests/test.h"
 
 #include <math.h>
+#include <stdlib.h>
 
 #include "fuel_gauge_driver.h"
 #include "logging.h"
+#include "magnetorquer_driver.h"
+#include "photodiode_driver.h"
 #include "thermistor_driver.h"
 
 int tests_passed = 0;
@@ -112,8 +115,83 @@ static void test_thermistor_hw(void) {
     PVDX_ASSERT_MSG(!heater_is_on(0) && !heater_is_on(1), "heater ON at warm ambient (check wiring/polarity)\n");
 }
 
+// ---- Photodiode test (ambient-light dependent; tune for the bench) ----
+#define PHD_TEST_LIGHT_FLOOR 50 // ADC code a lit channel should exceed
+#define PHD_TEST_MIN_LIT     1  // at least this many channels above the floor
+
+static void test_photodiode_hw(void) {
+    test_log("----- testing photodiodes (hardware) -----\n");
+
+    PVDX_ASSERT_MSG(init_photodiodes() == SUCCESS, "init_photodiodes failed\n");
+
+    uint16_t codes[PHD_COUNT];
+    PVDX_ASSERT_MSG(phd_read_all(codes) == SUCCESS, "phd_read_all failed\n");
+
+    uint16_t lo = 0xFFFF, hi = 0;
+    int lit = 0;
+    for (uint8_t i = 0; i < PHD_COUNT; i++) {
+        test_log("phd %u: code=%u\n", i, codes[i]);
+        if (codes[i] > PHD_TEST_LIGHT_FLOOR) {
+            lit++;
+        }
+        if (codes[i] < lo) {
+            lo = codes[i];
+        }
+        if (codes[i] > hi) {
+            hi = codes[i];
+        }
+    }
+
+    // A live, illuminated array reads nonzero on some channels and shows spread across them;
+    // a dead/disconnected array reads a flat floor. Assumes bench ambient light.
+    PVDX_ASSERT_MSG(lit >= PHD_TEST_MIN_LIT, "no photodiode above light floor (dark or disconnected?)\n");
+    PVDX_ASSERT_MSG(hi != lo, "all photodiodes identical (array not responding?)\n");
+}
+
+// ---- Magnetorquer test: verify the PWM/control path at the TCC register level ----
+// The MCU can't sense coil current, so we read back the compare registers and the nSLEEP
+// pin after each command. (True actuation needs a scope or the magnetometer.)
+static void check_mtq_axis(const char *name, mtq_axis_t axis, Tcc *hw, uint8_t cc_in1, uint8_t cc_in2,
+                           uint32_t slp_pin) {
+    uint32_t per = hri_tcc_get_PER_reg(hw, 0xFFFFFFFF);
+    uint32_t half = (uint32_t)(0.5f * (float)per + 0.5f);
+
+    test_log("--- MTQ %s (PER=%lu) ---\n", name, (unsigned long)per);
+
+    // +50%: IN1 ~half duty, IN2 off, awake.
+    mtq_set(axis, 0.5f);
+    PVDX_ASSERT_MSG(labs((long)hri_tcc_read_CC_reg(hw, cc_in1) - (long)half) <= 2, "+duty: CC(IN1) wrong\n");
+    PVDX_ASSERT_MSG(hri_tcc_read_CC_reg(hw, cc_in2) == 0, "+duty: CC(IN2) not zero\n");
+    PVDX_ASSERT_MSG(gpio_get_pin_level(slp_pin), "+duty: SLP not awake\n");
+
+    // -50%: IN1 off, IN2 ~half duty, awake.
+    mtq_set(axis, -0.5f);
+    PVDX_ASSERT_MSG(hri_tcc_read_CC_reg(hw, cc_in1) == 0, "-duty: CC(IN1) not zero\n");
+    PVDX_ASSERT_MSG(labs((long)hri_tcc_read_CC_reg(hw, cc_in2) - (long)half) <= 2, "-duty: CC(IN2) wrong\n");
+    PVDX_ASSERT_MSG(gpio_get_pin_level(slp_pin), "-duty: SLP not awake\n");
+
+    // Stop: both off, asleep.
+    mtq_stop(axis);
+    PVDX_ASSERT_MSG(hri_tcc_read_CC_reg(hw, cc_in1) == 0 && hri_tcc_read_CC_reg(hw, cc_in2) == 0, "stop: CC not zero\n");
+    PVDX_ASSERT_MSG(!gpio_get_pin_level(slp_pin), "stop: SLP not asleep\n");
+}
+
+static void test_magnetorquer(void) {
+    test_log("----- testing magnetorquers (register readback) -----\n");
+
+    PVDX_ASSERT_MSG(init_magnetorquers() == SUCCESS, "init_magnetorquers failed\n");
+
+    check_mtq_axis("X", MTQ_X, TCC0, 0, 1, MTQ_X_SLP);
+    check_mtq_axis("Y", MTQ_Y, TCC0, 2, 3, MTQ_Y_SLP);
+    check_mtq_axis("Z", MTQ_Z, TCC1, 0, 1, MTQ_Z_SLP);
+
+    mtq_stop_all();
+}
+
 void tests_run(void) {
     test_fuel_gauge_hw();
     test_thermistor_hw();
+    test_photodiode_hw();
+    test_magnetorquer();
     test_log("test results: %d/%d passed\n", tests_passed, tests_total);
 }

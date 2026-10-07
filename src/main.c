@@ -17,6 +17,8 @@
 #include "fuel_gauge_driver.h"
 #include "globals.h"
 #include "logging.h"
+#include "magnetorquer_driver.h"
+#include "photodiode_driver.h"
 #include "tests/test.h"
 #include "thermistor_driver.h"
 
@@ -69,6 +71,21 @@ int main(void) {
         info("[+] Thermistors initialized\n");
     }
 
+    status_t phd_status = init_photodiodes();
+    if (phd_status != SUCCESS) {
+        warning("[!] init_photodiodes() failed (status=%d)\n", phd_status);
+    } else {
+        info("[+] Photodiodes initialized\n");
+    }
+
+    // Magnetorquers are brought up but left stopped - never fire actuators uncommanded.
+    status_t mtq_status = init_magnetorquers();
+    if (mtq_status != SUCCESS) {
+        warning("[!] init_magnetorquers() failed (status=%d)\n", mtq_status);
+    } else {
+        info("[+] Magnetorquers initialized (stopped)\n");
+    }
+
     /* ---------- READ LOOP ---------- */
 
     while (true) {
@@ -96,6 +113,16 @@ int main(void) {
         }
         heater_control_update();
         info("heaters: 1=%s 2=%s\n", heater_is_on(0) ? "ON" : "off", heater_is_on(1) ? "ON" : "off");
+
+        // Photodiodes (coarse sun sensing).
+        for (int i = 0; i < PHD_COUNT; i++) {
+            float v = 0.0f;
+            phd_read_voltage(i, &v);
+            info("phd %2d: %ld mV\n", i, (long)(v * 1000.0f));
+        }
+
+        // Magnetorquers: left stopped. Example (commented) command:
+        //   mtq_set(MTQ_Z, 0.5f); // +50%% dipole on Z
 
         delay_ms(1000);
     }
