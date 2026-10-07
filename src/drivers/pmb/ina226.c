@@ -160,6 +160,7 @@ status_t ina226_read_measurement(ina226_measurement_t *measurement) {
     if ((status = ina226_read_bus_voltage_uv(&measurement->bus_uv)) != SUCCESS) {
         return status;
     }
+    measurement->follow_uv = (int32_t)measurement->bus_uv - measurement->shunt_nv / 1000;
     if ((status = ina226_read_current_na(&measurement->current_na)) != SUCCESS) {
         return status;
     }

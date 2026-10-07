@@ -9,8 +9,13 @@
 /*
  * Pixel routing through four ADG734 quad SPDT switches (ADG733/ADG734 datasheet Rev. B).
  * Each channel's IN pin is driven by one MCP23017 output. Per the truth table (Table II), IN = 1 connects
- * SxA-Dx and IN = 0 connects SxB-Dx. On the PMB, Dx is the pixel's positive terminal, SxA is the
- * measurement circuit and SxB is the resistor to ground.
+ * SxA-Dx and IN = 0 connects SxB-Dx. On the PMB (perovskites.kicad_sch), Dx is the pixel's positive terminal,
+ * every SxA is the shared measurement node PIXEL+, and each SxB goes to ground through its own 100 ohm resistor.
+ *
+ * Chips U6-U9 are indices 0-3. Firmware pixel N (0-15) is schematic net PIXEL<N+1>+.
+ *
+ * The IN lines have no pull-downs, so the switches are undefined while the MCP23017 pins are inputs (power-on,
+ * and after mcp23017_init() alone). Call adg734_init() before anything else on the MCP23017.
  */
 #define ADG734_COUNT 4U
 #define ADG734_CHANNELS 4U

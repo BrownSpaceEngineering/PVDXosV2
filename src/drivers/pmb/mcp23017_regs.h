@@ -24,6 +24,8 @@
 #define MCP23017_OLATA 0x14U /* R/W  Output latch */
 #define MCP23017_OLATB 0x15U
 
+#define MCP23017_IOCON_BANK1 0x05U /* IOCON address while IOCON.BANK = 1 (GPINTENB when BANK = 0) */
+
 // IOCON fields (MCP23017 pg. 20)
 #define MCP23017_IOCON_BANK (1U << 7)   /* 1 = registers split by port */
 #define MCP23017_IOCON_MIRROR (1U << 6) /* 1 = INTA/INTB internally connected */

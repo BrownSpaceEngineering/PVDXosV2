@@ -57,7 +57,8 @@ status_t pvd_dac_set_mv(uint32_t dac_mv) {
 }
 
 /**
- * Sets the target voltage across the selected pixel (0 to PVD_PIXEL_FULL_SCALE_MV), clamping out-of-range values.
+ * Sets the opamp output FOLLOW (0 to PVD_PIXEL_FULL_SCALE_MV), clamping out-of-range values. The selected pixel
+ * sits at this voltage plus the shunt drop; read the actual pixel voltage from the INA226 bus voltage.
  */
 status_t pvd_dac_set_pixel_mv(uint32_t pixel_mv) {
     if (pixel_mv > PVD_PIXEL_FULL_SCALE_MV) {

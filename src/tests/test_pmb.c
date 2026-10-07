@@ -60,13 +60,15 @@ static void test_pmb_sweep_pixel(uint8_t pixel) {
             continue;
         }
 
-        int measured_mv = (int)(m.bus_uv / 1000U);
-        int error_mv = measured_mv - (int)target_mv;
-        test_log("px %2u  set %4u mV  meas %4d mV  err %4d mV  I %8d nA  P %7u nW\n", pixel, (unsigned)target_mv, measured_mv, error_mv,
-                 (int)m.current_na, (unsigned)m.power_nw);
+        // The opamp regulates FOLLOW, so that is what must match the command; the pixel differs by the shunt drop
+        int follow_mv = (int)(m.follow_uv / 1000);
+        int pixel_mv = (int)(m.bus_uv / 1000U);
+        int error_mv = follow_mv - (int)target_mv;
+        test_log("px %2u  set %4u mV  follow %4d mV  err %4d mV  pixel %4d mV  I %8d nA  P %7u nW\n", pixel, (unsigned)target_mv, follow_mv,
+                 error_mv, pixel_mv, (int)m.current_na, (unsigned)m.power_nw);
 
         bool in_tolerance = error_mv <= PMB_TEST_TOLERANCE_MV && error_mv >= -PMB_TEST_TOLERANCE_MV;
-        PVDX_ASSERT_MSG(in_tolerance, "pmb pixel voltage tracks DAC\n");
+        PVDX_ASSERT_MSG(in_tolerance, "pmb opamp output tracks DAC\n");
         if (!in_tolerance) {
             out_of_tolerance++;
         }
@@ -74,15 +76,15 @@ static void test_pmb_sweep_pixel(uint8_t pixel) {
     test_log("px %2u  done, %d steps out of tolerance\n", pixel, out_of_tolerance);
 }
 
-// Settles, waits for a conversion that reflects the current input, and reads the pixel voltage
+// Settles, waits for a conversion that reflects the current input, and reads the opamp output voltage (-1 on failure)
 static status_t test_pmb_measure_mv(int *measured_mv) {
     delay_ms(PMB_TEST_SETTLE_MS);
     status_t status = ina226_wait_for_fresh_conversion(PMB_TEST_CONVERSION_TIMEOUT_MS);
-    uint32_t bus_uv = 0;
+    ina226_measurement_t m = {0};
     if (status == SUCCESS) {
-        status = ina226_read_bus_voltage_uv(&bus_uv);
+        status = ina226_read_measurement(&m);
     }
-    *measured_mv = (int)(bus_uv / 1000U);
+    *measured_mv = (status == SUCCESS) ? (int)(m.follow_uv / 1000) : -1;
     return status;
 }
 
@@ -126,8 +128,11 @@ static int test_pmb_sanity(void) {
               "pmb ina226 calibration readback\n");
     PMB_CHECK(failures, ina226_wait_for_fresh_conversion(PMB_TEST_CONVERSION_TIMEOUT_MS) == SUCCESS, "pmb ina226 converting\n");
 
-    // MCP23017: init, then a write/readback pattern on DEFVALA/B (inert while GPINTEN = 0) to exercise both directions
-    PMB_CHECK(failures, mcp23017_init() == SUCCESS, "pmb mcp23017 init\n");
+    // ADG734 IN lines float until the MCP23017 drives them, so adg734_init() (which also brings up the MCP23017)
+    // runs before anything else touches the expander
+    PMB_CHECK(failures, adg734_init() == SUCCESS, "pmb adg734 init\n");
+
+    // MCP23017: a write/readback pattern on DEFVALA/B (inert while GPINTEN = 0) to exercise both directions
     const uint16_t patterns[] = {0xA55AU, 0x5AA5U, 0x0000U};
     for (unsigned i = 0; i < sizeof(patterns) / sizeof(patterns[0]); i++) {
         uint16_t readback = (uint16_t)~patterns[i];
@@ -138,8 +143,8 @@ static int test_pmb_sanity(void) {
     }
 
     // ADG734 routing: all IN pins outputs, nothing selected, then each pixel alone. Selection is read from the
-    // actual pin levels, so a stuck or shorted IN line shows up as the wrong pixel or two pixels at once.
-    PMB_CHECK(failures, adg734_init() == SUCCESS, "pmb adg734 init\n");
+    // MCP23017 pin levels, so a stuck or shorted IN line shows up as the wrong pixel or two pixels at once (the
+    // switches themselves are only proven by current through the pixel).
     uint16_t iodir = 0xFFFF;
     PMB_CHECK(failures, mcp23017_read_reg16(MCP23017_IODIRA, &iodir) == SUCCESS && iodir == MCP23017_ALL_OUTPUTS,
               "pmb adg734 IN pins are outputs\n");
@@ -160,8 +165,8 @@ static int test_pmb_sanity(void) {
     PMB_CHECK(failures, pvd_dac_init() == SUCCESS, "pmb dac init\n");
     PMB_CHECK(failures, pvd_dac_is_ready(), "pmb dac ready\n");
 
-    // Measurement chain: at 0 V nothing should be across the measurement node; a full-scale step on pixel 0 must
-    // move the INA226 bus voltage by at least half of full scale (DAC -> divider -> opamp -> switch -> INA226)
+    // Measurement chain: at 0 V the opamp output should sit near 0; a full-scale step on pixel 0 must move it by at
+    // least half of full scale (DAC -> divider -> opamp -> shunt -> INA226)
     int zero_mv = -1, full_mv = -1;
     PMB_CHECK(failures, pvd_dac_set_pixel_mv(0) == SUCCESS && test_pmb_measure_mv(&zero_mv) == SUCCESS, "pmb chain read at 0 V\n");
     PMB_CHECK(failures, zero_mv >= 0 && zero_mv <= PMB_TEST_TOLERANCE_MV, "pmb chain idle voltage near 0\n");
