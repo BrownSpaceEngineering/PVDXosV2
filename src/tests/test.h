@@ -26,7 +26,8 @@ extern int tests_total;
 #define PVDX_ASSERT_MSG(x, msg)                                                                                                            \
     do {                                                                                                                                   \
         if (!(x)) {                                                                                                                        \
-            warning("[!] ASSERT FAILED: " msg);                                                                                            \
+            /* msg is an argument, not pasted into the format, so every assert shares one format string in RAM */                          \
+            warning("[!] ASSERT FAILED: %s", msg);                                                                                         \
         } else {                                                                                                                           \
             ++tests_passed;                                                                                                                \
         }                                                                                                                                  \
