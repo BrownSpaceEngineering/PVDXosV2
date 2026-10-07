@@ -2,9 +2,9 @@
 #include "mram_driver.h"
 #include "watchdog_driver.h"
 
-#define FLASH_OS_BASE_ADDRESS (0x00020000)  // Address of OS in flash (after bootloaders)
+#define FLASH_OS_BASE_ADDRESS (0x020000)    // Address of OS in flash (after bootloaders)
 #define RAM_OS_BASE_ADDRESS (0x20000000)    // Where to load OS into RAM
-#define BOOTLOADER_SIZE (0x3000)            // Size of each bootloader in the chain
+#define BOOTLOADER_SIZE (0x2000)            // Size of each bootloader in the chain
 
 #define SCS_BASE (0xE000E000UL)
 #define SCB_BASE (SCS_BASE + 0x0D00UL)
@@ -43,7 +43,6 @@ int main(void) {
 
     bool mram_ok = mram_init();
 
-    char *os_flash_src = (char *)FLASH_OS_BASE_ADDRESS;
     char *os_dst = (char *)RAM_OS_BASE_ADDRESS;
 
 // only for debugging; will not be present in final
@@ -54,7 +53,12 @@ int main(void) {
 
     if (mram_ok) {
         mram_read_bytes(MRAM_OS_BASE_ADDRESS, (uint8_t *)os_dst, MRAM_OS_SIZE);
+        
+        do {
+        } while (crc32(os_dst, MRAM_OS_SIZE - sizeof(uint32_t) !=
+                *(uint32_t *)(os_dst + MRAM_OS_SIZE - sizeof(uint32_t))));
     } else {
+        char *os_flash_src = (char *)FLASH_OS_BASE_ADDRESS;
         for (long i = 0; i < MRAM_OS_SIZE; i++) {
             os_dst[i] = os_flash_src[i];
         }

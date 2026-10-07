@@ -35,8 +35,6 @@ _|"""""|_|"""""|_|"""""|_|"""""|
 
 #define PMM_REG     8       // Persistent Memory Mode register
 
-// #define COSMIC_MRAM
-
 typedef enum {
     MRAM_OK = 0,                        // No issues
     MRAM_BAD_ID = 1u << 1,              // Device ID does not match expected value
@@ -150,15 +148,6 @@ void read_bytes(uint8_t mram, uint32_t address, uint8_t *data, uint32_t size) {
     spi_read(data, size);
     mram_deselect(mram);
 
-#ifdef COSMIC_MRAM
-    // mess up first mram
-    if (mram == 1) {
-        for (uint32_t i = 0; i < size; i += 3) {
-            data[i] += 1;
-        }
-    }
-#endif
-
     watchdog_pet();
 }
 
@@ -228,7 +217,7 @@ void write_vol_reg(uint8_t mram, uint8_t reg, uint8_t reg_val) {
 // ---------------------- Core Operations ----------------------
 
 void mram_init_report_err(uint8_t mram, mram_init_status_t status) {
-    // TODO: figure out what to do when reporting an error.
+    /** TODO: figure out what to do when reporting an error. */
 }
 
 mram_init_status_t check_device_id(uint8_t mram) {
@@ -288,6 +277,7 @@ mram_init_status_t set_persistent_mode(uint8_t mram) {
  * @param size Size of data to be written, in bytes.
  */
 void mram_write_bytes(uint32_t address, const uint8_t *data, uint32_t size) {
+    /** TODO: Only write bytes to known-good modules. */
     for (uint8_t mram = 1; mram <= 3; mram++) {
         write_bytes(mram, address, data, size);
     }
@@ -296,6 +286,8 @@ void mram_write_bytes(uint32_t address, const uint8_t *data, uint32_t size) {
 #define PAGE_SIZE 256
 
 void mram_read_bytes(uint32_t address, uint8_t *data, uint32_t size) {
+    /** TODO: Only read bytes from known-good modules (no majority vote). */
+
     if (size % PAGE_SIZE != 0) {
         mram_recoverable_fatal();
     }

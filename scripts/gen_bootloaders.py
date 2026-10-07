@@ -1,6 +1,6 @@
 import os, sys
 
-BOOTLOADER_SIZE = 0x3000
+BOOTLOADER_SIZE = 0x2000
 
 bootloader_count = int(sys.argv[1])
 
