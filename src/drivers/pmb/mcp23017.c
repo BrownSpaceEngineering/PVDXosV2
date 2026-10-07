@@ -39,13 +39,18 @@ status_t mcp23017_read_reg16(uint8_t reg_a, uint16_t *value) {
  * Selects BANK = 0 with sequential addressing, which the 16-bit accessors rely on, and confirms the device
  * responds. GPA7/GPB7 are made outputs as the datasheet requires (driving their power-on latch value, low);
  * all other pins are left as power-on inputs.
+ *
+ * ~RESET is only pulled up (R37), so the expander keeps its state across MCU resets and BANK may not be at its
+ * power-on value. IOCON is at 0x05 when BANK = 1, so 0x00 is written there first: that clears BANK if it was set,
+ * and otherwise lands on GPINTENB, whose value 0 (no interrupts) is what this driver expects anyway.
  */
 status_t mcp23017_init(void) {
     status_t status = pmb_i2c_init();
     if (status != SUCCESS) {
         return status;
     }
-    if ((status = mcp23017_write_reg(MCP23017_IOCON, 0x00)) != SUCCESS) {
+    if ((status = mcp23017_write_reg(MCP23017_IOCON_BANK1, 0x00)) != SUCCESS ||
+        (status = mcp23017_write_reg(MCP23017_IOCON, 0x00)) != SUCCESS) {
         warning("mcp23017: no response at 0x%02x\n", MCP23017_I2C_ADDR);
         return status;
     }
