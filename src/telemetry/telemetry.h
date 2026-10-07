@@ -8,7 +8,10 @@
 #define TELEMETRY_CALLSIGN_LENGTH 6
 #define TELEMETRY_CALLSIGN "BSEBSE" // TODO: Make real value
 #define TELEMETRY_PREAMBLE_APID 1   // TODO: Make real value
-#define TELEMETRY_PACKET_SIZE 157   // For now
+#define TELEMETRY_PACKET_SIZE 161   // For now
+
+#define TELEMETRY_FALSE 0x00
+#define TELEMETRY_TRUE 0x01
 
 // Reference: PVDX UHF Uplink/Downlink Summary 3/3/2026
 // (https://docs.google.com/spreadsheets/d/1XYJBU4V2vjlKj8QtCxaPuW247gf_tx6XY4dey5q0v0k/edit?usp=sharing)

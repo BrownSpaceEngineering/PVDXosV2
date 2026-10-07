@@ -163,16 +163,17 @@ static bool serialize_gyro(tel_gyro_data_t *gyro_data, uint8_t *buf, size_t buf_
  * Function for serializing the peripheral health flags
  */
 static bool serialize_peripheral_status(tel_peripheral_status_t *status, uint8_t *buf, size_t buf_size, size_t *offset) {
-    if (put_uint8(buf, buf_size, offset, status->display)) {
+    // Sends an entire byte full of 1s or 0s based on whether healthy or not - prevents bit flips
+    if (put_uint8(buf, buf_size, offset, status->display ? TELEMETRY_TRUE : TELEMETRY_FALSE)) {
         return true;
     }
-    if (put_uint8(buf, buf_size, offset, status->camera)) {
+    if (put_uint8(buf, buf_size, offset, status->camera ? TELEMETRY_TRUE : TELEMETRY_FALSE)) {
         return true;
     }
-    if (put_uint8(buf, buf_size, offset, status->uhf_radio)) {
+    if (put_uint8(buf, buf_size, offset, status->uhf_radio ? TELEMETRY_TRUE : TELEMETRY_FALSE)) {
         return true;
     }
-    if (put_uint8(buf, buf_size, offset, status->sband_radio)) {
+    if (put_uint8(buf, buf_size, offset, status->sband_radio ? TELEMETRY_TRUE : TELEMETRY_FALSE)) {
         return true;
     }
     return false;

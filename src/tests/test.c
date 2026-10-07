@@ -76,6 +76,74 @@ void test_spp(void) {
 
     test_log("data_length: %x\n", packet.header.data_length);
     PVDX_ASSERT_MSG(packet.header.data_length == 0xAA, "data_length");
+
+    // Packets below were generated with Python's struct module, independently of spp.c.
+    // Each assert costs RAM in the test image, so data contents are covered by checking that view.data
+    // points to the right place in the (unchanged) input, rather than by comparing bytes
+
+    // Telemetry, APID 0x123, unsegmented, count 0x2A, with a secondary header (timestamp 0x01020304,
+    // boot_timestamp 0x0A0B0C0D, callsign "BSEBSE") and 3 bytes of user data. Every integer byte is distinct,
+    // so a swapped or shifted field shows up clearly
+    uint8_t with_sec[] = {0x09, 0x23, 0xC0, 0x2A, 0x00, 0x10, 0x01, 0x02, 0x03, 0x04, 0x0A, 0x0B,
+                          0x0C, 0x0D, 0x42, 0x53, 0x45, 0x42, 0x53, 0x45, 0xAA, 0xBB, 0xCC};
+    spp_packet_view_t view;
+    bool err;
+
+    test_log("spp parse tests:\n");
+    err = spp_packet_parse(&view, with_sec, sizeof(with_sec));
+    PVDX_ASSERT_MSG(!err, "with_sec parse\n");
+    PVDX_ASSERT_MSG(view.header.version_number == SPP_VERSION_NUMBER, "with_sec version\n");
+    PVDX_ASSERT_MSG(view.header.packet_type == SPP_PACKET_TYPE_REPORTING, "with_sec type\n");
+    PVDX_ASSERT_MSG(view.header.secondary_header_flag == SPP_SECONDARY_HEADER_PRESENT, "with_sec sec flag\n");
+    PVDX_ASSERT_MSG(view.header.application_process_id == 0x123, "with_sec apid\n");
+    PVDX_ASSERT_MSG(view.header.sequence_flags == SPP_SEQ_FLAG_UNSEGMENTED_DATA, "with_sec seq flags\n");
+    PVDX_ASSERT_MSG(view.header.sequence_count == 0x2A, "with_sec seq count\n");
+    PVDX_ASSERT_MSG(view.header.data_length == sizeof(with_sec) - SPP_PRIMARY_HEADER_SIZE - 1, "with_sec data_length\n");
+    PVDX_ASSERT_MSG(view.secondary_header.timestamp == 0x01020304, "with_sec timestamp\n");
+    PVDX_ASSERT_MSG(view.secondary_header.boot_timestamp == 0x0A0B0C0D, "with_sec boot_timestamp\n");
+    PVDX_ASSERT_MSG(memcmp(view.secondary_header.callsign, "BSEBSE", SPP_SECONDARY_HEADER_CALLSIGN_SIZE) == 0, "with_sec callsign\n");
+    PVDX_ASSERT_MSG(view.data == &with_sec[SPP_PRIMARY_HEADER_SIZE + SPP_SECONDARY_HEADER_SIZE], "with_sec data\n");
+
+    // Telecommand, APID 0x7FE, first segment, max count 0x3FFF, no secondary header, 2 bytes of user data
+    uint8_t no_sec[] = {0x17, 0xFE, 0x7F, 0xFF, 0x00, 0x01, 0x11, 0x22};
+    view.secondary_header.timestamp = 0xFFFFFFFF; // left over from a previous parse, must be cleared
+    err = spp_packet_parse(&view, no_sec, sizeof(no_sec));
+    PVDX_ASSERT_MSG(!err, "no_sec parse\n");
+    PVDX_ASSERT_MSG(view.header.packet_type == SPP_PACKET_TYPE_REQUESTING, "no_sec type\n");
+    PVDX_ASSERT_MSG(view.header.secondary_header_flag == SPP_SECONDARY_HEADER_NOT_PRESENT, "no_sec sec flag\n");
+    PVDX_ASSERT_MSG(view.header.application_process_id == 0x7FE, "no_sec apid\n");
+    PVDX_ASSERT_MSG(view.header.sequence_flags == SPP_SEQ_FLAG_FIRST_SEGMENT_OF_DATA, "no_sec seq flags\n");
+    PVDX_ASSERT_MSG(view.header.sequence_count == 0x3FFF, "no_sec seq count\n");
+    PVDX_ASSERT_MSG(view.secondary_header.timestamp == 0, "no_sec secondary header zeroed\n");
+    PVDX_ASSERT_MSG(view.data == &no_sec[SPP_PRIMARY_HEADER_SIZE], "no_sec data\n");
+
+    // APID 1, a secondary header with high bits set (timestamp 0xFFFFFFFF, boot_timestamp 0x80000001,
+    // callsign "ABCDEF") and no user data
+    uint8_t sec_only[] = {0x08, 0x01, 0xC0, 0x00, 0x00, 0x0D, 0xFF, 0xFF, 0xFF, 0xFF,
+                          0x80, 0x00, 0x00, 0x01, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46};
+    err = spp_packet_parse(&view, sec_only, sizeof(sec_only));
+    PVDX_ASSERT_MSG(!err && view.secondary_header.timestamp == 0xFFFFFFFF && view.secondary_header.boot_timestamp == 0x80000001 &&
+                        memcmp(view.secondary_header.callsign, "ABCDEF", SPP_SECONDARY_HEADER_CALLSIGN_SIZE) == 0,
+                    "sec_only secondary header\n");
+    PVDX_ASSERT_MSG(view.data == &sec_only[sizeof(sec_only)], "sec_only data\n");
+
+    // Bytes after the end given by the packet data length field are ignored
+    uint8_t padded[sizeof(with_sec) + 4] = {0};
+    memcpy(padded, with_sec, sizeof(with_sec));
+    PVDX_ASSERT_MSG(!spp_packet_parse(&view, padded, sizeof(padded)), "trailing bytes accepted\n");
+
+    test_log("spp parse rejection tests:\n");
+    PVDX_ASSERT_MSG(spp_packet_parse(&view, with_sec, sizeof(with_sec) - 1), "shorter than data length\n");
+    PVDX_ASSERT_MSG(spp_packet_parse(&view, with_sec, SPP_PRIMARY_HEADER_SIZE - 1), "shorter than primary header\n");
+    PVDX_ASSERT_MSG(spp_packet_parse(NULL, with_sec, sizeof(with_sec)) && spp_packet_parse(&view, NULL, sizeof(with_sec)), "NULL args\n");
+
+    // Secondary header flag is set, but the packet data field is one octet short of a full secondary header
+    uint8_t short_sec[] = {0x08, 0x01, 0xC0, 0x00, 0x00, 0x0C, 0x00, 0x00, 0x00, 0x01,
+                           0x00, 0x00, 0x00, 0x02, 0x41, 0x42, 0x43, 0x44, 0x45};
+    PVDX_ASSERT_MSG(spp_packet_parse(&view, short_sec, sizeof(short_sec)), "too short for secondary header\n");
+
+    with_sec[0] |= 0x20; // version number 001
+    PVDX_ASSERT_MSG(spp_packet_parse(&view, with_sec, sizeof(with_sec)), "wrong version number\n");
 }
 #endif // TEST_SPP
 
