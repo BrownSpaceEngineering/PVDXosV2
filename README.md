@@ -189,6 +189,31 @@ administrator-level PowerShell
    - Alternatively, you can try running `python3 scripts/rtt_splitscreen.py` for both the PVDXos Shell and log output in the same terminal window, but this might not work!
 
 
+## Build Options
+
+There are 3 build types. Each one rebuilds the bootloader and creates `flash.bin`, which you then flash with `make connect`.
+
+| Command | Build type | Use |
+| --- | --- | --- |
+| `make` or `make dev` | Development (default) | Day-to-day work and debugging |
+| `make release` | Release | The image that flies |
+| `make test` | Unit test | Running the firmware tests in `src/tests/` |
+
+- **Dev (`make` / `make dev`)** compiles with `-DDEVBUILD`, has logs and is `-O0`
+- **Release (`make release`)** compiles with `-DRELEASE -O2` and always does a clean build first, cosmic monkey is disabled, and logging is disabled.
+- **Test (`make test`)** compiles with `-DUNITTEST -DDEVBUILD`. Before FreeRTOS starts, `main` calls `tests_run()`, which prints `[TEST]` lines and a final `test results: passed/total` line over RTT. 
+-
+  By default every test is built. To build only some tests, list them in `TESTS` (names aren't case-sensitive):
+
+  ```bash
+  make test TESTS="spp cfdp"   # builds only the SPP and CFDP tests
+  ```
+
+  Each name becomes a `-DTEST_<NAME>` flag. For example, some tests to choose from are `SPP`, `LINALG`, `CFDP` and `USLP`. When adding a new test, wrap it in `#ifdef TEST_<NAME>` and add its name to `TEST_NAMES` in `src/Makefile` and to the default list in `src/tests/test.h`.
+
+> **Note:** The bootloader copies PVDXos into the SAMD51's 256 KB of RAM and runs it from there, so the build fails if the image doesn't fit. If a test build is too big, use `TESTS` to build fewer tests.
+
+
 ## Setting Up a Brand New Metro M4 Grand Central Devboard
 
 The Grand Central runs on an Atmel SAMD51P20A, which has a `BOOTPROT` fuse protecting the flash area of the bootloader. If you have a factory-new board, you will need to clear the `BOOTPROT` fuse to allow your J-Link to flash code onto the board.

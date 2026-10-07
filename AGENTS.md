@@ -55,8 +55,11 @@ exactly one of `DEVBUILD`, `RELEASE`, or `UNITTEST`; do not combine these
 manually. Tests are embedded firmware tests: `make test` calls `tests_run()` in
 `src/main.c` before FreeRTOS, with results emitted through SEGGER RTT. Current
 test functions cover SPP, linear algebra matrix multiplication, and CFDP
-parsing. To run one test function, temporarily leave only that call in
-`src/tests/test.c:tests_run()`, build, flash/connect, and inspect RTT output.
+parsing. To build only some tests, pass their names, e.g.
+`make test TESTS="spp cfdp"` (defines `TEST_SPP`/`TEST_CFDP`; see `TEST_NAMES`
+in `src/Makefile` and `src/tests/test.h`); with no `TESTS`, all are built.
+Builds fail if `PVDXos.bin` exceeds 256 KB or the linker's RAM region
+overflows.
 
 For hardware flashing, start a J-Link GDB server configured for
 `ATSAMD51P20A`, SWD, and port 2331. For J-Link/GDB workflows:
