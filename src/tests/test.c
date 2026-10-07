@@ -26,14 +26,23 @@ void test_cfdp(void);
 void test_uslp(void);
 
 void tests_run(void) {
+#ifdef TEST_SPP
     test_spp();
+#endif
+#ifdef TEST_LINALG
     test_matrix_product();
+#endif
+#ifdef TEST_CFDP
     test_cfdp();
+#endif
+#ifdef TEST_USLP
     test_uslp();
+#endif
     test_log("test results: %d/%d passed", tests_passed, tests_total);
 }
 
 // #ifdef UNITTEST
+#ifdef TEST_SPP
 void test_spp(void) {
     spp_packet_t packet = spp_packet_create_header_only(0xBB, 0, 1, 0b10, 0b0011111111111111, 0xAA);
     test_log("----- testing spp -----\n");
@@ -59,8 +68,9 @@ void test_spp(void) {
     test_log("data_length: %x\n", packet.header.data_length);
     PVDX_ASSERT_MSG(packet.header.data_length == 0xAA, "data_length");
 }
+#endif // TEST_SPP
 
-#ifdef UNITTEST
+#if defined(UNITTEST) && defined(TEST_CFDP)
 void test_cfdp(void) {
     test_log("----- testing cfdp -----\n");
 
@@ -514,7 +524,9 @@ void test_cfdp(void) {
     test_log("metadata nak (null) return: %d\n", ret);
     PVDX_ASSERT(ret == -1 && "metadata_nak_null_return");
 }
-#endif // !UNITTEST
+#endif // UNITTEST && TEST_CFDP
+
+#ifdef TEST_USLP
 void test_uslp(void) {
     test_log("----- testing uslp -----\n");
 
@@ -721,4 +733,5 @@ void test_uslp(void) {
     PVDX_ASSERT_MSG(view.primary_header.vc_frame_count == 0, "VC 6 has its own count\n");
 #endif
 }
+#endif // TEST_USLP
 // #endif

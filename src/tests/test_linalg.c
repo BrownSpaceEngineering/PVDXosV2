@@ -11,8 +11,9 @@
 #include "stdbool.h"
 #include "declareFunctions.h"
 #include "logging.h"
+#include "tests/test.h"
 
-
+#ifdef TEST_LINALG
 void test_matrix_product(void) {
     test_log("----- testing matrix product -----\n");
 
@@ -80,3 +81,4 @@ void test_matrix_product(void) {
         test_log("Large matrix product test failed!\n");
     }
 }
+#endif // TEST_LINALG

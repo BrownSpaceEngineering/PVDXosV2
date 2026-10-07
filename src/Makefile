@@ -102,9 +102,22 @@ CFLAGS += -fsigned-char # Ensure that char is signed as your average c programme
 # Disable warnings for unused parameters due to ASF functions having unused parameters
 CFLAGS += -Wno-unused-parameter #Because some ASF functions have unused parameters, supress this warning
 
+# Tests that `make test` can build individually. Each NAME is guarded by #ifdef TEST_NAME in src/tests
+# Keep this list in sync with src/tests/test.h
+TEST_NAMES := SPP LINALG CFDP USLP
+
+# `make test TESTS="spp cfdp"` builds only those tests by passing -DTEST_SPP -DTEST_CFDP.
+# Leaving TESTS empty builds every test
+SELECTED_TESTS := $(patsubst TEST_%,%,$(shell echo '$(TESTS)' | tr 'a-z,' 'A-Z '))
+UNKNOWN_TESTS := $(filter-out $(TEST_NAMES),$(SELECTED_TESTS))
+ifneq ($(UNKNOWN_TESTS),)
+    $(error Unknown test(s) in TESTS: $(UNKNOWN_TESTS). Available tests: $(TEST_NAMES))
+endif
+TEST_DEFINES := $(addprefix -DTEST_,$(SELECTED_TESTS))
+
 # Build-specific flags
 CFLAGS_DEV := -DDEVBUILD
-CFLAGS_UNITTEST := -DUNITTEST -DDEVBUILD -Wno-unused-variable 
+CFLAGS_UNITTEST := -DUNITTEST -DDEVBUILD -Wno-unused-variable $(TEST_DEFINES)
 CFLAGS_RELEASE := -DRELEASE -O2
 
 ### All these variables are exported to the child makefile, and affect its behavior ###
@@ -129,17 +142,53 @@ define ensure_build_type
 	fi
 endef
 
+# The bootloader copies PVDXos.bin into RAM and runs it from there, so it can't
+# be larger than the SAMD51's 256 KB of RAM
+MAX_BIN_SIZE := 262144
+
+BUILD_LOG := $(CHILD_MAKEFILE_PATH)/build.log
+
+# Printed when a unit test build doesn't fit in RAM
+TEST_SIZE_HINT := echo "Hint: build only the tests you need, e.g. 'make test TESTS=\"spp cfdp\"' (passes -DTEST_SPP -DTEST_CFDP)."; \
+	echo "      Available tests: $(TEST_NAMES)";
+
+# $(call size_hint,<build type>) expands to the hint for test builds, and to nothing otherwise
+size_hint = $(if $(filter test,$(1)),$(TEST_SIZE_HINT))
+
 # The child make lines below are prefixed with '+' so that they still recurse
 # under `make -n`. Make only does that automatically when $(MAKE) appears
 # literally in the recipe, and without it dry runs (which compiledb relies on)
 # would never see the compile commands.
+
+# $(call child_build,<build type>,<CFLAGS>) runs the child make. The linker
+# script's RAM region is smaller than MAX_BIN_SIZE, so an oversized image
+# usually fails at link time rather than in check_bin_size; catch that here
+# too so test builds still get the hint.
+define child_build
+	+@set -o pipefail; $(CHILD_MAKE) CFLAGS="$(2)" 2>&1 | tee $(BUILD_LOG) \
+	|| { if grep -q "overflowed by\|will not fit in region" $(BUILD_LOG); then \
+		echo "ERROR: PVDXos does not fit in RAM (see the linker error above)"; \
+		$(call size_hint,$(1)) \
+	fi; exit 1; }
+endef
+
+# $(call check_bin_size,<build type>) fails the build if PVDXos.bin is bigger than RAM
+define check_bin_size
+	@size=$$(wc -c < ../ASF/gcc/PVDXos.bin | tr -d ' '); \
+	if [ "$$size" -gt $(MAX_BIN_SIZE) ]; then \
+		echo "ERROR: PVDXos.bin is $$size bytes, which is larger than RAM ($(MAX_BIN_SIZE) bytes)"; \
+		$(call size_hint,$(1)) \
+		exit 1; \
+	fi
+endef
 
 # Default target
 all: dev
 
 dev:
 	$(call ensure_build_type,dev)
-	+@$(CHILD_MAKE) CFLAGS=" $(CFLAGS_DEV) $(CFLAGS)"
+	$(call child_build,dev, $(CFLAGS_DEV) $(CFLAGS))
+	$(call check_bin_size,dev)
 	@cp -f ../ASF/gcc/PVDXos.bin ./ \
 	&& cp -f ../ASF/gcc/PVDXos.elf ./ \
 	&& echo " --- Finished Building PVDXos --- " \
@@ -147,15 +196,18 @@ dev:
 
 release: clean #Might as well clean before compiling the release build
 	@echo "release" > $(BUILD_TYPE_FILE)
-	+@$(CHILD_MAKE) CFLAGS=" $(CFLAGS_RELEASE) $(CFLAGS)"
+	$(call child_build,release, $(CFLAGS_RELEASE) $(CFLAGS))
+	$(call check_bin_size,release)
 	@cp -f ../ASF/gcc/PVDXos.bin ./ \
 	&& cp -f ../ASF/gcc/PVDXos.elf ./ \
 	&& echo " ---  Finished Building PVDXos  --- " \
 	&& echo " --- THIS IS THE RELEASE BUILD! --- "
 
+# The selected tests are part of the build type, so changing TESTS forces a rebuild
 test:
-	$(call ensure_build_type,test)
-	+@$(CHILD_MAKE) CFLAGS=" $(CFLAGS_UNITTEST) $(CFLAGS)"
+	$(call ensure_build_type,$(strip test $(TEST_DEFINES)))
+	$(call child_build,test, $(CFLAGS_UNITTEST) $(CFLAGS))
+	$(call check_bin_size,test)
 	@cp -f ../ASF/gcc/PVDXos.elf ./ \
 	&& cp -f ../ASF/gcc/PVDXos.bin ./ \
 	&& echo " ---   Finished Building PVDXos   --- " \
@@ -165,7 +217,7 @@ test:
 clean:
 	@$(CHILD_MAKE) clean \
 	&& rm -rf $(BUILD_DIR) \
-	&& rm -f ./PVDXos.bin ./PVDXos.elf $(BUILD_TYPE_FILE) \
+	&& rm -f ./PVDXos.bin ./PVDXos.elf $(BUILD_TYPE_FILE) $(BUILD_LOG) \
 	&& echo " --- Cleaned Build Files --- "
 
 # this is a cheat, since it's just a nop. Execution stops after 
