@@ -62,7 +62,7 @@ typedef struct {
     StaticTimer_t retransmit_timer_mem[MAX_TRANSACTIONS];
     TimerHandle_t inactivity_timer_handles[MAX_TRANSACTIONS];
     TimerHandle_t retransmit_timer_handles[MAX_TRANSACTIONS];
-} cfdp_task_memory_t;
+} radio_task_memory_t;
 
 typedef enum cfdp_state {
     CFDP_SEND_STATE_METADATA_SEND = 0,
