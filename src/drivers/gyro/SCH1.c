@@ -1166,11 +1166,11 @@ bool SCH1_check_48bit_frame_error(uint64_t *data, int size) {
     return false;
 }
 
-// gets data out. 
-status_t gyro_read(SCH1_result_t *result) {
+// gets data out.
+status_t SCH1_gyro_read(SCH1_result_t *result) {
     SCH1_raw_data_t raw_data;
     SCH1_getData(&raw_data);
     SCH1_convert_data(&raw_data, result);
-    // TODO: error handling. 
+    // TODO: error handling.
     return SUCCESS;
 }
