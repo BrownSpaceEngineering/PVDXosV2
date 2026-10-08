@@ -10,11 +10,25 @@
 
 #define PVD_DAC_READY_TIMEOUT 100000U // Polling iterations to wait for the DAC channel to start up
 
+/*
+ * Channel settings that override the Atmel START configuration (hpl_dac_config.h), which leaves CCTRL at CC100K and
+ * refresh off. CCTRL must match the 12 MHz GCLK_DAC, and since the channel holds a static level for tens of ms per
+ * sweep step, its output must be refreshed or it droops. REFRESH n gives a period of n * 30 us (0 = off, 1 reserved).
+ * TODO: move these into the Atmel START project (PVDX-SAMD-PinConfig) so the generated config matches.
+ */
+#define PVD_DAC_CCTRL DAC_DACCTRL_CCTRL_CC12M_Val
+#define PVD_DAC_REFRESH 2U
+
 /**
- * Enables the DAC channel, waits for it to start up and sets the output to 0 V.
+ * Applies the channel settings above, enables the DAC channel, waits for it to start up and sets the output to 0 V.
  * system_init() initializes the DAC but leaves the channel disabled.
  */
 status_t pvd_dac_init(void) {
+    // DACCTRL is enable-protected; dac_sync_enable_channel() re-enables the DAC afterwards
+    hri_dac_clear_CTRLA_ENABLE_bit(DAC);
+    hri_dac_write_DACCTRL_CCTRL_bf(DAC, PVD_DAC_CHANNEL, PVD_DAC_CCTRL);
+    hri_dac_write_DACCTRL_REFRESH_bf(DAC, PVD_DAC_CHANNEL, PVD_DAC_REFRESH);
+
     if (dac_sync_enable_channel(&PVD_DAC, PVD_DAC_CHANNEL) != 0) {
         warning("pvd_dac: failed to enable channel %u\n", PVD_DAC_CHANNEL);
         return ERROR_NOT_READY;
