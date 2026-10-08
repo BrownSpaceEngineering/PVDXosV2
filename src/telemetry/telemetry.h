@@ -75,6 +75,7 @@ typedef struct {
     tel_adcs_data_t adcs;
 } telemetry_data_t;
 
-bool serialize_telemetry(size_t buf_size, uint8_t *buf, telemetry_data_t *data); // Function to serialize all telemetry data
+/// Serialize all telemetry data
+bool serialize_telemetry(size_t buf_size, uint8_t *buf, telemetry_data_t *data);
 
 #endif
