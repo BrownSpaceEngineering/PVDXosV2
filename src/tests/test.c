@@ -26,6 +26,7 @@ void test_matrix_product(void);
 void test_cfdp(void);
 void test_uslp(void);
 void test_telemetry_downlink(void);
+void test_telemetry_spp(void);
 
 void tests_run(void) {
 #ifdef TEST_SPP
@@ -42,6 +43,7 @@ void tests_run(void) {
 #endif
 #ifdef TEST_TELEMETRY
     test_telemetry_downlink();
+    test_telemetry_spp();
 #endif
     test_log("test results: %d/%d passed", tests_passed, tests_total);
 }
@@ -809,44 +811,220 @@ void test_uslp(void) {
 #endif // TEST_USLP
 
 #ifdef TEST_TELEMETRY
+// Shared by both telemetry tests. static so they don't sit on the (small) stack; one copy each to save RAM,
+// since the test image has to fit in RAM alongside everything else
+static telemetry_data_t telemetry_test_data;
+static uint8_t telemetry_test_buf[TELEMETRY_PACKET_SIZE + 1]; // one extra byte to check nothing is written past the packet
+
+// Fills every section with known values. The first and last element of each array get distinct values,
+// so a section that is shifted, swapped, or the wrong length shows up clearly
+static void telemetry_test_fill(telemetry_data_t *data) {
+    memset(data, 0, sizeof(*data));
+
+    data->spp_primary.version_number = SPP_VERSION_NUMBER;
+    data->spp_primary.packet_type = SPP_PACKET_TYPE_REPORTING;
+    data->spp_primary.secondary_header_flag = SPP_SECONDARY_HEADER_PRESENT;
+    data->spp_primary.application_process_id = 0x123;
+    data->spp_primary.sequence_flags = SPP_SEQ_FLAG_UNSEGMENTED_DATA;
+    data->spp_primary.sequence_count = 0x2A;
+    data->spp_primary.data_length = TELEMETRY_PACKET_SIZE - SPP_PRIMARY_HEADER_SIZE - 1; // number of bytes after the primary header - 1
+
+    data->spp_secondary.timestamp = 0x01020304;
+    data->spp_secondary.boot_timestamp = 0x0A0B0C0D;
+    memcpy(data->spp_secondary.callsign, TELEMETRY_CALLSIGN, TELEMETRY_CALLSIGN_LENGTH);
+
+    data->boot.last_bootloader = 2;
+
+    data->magnetometer.revid_register = 0x22;
+    data->magnetometer.bist_register = 0x5A;
+    data->magnetometer.raw_readings[0] = -5;
+    data->magnetometer.raw_readings[2] = 0x11223344;
+    data->magnetometer.gain_adjusted_readings[0] = 1.5f;
+    data->magnetometer.gain_adjusted_readings[2] = -2.0f;
+
+    data->magnetorquer.current[0] = -1;
+    data->magnetorquer.current[2] = 0x55667788;
+
+    data->photodiode.raw_readings[0] = 0.5f;
+    data->photodiode.raw_readings[21] = 100.0f;
+
+    data->gyro.status = 0xBEEF;
+    data->gyro.raw_readings[0] = 0x00C0FFEE;
+    data->gyro.raw_readings[2] = -7;
+    data->gyro.health_status = 3;
+
+    data->camera.health_status = 1;
+    data->camera.recent_capture_status = true;
+    data->camera.resolution = 4;
+
+    data->display.health_status = 5;
+    data->uhf.health_status = 6;
+
+    data->sband.health_status = 7;
+    data->sband.last_transmission_timestamp = 0xCAFEBABE;
+
+    data->eps.charge[0] = 0.25f;
+    data->eps.temperature[3] = -40.0f;
+
+    data->state_machine.state_history[0] = 1;
+    data->state_machine.state_history[7] = 8;
+    data->state_machine.transition_times[0] = 10.0f;
+    data->state_machine.input_variables[2] = 0x99;
+
+    data->adcs.position[0] = 1.0f;
+    data->adcs.covariance_matrix[3] = 2.0f;
+
+    data->commands.received_timestamps[0] = 0x1234;
+    data->commands.received_timestamps[15] = 0xABCD;
+
+    data->mram.mram_status[0] = 0xA1;
+    data->mram.total_reflashes = 0x00000100;
+    data->mram.reflash_timestamps[7] = 0xFEEDFACE;
+
+    data->os_errors.error_codes[0] = 0x0E;
+    data->os_errors.error_timestamps[7] = 0xDEADBEEF;
+}
+
+// Where each value from telemetry_test_fill should land in the packet, read back big-endian like the ground will.
+// Offsets come from the downlink sheet: each section starts where the previous one ends.
+// Floats are listed as their IEEE 754 bits, worked out independently of telemetry.c
+typedef struct {
+    uint16_t offset;
+    uint8_t size; // 1, 2 or 4 bytes
+    uint32_t value;
+} telemetry_test_expected_t;
+
+static const telemetry_test_expected_t telemetry_test_expected[] = {
+    {0, 4, 0x0923C02A},             // SPP primary: version 0, telemetry, secondary header, APID 0x123, unsegmented, count 0x2A
+    {4, 2, TELEMETRY_PACKET_SIZE - SPP_PRIMARY_HEADER_SIZE - 1}, // SPP primary: data length
+    {6, 4, 0x01020304},             // SPP secondary: timestamp
+    {10, 4, 0x0A0B0C0D},            // SPP secondary: boot timestamp
+    {14, 4, 0x42534542},            // SPP secondary: callsign "BSEB"
+    {18, 2, 0x5345},                // SPP secondary: callsign "SE"
+    {20, 1, 2},                     // boot: last bootloader
+    {21, 1, 0x22},                  // magnetometer: revid
+    {22, 1, 0x5A},                  // magnetometer: bist
+    {23, 4, 0xFFFFFFFB},            // magnetometer: raw x (-5)
+    {31, 4, 0x11223344},            // magnetometer: raw z
+    {35, 4, 0x3FC00000},            // magnetometer: gain-adjusted x (1.5f)
+    {43, 4, 0xC0000000},            // magnetometer: gain-adjusted z (-2.0f)
+    {47, 4, 0xFFFFFFFF},            // magnetorquer: x (-1)
+    {55, 4, 0x55667788},            // magnetorquer: z
+    {59, 4, 0x3F000000},            // photodiode 0 (0.5f)
+    {143, 4, 0x42C80000},           // photodiode 21 (100.0f)
+    {147, 2, 0xBEEF},               // gyro: status
+    {149, 4, 0x00C0FFEE},           // gyro: raw x
+    {157, 4, 0xFFFFFFF9},           // gyro: raw z (-7)
+    {161, 1, 3},                    // gyro: health
+    {162, 1, 1},                    // camera: health
+    {163, 1, TELEMETRY_TRUE},       // camera: last capture flag
+    {164, 1, 4},                    // camera: resolution
+    {165, 1, 5},                    // display: health
+    {166, 1, 6},                    // uhf: health
+    {167, 1, 7},                    // sband: health
+    {168, 4, 0xCAFEBABE},           // sband: last transmission timestamp
+    {172, 4, 0x3E800000},           // eps: charge 0 (0.25f)
+    {232, 4, 0xC2200000},           // eps: temperature 3 (-40.0f)
+    {236, 1, 1},                    // state machine: state history 0
+    {243, 1, 8},                    // state machine: state history 7
+    {244, 4, 0x41200000},           // state machine: transition time 0 (10.0f)
+    {278, 1, 0x99},                 // state machine: input variable 2
+    {279, 4, 0x3F800000},           // adcs: position x (1.0f)
+    {343, 4, 0x40000000},           // adcs: covariance 3 (2.0f)
+    {347, 2, 0x1234},               // commands: timestamp 0
+    {377, 2, 0xABCD},               // commands: timestamp 15
+    {379, 1, 0xA1},                 // mram: status 0
+    {382, 4, 0x00000100},           // mram: total reflashes
+    {414, 4, 0xFEEDFACE},           // mram: reflash timestamp 7
+    {418, 1, 0x0E},                 // os errors: code 0
+    {454, 4, 0xDEADBEEF},           // os errors: timestamp 7, the last defined field
+};
+
+// Checks every entry in telemetry_test_expected against buf, logging the ones that don't match
+// Returns the number of mismatches
+static int telemetry_test_check_bytes(const uint8_t *buf) {
+    int mismatches = 0;
+    for (size_t i = 0; i < sizeof(telemetry_test_expected) / sizeof(telemetry_test_expected[0]); i++) {
+        const telemetry_test_expected_t *e = &telemetry_test_expected[i];
+        uint32_t value = 0;
+        for (uint8_t b = 0; b < e->size; b++) {
+            value = (value << 8) | buf[e->offset + b];
+        }
+        if (value != e->value) {
+            test_log("telemetry byte %d: got %x, expected %x\n", e->offset, value, e->value);
+            mismatches++;
+        }
+    }
+    return mismatches;
+}
+
 void test_telemetry_downlink(void) {
     test_log("----- testing telemetry downlink -----\n");
+    uint8_t *buf = telemetry_test_buf;
+    bool err;
 
-    // // Every byte is distinct so a swapped or shifted field shows up clearly
-    // preamble_t pre = {0};
-    // memcpy(pre.callsign, TELEMETRY_CALLSIGN, TELEMETRY_CALLSIGN_LENGTH);
-    // pre.state = 0x01020304;
-    // pre.timestamp = 0x0A0B0C0D;
-    // pre.message_size = 0x11223344;
+    telemetry_test_fill(&telemetry_test_data);
 
-    // // "BSEBSE" in ASCII, then each uint32 big-endian
-    // uint8_t expected[] = {0x42, 0x53, 0x45, 0x42, 0x53, 0x45, // callsign
-    //                       0x01, 0x02, 0x03, 0x04,             // state
-    //                       0x0A, 0x0B, 0x0C, 0x0D,             // timestamp
-    //                       0x11, 0x22, 0x33, 0x44};            // message_size
+    test_log("telemetry serialize test:\n");
+    memset(buf, 0xEE, sizeof(telemetry_test_buf));
+    err = serialize_telemetry(TELEMETRY_PACKET_SIZE, buf, &telemetry_test_data);
+    PVDX_ASSERT_MSG(!err, "serialize succeeds\n");
+    PVDX_ASSERT_MSG(telemetry_test_check_bytes(buf) == 0, "every field lands where the sheet says\n");
+    PVDX_ASSERT_MSG(buf[TELEMETRY_PACKET_SIZE] == 0xEE, "nothing written past the packet\n");
 
-    // // Buffers are larger than needed, so a bug that writes too far can't corrupt the stack
-    // uint8_t buf[64];
-    // bool err;
+    // Everything after the defined fields is reserved and sent as zeros
+    bool reserved_zero = true;
+    for (size_t i = TELEMETRY_DATA_SIZE; i < TELEMETRY_PACKET_SIZE; i++) {
+        reserved_zero = reserved_zero && buf[i] == 0;
+    }
+    PVDX_ASSERT_MSG(reserved_zero, "reserved space is zeros\n");
 
-    // test_log("telemetry preamble serialize test:\n");
-    // memset(buf, 0, sizeof(buf));
-    // err = serialize_telemetry(sizeof(expected), buf, &pre);
-    // PVDX_ASSERT_MSG(!err, "preamble serialize succeeds\n");
-    // PVDX_ASSERT_MSG(memcmp(buf, expected, sizeof(expected)) == 0, "preamble bytes\n");
-    // PVDX_ASSERT_MSG(buf[sizeof(expected)] == 0, "nothing written past the preamble\n");
+    // The packet will be built over and over, so a second call must give the same bytes
+    test_log("telemetry serialize twice test:\n");
+    memset(buf, 0, sizeof(telemetry_test_buf));
+    err = serialize_telemetry(TELEMETRY_PACKET_SIZE, buf, &telemetry_test_data);
+    PVDX_ASSERT_MSG(!err && telemetry_test_check_bytes(buf) == 0, "second serialize gives the same bytes\n");
 
-    // // The task will call this every few seconds, so a second call must produce the same bytes
-    // test_log("telemetry preamble serialize twice test:\n");
-    // memset(buf, 0, sizeof(buf));
-    // err = serialize_telemetry(sizeof(expected), buf, &pre);
-    // PVDX_ASSERT_MSG(!err, "second serialize succeeds\n");
-    // PVDX_ASSERT_MSG(memcmp(buf, expected, sizeof(expected)) == 0, "second preamble bytes\n");
+    // One byte short: everything but the last reserved byte fits
+    test_log("telemetry buffer too small test:\n");
+    PVDX_ASSERT_MSG(serialize_telemetry(TELEMETRY_PACKET_SIZE - 1, buf, &telemetry_test_data), "buffer one byte short is rejected\n");
+    PVDX_ASSERT_MSG(serialize_telemetry(0, buf, &telemetry_test_data), "empty buffer is rejected\n");
+}
 
-    // // Claim the buffer is only 10 bytes: callsign + state fit, timestamp doesn't
-    // test_log("telemetry preamble buffer too small test:\n");
-    // err = serialize_telemetry(10, buf, &pre);
-    // PVDX_ASSERT_MSG(err, "too-small buffer is rejected\n");
+void test_telemetry_spp(void) {
+    test_log("----- testing telemetry with spp parser -----\n");
+    uint8_t *buf = telemetry_test_buf;
+    spp_packet_view_t view;
+    bool err;
+
+    telemetry_test_fill(&telemetry_test_data);
+    err = serialize_telemetry(TELEMETRY_PACKET_SIZE, buf, &telemetry_test_data);
+    PVDX_ASSERT_MSG(!err, "serialize succeeds\n");
+
+    // Whatever telemetry puts in the headers, the parser must read back
+    test_log("telemetry packet parse test:\n");
+    err = spp_packet_parse(&view, buf, TELEMETRY_PACKET_SIZE);
+    PVDX_ASSERT_MSG(!err, "telemetry packet parses\n");
+    PVDX_ASSERT_MSG(view.header.version_number == SPP_VERSION_NUMBER && view.header.packet_type == SPP_PACKET_TYPE_REPORTING &&
+                        view.header.secondary_header_flag == SPP_SECONDARY_HEADER_PRESENT && view.header.application_process_id == 0x123 &&
+                        view.header.sequence_flags == SPP_SEQ_FLAG_UNSEGMENTED_DATA && view.header.sequence_count == 0x2A &&
+                        view.header.data_length == TELEMETRY_PACKET_SIZE - SPP_PRIMARY_HEADER_SIZE - 1,
+                    "primary header fields\n");
+    PVDX_ASSERT_MSG(view.secondary_header.timestamp == 0x01020304 && view.secondary_header.boot_timestamp == 0x0A0B0C0D &&
+                        memcmp(view.secondary_header.callsign, TELEMETRY_CALLSIGN, TELEMETRY_CALLSIGN_LENGTH) == 0,
+                    "secondary header fields\n");
+
+    // The telemetry data starts right after both headers, with the boot section first
+    test_log("telemetry packet data field test:\n");
+    PVDX_ASSERT_MSG(view.data == &buf[SPP_PRIMARY_HEADER_SIZE + SPP_SECONDARY_HEADER_SIZE] && ((uint8_t *)view.data)[0] == 2,
+                    "data starts after the headers\n");
+
+    // The length the packet claims has to match what was actually serialized
+    test_log("telemetry packet length test:\n");
+    PVDX_ASSERT_MSG(spp_packet_parse(&view, buf, TELEMETRY_PACKET_SIZE - 1), "truncated packet is rejected\n");
+    telemetry_test_data.spp_primary.data_length += 1;
+    err = serialize_telemetry(TELEMETRY_PACKET_SIZE, buf, &telemetry_test_data);
+    PVDX_ASSERT_MSG(!err && spp_packet_parse(&view, buf, TELEMETRY_PACKET_SIZE), "packet claiming to be too long is rejected\n");
 }
 #endif // TEST_TELEMETRY
 
