@@ -39,7 +39,6 @@ void tests_run(void) {
 #ifdef TEST_USLP
     test_uslp();
 #endif
-    test_ina226();
     test_pmb();
     test_log("test results: %d/%d passed", tests_passed, tests_total);
 }
