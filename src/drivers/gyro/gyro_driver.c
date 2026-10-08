@@ -301,158 +301,84 @@ static status_t gyro_write_register(uint64_t request_base, uint64_t data_field, 
 
 /* ---------- CONFIGURATION VALUE CONVERSION ---------- */
 
-/**
- * \fn gyro_is_valid_filter_freq
- *
- * \brief Checks whether a filter corner frequency is one the sensor supports
- *
- * \param freq filter corner frequency, in Hz; SCH16T_FILTER_BYPASS means bypass mode
- *
- * \returns whether the frequency is valid
- */
-static bool gyro_is_valid_filter_freq(uint32_t freq) {
-    return freq == 13 || freq == 30 || freq == 68 || freq == 235 || freq == 280 || freq == 370 || freq == SCH16T_FILTER_BYPASS;
-}
+// Each table maps a value the sensor accepts to its register bitfield, and is the single source
+// of truth for both validation and conversion: a value is supported exactly when GYRO_LOOKUP()
+// finds it, so nothing can be accepted as valid and then converted wrongly.
+typedef struct {
+    uint32_t value;
+    uint32_t bitfield;
+} gyro_bitfield_map_t;
+
+// Filter corner frequencies, in Hz. All three axes of a channel are set alike, hence the
+// repeated three-bit groups.
+static const gyro_bitfield_map_t gyro_filter_map[] = {
+    {13, 0x092},                   // 010 010 010
+    {30, 0x049},                   // 001 001 001
+    {68, 0x000},                   // 000 000 000
+    {235, 0x16D},                  // 101 101 101
+    {280, 0x0DB},                  // 011 011 011
+    {370, 0x124},                  // 100 100 100
+    {SCH16T_FILTER_BYPASS, 0x1FF}, // 111 111 111, filter bypass mode
+};
+
+// Rate channel sensitivities, in LSB/dps
+static const gyro_bitfield_map_t gyro_rate_sens_map[] = {{1600, 0x02}, {3200, 0x03}, {6400, 0x04}};
+
+// Acceleration channel sensitivities, in LSB/(m/s^2)
+static const gyro_bitfield_map_t gyro_acc_sens_map[] = {{3200, 0x01}, {6400, 0x02}, {12800, 0x03}, {25600, 0x04}};
+
+// Output sample rate dividers for the decimated channels
+static const gyro_bitfield_map_t gyro_decimation_map[] = {{2, 0x00}, {4, 0x01}, {8, 0x02}, {16, 0x03}, {32, 0x04}};
+
+// Looks `value` up in one of the tables above, writing its bitfield to `p_bits`
+#define GYRO_LOOKUP(map, value, p_bits) gyro_lookup_bitfield((map), sizeof(map) / sizeof((map)[0]), (value), (p_bits))
 
 /**
- * \fn gyro_is_valid_rate_sens
+ * \fn gyro_lookup_bitfield
  *
- * \brief Checks whether a rate sensitivity is one the sensor supports
+ * \brief Looks a configuration value up in one of the tables above. Use via GYRO_LOOKUP().
  *
- * \param sens sensitivity, in LSB/dps
+ * \param map the table to search
+ * \param count how many entries the table has
+ * \param value the configuration value to look up
+ * \param p_bitfield set to the matching register bitfield when the value is found
  *
- * \returns whether the sensitivity is valid
+ * \returns whether the value is one the sensor supports
  */
-static bool gyro_is_valid_rate_sens(uint32_t sens) {
-    return sens == 1600 || sens == 3200 || sens == 6400;
-}
-
-/**
- * \fn gyro_is_valid_acc_sens
- *
- * \brief Checks whether an accelerometer sensitivity is one the sensor supports
- *
- * \param sens sensitivity, in LSB/(m/s^2)
- *
- * \returns whether the sensitivity is valid
- */
-static bool gyro_is_valid_acc_sens(uint32_t sens) {
-    return sens == 3200 || sens == 6400 || sens == 12800 || sens == 25600;
-}
-
-/**
- * \fn gyro_is_valid_decimation
- *
- * \brief Checks whether an output sample rate divider is one the sensor supports
- *
- * \param decimation decimation ratio
- *
- * \returns whether the decimation ratio is valid
- */
-static bool gyro_is_valid_decimation(uint32_t decimation) {
-    return decimation == 2 || decimation == 4 || decimation == 8 || decimation == 16 || decimation == 32;
-}
-
-/**
- * \fn gyro_filter_bitfield
- *
- * \brief Converts a filter corner frequency into its register bitfield
- *
- * \param freq filter corner frequency, in Hz
- *
- * \returns the bitfield for building the filter setting frame, with all three axes set alike
- */
-static uint32_t gyro_filter_bitfield(uint32_t freq) {
-    switch (freq) {
-        case 13:
-            return 0x092; // 010 010 010
-        case 30:
-            return 0x049; // 001 001 001
-        case 68:
-            return 0x000; // 000 000 000
-        case 235:
-            return 0x16D; // 101 101 101
-        case 280:
-            return 0x0DB; // 011 011 011
-        case 370:
-            return 0x124; // 100 100 100
-        case SCH16T_FILTER_BYPASS:
-            return 0x1FF; // 111 111 111, filter bypass mode
-        default:
-            return 0x000;
+static bool gyro_lookup_bitfield(const gyro_bitfield_map_t *const map, size_t count, uint32_t value, uint32_t *const p_bitfield) {
+    for (size_t i = 0; i < count; i++) {
+        if (map[i].value == value) {
+            *p_bitfield = map[i].bitfield;
+            return true;
+        }
     }
+
+    return false;
 }
 
 /**
- * \fn gyro_rate_sens_bitfield
+ * \fn gyro_pack_sens_dec
  *
- * \brief Converts a rate sensitivity into its RATE_CTRL register bitfield
+ * \brief Packs a RATE_CTRL or ACC12_CTRL payload
  *
- * \param sens sensitivity, in LSB/dps
+ * \param sens1_bits sensitivity bitfield for the interpolated channel
+ * \param sens2_bits sensitivity bitfield for the decimated channel
+ * \param dec_bits decimation bitfield for the decimated channel
  *
- * \returns the bitfield for building the rate sensitivity setting frame
+ * \returns the payload to write
+ *
+ * \note Both registers share this layout, from the top down: channel 1 sensitivity, channel 2
+ *       sensitivity, then the channel 2 decimation three times, once per axis.
  */
-static uint32_t gyro_rate_sens_bitfield(uint32_t sens) {
-    switch (sens) {
-        case 1600:
-            return 0x02; // 010
-        case 3200:
-            return 0x03; // 011
-        case 6400:
-            return 0x04; // 100
-        default:
-            return 0x01;
-    }
-}
+static uint32_t gyro_pack_sens_dec(uint32_t sens1_bits, uint32_t sens2_bits, uint32_t dec_bits) {
+    uint32_t payload = sens1_bits;
 
-/**
- * \fn gyro_acc_sens_bitfield
- *
- * \brief Converts an accelerometer sensitivity into its ACC12/ACC3_CTRL register bitfield
- *
- * \param sens sensitivity, in LSB/(m/s^2)
- *
- * \returns the bitfield for building the acceleration sensitivity setting frame
- */
-static uint32_t gyro_acc_sens_bitfield(uint32_t sens) {
-    switch (sens) {
-        case 3200:
-            return 0x01; // 001
-        case 6400:
-            return 0x02; // 010
-        case 12800:
-            return 0x03; // 011
-        case 25600:
-            return 0x04; // 100
-        default:
-            return 0x00;
-    }
-}
+    payload = (payload << 3) | sens2_bits;
+    payload = (payload << 3) | dec_bits;
+    payload = (payload << 3) | dec_bits;
+    payload = (payload << 3) | dec_bits;
 
-/**
- * \fn gyro_decimation_bitfield
- *
- * \brief Converts an output sample rate divider into its register bitfield
- *
- * \param decimation decimation ratio
- *
- * \returns the bitfield for building the decimation setting frame
- */
-static uint32_t gyro_decimation_bitfield(uint32_t decimation) {
-    switch (decimation) {
-        case 2:
-            return 0x00;
-        case 4:
-            return 0x01;
-        case 8:
-            return 0x02;
-        case 16:
-            return 0x03;
-        case 32:
-            return 0x04;
-        default:
-            return 0x00;
-    }
+    return payload;
 }
 
 /* ---------- CONFIGURATION ---------- */
@@ -471,18 +397,19 @@ static uint32_t gyro_decimation_bitfield(uint32_t decimation) {
  * \warning returns `ERROR_SANITY_CHECK_FAILED` if any frequency is unsupported
  */
 static status_t gyro_set_filters(uint32_t freq_rate12, uint32_t freq_acc12, uint32_t freq_acc3) {
-    if (!gyro_is_valid_filter_freq(freq_rate12) || !gyro_is_valid_filter_freq(freq_acc12) || !gyro_is_valid_filter_freq(freq_acc3)) {
+    uint32_t bits_rate12 = 0, bits_acc12 = 0, bits_acc3 = 0;
+
+    if (!GYRO_LOOKUP(gyro_filter_map, freq_rate12, &bits_rate12) || !GYRO_LOOKUP(gyro_filter_map, freq_acc12, &bits_acc12) ||
+        !GYRO_LOOKUP(gyro_filter_map, freq_acc3, &bits_acc3)) {
         warning("gyro: unsupported filter frequency\n");
         return ERROR_SANITY_CHECK_FAILED;
     }
 
     uint64_t requests[3];
-    ret_err_status(gyro_write_register(SCH16T_REQ_SET_FILT_RATE, gyro_filter_bitfield(freq_rate12), &requests[0]),
+    ret_err_status(gyro_write_register(SCH16T_REQ_SET_FILT_RATE, bits_rate12, &requests[0]),
                    "gyro: could not set the Rate_XYZ1/2 filter\n");
-    ret_err_status(gyro_write_register(SCH16T_REQ_SET_FILT_ACC12, gyro_filter_bitfield(freq_acc12), &requests[1]),
-                   "gyro: could not set the Acc_XYZ1/2 filter\n");
-    ret_err_status(gyro_write_register(SCH16T_REQ_SET_FILT_ACC3, gyro_filter_bitfield(freq_acc3), &requests[2]),
-                   "gyro: could not set the Acc_XYZ3 filter\n");
+    ret_err_status(gyro_write_register(SCH16T_REQ_SET_FILT_ACC12, bits_acc12, &requests[1]), "gyro: could not set the Acc_XYZ1/2 filter\n");
+    ret_err_status(gyro_write_register(SCH16T_REQ_SET_FILT_ACC3, bits_acc3, &requests[2]), "gyro: could not set the Acc_XYZ3 filter\n");
 
     const uint64_t readbacks[3] = {SCH16T_REQ_READ_FILT_RATE, SCH16T_REQ_READ_FILT_ACC12, SCH16T_REQ_READ_FILT_ACC3};
     uint64_t responses[3];
@@ -509,22 +436,16 @@ static status_t gyro_set_filters(uint32_t freq_rate12, uint32_t freq_acc12, uint
  * \warning returns `ERROR_SANITY_CHECK_FAILED` if any value is unsupported
  */
 static status_t gyro_set_rate_sens_dec(uint16_t sens_rate1, uint16_t sens_rate2, uint16_t dec_rate2) {
-    if (!gyro_is_valid_rate_sens(sens_rate1) || !gyro_is_valid_rate_sens(sens_rate2) || !gyro_is_valid_decimation(dec_rate2)) {
+    uint32_t bits_sens1 = 0, bits_sens2 = 0, bits_dec = 0;
+
+    if (!GYRO_LOOKUP(gyro_rate_sens_map, sens_rate1, &bits_sens1) || !GYRO_LOOKUP(gyro_rate_sens_map, sens_rate2, &bits_sens2) ||
+        !GYRO_LOOKUP(gyro_decimation_map, dec_rate2, &bits_dec)) {
         warning("gyro: unsupported rate sensitivity or decimation\n");
         return ERROR_SANITY_CHECK_FAILED;
     }
 
-    // RATE_CTRL packs, from the top down: Rate1 sensitivity, Rate2 sensitivity, then the
-    // Rate2 decimation once per axis
-    const uint32_t decimation_bits = gyro_decimation_bitfield(dec_rate2);
-    uint32_t data_field = gyro_rate_sens_bitfield(sens_rate1);
-    data_field = (data_field << 3) | gyro_rate_sens_bitfield(sens_rate2);
-    data_field = (data_field << 3) | decimation_bits;
-    data_field = (data_field << 3) | decimation_bits;
-    data_field = (data_field << 3) | decimation_bits;
-
     uint64_t request;
-    ret_err_status(gyro_write_register(SCH16T_REQ_SET_RATE_CTRL, data_field, &request),
+    ret_err_status(gyro_write_register(SCH16T_REQ_SET_RATE_CTRL, gyro_pack_sens_dec(bits_sens1, bits_sens2, bits_dec), &request),
                    "gyro: could not set the rate sensitivity and decimation\n");
 
     const uint64_t readback = SCH16T_REQ_READ_RATE_CTRL;
@@ -550,24 +471,18 @@ static status_t gyro_set_rate_sens_dec(uint16_t sens_rate1, uint16_t sens_rate2,
  * \warning returns `ERROR_SANITY_CHECK_FAILED` if any value is unsupported
  */
 static status_t gyro_set_acc_sens_dec(uint16_t sens_acc1, uint16_t sens_acc2, uint16_t sens_acc3, uint16_t dec_acc2) {
-    if (!gyro_is_valid_acc_sens(sens_acc1) || !gyro_is_valid_acc_sens(sens_acc2) || !gyro_is_valid_acc_sens(sens_acc3) ||
-        !gyro_is_valid_decimation(dec_acc2)) {
+    uint32_t bits_acc1 = 0, bits_acc2 = 0, bits_acc3 = 0, bits_dec = 0;
+
+    if (!GYRO_LOOKUP(gyro_acc_sens_map, sens_acc1, &bits_acc1) || !GYRO_LOOKUP(gyro_acc_sens_map, sens_acc2, &bits_acc2) ||
+        !GYRO_LOOKUP(gyro_acc_sens_map, sens_acc3, &bits_acc3) || !GYRO_LOOKUP(gyro_decimation_map, dec_acc2, &bits_dec)) {
         warning("gyro: unsupported acceleration sensitivity or decimation\n");
         return ERROR_SANITY_CHECK_FAILED;
     }
 
-    // ACC12_CTRL is packed the same way as RATE_CTRL
-    const uint32_t decimation_bits = gyro_decimation_bitfield(dec_acc2);
-    uint32_t data_field = gyro_acc_sens_bitfield(sens_acc1);
-    data_field = (data_field << 3) | gyro_acc_sens_bitfield(sens_acc2);
-    data_field = (data_field << 3) | decimation_bits;
-    data_field = (data_field << 3) | decimation_bits;
-    data_field = (data_field << 3) | decimation_bits;
-
     uint64_t requests[2];
-    ret_err_status(gyro_write_register(SCH16T_REQ_SET_ACC12_CTRL, data_field, &requests[0]),
+    ret_err_status(gyro_write_register(SCH16T_REQ_SET_ACC12_CTRL, gyro_pack_sens_dec(bits_acc1, bits_acc2, bits_dec), &requests[0]),
                    "gyro: could not set the Acc_XYZ1/2 sensitivity and decimation\n");
-    ret_err_status(gyro_write_register(SCH16T_REQ_SET_ACC3_CTRL, gyro_acc_sens_bitfield(sens_acc3), &requests[1]),
+    ret_err_status(gyro_write_register(SCH16T_REQ_SET_ACC3_CTRL, bits_acc3, &requests[1]),
                    "gyro: could not set the Acc_XYZ3 sensitivity\n");
 
     const uint64_t readbacks[2] = {SCH16T_REQ_READ_ACC12_CTRL, SCH16T_REQ_READ_ACC3_CTRL};
