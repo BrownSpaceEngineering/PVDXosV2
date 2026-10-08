@@ -131,6 +131,30 @@ static uint8_t gyro_crc8(uint64_t frame) {
 }
 
 /**
+ * \fn gyro_apply_ta_select
+ *
+ * \brief Stamps the configured TA9/TA8 device-select bits into a request frame and fixes up the
+ *        frame's CRC to match
+ *
+ * \param request the request frame to stamp, normally an `SCH16T_REQ_*` constant
+ *
+ * \returns the frame that should actually go out on the wire
+ *
+ * \note The CRC covers the Target Address, so setting TA9/TA8 invalidates the CRC that is baked
+ *       into every `SCH16T_REQ_*` constant and it has to be recalculated. Stamping the bits into
+ *       the outgoing byte without doing this is the trap here: the sensor would reject the frame.
+ *
+ * \note When `SCH16T_TA_SELECT` is 0 this is an identity transform. No bits change, so the
+ *       recomputed CRC comes out equal to the constant's original one. Keeping it unconditional
+ *       means there is only one code path to get wrong, at the cost of one CRC pass per transfer.
+ */
+static uint64_t gyro_apply_ta_select(uint64_t request) {
+    const uint64_t stamped = request | SCH16T_TA_SELECT_MASK;
+
+    return (stamped & ~SCH16T_CRC_FIELD_MASK) | gyro_crc8(stamped);
+}
+
+/**
  * \fn gyro_spi_request
  *
  * \brief Performs a single 48-bit SPI transfer to the gyro
@@ -143,9 +167,11 @@ static uint8_t gyro_crc8(uint64_t frame) {
  * \warning returns `ERROR_SPI_TRANSFER_FAILED` if transfer unsuccessful
  */
 static status_t gyro_spi_request(uint64_t request, uint64_t *const p_response) {
+    const uint64_t frame = gyro_apply_ta_select(request);
+
     // The sensor clocks frames out MSB first, so byte 0 carries bits 47..40
     for (uint8_t i = 0; i < SCH16T_FRAME_SIZE_BYTES; i++) {
-        spi_tx_buffer[i] = (uint8_t)(request >> (8 * (SCH16T_FRAME_SIZE_BYTES - 1 - i)));
+        spi_tx_buffer[i] = (uint8_t)(frame >> (8 * (SCH16T_FRAME_SIZE_BYTES - 1 - i)));
     }
 
     GYRO_CS_LOW(); // select the gyro for SPI communication
@@ -217,8 +243,10 @@ static status_t gyro_verify_response(uint64_t request, uint64_t response) {
         return ERROR_SPI_TRANSFER_FAILED;
     }
 
-    // The response's Source Address must match the request's Target Address
-    if (((request & SCH16T_TA_FIELD_MASK) >> SCH16T_TA_FIELD_SHIFT) != ((response & SCH16T_SA_FIELD_MASK) >> SCH16T_SA_FIELD_SHIFT)) {
+    // The response's Source Address must name the register the request addressed. Only the eight
+    // register-address bits are compared, so this holds whatever TA9/TA8 are strapped to.
+    if ((((request & SCH16T_TA_FIELD_MASK) >> SCH16T_TA_FIELD_SHIFT) & SCH16T_TA_REGISTER_MASK) !=
+        (((response & SCH16T_SA_FIELD_MASK) >> SCH16T_SA_FIELD_SHIFT) & SCH16T_TA_REGISTER_MASK)) {
         return ERROR_SPI_TRANSFER_FAILED;
     }
 

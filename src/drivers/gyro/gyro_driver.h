@@ -144,6 +144,28 @@
 #define SCH16T_TA_FIELD_SHIFT 38
 #define SCH16T_SA_FIELD_SHIFT 37
 
+// Only the eight register-address bits (TA7..TA0) are compared when checking that a response
+// came from the register that was asked for. Whether the sensor echoes the TA9/TA8 select bits
+// below back in the Source Address is not something this port can confirm without the data
+// sheet, so they are left out of the comparison rather than risking a false mismatch.
+#define SCH16T_TA_REGISTER_MASK 0xFF
+
+/* ---------- TARGET ADDRESS SELECT (TA9/TA8) ---------- */
+
+// The Target Address field is 10 bits wide. Its top two bits, TA9 and TA8, are driven by
+// physical pins on the sensor and act as a device select, letting several SCH16Ts share one bus
+// without separate chip-select lines. They were left unconnected on the Arduino prototype's
+// breakout, so every request there carried TA9 = TA8 = 0 -- which is what the CRC baked into
+// each SCH16T_REQ_* constant above assumes.
+//
+// Set this to the two-bit value the board straps TA9/TA8 to. Because the CRC covers the Target
+// Address, changing it makes gyro_apply_ta_select() recompute each frame's CRC.
+#define SCH16T_TA_SELECT 0x3 // Valid: 0x0, 0x1, 0x2, 0x3 (TA9 is the high bit)
+
+// TA9/TA8 sit at frame bits 47 and 46, i.e. the top two bits of the first byte on the wire
+#define SCH16T_TA_SELECT_SHIFT 46
+#define SCH16T_TA_SELECT_MASK ((uint64_t)(SCH16T_TA_SELECT & 0x3) << SCH16T_TA_SELECT_SHIFT)
+
 /* ---------- MODE_CTRL AND USER_IF_CTRL BITS ---------- */
 
 #define SCH16T_MODE_EN_SENSOR 0x01 // Enables the sensor
