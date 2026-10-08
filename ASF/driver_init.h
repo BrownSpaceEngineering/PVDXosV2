@@ -28,6 +28,7 @@ extern "C" {
 #include <hal_spi_m_sync.h>
 #include <hal_timer.h>
 #include <hal_wdt.h>
+#include <hpl/tcc/hpl_tcc.h>
 
 extern struct adc_sync_descriptor ADC_0;
 
