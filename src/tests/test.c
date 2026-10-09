@@ -5,17 +5,16 @@
 
 #include "ccsds/spp.h"
 #include "ccsds/uslp.h"
-#include "linalg/LinearAlgebra/declareFunctions.h"
-#include "logging.h"
-#include "tests/test_pmb.h"
-
-int tests_passed = 0;
-int tests_total = 0;
 #include "cfdp/cfdp_pdu.h"
 #include "cfdp/cfdp_task.h"
 #include "cfdp/cfdp_utils.h"
 #include "linalg/LinearAlgebra/declareFunctions.h"
 #include "logging.h"
+#include "telemetry/telemetry.h"
+#include "tests/test_pmb.h"
+
+int tests_passed = 0;
+int tests_total = 0;
 
 #if defined(UNITTEST)
 uint8_t test_mem[512];
@@ -25,6 +24,8 @@ void test_spp(void);
 void test_matrix_product(void);
 void test_cfdp(void);
 void test_uslp(void);
+void test_telemetry_downlink(void);
+void test_telemetry_uplink(void);
 
 void tests_run(void) {
 #ifdef TEST_SPP
@@ -39,7 +40,13 @@ void tests_run(void) {
 #ifdef TEST_USLP
     test_uslp();
 #endif
+#ifdef TEST_PMB
     test_pmb();
+#endif
+#ifdef TEST_TELEMETRY
+    test_telemetry_downlink();
+    test_telemetry_uplink();
+#endif
     test_log("test results: %d/%d passed", tests_passed, tests_total);
 }
 
@@ -69,6 +76,74 @@ void test_spp(void) {
 
     test_log("data_length: %x\n", packet.header.data_length);
     PVDX_ASSERT_MSG(packet.header.data_length == 0xAA, "data_length");
+
+    // Packets below were generated with Python's struct module, independently of spp.c.
+    // Each assert costs RAM in the test image, so data contents are covered by checking that view.data
+    // points to the right place in the (unchanged) input, rather than by comparing bytes
+
+    // Telemetry, APID 0x123, unsegmented, count 0x2A, with a secondary header (timestamp 0x01020304,
+    // boot_timestamp 0x0A0B0C0D, callsign "BSEBSE") and 3 bytes of user data. Every integer byte is distinct,
+    // so a swapped or shifted field shows up clearly
+    uint8_t with_sec[] = {0x09, 0x23, 0xC0, 0x2A, 0x00, 0x10, 0x01, 0x02, 0x03, 0x04, 0x0A, 0x0B,
+                          0x0C, 0x0D, 0x42, 0x53, 0x45, 0x42, 0x53, 0x45, 0xAA, 0xBB, 0xCC};
+    spp_packet_view_t view;
+    bool err;
+
+    test_log("spp parse tests:\n");
+    err = spp_packet_parse(&view, with_sec, sizeof(with_sec));
+    PVDX_ASSERT_MSG(!err, "with_sec parse\n");
+    PVDX_ASSERT_MSG(view.header.version_number == SPP_VERSION_NUMBER, "with_sec version\n");
+    PVDX_ASSERT_MSG(view.header.packet_type == SPP_PACKET_TYPE_REPORTING, "with_sec type\n");
+    PVDX_ASSERT_MSG(view.header.secondary_header_flag == SPP_SECONDARY_HEADER_PRESENT, "with_sec sec flag\n");
+    PVDX_ASSERT_MSG(view.header.application_process_id == 0x123, "with_sec apid\n");
+    PVDX_ASSERT_MSG(view.header.sequence_flags == SPP_SEQ_FLAG_UNSEGMENTED_DATA, "with_sec seq flags\n");
+    PVDX_ASSERT_MSG(view.header.sequence_count == 0x2A, "with_sec seq count\n");
+    PVDX_ASSERT_MSG(view.header.data_length == sizeof(with_sec) - SPP_PRIMARY_HEADER_SIZE - 1, "with_sec data_length\n");
+    PVDX_ASSERT_MSG(view.secondary_header.timestamp == 0x01020304, "with_sec timestamp\n");
+    PVDX_ASSERT_MSG(view.secondary_header.boot_timestamp == 0x0A0B0C0D, "with_sec boot_timestamp\n");
+    PVDX_ASSERT_MSG(memcmp(view.secondary_header.callsign, "BSEBSE", SPP_SECONDARY_HEADER_CALLSIGN_SIZE) == 0, "with_sec callsign\n");
+    PVDX_ASSERT_MSG(view.data == &with_sec[SPP_PRIMARY_HEADER_SIZE + SPP_SECONDARY_HEADER_SIZE], "with_sec data\n");
+
+    // Telecommand, APID 0x7FE, first segment, max count 0x3FFF, no secondary header, 2 bytes of user data
+    uint8_t no_sec[] = {0x17, 0xFE, 0x7F, 0xFF, 0x00, 0x01, 0x11, 0x22};
+    view.secondary_header.timestamp = 0xFFFFFFFF; // left over from a previous parse, must be cleared
+    err = spp_packet_parse(&view, no_sec, sizeof(no_sec));
+    PVDX_ASSERT_MSG(!err, "no_sec parse\n");
+    PVDX_ASSERT_MSG(view.header.packet_type == SPP_PACKET_TYPE_REQUESTING, "no_sec type\n");
+    PVDX_ASSERT_MSG(view.header.secondary_header_flag == SPP_SECONDARY_HEADER_NOT_PRESENT, "no_sec sec flag\n");
+    PVDX_ASSERT_MSG(view.header.application_process_id == 0x7FE, "no_sec apid\n");
+    PVDX_ASSERT_MSG(view.header.sequence_flags == SPP_SEQ_FLAG_FIRST_SEGMENT_OF_DATA, "no_sec seq flags\n");
+    PVDX_ASSERT_MSG(view.header.sequence_count == 0x3FFF, "no_sec seq count\n");
+    PVDX_ASSERT_MSG(view.secondary_header.timestamp == 0, "no_sec secondary header zeroed\n");
+    PVDX_ASSERT_MSG(view.data == &no_sec[SPP_PRIMARY_HEADER_SIZE], "no_sec data\n");
+
+    // APID 1, a secondary header with high bits set (timestamp 0xFFFFFFFF, boot_timestamp 0x80000001,
+    // callsign "ABCDEF") and no user data
+    uint8_t sec_only[] = {0x08, 0x01, 0xC0, 0x00, 0x00, 0x0D, 0xFF, 0xFF, 0xFF, 0xFF,
+                          0x80, 0x00, 0x00, 0x01, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46};
+    err = spp_packet_parse(&view, sec_only, sizeof(sec_only));
+    PVDX_ASSERT_MSG(!err && view.secondary_header.timestamp == 0xFFFFFFFF && view.secondary_header.boot_timestamp == 0x80000001 &&
+                        memcmp(view.secondary_header.callsign, "ABCDEF", SPP_SECONDARY_HEADER_CALLSIGN_SIZE) == 0,
+                    "sec_only secondary header\n");
+    PVDX_ASSERT_MSG(view.data == &sec_only[sizeof(sec_only)], "sec_only data\n");
+
+    // Bytes after the end given by the packet data length field are ignored
+    uint8_t padded[sizeof(with_sec) + 4] = {0};
+    memcpy(padded, with_sec, sizeof(with_sec));
+    PVDX_ASSERT_MSG(!spp_packet_parse(&view, padded, sizeof(padded)), "trailing bytes accepted\n");
+
+    test_log("spp parse rejection tests:\n");
+    PVDX_ASSERT_MSG(spp_packet_parse(&view, with_sec, sizeof(with_sec) - 1), "shorter than data length\n");
+    PVDX_ASSERT_MSG(spp_packet_parse(&view, with_sec, SPP_PRIMARY_HEADER_SIZE - 1), "shorter than primary header\n");
+    PVDX_ASSERT_MSG(spp_packet_parse(NULL, with_sec, sizeof(with_sec)) && spp_packet_parse(&view, NULL, sizeof(with_sec)), "NULL args\n");
+
+    // Secondary header flag is set, but the packet data field is one octet short of a full secondary header
+    uint8_t short_sec[] = {0x08, 0x01, 0xC0, 0x00, 0x00, 0x0C, 0x00, 0x00, 0x00, 0x01,
+                           0x00, 0x00, 0x00, 0x02, 0x41, 0x42, 0x43, 0x44, 0x45};
+    PVDX_ASSERT_MSG(spp_packet_parse(&view, short_sec, sizeof(short_sec)), "too short for secondary header\n");
+
+    with_sec[0] |= 0x20; // version number 001
+    PVDX_ASSERT_MSG(spp_packet_parse(&view, with_sec, sizeof(with_sec)), "wrong version number\n");
 }
 #endif // TEST_SPP
 
@@ -736,4 +811,210 @@ void test_uslp(void) {
     #endif
 }
 #endif // TEST_USLP
+
+#ifdef TEST_TELEMETRY
+// Floats are compared bit for bit, since parsing must give back exactly the value that was sent
+static bool same_float(float a, float b) {
+    return memcmp(&a, &b, sizeof(a)) == 0;
+}
+
+void test_telemetry_downlink(void) {
+    test_log("----- testing telemetry downlink -----\n");
+
+    // Static so these don't use up the test's stack
+    static tel_downlink_t downlink;
+    // Larger than a downlink packet, so we can check nothing is written past one
+    static uint8_t buf[TELEMETRY_DOWNLINK_SIZE + 8];
+    spp_packet_view_t view;
+    bool err;
+
+    memset(&downlink, 0, sizeof(downlink));
+    downlink.sequence_count = 0x4123; // past the 14-bit SPP sequence count, so only 0x0123 is sent
+    downlink.timestamp = 0x01020304;
+    downlink.boot_timestamp = 0x0A0B0C0D;
+    downlink.last_bootloader = 2;
+    downlink.magnetometer.revid_register = 0x5A;
+    downlink.magnetometer.bist_register = 0xA5;
+    downlink.magnetometer.raw_readings[0] = 1;
+    downlink.magnetometer.raw_readings[1] = -2;
+    downlink.magnetometer.raw_readings[2] = 0x12345678;
+    downlink.magnetometer.gain_adjusted_readings[0] = 1.0f;
+    downlink.magnetometer.gain_adjusted_readings[1] = -2.5f;
+    downlink.magnetometer.gain_adjusted_readings[2] = 0.15625f;
+    downlink.sband.health = TEL_DEVICE_STATUS_BROKEN;
+    downlink.sband.last_transmission_timestamp = 0xDEADBEEF;
+    downlink.command_timestamps[15] = 0xBEEF;
+    downlink.os_errors.error_timestamps[7] = 0x11223344;
+
+    // The expected bytes below were generated with Python's struct module, independently of telemetry.c.
+    // Each assert costs RAM in the test image, so rather than comparing all 512 bytes, these check one section
+    // near the start, one in the middle, and the last field, which together pin down every field's size and order
+    // Magnetometer, right after the 20 bytes of SPP headers and the 1-byte last bootloader
+    uint8_t expected_mag[] = {0x5A, 0xA5,                                                              // revid, bist
+                              0x00, 0x00, 0x00, 0x01, 0xFF, 0xFF, 0xFF, 0xFE, 0x12, 0x34, 0x56, 0x78,  // raw
+                              0x3F, 0x80, 0x00, 0x00, 0xC0, 0x20, 0x00, 0x00, 0x3E, 0x20, 0x00, 0x00}; // gain adjusted
+    // S-band health and last transmission timestamp
+    uint8_t expected_sband[] = {TEL_DEVICE_STATUS_BROKEN, 0xDE, 0xAD, 0xBE, 0xEF};
+
+    test_log("telemetry downlink serialize test:\n");
+    memset(buf, 0xEE, sizeof(buf)); // nonzero, so we can tell the spare bytes were zeroed
+    err = telemetry_downlink_serialize(&downlink, buf, sizeof(buf));
+    PVDX_ASSERT_MSG(!err, "downlink serialize\n");
+    PVDX_ASSERT_MSG(buf[20] == 2, "downlink last bootloader\n");
+    PVDX_ASSERT_MSG(memcmp(&buf[21], expected_mag, sizeof(expected_mag)) == 0, "downlink magnetometer bytes\n");
+    PVDX_ASSERT_MSG(memcmp(&buf[177], expected_sband, sizeof(expected_sband)) == 0, "downlink sband bytes\n");
+    PVDX_ASSERT_MSG(buf[387] == 0xBE && buf[388] == 0xEF, "downlink last command timestamp\n");
+    PVDX_ASSERT_MSG(buf[464] == 0x11 && buf[465] == 0x22 && buf[466] == 0x33 && buf[467] == 0x44, "downlink last os error timestamp\n");
+
+    bool spare_zeroed = true;
+    for (size_t i = 468; i < TELEMETRY_DOWNLINK_SIZE; i++) {
+        spare_zeroed = spare_zeroed && buf[i] == 0;
+    }
+    PVDX_ASSERT_MSG(spare_zeroed, "downlink spare bytes zeroed\n");
+    PVDX_ASSERT_MSG(buf[TELEMETRY_DOWNLINK_SIZE] == 0xEE && buf[sizeof(buf) - 1] == 0xEE, "nothing written past the downlink\n");
+
+    // The SPP headers are checked with spp_packet_parse, so they don't depend on the placeholder APID and callsign
+    test_log("telemetry downlink spp header test:\n");
+    err = spp_packet_parse(&view, buf, TELEMETRY_DOWNLINK_SIZE);
+    PVDX_ASSERT_MSG(!err, "downlink spp parse\n");
+    PVDX_ASSERT_MSG(view.header.packet_type == SPP_PACKET_TYPE_REPORTING, "downlink packet type\n");
+    PVDX_ASSERT_MSG(view.header.secondary_header_flag == SPP_SECONDARY_HEADER_PRESENT, "downlink sec flag\n");
+    PVDX_ASSERT_MSG(view.header.application_process_id == TELEMETRY_DOWNLINK_APID, "downlink apid\n");
+    PVDX_ASSERT_MSG(view.header.sequence_flags == SPP_SEQ_FLAG_UNSEGMENTED_DATA, "downlink seq flags\n");
+    PVDX_ASSERT_MSG(view.header.sequence_count == 0x0123, "downlink seq count wraps\n");
+    PVDX_ASSERT_MSG(view.header.data_length == TELEMETRY_DOWNLINK_SIZE - SPP_PRIMARY_HEADER_SIZE - 1, "downlink data_length\n");
+    PVDX_ASSERT_MSG(view.secondary_header.timestamp == 0x01020304, "downlink timestamp\n");
+    PVDX_ASSERT_MSG(view.secondary_header.boot_timestamp == 0x0A0B0C0D, "downlink boot_timestamp\n");
+    PVDX_ASSERT_MSG(memcmp(view.secondary_header.callsign, TELEMETRY_CALLSIGN, TELEMETRY_CALLSIGN_LENGTH) == 0, "downlink callsign\n");
+    PVDX_ASSERT_MSG(view.data == &buf[20], "downlink data\n");
+
+    test_log("telemetry downlink rejection tests:\n");
+    PVDX_ASSERT_MSG(telemetry_downlink_serialize(&downlink, buf, TELEMETRY_DOWNLINK_SIZE - 1), "too-small buffer rejected\n");
+    PVDX_ASSERT_MSG(telemetry_downlink_serialize(NULL, buf, sizeof(buf)) && telemetry_downlink_serialize(&downlink, NULL, sizeof(buf)),
+                    "NULL args\n");
+}
+
+void test_telemetry_uplink(void) {
+    test_log("----- testing telemetry uplink -----\n");
+
+    // Packets below were generated with Python's struct module, independently of telemetry.c.
+    // Each is a telecommand with APID 0x0AB, unsegmented, count 5, no secondary header, and a preamble with
+    // callsign "N0CALL" and timestamp 0x01020304
+
+    // Six commands: sleep 3600, kepler coefficients {97.5, 120.25, 2^-10, -45.5, 270, 15.0625}, ADCS parameters
+    // (timestamp 0x6543210F, {3.75, -0.5, 0.15625, 1, -2.5, 15.0625}), enable/disable device 8 (display),
+    // reboot 1, send pictures -2
+    uint8_t multi[] = {0x10, 0xAB, 0xC0, 0x05, 0x00, 0x72, 0x4E, 0x30, 0x43, 0x41, 0x4C, 0x4C, 0x00, 0x00, 0x00, 0x79, 0x00, 0x06,
+                       0x01, 0x02, 0x03, 0x04, 0x00, 0x03, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x0E, 0x10, 0x00, 0x07, 0x00, 0x00,
+                       0x00, 0x18, 0x42, 0xC3, 0x00, 0x00, 0x42, 0xF0, 0x80, 0x00, 0x3A, 0x80, 0x00, 0x00, 0xC2, 0x36, 0x00, 0x00,
+                       0x43, 0x87, 0x00, 0x00, 0x41, 0x71, 0x00, 0x00, 0x00, 0x0A, 0x00, 0x00, 0x00, 0x1C, 0x65, 0x43, 0x21, 0x0F,
+                       0x40, 0x70, 0x00, 0x00, 0xBF, 0x00, 0x00, 0x00, 0x3E, 0x20, 0x00, 0x00, 0x3F, 0x80, 0x00, 0x00, 0xC0, 0x20,
+                       0x00, 0x00, 0x41, 0x71, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x08, 0x00, 0x04, 0x00, 0x00,
+                       0x00, 0x01, 0x01, 0x00, 0x06, 0x00, 0x00, 0x00, 0x04, 0xFF, 0xFF, 0xFF, 0xFE};
+    static tel_uplink_t uplink; // static so it doesn't use up the test's stack
+    bool err;
+
+    test_log("telemetry uplink parse test:\n");
+    err = telemetry_uplink_parse(&uplink, multi, sizeof(multi));
+    PVDX_ASSERT_MSG(!err, "multi parse\n");
+    PVDX_ASSERT_MSG(memcmp(uplink.callsign, "N0CALL", TELEMETRY_CALLSIGN_LENGTH) == 0, "multi callsign\n");
+    PVDX_ASSERT_MSG(uplink.message_size == sizeof(multi), "multi message_size\n");
+    PVDX_ASSERT_MSG(uplink.num_commands == 6, "multi num_commands\n");
+    PVDX_ASSERT_MSG(uplink.timestamp == 0x01020304, "multi timestamp\n");
+
+    tel_command_t *cmd = uplink.commands;
+    PVDX_ASSERT_MSG(cmd[0].id == TEL_CMD_SLEEP && cmd[0].args.sleep_time == 3600, "multi sleep\n");
+    PVDX_ASSERT_MSG(cmd[0].data == &multi[28] && cmd[0].data_size == 4, "multi sleep data points into the input\n");
+
+    PVDX_ASSERT_MSG(cmd[1].id == TEL_CMD_SET_KEPLER_COEFFICIENTS, "multi kepler id\n");
+    PVDX_ASSERT_MSG(same_float(cmd[1].args.kepler_coefficients[0], 97.5f) && same_float(cmd[1].args.kepler_coefficients[1], 120.25f) &&
+                        same_float(cmd[1].args.kepler_coefficients[2], 0.0009765625f) &&
+                        same_float(cmd[1].args.kepler_coefficients[3], -45.5f) && same_float(cmd[1].args.kepler_coefficients[4], 270.0f) &&
+                        same_float(cmd[1].args.kepler_coefficients[5], 15.0625f),
+                    "multi kepler coefficients\n");
+
+    tel_adcs_parameters_t *adcs = &cmd[2].args.adcs_parameters;
+    PVDX_ASSERT_MSG(cmd[2].id == TEL_CMD_ADCS_UPDATE_PARAMETERS && adcs->timestamp == 0x6543210F, "multi adcs timestamp\n");
+    PVDX_ASSERT_MSG(same_float(adcs->inclination, 3.75f) && same_float(adcs->raan, -0.5f) && same_float(adcs->eccentricity, 0.15625f) &&
+                        same_float(adcs->argument_of_perigee, 1.0f) && same_float(adcs->mean_anomaly, -2.5f) &&
+                        same_float(adcs->mean_motion, 15.0625f),
+                    "multi adcs parameters\n");
+
+    PVDX_ASSERT_MSG(cmd[3].id == TEL_CMD_ENABLE_DISABLE_DEVICE && cmd[3].args.device == DISPLAY_ID, "multi enable/disable device\n");
+    PVDX_ASSERT_MSG(cmd[4].id == TEL_CMD_REBOOT && cmd[4].args.reboot == 1, "multi reboot\n");
+    PVDX_ASSERT_MSG(cmd[5].id == TEL_CMD_SEND_PICTURES && cmd[5].args.picture_count == -2, "multi send pictures (negative)\n");
+
+    // Bytes after the end given by the SPP packet data length field are ignored
+    uint8_t padded[sizeof(multi) + 4] = {0};
+    memcpy(padded, multi, sizeof(multi));
+    PVDX_ASSERT_MSG(!telemetry_uplink_parse(&uplink, padded, sizeof(padded)), "trailing bytes accepted\n");
+
+    // No commands at all
+    uint8_t empty[] = {0x10, 0xAB, 0xC0, 0x05, 0x00, 0x0F, 0x4E, 0x30, 0x43, 0x41, 0x4C,
+                       0x4C, 0x00, 0x00, 0x00, 0x16, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04};
+    err = telemetry_uplink_parse(&uplink, empty, sizeof(empty));
+    PVDX_ASSERT_MSG(!err && uplink.num_commands == 0, "no commands\n");
+
+    // One update display command with an 8192-byte bitmap. Only the headers were generated; the bitmap is filled in here
+    test_log("telemetry uplink display test:\n");
+    uint8_t display_header[] = {0x10, 0xAB, 0xC0, 0x05, 0x20, 0x15, 0x4E, 0x30, 0x43, 0x41, 0x4C, 0x4C, 0x00, 0x00,
+                                0x20, 0x1C, 0x00, 0x01, 0x01, 0x02, 0x03, 0x04, 0x00, 0x02, 0x00, 0x00, 0x20, 0x00};
+    static uint8_t display[sizeof(display_header) + TELEMETRY_DISPLAY_BITMAP_SIZE];
+    memcpy(display, display_header, sizeof(display_header));
+    for (size_t i = sizeof(display_header); i < sizeof(display); i++) {
+        display[i] = (uint8_t)(i * 7);
+    }
+    err = telemetry_uplink_parse(&uplink, display, sizeof(display));
+    PVDX_ASSERT_MSG(!err, "display parse\n");
+    PVDX_ASSERT_MSG(uplink.commands[0].id == TEL_CMD_UPDATE_DISPLAY, "display id\n");
+    PVDX_ASSERT_MSG(uplink.commands[0].data == &display[sizeof(display_header)], "display bitmap points into the input\n");
+    PVDX_ASSERT_MSG(uplink.commands[0].data_size == TELEMETRY_DISPLAY_BITMAP_SIZE, "display bitmap size\n");
+
+    test_log("telemetry uplink rejection tests:\n");
+    uint8_t bad[sizeof(multi)];
+
+    PVDX_ASSERT_MSG(telemetry_uplink_parse(&uplink, multi, sizeof(multi) - 1), "shorter than spp data length\n");
+    PVDX_ASSERT_MSG(telemetry_uplink_parse(NULL, multi, sizeof(multi)) && telemetry_uplink_parse(&uplink, NULL, sizeof(multi)),
+                    "NULL args\n");
+
+    memcpy(bad, multi, sizeof(multi));
+    bad[0] &= ~0x10; // packet type 0, telemetry
+    PVDX_ASSERT_MSG(telemetry_uplink_parse(&uplink, bad, sizeof(bad)), "telemetry packet rejected\n");
+
+    memcpy(bad, multi, sizeof(multi));
+    bad[15] += 1; // message size one too big
+    PVDX_ASSERT_MSG(telemetry_uplink_parse(&uplink, bad, sizeof(bad)), "wrong message size rejected\n");
+
+    memcpy(bad, multi, sizeof(multi));
+    bad[17] = 7; // one more command than there is
+    PVDX_ASSERT_MSG(telemetry_uplink_parse(&uplink, bad, sizeof(bad)), "too many commands for packet rejected\n");
+
+    memcpy(bad, multi, sizeof(multi));
+    bad[17] = 5; // one less command than there is, so the last one is left over
+    PVDX_ASSERT_MSG(telemetry_uplink_parse(&uplink, bad, sizeof(bad)), "left over bytes rejected\n");
+
+    memcpy(bad, multi, sizeof(multi));
+    bad[17] = TELEMETRY_UPLINK_MAX_COMMANDS + 1;
+    PVDX_ASSERT_MSG(telemetry_uplink_parse(&uplink, bad, sizeof(bad)), "more than max commands rejected\n");
+
+    memcpy(bad, multi, sizeof(multi));
+    bad[23] = TEL_CMD_COUNT; // sleep command becomes an unknown command
+    PVDX_ASSERT_MSG(telemetry_uplink_parse(&uplink, bad, sizeof(bad)), "unknown command rejected\n");
+
+    // Preamble cut off after the message size
+    uint8_t short_preamble[] = {0x10, 0xAB, 0xC0, 0x05, 0x00, 0x09, 0x4E, 0x30, 0x43, 0x41, 0x4C, 0x4C, 0x00, 0x00, 0x00, 0x10};
+    PVDX_ASSERT_MSG(telemetry_uplink_parse(&uplink, short_preamble, sizeof(short_preamble)), "short preamble rejected\n");
+
+    // Sleep command with 2 bytes of data instead of 4
+    uint8_t bad_size[] = {0x10, 0xAB, 0xC0, 0x05, 0x00, 0x17, 0x4E, 0x30, 0x43, 0x41, 0x4C, 0x4C, 0x00, 0x00, 0x00,
+                          0x1E, 0x00, 0x01, 0x01, 0x02, 0x03, 0x04, 0x00, 0x03, 0x00, 0x00, 0x00, 0x02, 0x0E, 0x10};
+    PVDX_ASSERT_MSG(telemetry_uplink_parse(&uplink, bad_size, sizeof(bad_size)), "wrong command data size rejected\n");
+
+    // Set device broken on device 10, which is NUM_DEVICES
+    uint8_t bad_device[] = {0x10, 0xAB, 0xC0, 0x05, 0x00, 0x17, 0x4E, 0x30, 0x43, 0x41, 0x4C, 0x4C, 0x00, 0x00, 0x00,
+                            0x1E, 0x00, 0x01, 0x01, 0x02, 0x03, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x0A};
+    PVDX_ASSERT_MSG(telemetry_uplink_parse(&uplink, bad_device, sizeof(bad_device)), "unknown device rejected\n");
+}
+#endif // TEST_TELEMETRY
+
 // #endif
