@@ -203,17 +203,13 @@ status_t mag_read_data(int32_t *raw_readings, float *gain_adj_readings) {
     ret_err_status(rm3100_read_reg(NULL, RM3100_QX2_REG, (uint8_t *)&m_samples, sizeof(m_samples)),
                    "magnetometer: Read from QX2 Register failed");
 
-    readings[0] = ((int8_t)m_samples[0]) * 256 * 256;
-    readings[0] |= m_samples[1] * 256;
-    readings[0] |= m_samples[2];
-
-    readings[1] = ((int8_t)m_samples[3]) * 256 * 256;
-    readings[1] |= m_samples[4] * 256;
-    readings[1] |= m_samples[5];
-
-    readings[2] = ((int8_t)m_samples[6]) * 256 * 256;
-    readings[2] |= m_samples[7] * 256;
-    readings[2] |= m_samples[8];
+    // Each axis is 24-bit two's complement: only the top byte carries the sign; the
+    // middle and low bytes are plain magnitude (0-255). Sign-extend via the (int8_t)
+    // top byte, but decode the lower two bytes as UNSIGNED so a byte >= 0x80 doesn't
+    // get sign-extended and corrupt the result.
+    readings[0] = ((int8_t)m_samples[0]) << 16 | (uint8_t)m_samples[1] << 8 | (uint8_t)m_samples[2];
+    readings[1] = ((int8_t)m_samples[3]) << 16 | (uint8_t)m_samples[4] << 8 | (uint8_t)m_samples[5];
+    readings[2] = ((int8_t)m_samples[6]) << 16 | (uint8_t)m_samples[7] << 8 | (uint8_t)m_samples[8];
 
     if (raw_readings != NULL) {
         raw_readings[0] = readings[0];
