@@ -213,6 +213,7 @@ There are 3 build types. Each one rebuilds the bootloader and creates `flash.bin
 
 > **Note:** The bootloader copies PVDXos into the SAMD51's 256 KB of RAM and runs it from there, so the build fails if the image doesn't fit. If a test build is too big, use `TESTS` to build fewer tests.
 
+> **Note:** If you for some reason need to build the OS with the old pin-config for use with the old Grand Central devboard, rename the `ASF_grand_central` dir to `ASF` after first temporarily name the normal `ASF` dir to something else (maybe `ASF_new`), but never commit/push any name changes to main.
 
 ## Setting Up a Brand New Metro M4 Grand Central Devboard
 
