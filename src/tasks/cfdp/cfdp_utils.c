@@ -154,37 +154,56 @@ cfdp_transaction_t *cfdp_find_transaction(cfdp_transaction_store_t *txn_store, u
     return NULL;
 }
 
-uint8_t *cfdp_alloc_small_buff() {
+cfdp_buff_header_t *cfdp_alloc_small_buff() {
     for (size_t i = 0; i < CFDP_SMALL_BUFF_COUNT; ++i) {
-        if (!cfdp_small_buffs.in_use[i]) {
-            cfdp_small_buffs.in_use[i] = true;
-            return &cfdp_small_buffs.buff[i * CFDP_SMALL_BUFF_SZ];
+        lock_mutex(cfdp_small_buffs[i].header.semaphore);
+        if (!cfdp_small_buffs[i].header.ref_count) {
+            cfdp_small_buffs[i].header.ref_count = 1;
+            cfdp_small_buffs[i].header.is_large = false;
+            if (!cfdp_small_buffs[i].header.ref_count) {
+                unlock_mutex(cfdp_small_buffs[i].header.semaphore);
+                return (cfdp_buff_header_t *)&cfdp_small_buffs[i];
+            }
         }
+        unlock_mutex(cfdp_small_buffs[i].header.semaphore);
     }
     return NULL;
 }
 
-uint8_t *cfdp_alloc_large_buff() {
-    if (cfdp_large_buff.in_use) {
-        return NULL;
-    } else {
-        cfdp_large_buff.in_use = true;
-        return cfdp_large_buff.buff;
+cfdp_buff_header_t *cfdp_alloc_large_buff() {
+    lock_mutex(cfdp_large_buff.header.semaphore);
+    cfdp_buff_header_t *ret = NULL;
+    if (cfdp_large_buff.header.ref_count == 0) {
+        cfdp_large_buff.header.ref_count = 1;
+        ret = (cfdp_buff_header_t *)&cfdp_large_buff.buff;
     }
+    unlock_mutex(cfdp_large_buff.header.semaphore);
+    return ret;
 }
 
-int cfdp_free_buff(uint8_t *buff) {
-    if (cfdp_large_buff.buff == buff) {
-        cfdp_large_buff.in_use = false;
-        return 0;
+int cfdp_free_buff(cfdp_buff_header_t *buff) {
+    lock_mutex(buff->semaphore);
+    if (buff->ref_count != 1) {
+        unlock_mutex(buff->semaphore);
+        return -1;
     }
-    for (size_t i = 0; i < CFDP_SMALL_BUFF_COUNT; ++i) {
-        if (&cfdp_small_buffs.buff[i * CFDP_SMALL_BUFF_SZ] == buff) {
-            cfdp_small_buffs.in_use[i] = false;
-            return 0;
-        }
+
+    buff->ref_count = 0;
+    unlock_mutex(buff->semaphore);
+    return 0;
+}
+
+int cfdp_release_buff(cfdp_buff_header_t *buff) {
+    lock_mutex(buff->semaphore);
+
+    if (buff->ref_count == 0) {
+        unlock_mutex(buff->semaphore);
+        return -1;
     }
-    return -1;
+
+    buff->ref_count--;
+    unlock_mutex(buff->semaphore);
+    return 0;
 }
 
 uint32_t cfdp_calculate_modular_checksum(cfdp_transaction_t *txn) {

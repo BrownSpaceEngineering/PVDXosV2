@@ -51,9 +51,9 @@ cfdp_transaction_t *cfdp_alloc_transaction(cfdp_transaction_store_t *txn_store);
 void cfdp_free_transaction(cfdp_transaction_store_t *txn_store, cfdp_transaction_t *txn);
 cfdp_transaction_t *cfdp_find_transaction(cfdp_transaction_store_t *txn_store, uint32_t entity_id, uint32_t seq_num);
 
-uint8_t *cfdp_alloc_small_buff();
-uint8_t *cfdp_alloc_large_buff();
-int cfdp_free_buff(uint8_t *buff);
+cfdp_buff_header_t *cfdp_alloc_small_buff();
+cfdp_buff_header_t *cfdp_alloc_large_buff();
+int cfdp_free_buff(cfdp_buff_header_t *buff);
 
 uint32_t cfdp_calculate_modular_checksum(cfdp_transaction_t *transaction);
 

@@ -4,6 +4,7 @@
 // Includes
 #include <atmel_start.h>
 #include <driver_init.h>
+#include <semphr.h>
 
 #include "cfdp_pdu.h"
 #include "drivers/at86rf215/at86rf215.h"
@@ -62,7 +63,7 @@ typedef struct {
     StaticTimer_t retransmit_timer_mem[MAX_TRANSACTIONS];
     TimerHandle_t inactivity_timer_handles[MAX_TRANSACTIONS];
     TimerHandle_t retransmit_timer_handles[MAX_TRANSACTIONS];
-} radio_task_memory_t;
+} cfdp_task_memory_t;
 
 typedef enum cfdp_state {
     CFDP_SEND_STATE_METADATA_SEND = 0,
@@ -104,6 +105,24 @@ typedef enum cfdp_result {
     CFDP_RESULT_ERROR,
     CFDP_RESULT_INVALID_ARG
 } cfdp_result_t;
+
+typedef struct {
+    size_t ref_count;
+    StaticSemaphore_t _semaphore_mem;
+    SemaphoreHandle_t semaphore;
+    bool is_large;
+    void *buff;
+} cfdp_buff_header_t;
+
+typedef struct {
+    cfdp_buff_header_t header;
+    uint8_t buff[CFDP_LARGE_BUFF_SZ];
+} cfdp_large_buff_t;
+
+typedef struct {
+    cfdp_buff_header_t header;
+    uint8_t buff[CFDP_SMALL_BUFF_SZ];
+} cfdp_small_buff_t;
 
 typedef struct cfdp_nak_buf {
     cfdp_pdu_segment_request_t segments[CFDP_MAX_SEGMENT_REQUESTS];
@@ -147,11 +166,11 @@ typedef struct cfdp_transaction {
     bool delivery_complete;
     bool eof_acked;
 
+    cfdp_buff_header_t *buff_header;
     uint8_t *file_data;
 
     cfdp_lv_t source_filename;
     cfdp_lv_t dest_filename;
-
 } cfdp_transaction_t;
 
 typedef struct {
@@ -159,16 +178,6 @@ typedef struct {
     bool active[MAX_TRANSACTIONS];
     bool slot_free;
 } cfdp_transaction_store_t;
-
-typedef struct {
-    uint8_t buff[CFDP_LARGE_BUFF_SZ];
-    bool in_use;
-} cfdp_large_buff_t;
-
-typedef struct {
-    uint8_t buff[CFDP_SMALL_BUFF_SZ * CFDP_SMALL_BUFF_COUNT];
-    bool in_use[CFDP_SMALL_BUFF_COUNT];
-} cfdp_small_buffs_t;
 
 typedef struct {
     void *memory;
@@ -186,7 +195,7 @@ extern cfdp_task_memory_t cfdp_mem;
 extern cfdp_transaction_store_t cfdp_txn_store;
 
 extern cfdp_large_buff_t cfdp_large_buff;
-extern cfdp_small_buffs_t cfdp_small_buffs;
+extern cfdp_small_buff_t cfdp_small_buffs[CFDP_SMALL_BUFF_COUNT];
 
 QueueHandle_t init_cfdp(void);
 void main_cfdp(void *pvParameters);

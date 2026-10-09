@@ -35,6 +35,9 @@ typedef struct uplink_packet {
     uint16_t n_cmds;
     uint32_t timestamp;
     uplink_cmd_t cmds[];
-}
+} uplink_packet_t;
+
+int parse_uplink_packet(const uint8_t *raw, uplink_packet_t *out, size_t n);
+int parse_uplink_cmd(const uint8_t *raw, uplink_cmd_t *out, size_t n);
 
 #endif // UPLINK_COMMANDS_H

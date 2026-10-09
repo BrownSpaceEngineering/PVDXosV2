@@ -401,10 +401,12 @@ static void handle_metadata_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data
 
         if (meta.file_length <= CFDP_SMALL_BUFF_SZ) {
             info("cfdp: allocating small buffer for incoming txn of size %u\n", meta.file_length);
-            data = cfdp_alloc_small_buff();
+            txn->buff_header = cfdp_alloc_small_buff();
+            data = txn->buff_header->buff;
         } else if (meta.file_length <= CFDP_LARGE_BUFF_SZ) {
             info("cfdp: allocating large buffer for incoming txn of size %u\n", meta.file_length);
-            data = cfdp_alloc_large_buff();
+            txn->buff_header = cfdp_alloc_large_buff();
+            data = txn->buff_header->buff;
         } else {
             warning("cfdp: incoming file larger than supported size\n");
             return;
@@ -636,10 +638,12 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz) {
 
         if (meta.file_length <= CFDP_SMALL_BUFF_SZ) {
             info("cfdp: allocating small buffer for incoming txn of size %u\n", meta.file_length);
-            data = cfdp_alloc_small_buff();
+            new_txn->buff_header = cfdp_alloc_small_buff();
+            data = new_txn->buff_header->buff;
         } else if (meta.file_length <= CFDP_LARGE_BUFF_SZ) {
             info("cfdp: allocating large buffer for incoming txn of size %u\n", meta.file_length);
-            data = cfdp_alloc_large_buff();
+            new_txn->buff_header = cfdp_alloc_large_buff();
+            data = new_txn->buff_header->buff;
         } else {
             warning("cfdp: incoming file larger than supported size\n");
             cfdp_send_reject_fin(&header, &meta, CFDP_COND_FILE_SIZEERROR);
