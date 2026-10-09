@@ -35,11 +35,35 @@ _|"""""|_|"""""|_|"""""|_|"""""|
 
 #define PMM_REG     8       // Persistent Memory Mode register
 
-// #define COSMIC_MRAM
+typedef enum {
+    MRAM_INIT_OK = 0,                        // No issues
+    MRAM_INIT_BAD_ID = 1u << 1,              // Device ID does not match expected value
+    MRAM_INIT_FAIL_BLOCK_PROT = 1u << 2,     // Block protection not disabled
+    MRAM_INIT_FAIL_PERSIST = 1u << 3,        // Persistence mode not enabled
+} mram_init_status_t;
 
 // ---------------------- SPI Helpers ----------------------
 
-void mram_fatal(void) { while (1); }
+/**
+ * @brief Halts execution and waits for the watchdog to reboot the system.
+ * @warning Should only be called when a reboot will definitely fix the fatal
+ *          state. If the fatal state is unrecoverable, use
+ *          `mram_complete_fatal` instead.
+ */
+void mram_recoverable_fatal(void) { while (1); }
+
+/**
+ * @brief Sets the MRAM state to fatal to prevent functions from using MRAM
+ *        inappropriately. Does not reboot the system.
+ */
+void mram_complete_fatal(void) {
+    /**
+     * TODO: Figure out what to do in case of unrecoverable failure.
+     * Consider a function bool mram_is_fatal(void) that returns the status;
+     * every exposed function should call that function and only proceed if the
+     * result is false.
+     */
+}
 
 static inline void mram_select(uint8_t mram) {
     if (mram == 1) {
@@ -49,7 +73,7 @@ static inline void mram_select(uint8_t mram) {
     } else if (mram == 3) {
         gpio_set_pin_level(MRAM3_CS, false);
     } else {
-        mram_fatal();
+        mram_recoverable_fatal();
     }
 }
 
@@ -61,7 +85,7 @@ static inline void mram_deselect(uint8_t mram) {
     } else if (mram == 3) {
         gpio_set_pin_level(MRAM3_CS, true);
     } else {
-        mram_fatal();
+        mram_recoverable_fatal();
     }
 }
 
@@ -123,15 +147,6 @@ void read_bytes(uint8_t mram, uint32_t address, uint8_t *data, uint32_t size) {
     spi_write(cmd, 4);
     spi_read(data, size);
     mram_deselect(mram);
-
-#ifdef COSMIC_MRAM
-    // mess up first mram
-    if (mram == 1) {
-        for (uint32_t i = 0; i < size; i += 3) {
-            data[i] += 1;
-        }
-    }
-#endif
 
     watchdog_pet();
 }
@@ -201,7 +216,11 @@ void write_vol_reg(uint8_t mram, uint8_t reg, uint8_t reg_val) {
 
 // ---------------------- Core Operations ----------------------
 
-void check_device_id(uint8_t mram) {
+void mram_init_report_err(uint8_t mram, mram_init_status_t status) {
+    /** TODO: figure out what to do when reporting an error. */
+}
+
+mram_init_status_t check_device_id(uint8_t mram) {
     uint8_t cmd = CMD_RDID;
     uint8_t id[3] = {0};
     mram_select(mram);
@@ -211,11 +230,13 @@ void check_device_id(uint8_t mram) {
 
     if (id[0] != 0x6B || id[1] != 0xBB || id[2] != 0x14) {
         // invalid device ID
-        mram_fatal();
+        return MRAM_INIT_BAD_ID;
+    } else {
+        return MRAM_INIT_OK;
     }
 }
 
-void disable_block_protection(uint8_t mram) {
+mram_init_status_t disable_block_protection(uint8_t mram) {
     uint8_t status = read_status(mram);
 
     if (status & 0x0C) {
@@ -226,11 +247,13 @@ void disable_block_protection(uint8_t mram) {
     status = read_status(mram);
     if ((status & 0x0C) != 0) {
         // block protection not disabled
-        mram_fatal();
+        return MRAM_INIT_FAIL_BLOCK_PROT;
+    } else {
+        return MRAM_INIT_OK;
     }
 }
 
-void set_persistent_mode(uint8_t mram) {
+mram_init_status_t set_persistent_mode(uint8_t mram) {
     uint8_t reg_val = read_nonvol_reg(mram, PMM_REG);
 
     if (!(reg_val & 0x03)) {
@@ -241,11 +264,20 @@ void set_persistent_mode(uint8_t mram) {
     reg_val = read_vol_reg(mram, PMM_REG);
     if (!(reg_val & 0x03)) {
         // persistent mode not enabled
-        mram_fatal();
+        return MRAM_INIT_FAIL_PERSIST;
+    } else {
+        return MRAM_INIT_OK;
     }
 }
 
+/**
+ * @brief Writes data to all MRAM modules.
+ * @param address Destination address.
+ * @param data Data to be written.
+ * @param size Size of data to be written, in bytes.
+ */
 void mram_write_bytes(uint32_t address, const uint8_t *data, uint32_t size) {
+    /** TODO: Only write bytes to known-good modules. */
     for (uint8_t mram = 1; mram <= 3; mram++) {
         write_bytes(mram, address, data, size);
     }
@@ -254,8 +286,10 @@ void mram_write_bytes(uint32_t address, const uint8_t *data, uint32_t size) {
 #define PAGE_SIZE 256
 
 void mram_read_bytes(uint32_t address, uint8_t *data, uint32_t size) {
+    /** TODO: Only read bytes from known-good modules (no majority vote). */
+
     if (size % PAGE_SIZE != 0) {
-        mram_fatal();
+        mram_recoverable_fatal();
     }
     uint32_t npages = size / PAGE_SIZE;
 
@@ -298,14 +332,18 @@ void test_writes_reads(uint32_t addr, int salt) {
     for (uint32_t i = 0; i < NUM_BYTES; i++) {
         if (recv_data[i] != send_data[i]) {
             // test failed
-            mram_fatal();
+            mram_recoverable_fatal();
         }
     }
 }
 
 // ---------------------- Main ----------------------
 
-void mram_init(void) {
+/**
+ * @brief Initializes MRAM modules.
+ * @return An `mram_status_t` with the status of the three MRAM modules.
+ */
+mram_status_t mram_init(void) {
     atmel_start_init();
     spi_m_sync_enable(&SPI_MRAM);
 
@@ -315,45 +353,30 @@ void mram_init(void) {
 
     delay_ms(50);
 
+    mram_status_t status = 0;
+
     for (uint8_t mram = 1; mram <= 3; mram++) {
-        check_device_id(mram);
-        disable_block_protection(mram);
-        set_persistent_mode(mram);
+        mram_init_status_t init_status = MRAM_INIT_OK;
+        init_status |= check_device_id(mram);
+        init_status |= disable_block_protection(mram);
+        init_status |= set_persistent_mode(mram);
+
+        if (init_status == MRAM_INIT_OK) {
+            set_mram_state(&status, mram, MRAM_STATE_OK);
+        } else {
+            set_mram_state(&status, mram, MRAM_STATE_FAILED);
+            mram_init_report_err(mram, init_status);
+        }
     }
 
-    // for (int i = 0; i < 100; i++) {
-    //     test_writes_reads(0x000980, i+3);
-    //     test_writes_reads(0x000f00, i+7);
-    // }
-
-    // while (1) {
-    //     delay_ms(1000);
-    // }
+    return status;
 }
 
-
-// bool crc32_table_ready = false;
-
-// void crc32_init_table(void) {
-//     for (uint32_t i = 0; i < 256; i++) {
-//         uint32_t crc = i;
-//         for (int j = 0; j < 8; j++) {
-//             uint32_t xor_val;
-//             if (crc & 1) {
-//                 xor_val = 0xEDB88320;
-//             } else xor_val = 0;
-//             crc = (crc >> 1) ^ xor_val;
-//         }
-//         crc32_table[i] = crc;
-//     }
-//     crc32_table_ready = true;
-// }
+// ---------------------- CRC-32 ----------------------
 
 uint32_t crc32_table[256];
 
 uint32_t crc32(const uint8_t *block, uint32_t size) {
-    // crc32_init_table();
-
     for (uint32_t i = 0; i < 256; i++) {
         uint32_t crc = i;
         for (int j = 0; j < 8; j++) {
