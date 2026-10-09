@@ -27,11 +27,20 @@ export BUILD_DIR := $(PVDXOS_DIR)/build
 # Discover all c files in src dir
 SRCS := $(shell find $(SRC_DIR) -name "*.c" $(EXCLUDE_FLAGS))
 
+# The ADCS library (git submodule, excluded above) lists its own sources, include dirs, and flags
+ADCS_MK := $(SRC_DIR)/libraries/adcs/adcs.mk
+ifeq ($(wildcard $(ADCS_MK)),)
+    $(error ADCS library not found at $(ADCS_MK). Run 'git submodule update --init --recursive')
+endif
+include $(ADCS_MK)
+SRCS += $(ADCS_SRCS)
+CFLAGS += $(ADCS_CFLAGS)
+
 # Map src/foo/bar.c -> build/foo/bar.o so artifacts don't clutter src
 export OBJS := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SRCS))
 
 # Create list of directories to include from
-export EXTRA_VPATH := $(sort $(dir $(SRCS)))
+export EXTRA_VPATH := $(sort $(dir $(SRCS)) $(addsuffix /,$(ADCS_INCLUDE_DIRS)))
 
 # Print discovered objs and VPATH for debugging 
 $(info Parsed OBJS:)
