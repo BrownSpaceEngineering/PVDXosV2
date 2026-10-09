@@ -14,6 +14,7 @@
 #include "checks/device_checks.h"
 #include "globals.h"
 #include "logging.h"
+#include "magnetometer_driver.h"
 #include "tests/test.h"
 
 cosmic_monkey_task_arguments_t cm_args = {0};
@@ -65,52 +66,36 @@ int main(void) {
 
     info("AT_LEAST_ONE_DEVICE_FAILED: %d\n", check_all_devices_on_startup());
 
-/* -------------------------------------- TESTS ---------------------------------------------- */
-#ifdef UNITTEST
-    tests_run();
-#endif
+    /* ---------- RM3100-ONLY BRING-UP (NO SCHEDULER) ---------- */
 
-    // Initialize a mutex wrapping the shared PVDX task list struct
-    task_list_mutex = xSemaphoreCreateMutexStatic(&task_list_mutex_buffer);
-
-    if (task_list_mutex == NULL) {
-        fatal("Failed to create PVDX task list mutex");
-    }
-    if (task_list[0] != p_watchdog_task) {
-        fatal("Watchdog is not first in task_list!");
-    }
-
-    // Initialize all OS integrity tasks
-    for (pvdx_task_t *const*curr_task = task_list; *curr_task != NULL; curr_task++) {
-        if ((*curr_task)->task_type == OS) {
-            init_task_pointer(*curr_task);
-            info("%s initialized\n", (*curr_task)->name);
-        }
-    }
-
-    /* ---------- COSMIC MONKEY TASK ---------- */
-
-#if defined(UNITTEST) || defined(DEVBUILD)
-    #if defined(UNITTEST)
-    cm_args.frequency = 10;
-    #endif
-    #if defined(DEVBUILD)
-    cm_args.frequency = 0; // Bitflips per second
-    #endif
-
-    TaskHandle_t cosmic_monkey_task_handle =
-        xTaskCreateStatic(main_cosmic_monkey, "CosmicMonkey", COSMIC_MONKEY_TASK_STACK_SIZE, (void *)&cm_args, 1,
-                          cosmic_monkey_mem.cosmic_monkey_task_stack, &cosmic_monkey_mem.cosmic_monkey_task_tcb);
-    if (cosmic_monkey_task_handle == NULL) {
-        warning("Cosmic Monkey Task Creation Failed!\n");
+    // This build is dedicated to exercising the RM3100 magnetometer alone. We init the
+    // sensor and poll it forever here in main(); the FreeRTOS scheduler is never started,
+    // so no other PVDXos tasks run. Uses the ASF busy-wait delay_ms() (NOT vTaskDelay,
+    // which requires the scheduler).
+    status_t mag_status = init_rm3100();
+    if (mag_status != SUCCESS) {
+        warning("magnetometer: init_rm3100() failed (status=%d)\n", mag_status);
     } else {
-        info("Cosmic Monkey Task initialized\n");
+        info("magnetometer: RM3100 initialized (continuous mode)\n");
     }
-#endif // Cosmic Monkey
 
-    /* ---------- START FREERTOS SCHEDULER ---------- */
+    while (true) {
+        int32_t raw[3];
+        float adj[3];
+        status_t rs = magnetometer_read(raw, adj);
+        if (rs == SUCCESS) {
+            // Gain-adjusted values are floats; log their truncated integer part to avoid
+            // relying on %f support in the embedded printf.
+            info("magnetometer: raw x=%ld y=%ld z=%ld | adj(int) x=%ld y=%ld z=%ld\n", (long)raw[0], (long)raw[1],
+                 (long)raw[2], (long)adj[0], (long)adj[1], (long)adj[2]);
+        } else if (rs == ERROR_NOT_READY) {
+            debug("magnetometer: data not ready this cycle\n");
+        } else {
+            warning("magnetometer: read failed (status=%d)\n", rs);
+        }
 
-    // Start the scheduler
-    vTaskStartScheduler();
-    fatal("vTaskStartScheduler Returned! -- Should never happen!\n");
+        delay_ms(1000);
+    }
+
+    // Unreachable: this build never starts the scheduler.
 }
