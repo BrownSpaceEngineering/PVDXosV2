@@ -16,6 +16,7 @@
     !defined(TEST_TELEMETRY)
     #define TEST_LINALG
     #define TEST_CFDP
+    #define TEST_SPP
     #define TEST_USLP
     #define TEST_PMB
     #define TEST_TELEMETRY

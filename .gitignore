@@ -52,3 +52,6 @@ compile_commands.json
 
 # Build artifacts
 /build
+
+# scratch
+scratch
