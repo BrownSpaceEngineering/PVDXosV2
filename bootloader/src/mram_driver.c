@@ -36,10 +36,10 @@ _|"""""|_|"""""|_|"""""|_|"""""|
 #define PMM_REG     8       // Persistent Memory Mode register
 
 typedef enum {
-    MRAM_OK = 0,                        // No issues
-    MRAM_BAD_ID = 1u << 1,              // Device ID does not match expected value
-    MRAM_FAIL_BLOCK_PROT = 1u << 2,     // Block protection not disabled
-    MRAM_FAIL_PERSIST = 1u << 3,        // Persistence mode not enabled
+    MRAM_INIT_OK = 0,                        // No issues
+    MRAM_INIT_BAD_ID = 1u << 1,              // Device ID does not match expected value
+    MRAM_INIT_FAIL_BLOCK_PROT = 1u << 2,     // Block protection not disabled
+    MRAM_INIT_FAIL_PERSIST = 1u << 3,        // Persistence mode not enabled
 } mram_init_status_t;
 
 // ---------------------- SPI Helpers ----------------------
@@ -230,9 +230,9 @@ mram_init_status_t check_device_id(uint8_t mram) {
 
     if (id[0] != 0x6B || id[1] != 0xBB || id[2] != 0x14) {
         // invalid device ID
-        return MRAM_BAD_ID;
+        return MRAM_INIT_BAD_ID;
     } else {
-        return MRAM_OK;
+        return MRAM_INIT_OK;
     }
 }
 
@@ -247,9 +247,9 @@ mram_init_status_t disable_block_protection(uint8_t mram) {
     status = read_status(mram);
     if ((status & 0x0C) != 0) {
         // block protection not disabled
-        return MRAM_FAIL_BLOCK_PROT;
+        return MRAM_INIT_FAIL_BLOCK_PROT;
     } else {
-        return MRAM_OK;
+        return MRAM_INIT_OK;
     }
 }
 
@@ -264,9 +264,9 @@ mram_init_status_t set_persistent_mode(uint8_t mram) {
     reg_val = read_vol_reg(mram, PMM_REG);
     if (!(reg_val & 0x03)) {
         // persistent mode not enabled
-        return MRAM_FAIL_PERSIST;
+        return MRAM_INIT_FAIL_PERSIST;
     } else {
-        return MRAM_OK;
+        return MRAM_INIT_OK;
     }
 }
 
@@ -341,9 +341,9 @@ void test_writes_reads(uint32_t addr, int salt) {
 
 /**
  * @brief Initializes MRAM modules.
- * @return `true` if at least one MRAM module is functional, otherwise `false`.
+ * @return An `mram_status_t` with the status of the three MRAM modules.
  */
-bool mram_init(void) {
+mram_status_t mram_init(void) {
     atmel_start_init();
     spi_m_sync_enable(&SPI_MRAM);
 
@@ -353,22 +353,23 @@ bool mram_init(void) {
 
     delay_ms(50);
 
-    uint8_t healthy_mrams = 0;
+    mram_status_t status = 0;
 
     for (uint8_t mram = 1; mram <= 3; mram++) {
-        mram_init_status_t init_status = MRAM_OK;
+        mram_init_status_t init_status = MRAM_INIT_OK;
         init_status |= check_device_id(mram);
         init_status |= disable_block_protection(mram);
         init_status |= set_persistent_mode(mram);
 
-        if (init_status == MRAM_OK) {
-            healthy_mrams |= 1u << (mram - 1);
+        if (init_status == MRAM_INIT_OK) {
+            set_mram_state(&status, mram, MRAM_STATE_OK);
         } else {
+            set_mram_state(&status, mram, MRAM_STATE_FAILED);
             mram_init_report_err(mram, init_status);
         }
     }
 
-    return healthy_mrams != 0;
+    return status;
 }
 
 // ---------------------- CRC-32 ----------------------
