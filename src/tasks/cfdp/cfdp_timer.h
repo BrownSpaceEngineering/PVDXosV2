@@ -2,17 +2,16 @@
 #define CFDP_TIMER_H
 
 #include "cfdp_task.h"
-#include "cfdp_timer.h"
 
-#define RETRANSMIT_TIMEOUT_MS 100UL  // placeholders
+#define RETRANSMIT_TIMEOUT_MS 100UL // placeholders
 #define TRANSACTION_LIFETIME_MS 20000UL
 
 #define ACK_RETRANSMIT_LIMIT 16
 #define NAK_RETRANSMIT_LIMIT 16
 
-#define CFDP_TIMER_TICKS_TO_WAIT 10  // placeholders
+#define CFDP_TIMER_TICKS_TO_WAIT 10 // placeholders
 
-void init_cfdp_timers(cfdp_task_memory_t* mem);
+void init_cfdp_timers(cfdp_task_memory_t *mem);
 
 static inline void reset_timer(TimerHandle_t timer_handle) {
     info("Reseting Timer\n");
@@ -29,8 +28,8 @@ static inline void start_timer(TimerHandle_t timer_handle) {
     xTimerStart(timer_handle, CFDP_TIMER_TICKS_TO_WAIT);
 }
 
-void inactivity_timer_timeout(cfdp_transaction_t* txn);
-void retransmit_timer_timeout(cfdp_transaction_t* txn);
+void inactivity_timer_timeout(cfdp_transaction_t *txn);
+void retransmit_timer_timeout(cfdp_transaction_t *txn);
 
 void inactivity_timer_callback(TimerHandle_t timer);
 void retransmit_timer_callback(TimerHandle_t timer);
