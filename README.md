@@ -1,14 +1,176 @@
 # PVDXos
 
-The real-time operating system for Brown Space Engineering's second satellite, Perovskite Visuals and Degradation eXperiment (PVDX).
+The real-time operating system for Brown Space Engineering's second satellite, Perovskite Visuals and Degradation eXperiment ([PVDX](https://www.brown.edu/news/2021-04-21/cubesat)).
 
 ![PVDXos Diagram](pvdxos.png)
 
 # Project Setup and Toolchain Installation Guide
 
+Our OS is designed to run on the SAMD51 microcontroller. Therefore, to run our code, we use a development board with that chip (the Adafruit Grand Central), which the club provides to members.
+
+Some key terms you will see below are:
+
+- SEGGER J-Link - a debug probe which allows us to connect our PCs to the microcontroller and load/debug code.
+- GDB - the GNU Debugger. If you haven't taken Intro Systems yet, you can check out [this video](https://www.youtube.com/watch?v=8kU35Rbquzc) we've co-opted from them to show how it works.
+- Make/Makefile - a tool we use to speed up building the project. Commands which start with `make` are reading from the Makefile in that directory to determine what further commands to execute.
+
+Most new members reading this should start at [Toolchain Installation](#toolchain-installation) below to set up their computer, then come back to Building and Running.
+
+
+## Toolchain Installation
+---
+### Windows
+
+PVDXos uses GCC (GNU C Compiler) to create an executable. GCC can't be ported to Windows, so we need to virtualise a Linux environment 
+for our toolchain. One of the standard solution is to use WSL (Windows Subsystem for Linux). 
+
+As such, each instruction needs to be executed either in a Windows environment, or in the virtualised Linux environment. Each of the 
+following steps is thus prepended either by \[🪟WIN\] or \[🐧WSL\] to indicate which environment to run it in. 
+
+1. \[🪟WIN\] Install Windows Subsystem for Linux (WSL):
+
+   - Run `wsl --install` in PowerShell (as Administrator).
+   - Follow prompts and restart your computer as required.
+
+2. \[🪟WIN\] Install [`usbipd`](https://github.com/dorssel/usbipd-win/releases) to pass USB connections through to WSL
+
+3. \[🪟WIN\] Download the 64-bit DEB SEGGER [J-link installer](https://www.segger.com/downloads/jlink/). 
+
+   Once you've downloaded the installer, move it from your Windows Downloads folder to your WSL home directory, accessible
+   from the File Explorer. Look for the highlighted directory on the File Manager sidebar. 
+
+   ![Look for the highlighted directory on the File Manager sidebar](./misc/WSL_home_dir.png)
+
+4. \[🐧WSL\] Install ARM toolchain for Linux:
+
+   - `sudo apt install gcc-arm-none-eabi`
+
+   You can enter wsl by typing `wsl` from a windows terminal. 
+
+5. \[🐧WSL\] Install GDB Multiarch and other build tools:
+
+   - `sudo apt install gdb-multiarch`
+   - `sudo apt install build-essential`
+   - `sudo apt install clang-format`
+   - `sudo apt install usbutils`
+
+6. \[🐧WSL\] Install the SEGGER J-Link tools from the command-line: 
+   
+   - `sudo apt install ~/JLink_Linux_V{version number}_x86_64.deb`
+
+7. \[🐧WSL\] Add the installed J-link tools to your default `PATH`: 
+
+   - Run `nano ~/.bash_profile`
+   - Add these lines at the bottom of the file: 
+   ```
+   PATH_TO_SEGGER_JLINK="/opt/SEGGER/JLink"
+   PATH_TO_SEGGER_RTOS_PLUGIN="/opt/SEGGER/JLink_V884/GDBServer"
+
+   export PATH="$PATH:$PATH_TO_SEGGER_JLINK:$PATH_TO_SEGGER_RTOS_PLUGIN"``` 
+
+8. \[🐧WSL\] Clone this repository into the WSL filesystem. This is important for performance during compilation.
+
+   - `git clone https://github.com/BrownSpaceEngineering/PVDXosV2.git`
+
+9. (Optional) Configure VSCode to use clang-format for formatting:
+
+   - Install the `clang-format` extension in VSCode.
+   - In VSCode properties, set the default formatter to `clang-format`.
+   - Enable 'format on save' in the settings.
+   - Set 'format on save mode' to 'modifications'.
+
+### Mac/Linux (Geared towards Mac)
+
+<!-- **Note:** Skip to step 5 if you have a Mac with an Intel processor.
+
+ 1. Edit the `~/.zshrc` file:
+   - You can use `nano ~/.zshrc` to edit this file. Use `CTRL`+`X`, then `Y`, then `Enter` to quit and save.
+   - Add these lines to the bottom of the file:
+     ```bash
+     alias arm="env /usr/bin/arch -arm64 /bin/zsh --login"
+     alias intel="env /usr/bin/arch -x86_64 /bin/zsh --login"
+     ```
+
+2. Run `source ~/.zshrc`.
+   - This should enable the `arm` and `intel` commands in your terminal. Test this out by running `intel` and checking that the result of running `arch` is `i386`. Then run `arm` and check that the result of `arch` is `arm64`.
+
+3. Switch into an intel terminal by running the `intel` command you just created, and verify that the `arch` command returns `i386` -->
+
+4. Install brew in the terminal by running the script at https://brew.sh/ and following the prompts
+   - > **Note:** After the Brew installation is complete, it will prompt you to run two other commands. Remember to copy/paste them into the terminal and run these as well.
+
+5. Install gdb:
+   - `brew install gdb`
+
+6. Download Arm Developer Tools:
+   - Download & Install the .pkg from [here](<https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads#:~:text=macOS%20(Apple%20silicon)%20hosted%20cross%20toolchains>).
+   - Make sure you're downloading for the right hardware.
+
+7. Add the Arm Developer Tools to your path by adding the following line to the bottom of the `~/.zshrc` (or `~/.bash_profile`) file, similar to step 1
+   - Add:
+     ```bash
+     export PATH="/Applications/ArmGNUToolchain/<VersionNumber>/arm-none-eabi/bin/:$PATH"
+     ```
+   - IMPORTANT: Remember to replace `<VersionNumber>` with the version number of the toolchain you downloaded. It should be something like '13.2.Rel1'
+
+8. Install other build tools:
+   - `brew install gnu-sed` (if on mac)
+   - `brew install clang-format`
+
+9. (Optional) Configure VSCode to use clang-format for formatting:
+   - Install the `clang-format` extension in VSCode.
+   - In VSCode properties, set the default formatter to `clang-format`.
+   - Enable 'format on save' in the settings.
+   - Set 'format on save mode' to 'modifications'.
+
+---
+
 ## Building and Running:
 
 > **Note:** If you're using a factory-new devboard that you've just unboxed, please follow [these instructions](#setting-up-a-brand-new-metro-m4-grand-central-devboard) first before continuing. If you've received a working devboard from another team member, you can continue.
+
+### Windows
+
+#### Pre-Build Setup: 
+
+Some setup needs to be done when building for the first time. 
+
+We need to pipe the USB connection to the J-link debugger into WSL
+
+   1. In an administrator-level PowerShell, run `usbipd list`. The output should look like: 
+
+   ```
+   BUSID  VID:PID    DEVICE                                                        STATE
+   1-1    1366:1020  J-Link                                                        Not shared
+   2-1    af8b:85c3  MediaTek Bluetooth Adapter                                    Not shared
+   5-1    83de:864a  Integrated Camera, Integrated IR Camera, APP Mode             Not shared
+   ```
+   2. In the same PowerShell, run `usbipd bind --busid <J-link busid>`. For example, if the output of
+      list were as above, we would run `usbipd bind --busid 1-1` 
+   3. And finally run `usbipd attach --wsl --busid <J-link busid>`. 
+   
+You should now be able to access the J-link over USB in WSL. You can verify this by running `lsusb` in your 
+WSL terminal. The output should include a line like `Bus 001 Device 003: ID 1366:1020 SEGGER J-Link` 
+
+#### Building. 
+
+Before building, make sure you have completed all steps in the Pre-Build Setup. 
+
+1. \[🪟WIN\] Attach your J-Link to WSL by running `usbipd attach --wsl --busid <J-link busid>` in an 
+administrator-level PowerShell
+
+2. \[🐧WSL\] In a WSL terminal, start a J-Link GDB server: 
+
+   - `JLinkGDBServer -select USB=0 -device ATSAMD51P20A -endian little -if SWD -speed 4000 -noir -noLocalhostOnly -nologtofile -port 2331 -SWOPort 2332 -TelnetPort 2333`
+
+3. \[🐧WSL\] In a separate WSL terminal, run `make clean all` to delete the previous executable and compile a new version. 
+
+4. \[🐧WSL\] In the same terminal as step 3, connect to the GDB server by running `make connect`. 
+
+   The code will automatically pause at the top of the 'main' function. Set any breakpoints you need, and then continue running the program with 'c'. 
+
+
+### Mac/Linux
 
 1. **Start the SEGGER GDB Server:**
 
@@ -20,97 +182,38 @@ The real-time operating system for Brown Space Engineering's second satellite, P
 2. **Build, Connect and Run:**
    - Use `make clean all connect` to build the project, connect to the board and auto-flash/run the program. If you just want to connect without re-building, run `make connect`. If you just wish to build, run `make clean all`.
    - The code will automatically pause at the top of the 'main' function. Set any breakpoints you need, and then continue running the program with 'c'
-   - To connect to the PVDXos Shell, use Telnet to establish a connection to localhost:19021. You can use PuTTY for this on Windows, or `nc localhost 19021` to connect with netcat on a Mac/Linux terminal
+   - To connect to the PVDXos Shell, use Telnet to establish a connection to localhost:19021. `nc localhost 19021` to connect with netcat on a Mac/Linux terminal
    - If using PuTTY, go to 'Terminal' and check the box for 'Implicit CR in every LF' so that line endings work correctly
    - Log output can be viewed by running `python3 scripts/rtt_logs.py` in a separate terminal window. This will also record logs to the `/logs` folder.
    - If the script fails to run, you may need to install 'pylink-square' (`pip install pylink-square`)
    - Alternatively, you can try running `python3 scripts/rtt_splitscreen.py` for both the PVDXos Shell and log output in the same terminal window, but this might not work!
 
-## Toolchain Installation
 
-### All Platforms (Initial Step)
+## Build Options
 
-- Download Segger's J-Link tools from [here](https://www.segger.com/downloads/jlink/).
+There are 3 build types. Each one rebuilds the bootloader and creates `flash.bin`, which you then flash with `make connect`.
 
-### Windows
+| Command | Build type | Use |
+| --- | --- | --- |
+| `make` or `make dev` | Development (default) | Day-to-day work and debugging |
+| `make release` | Release | The image that flies |
+| `make test` | Unit test | Running the firmware tests in `src/tests/` |
 
-1. Install Windows Subsystem for Linux (WSL):
+- **Dev (`make` / `make dev`)** compiles with `-DDEVBUILD`, has logs and is `-O0`
+- **Release (`make release`)** compiles with `-DRELEASE -O2` and always does a clean build first, cosmic monkey is disabled, and logging is disabled.
+- **Test (`make test`)** compiles with `-DUNITTEST -DDEVBUILD`. Before FreeRTOS starts, `main` calls `tests_run()`, which prints `[TEST]` lines and a final `test results: passed/total` line over RTT. 
+-
+  By default every test is built. To build only some tests, list them in `TESTS` (names aren't case-sensitive):
 
-   - Run `wsl --install` in PowerShell (as Administrator).
-   - Follow prompts and restart your computer as required.
+  ```bash
+  make test TESTS="spp cfdp"   # builds only the SPP and CFDP tests
+  ```
 
-2. Clone the repository into the WSL filesystem. This is important for performance during compilation.
+  Each name becomes a `-DTEST_<NAME>` flag. For example, some tests to choose from are `SPP`, `LINALG`, `CFDP` and `USLP`. When adding a new test, wrap it in `#ifdef TEST_<NAME>` and add its name to `TEST_NAMES` in `src/Makefile` and to the default list in `src/tests/test.h`.
 
-3. Install ARM toolchain for Linux:
+> **Note:** The bootloader copies PVDXos into the SAMD51's 256 KB of RAM and runs it from there, so the build fails if the image doesn't fit. If a test build is too big, use `TESTS` to build fewer tests.
 
-   - `sudo apt install gcc-arm-none-eabi`
-
-4. Install GDB Multiarch and other build tools:
-
-   - `sudo apt install gdb-multiarch`
-   - `sudo apt install build-essential`
-   - `sudo apt install clang-format`
-
-5. (Optional) Configure VSCode to use clang-format for formatting:
-
-   - Install the `clang-format` extension in VSCode.
-   - In VSCode properties, set the default formatter to `clang-format`.
-   - Enable 'format on save' in the settings.
-   - Set 'format on save mode' to 'modifications'.
-
-### Mac/Linux (Geared towards Mac)
-
-> **Note:** Skip to step 5 if you have a Mac with an Intel processor.
-
-1. Edit the `~/.zshrc` file:
-
-   - You can use `nano ~/.zshrc` to edit this file. Use `CTRL`+`X`, then `Y`, then `Enter` to quit and save.
-   - Add these lines to the bottom of the file:
-     ```bash
-     alias arm="env /usr/bin/arch -arm64 /bin/zsh --login"
-     alias intel="env /usr/bin/arch -x86_64 /bin/zsh --login"
-     ```
-
-2. Run `source ~/.zshrc`.
-
-   - This should enable the `arm` and `intel` commands in your terminal. Test this out by running `intel` and checking that the result of running `arch` is `i386`. Then run `arm` and check that the result of `arch` is `arm64`.
-
-3. Switch into an intel terminal by running the `intel` command you just created, and verify that the `arch` command returns `i386`
-
-4. Install brew in the intel terminal by running the script at https://brew.sh/ and following the prompts
-
-   - > **Note:** After the Brew installation is complete, it will prompt you to run two other commands. Remember to copy/paste them into the terminal and run these as well.
-
-5. Install gdb:
-
-   - `brew install gdb`
-
-6. Download Arm Developer Tools:
-
-   - Download & Install the .pkg from [here](<https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads#:~:text=macOS%20(Apple%20silicon)%20hosted%20cross%20toolchains>).
-   - Make sure you're downloading for the right hardware.
-
-7. Add the Arm Developer Tools to your path by adding the following line to the bottom of the `~/.zshrc` (or `~/.bash_profile`) file, similar to step 1
-
-   - Add:
-     ```bash
-     export PATH="/Applications/ArmGNUToolchain/<VersionNumber>/arm-none-eabi/bin/:$PATH"
-     ```
-   - IMPORTANT: Remember to replace `<VersionNumber>` with the version number of the toolchain you downloaded. It should be something like '13.2.Rel1'
-
-8. Install other build tools:
-
-   - `brew install gnu-sed` (if on mac)
-   - `brew install clang-format`
-
-9. (Optional) Configure VSCode to use clang-format for formatting:
-
-   - Install the `clang-format` extension in VSCode.
-   - In VSCode properties, set the default formatter to `clang-format`.
-   - Enable 'format on save' in the settings.
-   - Set 'format on save mode' to 'modifications'.
-
----
+> **Note:** If you for some reason need to build the OS with the old pin-config for use with the old Grand Central devboard, rename the `ASF_grand_central` dir to `ASF` after first temporarily name the normal `ASF` dir to something else (maybe `ASF_new`), but never commit/push any name changes to main.
 
 ## Setting Up a Brand New Metro M4 Grand Central Devboard
 
@@ -135,14 +238,12 @@ That should be it. The J-Link GDB Server should now work as expected. Congrats o
 > **Note:** This does not apply to .h files (although, you should still follow step 1)
 
 1. Take 30 full seconds to think about the scope and name of this file:
-
    - Does the name encompass everything the file _could end up_ doing?
    - Is there a distinct logical separation between the role of this file and any other files?
    - Does it follow existing naming conventions (within the folder, and within the project)?
    - Does it belong in the folder you are adding it to? Will the file _always_ be doing things within this category?
 
 2. Modify the `Makefile` to add the new file to the list of objects to be compiled:
-
    - Add the file's name to the OBJS list, with the .o extension instead of .c
    - If the file is in a new folder, add the newly created folder to the EXTRA_VPATH list as well
 
@@ -160,13 +261,13 @@ That should be it. The J-Link GDB Server should now work as expected. Congrats o
    - Because of this, you should not put anything in the ASF folder that is not autogenerated by Atmel Start.
 6. Ideally, there should be nothing to be done after `make update_asf` completes. Make sure you return to the top level of the project before trying to rebuild it.
 7. If you intend to move a change into main, make sure to push your changes to the PVDX-SAMD-PinConfig
-submodule first and update the README.md, so that everyone can keep a consistent base pinconfig on main!
-    - run `git submodule update --init` to set up the submodule within this repo
-    - If you intend to do long-term work with a different config, consider creating a branch off the submodule.
+   submodule first and update the README.md, so that everyone can keep a consistent base pinconfig on main! - run `git submodule update --init` to set up the submodule within this repo - If you intend to do long-term work with a different config, consider creating a branch off the submodule.
 
-## Building Docs 
+## Building Docs
+
 - Make sure you have Doxygen installed on your system (see instructions for installing with a package manager):
-```bash 
+
+```bash
 # macOS
 brew install doxygen
 
@@ -176,19 +277,21 @@ sudo dnf install doxygen
 # debian/ubuntu
 sudo apt install doxygen
 ```
+
 - [Manual Doxygen download](https://www.doxygen.nl/download.html)
 - Build the docs with doxygen:
+
 ```bash
 doxygen Doxyfile
 ```
-- Download the `Live Server` extension on VSCode
-    - Open the `build-docs/html/index.html` file by right clicking -> `Open with Live Server`
-    - A tab in your browser will open with the full docs page
 
+- Download the `Live Server` extension on VSCode
+  - Open the `build-docs/html/index.html` file by right clicking -> `Open with Live Server`
+  - A tab in your browser will open with the full docs page
 
 # Acknowledgements
 
 Many thanks to Daniel Martenson, whose [EmbeddedLapack](https://github.com/DanielMartensson/EmbeddedLapack)
-and [CControl](https://github.com/DanielMartensson/CControl) projects 
-were the basis for the linear algebra subroutines used to implement 
-our ADCS systems. 
+and [CControl](https://github.com/DanielMartensson/CControl) projects
+were the basis for the linear algebra subroutines used to implement
+our ADCS systems.

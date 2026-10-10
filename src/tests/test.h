@@ -1,5 +1,5 @@
 /**
- * src/task/rado/spp.h
+ * src/tests/test.h
  *
  * header file to manage tests
  *
@@ -8,6 +8,17 @@
  */
 #ifndef TESTS_TEST_H
 #define TESTS_TEST_H
+
+// Each test is only compiled when its TEST_<NAME> macro is defined, which `make test TESTS="spp cfdp"`
+// does via -DTEST_SPP -DTEST_CFDP. If no test is selected, all of them are compiled.
+// Keep this list in sync with TEST_NAMES in src/Makefile
+#if !defined(TEST_SPP) && !defined(TEST_LINALG) && !defined(TEST_CFDP) && !defined(TEST_USLP) && !defined(TEST_PMB)
+    #define TEST_SPP
+    #define TEST_LINALG
+    #define TEST_CFDP
+    #define TEST_USLP
+    #define TEST_PMB
+#endif
 
 extern int tests_passed;
 extern int tests_total;

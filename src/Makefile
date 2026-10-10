@@ -1,166 +1,49 @@
-###############################################################################
-##################### ADDING SOMETHING?  READ THIS FIRST! #####################
-###############################################################################
-###
-###  When adding a new C file to the source, you must do 2 things:
-###    - Add the file to the OBJS list below (with a .o extension)
-###    - If it is in a new directory, Add the directory to the EXTRA_VPATH list below (with a .c extension)
-###  Remember to add the trailing \ to the end of each line!
-###
-###############################################################################
-###############################################################################
-###############################################################################
+##############################################################################
+################## OBJECT FILE AND INCLUDE PATH DISCOVERY ####################
+##############################################################################
 
-### ALL C FILES SHOULD HAVE AN OBJECT FILE LISTED HERE ###
-export OBJS :=                                              	\
-../src/linalg/LinearAlgebra/add.o 								\
-../src/linalg/LinearAlgebra/chol.o 								\
-../src/linalg/LinearAlgebra/cofact.o 							\
-../src/linalg/LinearAlgebra/copy.o 								\
-../src/linalg/LinearAlgebra/cut.o 								\
-../src/linalg/LinearAlgebra/det.o 								\
-../src/linalg/LinearAlgebra/diag.o 								\
-../src/linalg/LinearAlgebra/diagpower.o 						\
-../src/linalg/LinearAlgebra/dot.o 								\
-../src/linalg/LinearAlgebra/eabs.o 								\
-../src/linalg/LinearAlgebra/eig.o 								\
-../src/linalg/LinearAlgebra/eye.o 								\
-../src/linalg/LinearAlgebra/hankel.o 							\
-../src/linalg/LinearAlgebra/horzcat.o 							\
-../src/linalg/LinearAlgebra/insert.o 							\
-../src/linalg/LinearAlgebra/inv.o								\
-../src/linalg/LinearAlgebra/linprog.o 							\
-../src/linalg/LinearAlgebra/linsolve.o 							\
-../src/linalg/LinearAlgebra/lu.o 								\
-../src/linalg/LinearAlgebra/maxvector.o 						\
-../src/linalg/LinearAlgebra/mdiag.o 							\
-../src/linalg/LinearAlgebra/minvector.o 						\
-../src/linalg/LinearAlgebra/move.o 								\
-../src/linalg/LinearAlgebra/mpower.o 							\
-../src/linalg/LinearAlgebra/mul.o 								\
-../src/linalg/LinearAlgebra/norm.o 								\
-../src/linalg/LinearAlgebra/ones.o 								\
-../src/linalg/LinearAlgebra/pinv.o 								\
-../src/linalg/LinearAlgebra/power.o 							\
-../src/linalg/LinearAlgebra/print.o 							\
-../src/linalg/LinearAlgebra/qr.o 								\
-../src/linalg/LinearAlgebra/rank.o 								\
-../src/linalg/LinearAlgebra/repmat.o 							\
-../src/linalg/LinearAlgebra/scale.o 							\
-../src/linalg/LinearAlgebra/sqrte.o 							\
-../src/linalg/LinearAlgebra/sub.o 								\
-../src/linalg/LinearAlgebra/sumrows.o 							\
-../src/linalg/LinearAlgebra/svd.o 								\
-../src/linalg/LinearAlgebra/toeplitz.o 							\
-../src/linalg/LinearAlgebra/tran.o 								\
-../src/linalg/LinearAlgebra/tril.o 								\
-../src/linalg/LinearAlgebra/triu.o 								\
-../src/linalg/LinearAlgebra/vec.o 								\
-../src/linalg/LinearAlgebra/vertcat.o 							\
-../src/linalg/LinearAlgebra/zeros.o 							\
-../src/linalg/LinearAlgebra/eps.o 								\
-																\
-../src/main.o                                               	\
-                                                            	\
-../src/mutexes/mutexes.o                                    	\
-                                                            	\
-../src/misc/printf/SEGGER_RTT.o                             	\
-../src/misc/printf/SEGGER_RTT_printf.o                      	\
-                                                            	\
-../src/misc/rtos_support/rtos_static_memory.o               	\
-../src/misc/rtos_support/rtos_stack_overflow.o              	\
-                                                            	\
-../src/misc/logging/logging.o                               	\
-                                                            	\
-../src/misc/exception_handlers/default_handler.o            	\
-../src/misc/exception_handlers/specific_handlers.o          	\
-																\
-../src/drivers/display/display_driver.o                       	\
-../src/drivers/gyro/SCH1.o										\
-../src/drivers/magnetometer/magnetometer_driver.o           	\
-../src/drivers/photodiode/photodiode_driver.o               	\
-../src/drivers/rtc/rtc_driver.o                                 \
-../src/drivers/watchdog/watchdog_driver.o                     	\
-../src/drivers/at86rf215/at86rf215.o							\
-																\
-../src/libraries/cmd_dispatcher/cmd_dispatcher.o 			  	\
-                                                            	\
-../src/tasks/heartbeat/heartbeat_main.o                     	\
-                                                            	\
-../src/tasks/watchdog/watchdog_task.o                       	\
-../src/tasks/watchdog/watchdog_main.o                       	\
-                                                            	\
-../src/tasks/cosmic_monkey/cosmic_monkey_main.o             	\
-../src/tasks/cosmic_monkey/cosmic_monkey_task.o             	\
-                                                            	\
-../src/tasks/display/display_task.o                         	\
-../src/tasks/display/display_main.o                         	\
-../src/tasks/display/image_buffers/image_buffer_BrownLogo.o 	\
-../src/tasks/display/image_buffers/image_buffer_PVDX.o      	\
-../src/tasks/adcs/adcs_task.o 									\
-../src/tasks/adcs/adcs_main.o 									\
-                                                            	\
-../src/tasks/task_manager/task_manager_main.o               	\
-../src/tasks/task_manager/task_manager_task.o               	\
-                                                            	\
-../src/tasks/shell/shell_main.o                             	\
-../src/tasks/shell/shell_helpers.o                          	\
-../src/tasks/shell/shell_commands.o                         	\
-                                                            	\
-../src/tasks/task_list.o                                        \
-																\
-../src/checks/device_checks.o 									\
-																\
-../src/ccsds/spp.o 										\
-../src/ccsds/cfdp_pdu.o 									\
-../src/tests/test.o                                             \
-																
+# root of the repo - the top-level Makefile exports this, but fall back to the
+# parent of this directory so this Makefile can also be invoked directly
+# (e.g. `compiledb make` from src/, which can't see through the top-level Makefile)
+PVDXOS_DIR ?= $(abspath $(CURDIR)/..)
+export PVDXOS_DIR
 
-### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###
-### THESE ARE WRITTEN RELATIVE TO THE ./ASF/gcc/Makefile FILE ###
-export EXTRA_VPATH := \
-../../src \
-../../src/misc \
-../../src/misc/printf \
-../../src/misc/rtos_support \
-../../src/misc/logging \
-../../src/misc/exception_handlers \
-../../src/drivers \
-../../src/drivers/display \
-../../src/drivers/gyro \
-../../src/drivers/magnetometer \
-../../src/drivers/magnetorquer \
-../../src/drivers/at86rf215    \
-../../src/drivers/rtc \
-../../src/drivers/photodiode \
-../../src/drivers/watchdog \
-../../src/libraries \
-../../src/libraries/cmd_dispatcher \
-../../src/tasks \
-../../src/tasks/watchdog \
-../../src/tasks/heartbeat \
-../../src/tasks/cosmic_monkey \
-../../src/tasks/display \
-../../src/tasks/display/image_buffers \
-../../src/tasks/task_manager \
-../../src/tasks/command_dispatcher \
-../../src/tasks/shell \
-../../src/tasks/radio \
-../../src/tasks/adcs \
-../../src/mutexes \
-../../src/checks \
-../../src/ccsds \
-../../src/tests \
-../../src/linalg \
-../../src/linalg/Lapack \
-../../src/linalg/LinearAlgebra \
-../../src/tasks/adcs \
-../../src/mutexes
+# list of directories and files to exclude from compilation
+EXCLUDE_PATHS := $(PVDXOS_DIR)/src/libraries/adcs \
+				 $(PVDXOS_DIR)/src/linalg/Lapack \
+				 $(PVDXOS_DIR)/src/linalg/LinearAlgebra/quadprog.c \
+				 $(PVDXOS_DIR)/src/linalg/LinearAlgebra/kf.c \
+				 $(PVDXOS_DIR)/src/tests/test_linalg.c \
+				 $(PVDXOS_DIR)/src/tasks/radio \
+				 $(PVDXOS_DIR)/src/drivers/magnetorquer \
 
-###############################################################################
-###############################################################################
-###############################################################################
+# generate flags to pass to find to exclude paths from above
+EXCLUDE_FLAGS := $(foreach dir,$(EXCLUDE_PATHS),-not -path "$(dir)/*")
 
+# Root of the source tree, and the build directory that mirrors it
+export SRC_DIR := $(PVDXOS_DIR)/src
+export BUILD_DIR := $(PVDXOS_DIR)/build
+
+# Discover all c files in src dir
+SRCS := $(shell find $(SRC_DIR) -name "*.c" $(EXCLUDE_FLAGS))
+
+# Map src/foo/bar.c -> build/foo/bar.o so artifacts don't clutter src
+export OBJS := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SRCS))
+
+# Create list of directories to include from
+export EXTRA_VPATH := $(sort $(dir $(SRCS)))
+
+# Print discovered objs and VPATH for debugging 
+$(info Parsed OBJS:)
+$(eval $(foreach f,$(OBJS),$(info $(f))))
+
+$(info Parsed EXTRA_VPATH:)
+$(eval $(foreach f,$(EXTRA_VPATH),$(info $(f))))
+
+##############################################################################
+##############################################################################
+##############################################################################
+ 
 #Technical stuff
 
 #Makefile usually uses /bin/sh to evaluate commands, so we need to change it to /bin/bash
@@ -170,6 +53,10 @@ SHELL := /bin/bash
 #Path to the child makefile
 #This makefile is used to build the ASF files, and is provided by Atmel Start
 CHILD_MAKEFILE_PATH := ../ASF/gcc
+
+# Invoke the child makefile along with build_rules.mk, which adds the rule for
+# compiling src/*.c into BUILD_DIR
+CHILD_MAKE := $(MAKE) -C $(CHILD_MAKEFILE_PATH) -f Makefile -f $(SRC_DIR)/build_rules.mk
 
 # Path to the pinconfig submodule and the .atzip it contains
 PINCONFIG_DIR := ../PVDX-SAMD-PinConfig
@@ -215,13 +102,27 @@ CFLAGS += -fsigned-char # Ensure that char is signed as your average c programme
 # Disable warnings for unused parameters due to ASF functions having unused parameters
 CFLAGS += -Wno-unused-parameter #Because some ASF functions have unused parameters, supress this warning
 
+# Tests that `make test` can build individually. Each NAME is guarded by #ifdef TEST_NAME in src/tests
+# Keep this list in sync with src/tests/test.h
+TEST_NAMES := SPP LINALG CFDP USLP PMB
+
+# `make test TESTS="spp cfdp"` builds only those tests by passing -DTEST_SPP -DTEST_CFDP.
+# Leaving TESTS empty builds every test
+SELECTED_TESTS := $(patsubst TEST_%,%,$(shell echo '$(TESTS)' | tr 'a-z,' 'A-Z '))
+UNKNOWN_TESTS := $(filter-out $(TEST_NAMES),$(SELECTED_TESTS))
+ifneq ($(UNKNOWN_TESTS),)
+    $(error Unknown test(s) in TESTS: $(UNKNOWN_TESTS). Available tests: $(TEST_NAMES))
+endif
+TEST_DEFINES := $(addprefix -DTEST_,$(SELECTED_TESTS))
+
 # Build-specific flags
 CFLAGS_DEV := -DDEVBUILD
-CFLAGS_UNITTEST := -DUNITTEST -DDEVBUILD -Wno-unused-variable 
-CFLAGS_RELEASE := -DRELEASE
+CFLAGS_UNITTEST := -DUNITTEST -DDEVBUILD -Wno-unused-variable $(TEST_DEFINES)
+CFLAGS_RELEASE := -DRELEASE -O2
 
 ### All these variables are exported to the child makefile, and affect its behavior ###
-export SUB_DIRS := $(shell for dir in $(EXTRA_VPATH); do echo $$dir | $(SED) 's|\.\./||g'; done)
+# Build directories the child makefile creates before compiling
+export SUB_DIRS := $(patsubst %/,%,$(sort $(dir $(OBJS))))
 
 export DIR_INCLUDES := $(foreach dir,$(EXTRA_VPATH),-I"$(dir)" )
 
@@ -231,35 +132,98 @@ export DEPS_AS_ARGS := $(patsubst %.o,%.d,$(OBJS_AS_ARGS))
 
 .PHONY: all dev release test clean connect update_asf flash_bootloader
 
+# objects files don't depend on CFLAGS, so switching build types (e.g. dev -> test)
+# would otherwise relink stale objects, so ecord the last build type and clean on change.
+BUILD_TYPE_FILE := $(CHILD_MAKEFILE_PATH)/.build_type
+
+define ensure_build_type
+	@if [ "$$(cat $(BUILD_TYPE_FILE) 2>/dev/null)" != "$(1)" ]; then \
+		$(MAKE) clean && echo "$(1)" > $(BUILD_TYPE_FILE); \
+	fi
+endef
+
+# The bootloader copies PVDXos.bin into RAM and runs it from there, so it can't
+# be larger than the SAMD51's 256 KB of RAM
+MAX_BIN_SIZE := 262144
+
+BUILD_LOG := $(CHILD_MAKEFILE_PATH)/build.log
+
+# Printed when a unit test build doesn't fit in RAM
+TEST_SIZE_HINT := echo "Hint: build only the tests you need, e.g. 'make test TESTS=\"spp cfdp\"' (passes -DTEST_SPP -DTEST_CFDP)."; \
+	echo "      Available tests: $(TEST_NAMES)";
+
+# $(call size_hint,<build type>) expands to the hint for test builds, and to nothing otherwise
+size_hint = $(if $(filter test,$(1)),$(TEST_SIZE_HINT))
+
+# The child make lines below are prefixed with '+' so that they still recurse
+# under `make -n`. Make only does that automatically when $(MAKE) appears
+# literally in the recipe, and without it dry runs (which compiledb relies on)
+# would never see the compile commands.
+
+# $(call child_build,<build type>,<CFLAGS>) runs the child make. The linker
+# script's RAM region is smaller than MAX_BIN_SIZE, so an oversized image
+# usually fails at link time rather than in check_bin_size; catch that here
+# too so test builds still get the hint.
+define child_build
+	+@set -o pipefail; $(CHILD_MAKE) CFLAGS="$(2)" 2>&1 | tee $(BUILD_LOG) \
+	|| { if grep -q "overflowed by\|will not fit in region" $(BUILD_LOG); then \
+		echo "ERROR: PVDXos does not fit in RAM (see the linker error above)"; \
+		$(call size_hint,$(1)) \
+	fi; exit 1; }
+endef
+
+# $(call check_bin_size,<build type>) fails the build if PVDXos.bin is bigger than RAM
+define check_bin_size
+	@size=$$(wc -c < ../ASF/gcc/PVDXos.bin | tr -d ' '); \
+	if [ "$$size" -gt $(MAX_BIN_SIZE) ]; then \
+		echo "ERROR: PVDXos.bin is $$size bytes, which is larger than RAM ($(MAX_BIN_SIZE) bytes)"; \
+		$(call size_hint,$(1)) \
+		exit 1; \
+	fi
+endef
+
 # Default target
 all: dev
 
 dev:
-	@$(MAKE) -C $(CHILD_MAKEFILE_PATH) CFLAGS=" $(CFLAGS_DEV) $(CFLAGS)" \
-	&& cp -f ../ASF/gcc/PVDXos.bin ./ \
+	$(call ensure_build_type,dev)
+	$(call child_build,dev, $(CFLAGS_DEV) $(CFLAGS))
+	$(call check_bin_size,dev)
+	@cp -f ../ASF/gcc/PVDXos.bin ./ \
 	&& cp -f ../ASF/gcc/PVDXos.elf ./ \
 	&& echo " --- Finished Building PVDXos --- " \
 	&& echo " ---  THIS IS THE DEV BUILD! --- "
 
 release: clean #Might as well clean before compiling the release build
-	@$(MAKE) -C $(CHILD_MAKEFILE_PATH) CFLAGS=" $(CFLAGS_RELEASE) $(CFLAGS)" \
-	&& cp -f ../ASF/gcc/PVDXos.bin ./ \
+	@echo "release" > $(BUILD_TYPE_FILE)
+	$(call child_build,release, $(CFLAGS_RELEASE) $(CFLAGS))
+	$(call check_bin_size,release)
+	@cp -f ../ASF/gcc/PVDXos.bin ./ \
 	&& cp -f ../ASF/gcc/PVDXos.elf ./ \
 	&& echo " ---  Finished Building PVDXos  --- " \
 	&& echo " --- THIS IS THE RELEASE BUILD! --- "
 
+# The selected tests are part of the build type, so changing TESTS forces a rebuild
 test:
-	@$(MAKE) -C $(CHILD_MAKEFILE_PATH) CFLAGS=" $(CFLAGS_UNITTEST) $(CFLAGS)" \
-	&& cp -f ../ASF/gcc/PVDXos.elf ./ \
+	$(call ensure_build_type,$(strip test $(TEST_DEFINES)))
+	$(call child_build,test, $(CFLAGS_UNITTEST) $(CFLAGS))
+	$(call check_bin_size,test)
+	@cp -f ../ASF/gcc/PVDXos.elf ./ \
 	&& cp -f ../ASF/gcc/PVDXos.bin ./ \
 	&& echo " ---   Finished Building PVDXos   --- " \
 	&& echo " --- THIS IS THE UNIT TEST BUILD! --- "
 
 # Clean target
 clean:
-	@$(MAKE) -C $(CHILD_MAKEFILE_PATH) clean \
-	&& rm -f ./PVDXos.bin ./PVDXos.elf \
+	@$(CHILD_MAKE) clean \
+	&& rm -rf $(BUILD_DIR) \
+	&& rm -f ./PVDXos.bin ./PVDXos.elf $(BUILD_TYPE_FILE) $(BUILD_LOG) \
 	&& echo " --- Cleaned Build Files --- "
+
+# this is a cheat, since it's just a nop. Execution stops after 
+# info statements at the top of Makefile
+list_files:
+	@: 
 
 # When updating the ASF configuration, this must be run once in order to automatically integrate the new ASF config
 # Hopefully nobody ever needs to touch this, but you can add to it if you want to automatically trigger an action when the ASF is updated

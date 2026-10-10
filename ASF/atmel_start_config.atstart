@@ -103,13 +103,6 @@ drivers:
       adc_reference: Internal bandgap reference
       adc_resolution: 12-bit
     optional_signals:
-    - identifier: ADC_0:AIN/0
-      pad: PA02
-      mode: Enabled
-      configuration: null
-      definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::optional_signal_definition::ADC0.AIN.0
-      name: ADC0/AIN/0
-      label: AIN/0
     - identifier: ADC_0:AIN/1
       pad: PA03
       mode: Enabled
@@ -373,6 +366,50 @@ drivers:
     variant: null
     clocks:
       domain_group: null
+  DAC_0:
+    user_label: DAC_0
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::DAC::driver_config_definition::DAC::HAL:Driver:DAC.Sync
+    functionality: DAC
+    api: HAL:Driver:DAC_Sync
+    configuration:
+      adc_arch_dbgrun: true
+      dac0_arch_cctrl: GCLK_DAC <= 1.2MHz (100kSPS)
+      dac0_arch_ditrher: false
+      dac0_arch_leftadj: false
+      dac0_arch_refresh: 0
+      dac0_arch_runstdby: false
+      dac1_arch_cctrl: GCLK_DAC <= 1.2MHz (100kSPS)
+      dac1_arch_ditrher: false
+      dac1_arch_leftadj: false
+      dac1_arch_refresh: 0
+      dac1_arch_runstdby: false
+      dac_advanced_settings: false
+      dac_arch_diff: false
+      dac_arch_emptyeo_0: false
+      dac_arch_emptyeo_1: false
+      dac_arch_invei0: Detection on rising edge pf the input event
+      dac_arch_invei1: Detection on rising edge pf the input event
+      dac_arch_refsel: Voltage supply
+      dac_arch_startei_0: false
+      dac_arch_startei_1: false
+    optional_signals:
+    - identifier: DAC_0:VOUT/0
+      pad: PA02
+      mode: Enabled
+      configuration: null
+      definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::optional_signal_definition::DAC.VOUT.0
+      name: DAC/VOUT/0
+      label: VOUT/0
+    variant: null
+    clocks:
+      domain_group:
+        nodes:
+        - name: DAC
+          input: Generic clock generator 0
+          external: false
+          external_frequency: 0
+        configuration:
+          dac_gclk_selection: Generic clock generator 0
   DMAC:
     user_label: DMAC
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::DMAC::driver_config_definition::DMAC::HAL:HPL:DMAC
@@ -1689,6 +1726,172 @@ drivers:
     variant: null
     clocks:
       domain_group: null
+  MAGNETORQUER_1:
+    user_label: MAGNETORQUER_1
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::TCC0::driver_config_definition::PWM::HAL:Driver:PWM
+    functionality: PWM
+    api: HAL:Driver:PWM
+    configuration:
+      tcc_arch_alock: false
+      tcc_arch_cc0: 0
+      tcc_arch_cc1: 0
+      tcc_arch_cc2: 0
+      tcc_arch_cc3: 0
+      tcc_arch_cc4: 0
+      tcc_arch_cc5: 0
+      tcc_arch_cnteo: false
+      tcc_arch_cntsel: An interrupt/event is generated when a new counter cycle starts
+      tcc_arch_cpten0: false
+      tcc_arch_cpten1: false
+      tcc_arch_cpten2: false
+      tcc_arch_cpten3: false
+      tcc_arch_cpten4: false
+      tcc_arch_cpten5: false
+      tcc_arch_cpten6: false
+      tcc_arch_cpten7: false
+      tcc_arch_dbgrun: false
+      tcc_arch_evact0: Event action disabled
+      tcc_arch_evact1: Event action disabled
+      tcc_arch_lupd: true
+      tcc_arch_mcei0: false
+      tcc_arch_mcei1: false
+      tcc_arch_mcei2: false
+      tcc_arch_mcei3: false
+      tcc_arch_mcei4: false
+      tcc_arch_mcei5: false
+      tcc_arch_mceo0: false
+      tcc_arch_mceo1: false
+      tcc_arch_mceo2: false
+      tcc_arch_mceo3: false
+      tcc_arch_mceo4: false
+      tcc_arch_mceo5: false
+      tcc_arch_ovfeo: false
+      tcc_arch_prescsync: Reload or reset counter on next GCLK
+      tcc_arch_runstdby: false
+      tcc_arch_sel_ch: 3
+      tcc_arch_tcei0: false
+      tcc_arch_tcei1: false
+      tcc_arch_tceinv0: false
+      tcc_arch_tceinv1: false
+      tcc_arch_trgeo: false
+      tcc_arch_wave_duty_val: 500
+      tcc_arch_wave_per_val: 1000
+      tcc_arch_wavegen: Single-slope PWM
+      tcc_per: 10000
+      tcc_prescaler: Divide by 8
+      timer_event_control: false
+    optional_signals:
+    - identifier: MAGNETORQUER_1:WO/0
+      pad: PA20
+      mode: PWM output
+      configuration: null
+      definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::optional_signal_definition::TCC0.WO.0
+      name: TCC0/WO/0
+      label: WO/0
+    - identifier: MAGNETORQUER_1:WO/1
+      pad: PA21
+      mode: PWM output
+      configuration: null
+      definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::optional_signal_definition::TCC0.WO.1
+      name: TCC0/WO/1
+      label: WO/1
+    - identifier: MAGNETORQUER_1:WO/2
+      pad: PA22
+      mode: PWM output
+      configuration: null
+      definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::optional_signal_definition::TCC0.WO.2
+      name: TCC0/WO/2
+      label: WO/2
+    - identifier: MAGNETORQUER_1:WO/3
+      pad: PA23
+      mode: PWM output
+      configuration: null
+      definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::optional_signal_definition::TCC0.WO.3
+      name: TCC0/WO/3
+      label: WO/3
+    variant: null
+    clocks:
+      domain_group:
+        nodes:
+        - name: TCC
+          input: Generic clock generator 0
+          external: false
+          external_frequency: 0
+        configuration:
+          tcc_gclk_selection: Generic clock generator 0
+  MAGNETORQUER_2:
+    user_label: MAGNETORQUER_2
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::TCC1::driver_config_definition::PWM::HAL:Driver:PWM
+    functionality: PWM
+    api: HAL:Driver:PWM
+    configuration:
+      tcc_arch_alock: false
+      tcc_arch_cc0: 0
+      tcc_arch_cc1: 0
+      tcc_arch_cc2: 0
+      tcc_arch_cc3: 0
+      tcc_arch_cnteo: false
+      tcc_arch_cntsel: An interrupt/event is generated when a new counter cycle starts
+      tcc_arch_cpten0: false
+      tcc_arch_cpten1: false
+      tcc_arch_cpten2: false
+      tcc_arch_cpten3: false
+      tcc_arch_cpten4: false
+      tcc_arch_cpten5: false
+      tcc_arch_cpten6: false
+      tcc_arch_cpten7: false
+      tcc_arch_dbgrun: false
+      tcc_arch_evact0: Event action disabled
+      tcc_arch_evact1: Event action disabled
+      tcc_arch_lupd: true
+      tcc_arch_mcei0: false
+      tcc_arch_mcei1: false
+      tcc_arch_mcei2: false
+      tcc_arch_mcei3: false
+      tcc_arch_mceo0: false
+      tcc_arch_mceo1: false
+      tcc_arch_mceo2: false
+      tcc_arch_mceo3: false
+      tcc_arch_ovfeo: false
+      tcc_arch_prescsync: Reload or reset counter on next GCLK
+      tcc_arch_runstdby: false
+      tcc_arch_sel_ch: 3
+      tcc_arch_tcei0: false
+      tcc_arch_tcei1: false
+      tcc_arch_tceinv0: false
+      tcc_arch_tceinv1: false
+      tcc_arch_trgeo: false
+      tcc_arch_wave_duty_val: 500
+      tcc_arch_wave_per_val: 1000
+      tcc_arch_wavegen: Single-slope PWM
+      tcc_per: 10000
+      tcc_prescaler: Divide by 8
+      timer_event_control: false
+    optional_signals:
+    - identifier: MAGNETORQUER_2:WO/0
+      pad: PD20
+      mode: PWM output
+      configuration: null
+      definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::optional_signal_definition::TCC1.WO.0
+      name: TCC1/WO/0
+      label: WO/0
+    - identifier: MAGNETORQUER_2:WO/1
+      pad: PD21
+      mode: PWM output
+      configuration: null
+      definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::optional_signal_definition::TCC1.WO.1
+      name: TCC1/WO/1
+      label: WO/1
+    variant: null
+    clocks:
+      domain_group:
+        nodes:
+        - name: TCC
+          input: Generic clock generator 0
+          external: false
+          external_frequency: 0
+        configuration:
+          tcc_gclk_selection: Generic clock generator 0
   RAND_0:
     user_label: RAND_0
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::TRNG::driver_config_definition::RAND::HAL:Driver:RAND.Sync
@@ -1727,11 +1930,11 @@ pads:
     mode: Digital output
     user_label: DISPLAY_SCK
     configuration: null
-  PC00:
+  PHD_0:
     name: PC00
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC00
     mode: Analog
-    user_label: PC00
+    user_label: PHD_0
     configuration: null
   PC01:
     name: PC01
@@ -1739,53 +1942,53 @@ pads:
     mode: Analog
     user_label: PC01
     configuration: null
-  PC02:
+  PHD_16:
     name: PC02
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC02
     mode: Analog
-    user_label: PC02
+    user_label: PHD_16
     configuration: null
-  PC03:
+  PHD_17:
     name: PC03
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC03
     mode: Analog
-    user_label: PC03
+    user_label: PHD_17
     configuration: null
-  PA02:
+  PVD_CRNT:
     name: PA02
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA02
     mode: Analog
-    user_label: PA02
+    user_label: PVD_CRNT
     configuration: null
-  PA03:
+  PHD_1:
     name: PA03
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA03
     mode: Analog
-    user_label: PA03
+    user_label: PHD_1
     configuration: null
-  PB04:
+  THERM_0:
     name: PB04
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB04
     mode: Analog
-    user_label: PB04
+    user_label: THERM_0
     configuration: null
-  PB05:
+  THERM_1:
     name: PB05
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB05
     mode: Analog
-    user_label: PB05
+    user_label: THERM_1
     configuration: null
-  PD00:
+  THERM_2:
     name: PD00
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PD00
     mode: Analog
-    user_label: PD00
+    user_label: THERM_2
     configuration: null
-  PD01:
+  THERM_3:
     name: PD01
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PD01
     mode: Analog
-    user_label: PD01
+    user_label: THERM_3
     configuration: null
   PB06:
     name: PB06
@@ -1799,41 +2002,41 @@ pads:
     mode: Analog
     user_label: PB07
     configuration: null
-  PB08:
+  PHD_2:
     name: PB08
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB08
     mode: Analog
-    user_label: PB08
+    user_label: PHD_2
     configuration: null
-  PB09:
+  PHD_3:
     name: PB09
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB09
     mode: Analog
-    user_label: PB09
+    user_label: PHD_3
     configuration: null
-  PA04:
+  PHD_4:
     name: PA04
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA04
     mode: Analog
-    user_label: PA04
+    user_label: PHD_4
     configuration: null
-  PA05:
+  PHD_5:
     name: PA05
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA05
     mode: Analog
-    user_label: PA05
+    user_label: PHD_5
     configuration: null
-  PA06:
+  PHD_6:
     name: PA06
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA06
     mode: Analog
-    user_label: PA06
+    user_label: PHD_6
     configuration: null
-  PA07:
+  PHD_7:
     name: PA07
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA07
     mode: Analog
-    user_label: PA07
+    user_label: PHD_7
     configuration: null
   MRAM1_CS:
     name: PC04
@@ -1863,29 +2066,29 @@ pads:
     user_label: MRAM2_RST
     configuration:
       pad_initial_level: High
-  PA08:
+  PHD_8:
     name: PA08
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA08
     mode: Analog
-    user_label: PA08
+    user_label: PHD_8
     configuration: null
-  PA09:
+  PHD_9:
     name: PA09
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA09
     mode: Analog
-    user_label: PA09
+    user_label: PHD_9
     configuration: null
-  PA10:
+  PHD_10:
     name: PA10
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA10
     mode: Analog
-    user_label: PA10
+    user_label: PHD_10
     configuration: null
-  PA11:
+  PHD_11:
     name: PA11
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA11
     mode: Analog
-    user_label: PA11
+    user_label: PHD_11
     configuration: null
   MRAM3_CS:
     name: PB10
@@ -2084,18 +2287,23 @@ pads:
     user_label: GYRO_CS
     configuration:
       pad_initial_level: High
-  GYRO_RST:
-    name: PC21
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC21
+  HEATER_CTRL_1:
+    name: PC23
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC23
     mode: Digital output
-    user_label: GYRO_RST
-    configuration:
-      pad_initial_level: High
-  GYRO_DRDY:
-    name: PC22
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC22
-    mode: Digital input
-    user_label: GYRO_DRDY
+    user_label: HEATER_CTRL_1
+    configuration: null
+  PD20:
+    name: PD20
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PD20
+    mode: Peripheral IO
+    user_label: PD20
+    configuration: null
+  PD21:
+    name: PD21
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PD21
+    mode: Peripheral IO
+    user_label: PD21
     configuration: null
   SBAND_MOSI:
     name: PB16
@@ -2115,13 +2323,60 @@ pads:
     mode: Digital input
     user_label: SBAND_MISO
     configuration: null
-  SBAND_CS:
+  BURN:
     name: PB19
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB19
     mode: Digital output
-    user_label: SBAND_CS
-    configuration:
-      pad_initial_level: High
+    user_label: BURN
+    configuration: null
+  EPS_RST:
+    name: PB20
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB20
+    mode: Digital output
+    user_label: EPS_RST
+    configuration: null
+  EPS_A0:
+    name: PB21
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB21
+    mode: Digital output
+    user_label: EPS_A0
+    configuration: null
+  PA20:
+    name: PA20
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA20
+    mode: Peripheral IO
+    user_label: PA20
+    configuration: null
+  PA21:
+    name: PA21
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA21
+    mode: Peripheral IO
+    user_label: PA21
+    configuration: null
+  PA22:
+    name: PA22
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA22
+    mode: Peripheral IO
+    user_label: PA22
+    configuration: null
+  PA23:
+    name: PA23
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA23
+    mode: Peripheral IO
+    user_label: PA23
+    configuration: null
+  EPS_A1:
+    name: PB22
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB22
+    mode: Digital output
+    user_label: EPS_A1
+    configuration: null
+  EPS_A3:
+    name: PB23
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB23
+    mode: Digital output
+    user_label: EPS_A3
+    configuration: null
   MRAM_MOSI:
     name: PB24
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB24
@@ -2146,6 +2401,36 @@ pads:
     mode: Digital output
     user_label: CAMERA_SCK
     configuration: null
+  EPS_IRQ:
+    name: PB28
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB28
+    mode: Digital input
+    user_label: EPS_IRQ
+    configuration: null
+  HEATER_CTRL_2:
+    name: PC24
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC24
+    mode: Digital output
+    user_label: HEATER_CTRL_2
+    configuration: null
+  MTQ_Z_SLP:
+    name: PC27
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC27
+    mode: Digital output
+    user_label: MTQ_Z_SLP
+    configuration: null
+  MTQ_X_SLP:
+    name: PB30
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB30
+    mode: Digital output
+    user_label: MTQ_X_SLP
+    configuration: null
+  MTQ_Y_SLP:
+    name: PB31
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB31
+    mode: Digital output
+    user_label: MTQ_Y_SLP
+    configuration: null
   PC30:
     name: PC30
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC30
@@ -2158,29 +2443,29 @@ pads:
     mode: Analog
     user_label: PC31
     configuration: null
-  PB00:
+  PHD_12:
     name: PB00
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB00
     mode: Analog
-    user_label: PB00
+    user_label: PHD_12
     configuration: null
-  PB01:
+  PHD_13:
     name: PB01
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB01
     mode: Analog
-    user_label: PB01
+    user_label: PHD_13
     configuration: null
-  PB02:
+  PHD_14:
     name: PB02
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB02
     mode: Analog
-    user_label: PB02
+    user_label: PHD_14
     configuration: null
-  PB03:
+  PHD_15:
     name: PB03
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB03
     mode: Analog
-    user_label: PB03
+    user_label: PHD_15
     configuration: null
 toolchain_options: []
 static_files: []

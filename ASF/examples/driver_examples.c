@@ -38,6 +38,21 @@ void ADC_1_example(void)
 	}
 }
 
+/**
+ * Example of using DAC_0 to generate waveform.
+ */
+void DAC_0_example(void)
+{
+	uint16_t i = 0;
+
+	dac_sync_enable_channel(&DAC_0, 0);
+
+	for (;;) {
+		dac_sync_write(&DAC_0, 0, &i, 1);
+		i = (i + 1) % 1024;
+	}
+}
+
 static struct timer_task TIMER_0_task1, TIMER_0_task2;
 /**
  * Example of using TIMER_0.
@@ -67,7 +82,7 @@ void TIMER_0_example(void)
 /**
  * Example of using SPI_MRAM to write "Hello World" using the IO abstraction.
  */
-static uint8_t example_SPI_MRAM[13] = "Hello World!";
+static uint8_t example_SPI_MRAM[12] = "Hello World!";
 
 void SPI_MRAM_example(void)
 {
@@ -81,7 +96,7 @@ void SPI_MRAM_example(void)
 /**
  * Example of using SPI_DISPLAY to write "Hello World" using the IO abstraction.
  */
-static uint8_t example_SPI_DISPLAY[13] = "Hello World!";
+static uint8_t example_SPI_DISPLAY[12] = "Hello World!";
 
 void SPI_DISPLAY_example(void)
 {
@@ -95,7 +110,7 @@ void SPI_DISPLAY_example(void)
 /**
  * Example of using SPI_CAMERA to write "Hello World" using the IO abstraction.
  */
-static uint8_t example_SPI_CAMERA[13] = "Hello World!";
+static uint8_t example_SPI_CAMERA[12] = "Hello World!";
 
 void SPI_CAMERA_example(void)
 {
@@ -119,7 +134,7 @@ void I2C_SBAND_example(void)
 /**
  * Example of using SPI_MAGNETOMETER_GYRO to write "Hello World" using the IO abstraction.
  */
-static uint8_t example_SPI_MAGNETOMETER_GYRO[13] = "Hello World!";
+static uint8_t example_SPI_MAGNETOMETER_GYRO[12] = "Hello World!";
 
 void SPI_MAGNETOMETER_GYRO_example(void)
 {
@@ -133,7 +148,7 @@ void SPI_MAGNETOMETER_GYRO_example(void)
 /**
  * Example of using SPI_SBAND to write "Hello World" using the IO abstraction.
  */
-static uint8_t example_SPI_SBAND[13] = "Hello World!";
+static uint8_t example_SPI_SBAND[12] = "Hello World!";
 
 void SPI_SBAND_example(void)
 {
@@ -157,7 +172,7 @@ void I2C_CAMERA_example(void)
 /**
  * Example of using SPI_UHF to write "Hello World" using the IO abstraction.
  */
-static uint8_t example_SPI_UHF[13] = "Hello World!";
+static uint8_t example_SPI_UHF[12] = "Hello World!";
 
 void SPI_UHF_example(void)
 {
@@ -171,6 +186,24 @@ void SPI_UHF_example(void)
 void delay_example(void)
 {
 	delay_ms(5000);
+}
+
+/**
+ * Example of using MAGNETORQUER_1.
+ */
+void MAGNETORQUER_1_example(void)
+{
+	pwm_set_parameters(&MAGNETORQUER_1, 10000, 5000);
+	pwm_enable(&MAGNETORQUER_1);
+}
+
+/**
+ * Example of using MAGNETORQUER_2.
+ */
+void MAGNETORQUER_2_example(void)
+{
+	pwm_set_parameters(&MAGNETORQUER_2, 10000, 5000);
+	pwm_enable(&MAGNETORQUER_2);
 }
 
 /**
