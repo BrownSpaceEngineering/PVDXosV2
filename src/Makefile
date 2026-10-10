@@ -112,7 +112,7 @@ CFLAGS += -Wno-unused-parameter #Because some ASF functions have unused paramete
 
 # Tests that `make test` can build individually. Each NAME is guarded by #ifdef TEST_NAME in src/tests
 # Keep this list in sync with src/tests/test.h
-TEST_NAMES := SPP CFDP USLP PMB
+TEST_NAMES := SPP CFDP USLP PMB FLOAT
 
 # `make test TESTS="spp cfdp"` builds only those tests by passing -DTEST_SPP -DTEST_CFDP.
 # Leaving TESTS empty builds every test

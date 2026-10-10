@@ -1,6 +1,7 @@
 
 #include "tests/test.h"
 
+#include <math.h>
 #include <string.h>
 
 #include "ccsds/spp.h"
@@ -22,6 +23,7 @@ void test_spp(void);
 void test_matrix_product(void);
 void test_cfdp(void);
 void test_uslp(void);
+void test_float(void);
 
 void tests_run(void) {
 #ifdef TEST_SPP
@@ -32,6 +34,9 @@ void tests_run(void) {
 #endif
 #ifdef TEST_USLP
     test_uslp();
+#endif
+#ifdef TEST_FLOAT
+    test_float();
 #endif
     test_pmb();
     test_log("test results: %d/%d passed", tests_passed, tests_total);
@@ -731,3 +736,63 @@ void test_uslp(void) {
 }
 #endif // TEST_USLP
 // #endif
+
+// Tests that the hard float ABI works: FPU arithmetic, float args/returns passed in s registers, and libm calls.
+// Operands are volatile and the helpers are noinline so the compiler can't constant fold the work away.
+#define FLOAT_EPS 1e-5f
+static bool float_close(float a, float b) {
+    return fabsf(a - b) < FLOAT_EPS;
+}
+
+__attribute__((noinline)) static float float_mul_add(float a, float b, float c) {
+    return a * b + c;
+}
+
+// Mixes int and float args so the ints go in r registers and the floats in s registers
+__attribute__((noinline)) static float float_scale_sum(int n, float x, int m, float y) {
+    return (float)n * x + (float)m * y;
+}
+
+// More float args than the 16 s registers, so the last ones are passed on the stack
+__attribute__((noinline)) static float float_sum18(float a0, float a1, float a2, float a3, float a4, float a5, float a6, float a7, float a8,
+                                                   float a9, float a10, float a11, float a12, float a13, float a14, float a15, float a16,
+                                                   float a17) {
+    return a0 + a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8 + a9 + a10 + a11 + a12 + a13 + a14 + a15 + a16 + a17;
+}
+
+__attribute__((noinline)) static void float_vec_scale(float *v, int len, float k) {
+    for (int i = 0; i < len; i++) {
+        v[i] *= k;
+    }
+}
+
+void test_float(void) {
+    test_log("----- testing float -----\n");
+    volatile float a = 1.5f;
+    volatile float b = 2.25f;
+    volatile float c = -4.0f;
+
+    test_log("float arithmetic tests:\n");
+    PVDX_ASSERT_MSG(float_close(a + b, 3.75f), "float add\n");
+    PVDX_ASSERT_MSG(float_close(a - b, -0.75f), "float sub\n");
+    PVDX_ASSERT_MSG(float_close(a * c, -6.0f), "float mul\n");
+    PVDX_ASSERT_MSG(float_close(b / a, 1.5f), "float div\n");
+    PVDX_ASSERT_MSG(float_close(1.0f / 3.0f * a, 0.5f), "float div then mul\n");
+    PVDX_ASSERT_MSG(a < b && c < a, "float compare\n");
+    PVDX_ASSERT_MSG((int)(b * c) == -9, "float to int conversion\n");
+
+    test_log("float function call tests:\n");
+    PVDX_ASSERT_MSG(float_close(float_mul_add(a, b, c), -0.625f), "float args and return\n");
+    PVDX_ASSERT_MSG(float_close(float_scale_sum(3, a, -2, b), 0.0f), "mixed int and float args\n");
+    PVDX_ASSERT_MSG(float_close(float_sum18(a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, b, c), 22.25f), "float args on stack\n");
+
+    float v[3] = {a, b, c};
+    float_vec_scale(v, 3, 2.0f);
+    PVDX_ASSERT_MSG(float_close(v[0], 3.0f) && float_close(v[1], 4.5f) && float_close(v[2], -8.0f), "float pointer arg\n");
+
+    test_log("libm float tests:\n");
+    PVDX_ASSERT_MSG(float_close(sqrtf(b), a), "sqrtf\n");
+    PVDX_ASSERT_MSG(float_close(fabsf(c), 4.0f), "fabsf\n");
+    PVDX_ASSERT_MSG(float_close(sinf(0.0f) + cosf(0.0f), 1.0f), "sinf + cosf\n");
+    PVDX_ASSERT_MSG(float_close(atan2f(a, a), (float)M_PI / 4.0f), "atan2f\n");
+}
