@@ -99,14 +99,13 @@ endif
 CFLAGS += -D'GIT_BRANCH_NAME="$(GIT_BRANCH_NAME)"' -D'GIT_COMMIT_HASH="$(GIT_COMMIT_HASH)"'
 
 # Robust error checking
+# NOTE: CPU and FPU target flags (mcpu=, mfpu=) are handled by child Makefile
 CFLAGS += -Wextra -Werror -Werror=maybe-uninitialized -static
 CFLAGS += -Wshadow -Wnull-dereference -Wduplicated-cond -Wlogical-op -Werror=return-type -Wfloat-equal
 CFLAGS += -Wdangling-else -Wtautological-compare
 CFLAGS += -fwrapv # Enable fwrapv (wrap on overflow of signed integers) just to be safe
 CFLAGS += -fsigned-char # Ensure that char is signed as your average c programmer might expect -- it's actually default unsigned on arm!
-
-# Linking to Ccontrol 
-# CFLAGS += -L$(PATH_TO_CCONTROL) -lCControl
+CFLAGS += -ffast-math 
 
 # Disable warnings for unused parameters due to ASF functions having unused parameters
 CFLAGS += -Wno-unused-parameter #Because some ASF functions have unused parameters, supress this warning
