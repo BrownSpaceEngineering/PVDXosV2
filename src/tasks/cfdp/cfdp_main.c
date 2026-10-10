@@ -11,8 +11,8 @@
 #include "cfdp_task.h"
 #include "cfdp_timer.h"
 #include "cfdp_utils.h"
-#include "command_dispatcher_task.h"
 #include "globals.h"
+#include "libraries/cmd_dispatcher/cmd_dispatcher.h"
 #include "logging.h"
 #include "watchdog_task.h"
 

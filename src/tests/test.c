@@ -1,20 +1,19 @@
 
 #include "tests/test.h"
 
+#include <math.h>
 #include <string.h>
 
 #include "ccsds/spp.h"
 #include "ccsds/uslp.h"
-#include "linalg/LinearAlgebra/declareFunctions.h"
-#include "logging.h"
-
-int tests_passed = 0;
-int tests_total = 0;
 #include "cfdp/cfdp_pdu.h"
 #include "cfdp/cfdp_task.h"
 #include "cfdp/cfdp_utils.h"
-#include "linalg/LinearAlgebra/declareFunctions.h"
 #include "logging.h"
+#include "tests/test_pmb.h"
+
+int tests_passed = 0;
+int tests_total = 0;
 
 #if defined(UNITTEST)
 uint8_t test_mem[512];
@@ -24,13 +23,11 @@ void test_spp(void);
 void test_matrix_product(void);
 void test_cfdp(void);
 void test_uslp(void);
+void test_float(void);
 
 void tests_run(void) {
 #ifdef TEST_SPP
     test_spp();
-#endif
-#ifdef TEST_LINALG
-    test_matrix_product();
 #endif
 #ifdef TEST_CFDP
     test_cfdp();
@@ -38,6 +35,10 @@ void tests_run(void) {
 #ifdef TEST_USLP
     test_uslp();
 #endif
+#ifdef TEST_FLOAT
+    test_float();
+#endif
+    test_pmb();
     test_log("test results: %d/%d passed", tests_passed, tests_total);
 }
 
@@ -640,7 +641,7 @@ void test_uslp(void) {
     uint8_t rule_000[] = {0xCA, 0xBC, 0xD0, 0xA6, 0x00, 0x12, 0x81, 0x00, 0x00, 0x08, 0x01, 0xC0, 0x00, 0x00, 0x01, 0xAA, 0xBB, 0x4F, 0xAC};
     PVDX_ASSERT_MSG(uslp_transfer_frame_parse(&view, rule_000, sizeof(rule_000)), "TFDZ rule 000 rejected\n");
 
-#ifdef UNITTEST // uslp_test_last_frame only exists in unit test builds
+    #ifdef UNITTEST // uslp_test_last_frame only exists in unit test builds
     // VC frame counts are module state that persists between calls, so these tests assume nothing
     // has sent on VCs 5-7 since boot. That holds because tests run before any task is started
     test_log("uslp mapp request rejection tests:\n");
@@ -731,7 +732,67 @@ void test_uslp(void) {
     PVDX_ASSERT_MSG(!err, "VC 6 frame parses\n");
     PVDX_ASSERT_MSG(view.primary_header.virtual_channel_id == 6, "VC 6 frame virtual_channel_id\n");
     PVDX_ASSERT_MSG(view.primary_header.vc_frame_count == 0, "VC 6 has its own count\n");
-#endif
+    #endif
 }
 #endif // TEST_USLP
 // #endif
+
+// Tests that the hard float ABI works: FPU arithmetic, float args/returns passed in s registers, and libm calls.
+// Operands are volatile and the helpers are noinline so the compiler can't constant fold the work away.
+#define FLOAT_EPS 1e-5f
+static bool float_close(float a, float b) {
+    return fabsf(a - b) < FLOAT_EPS;
+}
+
+__attribute__((noinline)) static float float_mul_add(float a, float b, float c) {
+    return a * b + c;
+}
+
+// Mixes int and float args so the ints go in r registers and the floats in s registers
+__attribute__((noinline)) static float float_scale_sum(int n, float x, int m, float y) {
+    return (float)n * x + (float)m * y;
+}
+
+// More float args than the 16 s registers, so the last ones are passed on the stack
+__attribute__((noinline)) static float float_sum18(float a0, float a1, float a2, float a3, float a4, float a5, float a6, float a7, float a8,
+                                                   float a9, float a10, float a11, float a12, float a13, float a14, float a15, float a16,
+                                                   float a17) {
+    return a0 + a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8 + a9 + a10 + a11 + a12 + a13 + a14 + a15 + a16 + a17;
+}
+
+__attribute__((noinline)) static void float_vec_scale(float *v, int len, float k) {
+    for (int i = 0; i < len; i++) {
+        v[i] *= k;
+    }
+}
+
+void test_float(void) {
+    test_log("----- testing float -----\n");
+    volatile float a = 1.5f;
+    volatile float b = 2.25f;
+    volatile float c = -4.0f;
+
+    test_log("float arithmetic tests:\n");
+    PVDX_ASSERT_MSG(float_close(a + b, 3.75f), "float add\n");
+    PVDX_ASSERT_MSG(float_close(a - b, -0.75f), "float sub\n");
+    PVDX_ASSERT_MSG(float_close(a * c, -6.0f), "float mul\n");
+    PVDX_ASSERT_MSG(float_close(b / a, 1.5f), "float div\n");
+    PVDX_ASSERT_MSG(float_close(1.0f / 3.0f * a, 0.5f), "float div then mul\n");
+    PVDX_ASSERT_MSG(a < b && c < a, "float compare\n");
+    PVDX_ASSERT_MSG((int)(b * c) == -9, "float to int conversion\n");
+
+    test_log("float function call tests:\n");
+    PVDX_ASSERT_MSG(float_close(float_mul_add(a, b, c), -0.625f), "float args and return\n");
+    PVDX_ASSERT_MSG(float_close(float_scale_sum(3, a, -2, b), 0.0f), "mixed int and float args\n");
+    PVDX_ASSERT_MSG(float_close(float_sum18(a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, b, c), 22.25f), "float args on stack\n");
+
+    float v[3] = {a, b, c};
+    float_vec_scale(v, 3, 2.0f);
+    PVDX_ASSERT_MSG(float_close(v[0], 3.0f) && float_close(v[1], 4.5f) && float_close(v[2], -8.0f), "float pointer arg\n");
+
+    test_log("libm float tests:\n");
+    PVDX_ASSERT_MSG(float_close(sqrtf(b), a), "sqrtf\n");
+    PVDX_ASSERT_MSG(float_close(fabsf(c), 4.0f), "fabsf\n");
+    PVDX_ASSERT_MSG(float_close(sinf(0.0f) + cosf(0.0f), 1.0f), "sinf + cosf\n");
+    PVDX_ASSERT_MSG(float_close(atan2f(a, a), (float)M_PI / 4.0f), "atan2f\n");
+}

@@ -27,11 +27,20 @@ export BUILD_DIR := $(PVDXOS_DIR)/build
 # Discover all c files in src dir
 SRCS := $(shell find $(SRC_DIR) -name "*.c" $(EXCLUDE_FLAGS))
 
+# The ADCS library (git submodule, excluded above) lists its own sources, include dirs, and flags
+ADCS_MK := $(SRC_DIR)/libraries/adcs/adcs.mk
+ifeq ($(wildcard $(ADCS_MK)),)
+    $(error ADCS library not found at $(ADCS_MK). Run 'git submodule update --init --recursive')
+endif
+include $(ADCS_MK)
+SRCS += $(ADCS_SRCS)
+CFLAGS += $(ADCS_CFLAGS)
+
 # Map src/foo/bar.c -> build/foo/bar.o so artifacts don't clutter src
 export OBJS := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SRCS))
 
 # Create list of directories to include from
-export EXTRA_VPATH := $(sort $(dir $(SRCS)))
+export EXTRA_VPATH := $(sort $(dir $(SRCS)) $(addsuffix /,$(ADCS_INCLUDE_DIRS)))
 
 # Print discovered objs and VPATH for debugging 
 $(info Parsed OBJS:)
@@ -90,21 +99,20 @@ endif
 CFLAGS += -D'GIT_BRANCH_NAME="$(GIT_BRANCH_NAME)"' -D'GIT_COMMIT_HASH="$(GIT_COMMIT_HASH)"'
 
 # Robust error checking
+# NOTE: CPU and FPU target flags (mcpu=, mfpu=) are handled by child Makefile
 CFLAGS += -Wextra -Werror -Werror=maybe-uninitialized -static
 CFLAGS += -Wshadow -Wnull-dereference -Wduplicated-cond -Wlogical-op -Werror=return-type -Wfloat-equal
 CFLAGS += -Wdangling-else -Wtautological-compare
 CFLAGS += -fwrapv # Enable fwrapv (wrap on overflow of signed integers) just to be safe
 CFLAGS += -fsigned-char # Ensure that char is signed as your average c programmer might expect -- it's actually default unsigned on arm!
-
-# Linking to Ccontrol 
-# CFLAGS += -L$(PATH_TO_CCONTROL) -lCControl
+CFLAGS += -ffast-math 
 
 # Disable warnings for unused parameters due to ASF functions having unused parameters
 CFLAGS += -Wno-unused-parameter #Because some ASF functions have unused parameters, supress this warning
 
 # Tests that `make test` can build individually. Each NAME is guarded by #ifdef TEST_NAME in src/tests
 # Keep this list in sync with src/tests/test.h
-TEST_NAMES := SPP LINALG CFDP USLP
+TEST_NAMES := SPP CFDP USLP PMB FLOAT
 
 # `make test TESTS="spp cfdp"` builds only those tests by passing -DTEST_SPP -DTEST_CFDP.
 # Leaving TESTS empty builds every test
