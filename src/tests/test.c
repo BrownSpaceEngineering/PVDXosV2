@@ -5,17 +5,14 @@
 
 #include "ccsds/spp.h"
 #include "ccsds/uslp.h"
-#include "linalg/LinearAlgebra/declareFunctions.h"
+#include "cfdp/cfdp_pdu.h"
+#include "cfdp/cfdp_task.h"
+#include "cfdp/cfdp_utils.h"
 #include "logging.h"
 #include "tests/test_pmb.h"
 
 int tests_passed = 0;
 int tests_total = 0;
-#include "cfdp/cfdp_pdu.h"
-#include "cfdp/cfdp_task.h"
-#include "cfdp/cfdp_utils.h"
-#include "linalg/LinearAlgebra/declareFunctions.h"
-#include "logging.h"
 
 #if defined(UNITTEST)
 uint8_t test_mem[512];
@@ -29,9 +26,6 @@ void test_uslp(void);
 void tests_run(void) {
 #ifdef TEST_SPP
     test_spp();
-#endif
-#ifdef TEST_LINALG
-    test_matrix_product();
 #endif
 #ifdef TEST_CFDP
     test_cfdp();
