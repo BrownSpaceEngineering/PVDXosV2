@@ -281,7 +281,7 @@ $(OUTPUT_FILE_PATH): $(OBJS)
 	@echo Building target: $(strip $(patsubst ../%, %, $@))
 	@echo Invoking: ARM/GNU Linker
 	$(QUOTE)arm-none-eabi-gcc$(QUOTE) -o $(OUTPUT_FILE_NAME).elf $(OBJS_AS_ARGS) -Wl,--start-group -lm -Wl,--end-group -mthumb \
--Wl,-Map="$(OUTPUT_FILE_NAME).map" --specs=nano.specs -Wl,--gc-sections -mcpu=cortex-m4 \
+-Wl,-Map="$(OUTPUT_FILE_NAME).map" --specs=nano.specs -Wl,--gc-sections -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 \
  \
 -T"../../src/src_ram.ld" \
 -L"../samd51a/gcc/gcc"
@@ -307,7 +307,7 @@ $(OUTPUT_FILE_PATH): $(OBJS)
 	@echo Building file: $<
 	@echo ARM/GNU C Compiler
 	$(QUOTE)arm-none-eabi-gcc$(QUOTE) -x c -mthumb $(CFLAGS) -D__FILENAME__=\"$(notdir $<)\" -Os -ffunction-sections -mlong-calls -g3 -Wall -c -std=gnu99 \
--D__SAMD51P20A__ -mcpu=cortex-m4 -mfloat-abi=softfp -mfpu=fpv4-sp-d16 \
+-D__SAMD51P20A__ -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 \
 $(DIR_INCLUDES) \
 -MD -MP -MF "$(patsubst ../%,%, $(@:%.o=%.d))" -MT"$(patsubst ../%,%, $(@:%.o=%.d))" -MT"$(patsubst ../%,%, $(@:%.o=%.o))"  -o "$(strip $(patsubst ../%, %, $@))" "$<"
 	@echo Finished building: $<
@@ -316,7 +316,7 @@ $(DIR_INCLUDES) \
 	@echo Building file: $<
 	@echo ARM/GNU Assembler
 	$(QUOTE)arm-none-eabi-as$(QUOTE) -x c -mthumb $(CFLAGS) -D__FILENAME__=\"$(notdir $<)\" -Os -ffunction-sections -mlong-calls -g3 -Wall -c -std=gnu99 \
--D__SAMD51P20A__ -mcpu=cortex-m4 -mfloat-abi=softfp -mfpu=fpv4-sp-d16 \
+-D__SAMD51P20A__ -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 \
 $(DIR_INCLUDES) \
 -MD -MP -MF "$(patsubst ../%,%, $(@:%.o=%.d))" -MT"$(patsubst ../%,%, $(@:%.o=%.d))" -MT"$(patsubst ../%,%, $(@:%.o=%.o))"  -o "$(strip $(patsubst ../%, %, $@))" "$<"
 	@echo Finished building: $<
@@ -325,7 +325,7 @@ $(DIR_INCLUDES) \
 	@echo Building file: $<
 	@echo ARM/GNU Preprocessing Assembler
 	$(QUOTE)arm-none-eabi-gcc$(QUOTE) -x c -mthumb $(CFLAGS) -D__FILENAME__=\"$(notdir $<)\" -Os -ffunction-sections -mlong-calls -g3 -Wall -c -std=gnu99 \
--D__SAMD51P20A__ -mcpu=cortex-m4 -mfloat-abi=softfp -mfpu=fpv4-sp-d16 \
+-D__SAMD51P20A__ -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 \
 $(DIR_INCLUDES) \
 -MD -MP -MF "$(patsubst ../%,%, $(@:%.o=%.d))" -MT"$(patsubst ../%,%, $(@:%.o=%.d))" -MT"$(patsubst ../%,%, $(@:%.o=%.o))"  -o "$(strip $(patsubst ../%, %, $@))" "$<"
 	@echo Finished building: $<
