@@ -8,8 +8,8 @@
  * Authors: Oren Kohavi, Tanish Makadia, Siddharta Laloux
  */
 
-#include "tasks/command_dispatcher/command_dispatcher_task.h"
 #include "watchdog_task.h"
+#include "cmd_dispatcher.h"
 
 watchdog_task_memory_t watchdog_mem;
 QueueHandle_t watchdog_command_queue_handle;
@@ -72,7 +72,9 @@ void main_watchdog(void *pvParameters) {
 
         // Watchdog Task must also check-in with itself
         if (should_checkin(current_task)) {
-            enqueue_command(&cmd_checkin);
+            while (enqueue_command(&cmd_checkin) != SUCCESS) {
+                warning("watchdog: Failed to enqueue watchdog checkin command\n");
+            }
             debug("watchdog: Enqueued watchdog checkin command\n");
         }
 

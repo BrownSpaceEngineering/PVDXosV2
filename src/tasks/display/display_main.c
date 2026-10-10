@@ -7,8 +7,8 @@
  * Authors: Tanish Makadia, Ignacio Blancas Rodriguez, Siddharta Laloux
  */
 
-#include "command_dispatcher_task.h"
 #include "display_task.h"
+#include "cmd_dispatcher.h"
 
 // Display Task memory structures
 display_task_memory_t display_mem;
@@ -64,7 +64,10 @@ void main_display(void *pvParameters) {
 
         // Check in with the watchdog task
         if (should_checkin(current_task)) {
-            enqueue_command(&cmd_checkin);
+            while (enqueue_command(&cmd_checkin) != SUCCESS) {
+                warning("display: Failed to enqueue watchdog checkin command\n");
+            }
+
             debug("display: Enqueued watchdog checkin command\n");
         }
     }

@@ -1,7 +1,7 @@
 #include "cfdp_timer.h"
 
 #include "cfdp_task.h"
-#include "command_dispatcher_task.h"
+#include "libraries/cmd_dispatcher/cmd_dispatcher.h"
 
 // --------- Timer Init (Ran in CFDP Task) ---------
 void init_cfdp_timers(cfdp_task_memory_t *mem) {
