@@ -46,3 +46,7 @@ int main(void) {
 
     while (1) {} // Should be unreachable.
 }
+
+extern void *_estack;
+
+__attribute__((section(".vectors"), used)) void *const vector_table[] = {&_estack, (void *)main};
