@@ -44,7 +44,7 @@ int main(void) {
         }
     }
 
-    while (1) {} // Should be unreachable.
+    while (1) {} // Should be unreachable unless every bootloader has failed.
 }
 
 extern void *_estack;
