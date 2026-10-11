@@ -80,9 +80,15 @@ configuration, for example `clang-format -i path/to/file.c`.
 
 ## Persistent conventions and constraints
 
-- When adding a `.c` file, update `OBJS` and, for a new directory,
-  `EXTRA_VPATH` in `src/Makefile`; the generated `ASF/gcc/Makefile` consumes
-  those lists. Header-only additions do not need an object entry.
+- `src/Makefile` discovers `.c` files under `src/` with `find` and derives
+  `OBJS` and `EXTRA_VPATH` from them (the generated `ASF/gcc/Makefile`
+  consumes those lists); to keep a file or directory out of the build, add it
+  to `EXCLUDE_PATHS`.
+- `src/libraries/adcs` is the `adcs-c` submodule (with CMSIS-DSP nested inside
+  it, so use `git submodule update --init --recursive`). It is excluded from
+  the `find` glob: its sources, include dirs and flags come from its own
+  `adcs.mk`. It shares the global symbol namespace with `src/linalg`, which
+  defines generic names like `eye`, `dot`, `norm`, `inv` and `chol`.
 - Treat `ASF/` as generated output. Change Atmel Start configuration through
   the `PVDX-SAMD-PinConfig` submodule and run `make -C src update_asf` only
   when intentionally replacing ASF; that target deletes and recreates `ASF/`
