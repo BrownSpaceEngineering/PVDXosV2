@@ -11,6 +11,7 @@
 #ifndef RADIO_SPP_H
 #define RADIO_SPP_H
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 // constants:
@@ -29,6 +30,9 @@
 #define SPP_SEQ_FLAG_FIRST_SEGMENT_OF_DATA 0b01
 #define SPP_SEQ_FLAG_LAST_SEGMENT_OF_DATA 0b10
 #define SPP_SEQ_FLAG_UNSEGMENTED_DATA 0b11
+// Size, in bytes, of the primary header as it is sent
+// Reference: SPP Blue Book pg. 4-2
+#define SPP_PRIMARY_HEADER_SIZE 6
 
 /*
  * TODO:
@@ -123,5 +127,22 @@ spp_packet_view_t spp_packet_view_from(spp_packet_t *packet);
  * help to clear/zero a packet_views's data
  */
 void spp_packet_view_clear_data(spp_packet_view_t view);
+
+/**
+ * Serializes an SPP primary header into the byte layout it is sent in
+ *
+ * - Every field is packed most significant bit first
+ * - header->data_length is written as-is, so it must already be <number_of_bytes> - 1
+ *
+ * \param header - primary header to serialize
+ * \param buf - buffer to write into
+ * \param buf_size - size, in bytes, of buf
+ * \param offset - position in buf to write at; advanced by SPP_PRIMARY_HEADER_SIZE on success
+ *
+ * \return true on failure (not enough room in buf), else false
+ *
+ * Reference: SPP Blue Book pg. 4-2
+ */
+bool spp_primary_header_serialize(const spp_primary_packet_header_t *header, uint8_t *buf, size_t buf_size);
 
 #endif // !RADIO_SPP_H

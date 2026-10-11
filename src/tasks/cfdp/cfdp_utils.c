@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "cfdp_task.h"
+#include "radio/radio_task.h"
 
 uint32_t next_seq_num(void) {
     static uint32_t counter = 0;
@@ -17,6 +18,26 @@ int cfdp_send(void *buff, size_t sz) {
     (void)sz;
 #endif
     // TODO: send to radio board
+
+    if (sz == 0 || sz > RADIO_DOWNLINK_MAX_SIZE - SPP_PRIMARY_HEADER_SIZE) {
+        return -1; // PDU doesn't fit
+    }
+
+    spp_primary_packet_header_t header = {};
+
+    radio_downlink_item_t item;
+    if (spp_primary_header_serialize(&header, item.data, sizeof(item.data))) {
+        return -1;
+    }
+
+    // TODO: Add secondary header once telemetry branch is merged
+    memcpy(item.data, buff, sz);
+    item.len = sz;
+
+    if (xQueueSend(downlink_queue, &item, 0) != pdPASS) {
+        return -1; // queue full, caller retries later
+    }
+
     return 0;
 }
 

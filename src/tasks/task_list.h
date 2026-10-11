@@ -13,6 +13,7 @@ extern pvdx_task_t *const p_shell_task;
 extern pvdx_task_t *const p_display_task;
 extern pvdx_task_t *const p_heartbeat_task;
 extern pvdx_task_t *const p_cfdp_task;
+extern pvdx_task_t *const p_radio_task;
 extern pvdx_task_t *task_list[];
 
 pvdx_task_t *get_current_task(void);

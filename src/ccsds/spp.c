@@ -72,6 +72,11 @@ void spp_packet_view_clear_data(spp_packet_view_t view) {
     }
 }
 
+// TODO: Actually implement
+bool spp_primary_header_serialize(const spp_primary_packet_header_t *header, uint8_t *buf, size_t buf_size) {
+    return false;
+}
+
 /**
  * example for how we might use this spp_packet api
  */
