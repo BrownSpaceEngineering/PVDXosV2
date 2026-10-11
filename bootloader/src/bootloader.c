@@ -1,10 +1,8 @@
-#include "bootloader_index.h"
 #include "mram_driver.h"
 #include "watchdog_driver.h"
 
 #define FLASH_OS_BASE_ADDRESS (0x020000) // Address of OS in flash (after bootloaders)
 #define RAM_OS_BASE_ADDRESS (0x20000000) // Where to load OS into RAM
-#define BOOTLOADER_SIZE (0x2000)         // Size of each bootloader in the chain
 
 #define SCS_BASE (0xE000E000UL)
 #define SCB_BASE (SCS_BASE + 0x0D00UL)
@@ -16,29 +14,6 @@ int main(void);
 void go_to_app(void);
 
 int main(void) {
-    uint8_t bootloader_index = (BOOTLOADER_INDEX);
-    // If no bootloader flag was defined, panic
-    while (bootloader_index == 255);
-
-    uint8_t *cur_bootloader_start = (uint8_t *)(bootloader_index * BOOTLOADER_SIZE);
-
-    uint32_t computed_checksum = crc32(cur_bootloader_start, BOOTLOADER_SIZE - sizeof(uint32_t));
-    uint32_t *test_checksum = (uint32_t *)(cur_bootloader_start + BOOTLOADER_SIZE - sizeof(uint32_t));
-
-    if (computed_checksum != *test_checksum) {
-        // If checksum fails on the last bootloader, there is nowhere to jump so panic
-        while (bootloader_index == 7);
-
-        uint32_t next_sp = *(uint32_t *)((bootloader_index + 1) * BOOTLOADER_SIZE);
-        uint32_t next_pc = *(uint32_t *)((bootloader_index + 1) * BOOTLOADER_SIZE + 0x0004);
-        __asm__ volatile(
-            "mov sp, %0\n" // Move the value in desired_sp into SP
-            "bx %1"        // Branch to the address contained in desired_pc
-            :
-            : "r"(next_sp), "r"(next_pc) // Arguments to the assembly (accessed as %0 and %1 in the assembly code)
-            :);
-    }
-
     watchdog_setup();
 
     mram_status_t mram_status = mram_init();
@@ -59,7 +34,12 @@ int main(void) {
     if (mram_ok) {
         mram_read_bytes(MRAM_OS_BASE_ADDRESS, (uint8_t *)os_dst, MRAM_OS_SIZE);
         do {
-        } while (crc32(os_dst, MRAM_OS_SIZE - sizeof(uint32_t) != *(uint32_t *)(os_dst + MRAM_OS_SIZE - sizeof(uint32_t))));
+            /** TODO: determine what should happen if crc32 doesn't match
+             * when reading from MRAM
+             * ik this looks very scary rn; it will be fixed trust
+             */
+        } while (crc32((uint8_t *)os_dst, MRAM_OS_SIZE - sizeof(uint32_t)) !=
+             *(uint32_t *)(os_dst + MRAM_OS_SIZE - sizeof(uint32_t)));
     } else {
         char *os_flash_src = (char *)FLASH_OS_BASE_ADDRESS;
         for (long i = 0; i < MRAM_OS_SIZE; i++) {

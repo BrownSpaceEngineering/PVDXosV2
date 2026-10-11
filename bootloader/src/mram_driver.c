@@ -49,6 +49,7 @@ typedef enum {
  * @warning Should only be called when a reboot will definitely fix the fatal
  *          state. If the fatal state is unrecoverable, use
  *          `mram_complete_fatal` instead.
+ * TODO: consider if having this at all is risky; we might want to remove this entirely
  */
 void mram_recoverable_fatal(void) { while (1); }
 
