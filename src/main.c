@@ -91,12 +91,12 @@ int main(void) {
     }
 
     // Initialize all sensor integrity tasks
-    for (pvdx_task_t **curr_task = task_list; *curr_task != NULL; curr_task++) {
-        if ((*curr_task)->task_type == SENSOR) {
-            init_task_pointer(*curr_task);
-            info("%s initialized\n", (*curr_task)->name);
-        }
-    }
+    // for (pvdx_task_t **curr_task = task_list; *curr_task != NULL; curr_task++) {
+    //     if ((*curr_task)->task_type == SENSOR) {
+    //         init_task_pointer(*curr_task);
+    //         info("%s initialized\n", (*curr_task)->name);
+    //     }
+    // }
 
     /* ---------- COSMIC MONKEY TASK ---------- */
 
@@ -105,7 +105,7 @@ int main(void) {
     cm_args.frequency = 1;
     #endif
     #if defined(DEVBUILD)
-    cm_args.frequency = 1; // Bitflips per second
+    cm_args.frequency = 0; // Bitflips per second
     #endif
 
     TaskHandle_t cosmic_monkey_task_handle =
