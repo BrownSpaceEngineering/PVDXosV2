@@ -9,10 +9,13 @@ Adafruit Grand Central development board.
 
 - `bootloader/` contains three independently linked `0x3000`-byte bootloader
   images at flash offsets `0x00000000`, `0x00003000`, and `0x00006000`.
-  `startup.c` validates checksums and falls through to the next copy if needed.
-  `bootloader.c` byte-wise majority-votes application copies at
-  `0x00010000`, `0x00020000`, and `0x00030000`, copies the result to RAM at
-  `0x20000000`, sets VTOR, and jumps to it.
+  `startup.c` validates checksums (stored at `0x0000E000`) and falls through to
+  the next copy if needed.
+  `bootloader.c` byte-wise majority-votes three back-to-back application
+  copies starting at `0x00010000`, copies the result to RAM at `0x20000000`,
+  sets VTOR, and jumps to it. Each copy's slot is the image size rounded up to
+  the 8 KB NVM erase block; the slot size is stored three times at `0x0000E00C`
+  and majority-voted by the bootloader.
 - `src/` is the application; `src/src_ram.ld` links it for RAM execution after
   the bootloader copy. `src/main.c` initializes Atmel Start hardware, logging,
   startup checks, tasks, and FreeRTOS.
@@ -52,8 +55,11 @@ exactly one of `DEVBUILD`, `RELEASE`, or `UNITTEST`; do not combine these
 manually. Tests are embedded firmware tests: `make test` calls `tests_run()` in
 `src/main.c` before FreeRTOS, with results emitted through SEGGER RTT. Current
 test functions cover SPP, linear algebra matrix multiplication, and CFDP
-parsing. To run one test function, temporarily leave only that call in
-`src/tests/test.c:tests_run()`, build, flash/connect, and inspect RTT output.
+parsing. To build only some tests, pass their names, e.g.
+`make test TESTS="spp cfdp"` (defines `TEST_SPP`/`TEST_CFDP`; see `TEST_NAMES`
+in `src/Makefile` and `src/tests/test.h`); with no `TESTS`, all are built.
+Builds fail if `PVDXos.bin` exceeds 256 KB or the linker's RAM region
+overflows.
 
 For hardware flashing, start a J-Link GDB server configured for
 `ATSAMD51P20A`, SWD, and port 2331. For J-Link/GDB workflows:
@@ -74,9 +80,15 @@ configuration, for example `clang-format -i path/to/file.c`.
 
 ## Persistent conventions and constraints
 
-- When adding a `.c` file, update `OBJS` and, for a new directory,
-  `EXTRA_VPATH` in `src/Makefile`; the generated `ASF/gcc/Makefile` consumes
-  those lists. Header-only additions do not need an object entry.
+- `src/Makefile` discovers `.c` files under `src/` with `find` and derives
+  `OBJS` and `EXTRA_VPATH` from them (the generated `ASF/gcc/Makefile`
+  consumes those lists); to keep a file or directory out of the build, add it
+  to `EXCLUDE_PATHS`.
+- `src/libraries/adcs` is the `adcs-c` submodule (with CMSIS-DSP nested inside
+  it, so use `git submodule update --init --recursive`). It is excluded from
+  the `find` glob: its sources, include dirs and flags come from its own
+  `adcs.mk`. It shares the global symbol namespace with `src/linalg`, which
+  defines generic names like `eye`, `dot`, `norm`, `inv` and `chol`.
 - Treat `ASF/` as generated output. Change Atmel Start configuration through
   the `PVDX-SAMD-PinConfig` submodule and run `make -C src update_asf` only
   when intentionally replacing ASF; that target deletes and recreates `ASF/`

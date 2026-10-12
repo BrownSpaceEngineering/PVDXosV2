@@ -20,7 +20,7 @@ __attribute__((section(".vectors"))) const long startup_vectors[] = {
 void startup(void) {
 
     #ifdef BOOTLOADER_1
-        const volatile char* checksum_ptr = (char*)0x9000;
+        const volatile char* checksum_ptr = (char*)0xE000;
         long sum = 0;
         for (volatile char* mem = (char*)0x0000; mem < (char*)0x3000; mem++) {
             sum += *mem;
@@ -39,7 +39,7 @@ void startup(void) {
             __builtin_unreachable();
         }
     #elif BOOTLOADER_2
-        const volatile char* checksum_ptr = (char*)0x9004;
+        const volatile char* checksum_ptr = (char*)0xE004;
         long sum = 0;
         for (volatile char* mem = (char*)0x3000; mem < (char*)0x6000; mem++) {
             sum += *mem;
