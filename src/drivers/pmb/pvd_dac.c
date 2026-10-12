@@ -10,13 +10,6 @@
 
 #define PVD_DAC_READY_TIMEOUT 100000U // Polling iterations to wait for the DAC channel to start up
 
-<<<<<<< HEAD
-/**
- * Enables the DAC channel, waits for it to start up and sets the output to 0 V.
- * system_init() initializes the DAC but leaves the channel disabled.
- */
-status_t pvd_dac_init(void) {
-=======
 /*
  * Channel settings that override the Atmel START configuration (hpl_dac_config.h), which leaves CCTRL at CC100K and
  * refresh off. CCTRL must match the 12 MHz GCLK_DAC, and since the channel holds a static level for tens of ms per
@@ -36,7 +29,6 @@ status_t pvd_dac_init(void) {
     hri_dac_write_DACCTRL_CCTRL_bf(DAC, PVD_DAC_CHANNEL, PVD_DAC_CCTRL);
     hri_dac_write_DACCTRL_REFRESH_bf(DAC, PVD_DAC_CHANNEL, PVD_DAC_REFRESH);
 
->>>>>>> origin/main
     if (dac_sync_enable_channel(&PVD_DAC, PVD_DAC_CHANNEL) != 0) {
         warning("pvd_dac: failed to enable channel %u\n", PVD_DAC_CHANNEL);
         return ERROR_NOT_READY;
