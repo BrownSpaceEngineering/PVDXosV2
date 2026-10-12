@@ -42,36 +42,36 @@ static void PVDX_init(void) {
 // runs instead of normal bring-up. Watch RTT ch.1 to know the current state, or set a
 // breakpoint and single-step. Expected at the gauge pin: HIGH ~= 3.3 V, LOW ~= 0 V.
 // Remove the call in main() to return to normal boot.
-static void pin_toggle_test(void) {
-    gpio_set_pin_function(PIN_SDA, GPIO_PIN_FUNCTION_OFF);
-    gpio_set_pin_function(PIN_SCL, GPIO_PIN_FUNCTION_OFF);
-    gpio_set_pin_direction(PIN_SDA, GPIO_DIRECTION_OUT);
-    gpio_set_pin_direction(PIN_SCL, GPIO_DIRECTION_OUT);
+// static void pin_toggle_test(void) {
+//     gpio_set_pin_function(PIN_SDA, GPIO_PIN_FUNCTION_OFF);
+//     gpio_set_pin_function(PIN_SCL, GPIO_PIN_FUNCTION_OFF);
+//     gpio_set_pin_direction(PIN_SDA, GPIO_DIRECTION_OUT);
+//     gpio_set_pin_direction(PIN_SCL, GPIO_DIRECTION_OUT);
 
-    info("[PIN TEST] Driving PD09(SDA)/PD08(SCL) as GPIO. Probe at the gauge's SDA/SCL pins.\n");
+//     info("[PIN TEST] Driving PD09(SDA)/PD08(SCL) as GPIO. Probe at the gauge's SDA/SCL pins.\n");
 
-    while (true) {
-        gpio_set_pin_level(PIN_SDA, true);
-        gpio_set_pin_level(PIN_SCL, false);
-        info("[PIN TEST] PD09(SDA)=HIGH  PD08(SCL)=LOW\n");
-        delay_ms(3000);
+//     while (true) {
+//         gpio_set_pin_level(PIN_SDA, true);
+//         gpio_set_pin_level(PIN_SCL, false);
+//         info("[PIN TEST] PD09(SDA)=HIGH  PD08(SCL)=LOW\n");
+//         delay_ms(3000);
 
-        gpio_set_pin_level(PIN_SDA, false);
-        gpio_set_pin_level(PIN_SCL, true);
-        info("[PIN TEST] PD09(SDA)=LOW   PD08(SCL)=HIGH\n");
-        delay_ms(3000);
+//         gpio_set_pin_level(PIN_SDA, false);
+//         gpio_set_pin_level(PIN_SCL, true);
+//         info("[PIN TEST] PD09(SDA)=LOW   PD08(SCL)=HIGH\n");
+//         delay_ms(3000);
 
-        gpio_set_pin_level(PIN_SDA, true);
-        gpio_set_pin_level(PIN_SCL, true);
-        info("[PIN TEST] PD09(SDA)=HIGH  PD08(SCL)=HIGH\n");
-        delay_ms(3000);
+//         gpio_set_pin_level(PIN_SDA, true);
+//         gpio_set_pin_level(PIN_SCL, true);
+//         info("[PIN TEST] PD09(SDA)=HIGH  PD08(SCL)=HIGH\n");
+//         delay_ms(3000);
 
-        gpio_set_pin_level(PIN_SDA, false);
-        gpio_set_pin_level(PIN_SCL, false);
-        info("[PIN TEST] PD09(SDA)=LOW   PD08(SCL)=LOW\n");
-        delay_ms(3000);
-    }
-}
+//         gpio_set_pin_level(PIN_SDA, false);
+//         gpio_set_pin_level(PIN_SCL, false);
+//         info("[PIN TEST] PD09(SDA)=LOW   PD08(SCL)=LOW\n");
+//         delay_ms(3000);
+//     }
+// }
 
 int main(void) {
     /* ---------- HARDWARE & LOGGING INITIALIZATION ---------- */
@@ -88,7 +88,7 @@ int main(void) {
     info("[+] Built from commit: %s\n", GIT_COMMIT_HASH);
 
     // Pin continuity probe (loops forever). Remove this call to resume normal boot.
-    pin_toggle_test();
+    // pin_toggle_test();
 
 #ifdef UNITTEST
     // Hardware-in-the-loop tests; then idle (skip the normal telemetry loop).
@@ -100,30 +100,29 @@ int main(void) {
 
     /* ---------- DRIVER BRING-UP ---------- */
 
-    fg_i2c_scan();
+    // fg_i2c_scan();
 
-    status_t fg_status = init_fuel_gauges();
-    if (fg_status != SUCCESS) {
-        warning("[!] init_fuel_gauges() failed (status=%d)\n", fg_status);
-    } else {
-        info("[+] Fuel gauges initialized\n");
-    }
+    // status_t fg_status = init_fuel_gauges();
+    // if (fg_status != SUCCESS) {
+    //     warning("[!] init_fuel_gauges() failed (status=%d)\n", fg_status);
+    // } else {
+    //     info("[+] Fuel gauges initialized\n");
+    // }
 
-    status_t th_status = init_thermistors();
-    if (th_status != SUCCESS) {
-        warning("[!] init_thermistors() failed (status=%d)\n", th_status);
-    } else {
-        info("[+] Thermistors initialized\n");
-    }
+    // status_t th_status = init_thermistors();
+    // if (th_status != SUCCESS) {
+    //     warning("[!] init_thermistors() failed (status=%d)\n", th_status);
+    // } else {
+    //     info("[+] Thermistors initialized\n");
+    // }
 
-    status_t phd_status = init_photodiodes();
-    if (phd_status != SUCCESS) {
-        warning("[!] init_photodiodes() failed (status=%d)\n", phd_status);
-    } else {
-        info("[+] Photodiodes initialized\n");
-    }
+    // status_t phd_status = init_photodiodes();
+    // if (phd_status != SUCCESS) {
+    //     warning("[!] init_photodiodes() failed (status=%d)\n", phd_status);
+    // } else {
+    //     info("[+] Photodiodes initialized\n");
+    // }
 
-    // Magnetorquers are brought up but left stopped - never fire actuators uncommanded.
     status_t mtq_status = init_magnetorquers();
     if (mtq_status != SUCCESS) {
         warning("[!] init_magnetorquers() failed (status=%d)\n", mtq_status);
@@ -131,44 +130,27 @@ int main(void) {
         info("[+] Magnetorquers initialized (stopped)\n");
     }
 
-    /* ---------- READ LOOP ---------- */
+    /* ---------- MAGNETORQUER SWEEP LOOP ---------- */
+
+    // Sweep the X magnetorquer duty through a smooth triangle: 0 -> +1 -> 0 -> -1 -> 0,
+    // stepping in 0.1 increments with a short dwell at each step. Duty is tracked in
+    // integer tenths to avoid float-equality comparisons in the loop conditions.
+    static const int sweep_waypoints[] = {0, 10, 0, -10, 0}; // duty * 10
+    const int num_waypoints = (int)(sizeof(sweep_waypoints) / sizeof(sweep_waypoints[0]));
+    const uint16_t step_dwell_ms = 200; // time spent at each 0.1 step
 
     while (true) {
-        fg_reading_t packs[FG_NUM_PACKS];
-        fg_read_all(packs);
+        for (int w = 0; w < num_waypoints - 1; w++) {
+            int from = sweep_waypoints[w];
+            int to = sweep_waypoints[w + 1];
+            int dir = (to > from) ? 1 : -1;
 
-        for (int i = 0; i < FG_NUM_PACKS; i++) {
-            // Values are floats; print the truncated integer part to avoid relying on
-            // %f support in the embedded printf.
-            info("pack %d: SOC=%ld%% V=%ld mV I=%ld mA T=%ld C\n", i + 1,
-                 (long)packs[i].soc_pct, (long)(packs[i].pack_voltage * 1000.0f),
-                 (long)(packs[i].current_a * 1000.0f), (long)packs[i].temp_c);
+            // Walk from the current waypoint toward the next, hitting each 0.1 step.
+            for (int tenths = from; tenths != to; tenths += dir) {
+                mtq_set(MTQ_X, (float)tenths / 10.0f);
+                info("mtq X duty = %ld/10\n", (long)tenths);
+                delay_ms(step_dwell_ms);
+            }
         }
-
-        if (fg_alrt_asserted()) {
-            warning("[!] fuel-gauge ALRT asserted - scanning\n");
-            fg_scan_alerts();
-        }
-
-        // Thermistors + closed-loop heater control.
-        float temps[THERM_COUNT];
-        therm_read_all(temps);
-        for (int i = 0; i < THERM_COUNT; i++) {
-            info("therm %d: %ld C\n", i, (long)temps[i]);
-        }
-        heater_control_update();
-        info("heaters: 1=%s 2=%s\n", heater_is_on(0) ? "ON" : "off", heater_is_on(1) ? "ON" : "off");
-
-        // Photodiodes (coarse sun sensing).
-        for (int i = 0; i < PHD_COUNT; i++) {
-            float v = 0.0f;
-            phd_read_voltage(i, &v);
-            info("phd %2d: %ld mV\n", i, (long)(v * 1000.0f));
-        }
-
-        // Magnetorquers: left stopped. Example (commented) command:
-        //   mtq_set(MTQ_Z, 0.5f); // +50%% dipole on Z
-
-        delay_ms(1000);
     }
 }
