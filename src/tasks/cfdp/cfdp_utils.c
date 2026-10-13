@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "cfdp_task.h"
+#include "mutexes.h"
 #include "radio/radio_task.h"
 
 uint32_t next_seq_num(void) {
@@ -224,6 +225,16 @@ int cfdp_release_buff(cfdp_buff_header_t *buff) {
 
     buff->ref_count--;
     unlock_mutex(buff->semaphore);
+    return 0;
+}
+
+int cfdp_add_buff_reference(cfdp_buff_header_t *buff) {
+    lock_mutex(buff->semaphore);
+
+    buff->ref_count++;
+
+    unlock_mutex(buff->semaphore);
+
     return 0;
 }
 

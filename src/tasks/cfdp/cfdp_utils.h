@@ -57,6 +57,8 @@ cfdp_transaction_t *cfdp_find_transaction(cfdp_transaction_store_t *txn_store, u
 cfdp_buff_header_t *cfdp_alloc_small_buff();
 cfdp_buff_header_t *cfdp_alloc_large_buff();
 int cfdp_free_buff(cfdp_buff_header_t *buff);
+int cfdp_release_buff(cfdp_buff_header_t *buff);
+int cfdp_add_buff_reference(cfdp_buff_header_t *buff);
 
 uint32_t cfdp_calculate_modular_checksum(cfdp_transaction_t *transaction);
 

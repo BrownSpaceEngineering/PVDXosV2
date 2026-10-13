@@ -4,6 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "cfdp_task.h"
+
 typedef enum uplink_cmd_type {
     ENABLE_DEVICE = 0,
     DISABLE_DEVICE,
@@ -37,7 +39,7 @@ typedef struct uplink_packet {
     uplink_cmd_t cmds[];
 } uplink_packet_t;
 
-int parse_uplink_packet(const uint8_t *raw, uplink_packet_t *out, size_t n);
-int parse_uplink_cmd(const uint8_t *raw, uplink_cmd_t *out, size_t n);
+int parse_uplink_packet(cfdp_buff_header_t *buff, size_t n);
+int parse_uplink_cmd(cfdp_buff_header_t *buff, size_t offset, size_t n);
 
 #endif // UPLINK_COMMANDS_H
