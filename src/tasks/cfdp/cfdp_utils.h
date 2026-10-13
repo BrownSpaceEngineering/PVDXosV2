@@ -5,6 +5,9 @@
 
 #define CFDP_SAVED_TXNS 8
 
+// SPP APID for CFDP packets - TODO: replace with actual SPP APID
+#define CFDP_APID 0x02
+
 #ifdef UNITTEST
 extern uint8_t test_mem[512];
 #endif

@@ -9,8 +9,7 @@
  */
 
 #include "shell_helpers.h"
-
-#include "command_dispatcher/command_dispatcher_task.h"
+#include "cmd_dispatcher.h"
 
 /* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
 
@@ -28,7 +27,9 @@ size_t get_line_from_terminal(uint8_t *p_linebuffer) {
 
     while (true) {
         // This is really the loop that we expect the program to spend most of its time in, so pet the watchdog here
-        enqueue_command(&cmd_checkin);
+        while (enqueue_command(&cmd_checkin) != SUCCESS) {
+            warning("shell: Failed to enqueue watchdog checkin command\n");
+        }
         debug("shell: Enqueued watchdog checkin command\n");
 
         int character_read = SEGGER_RTT_GetKey();

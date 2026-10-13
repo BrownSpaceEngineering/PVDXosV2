@@ -9,9 +9,9 @@
  * Defne Doken, Aidan Wang, Jai Garg, Alex Khosrowshahi, Zach Mahan
  */
 
-#include "command_dispatcher_task.h"
 #include "task_manager_task.h"
 #include "watchdog_task.h"
+#include "cmd_dispatcher.h"
 
 task_manager_task_memory_t task_manager_mem;
 SemaphoreHandle_t task_list_mutex = NULL;
@@ -53,7 +53,9 @@ void main_task_manager(void *pvParameters) {
 
     command_t *const p_initialise_all_tasks = &initialise_all_tasks;
 
-    enqueue_command(p_initialise_all_tasks);
+    while (enqueue_command(p_initialise_all_tasks) != SUCCESS) {
+        warning("task_manager: Failed to task initialise command\n");
+    }
 
     while (true) {
         debug("\n---------- Task Manager Task Loop ----------\n");
@@ -69,7 +71,9 @@ void main_task_manager(void *pvParameters) {
 
         // Check in with the watchdog task
         if (should_checkin(current_task)) {
-            enqueue_command(&cmd_checkin);
+            while (enqueue_command(&cmd_checkin) != SUCCESS) {
+                warning("task_manager: Failed to enqueue watchdog checkin command\n");
+            }
             debug("task_manager: Enqueued watchdog checkin command\n");
         }
     }

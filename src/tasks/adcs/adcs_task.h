@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #include "atmel_start.h"
-#include "drivers/gyro/SCH1.h"
+#include "drivers/gyro/gyro_driver.h"
 #include "drivers/magnetometer/magnetometer_driver.h"
 #include "drivers/magnetorquer/magnetorquer_driver.h"
 #include "drivers/photodiode/photodiode_driver.h"
