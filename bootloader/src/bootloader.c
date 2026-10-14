@@ -13,6 +13,15 @@
 int main(void);
 void go_to_app(void);
 
+bool mram_checksum_matches(const uint8_t *os_address) {
+    const uint8_t *checksum = os_address + MRAM_OS_SIZE - sizeof(uint32_t);
+    uint32_t stored_checksum = ((uint32_t)checksum[0] << 0)
+                             | ((uint32_t)checksum[1] << 8)
+                             | ((uint32_t)checksum[2] << 16)
+                             | ((uint32_t)checksum[3] << 24);
+    return crc32(os_address, MRAM_OS_SIZE - sizeof(uint32_t)) == stored_checksum;
+}
+
 int main(void) {
     watchdog_setup();
 
@@ -32,14 +41,18 @@ int main(void) {
 #endif
 
     if (mram_ok) {
-        mram_read_bytes(MRAM_OS_BASE_ADDRESS, (uint8_t *)os_dst, MRAM_OS_SIZE);
-        do {
-            /** TODO: determine what should happen if crc32 doesn't match
-             * when reading from MRAM
-             * ik this looks very scary rn; it will be fixed trust
-             */
-        } while (crc32((uint8_t *)os_dst, MRAM_OS_SIZE - sizeof(uint32_t)) !=
-             *(uint32_t *)(os_dst + MRAM_OS_SIZE - sizeof(uint32_t)));
+        mram_read_bytes(MRAM_OS_BASE_ADDRESS + 0 * MRAM_OS_SIZE, (uint8_t *)os_dst, MRAM_OS_SIZE);
+        if (mram_checksum_matches((uint8_t *)os_dst)) {
+            go_to_app();
+        }
+        mram_read_bytes(MRAM_OS_BASE_ADDRESS + 1 * MRAM_OS_SIZE, (uint8_t *)os_dst, MRAM_OS_SIZE);
+        if (mram_checksum_matches((uint8_t *)os_dst)) {
+            go_to_app();
+        }
+        mram_read_bytes(MRAM_OS_BASE_ADDRESS + 2 * MRAM_OS_SIZE, (uint8_t *)os_dst, MRAM_OS_SIZE);
+        if (mram_checksum_matches((uint8_t *) os_dst)) {
+            go_to_app();
+        }
     } else {
         char *os_flash_src = (char *)FLASH_OS_BASE_ADDRESS;
         for (long i = 0; i < MRAM_OS_SIZE; i++) {
