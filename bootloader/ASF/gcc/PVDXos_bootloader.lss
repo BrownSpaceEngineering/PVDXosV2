@@ -1,0 +1,1237 @@
+
+PVDXos_bootloader.elf:     file format elf32-littlearm
+
+Sections:
+Idx Name          Size      VMA       LMA       File off  Algn
+  0 .text         00000910  00015000  00015000  00001000  2**4
+                  CONTENTS, ALLOC, LOAD, READONLY, CODE
+  1 .relocate     00000000  2003b000  2003b000  00001910  2**0
+                  CONTENTS
+  2 .bkupram      00000000  47000000  47000000  00001910  2**0
+                  CONTENTS
+  3 .qspi         00000000  04000000  04000000  00001910  2**0
+                  CONTENTS
+  4 .bss          00000538  2003b000  2003b000  00002000  2**2
+                  ALLOC
+  5 .stack        00002000  2003b538  2003b538  00002000  2**0
+                  ALLOC
+  6 .ARM.attributes 0000002e  00000000  00000000  00001910  2**0
+                  CONTENTS, READONLY
+  7 .comment      00000045  00000000  00000000  0000193e  2**0
+                  CONTENTS, READONLY
+  8 .debug_info   0000e553  00000000  00000000  00001983  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+  9 .debug_abbrev 00002181  00000000  00000000  0000fed6  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+ 10 .debug_loclists 00002da8  00000000  00000000  00012057  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+ 11 .debug_aranges 00000568  00000000  00000000  00014dff  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+ 12 .debug_rnglists 00000629  00000000  00000000  00015367  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+ 13 .debug_macro  0002e7cc  00000000  00000000  00015990  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+ 14 .debug_line   00009da9  00000000  00000000  0004415c  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+ 15 .debug_str    000fc09a  00000000  00000000  0004df05  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+ 16 .debug_frame  00000ea4  00000000  00000000  00149fa0  2**2
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+
+Disassembly of section .text:
+
+00015000 <exception_table>:
+   15000:	38 d5 03 20 55 56 01 00 51 56 01 00 51 56 01 00     8.. UV..QV..QV..
+   15010:	51 56 01 00 51 56 01 00 51 56 01 00 00 00 00 00     QV..QV..QV......
+	...
+   1502c:	e1 54 01 00 51 56 01 00 00 00 00 00 11 55 01 00     .T..QV.......U..
+   1503c:	75 55 01 00 51 56 01 00 51 56 01 00 51 56 01 00     uU..QV..QV..QV..
+   1504c:	51 56 01 00 51 56 01 00 51 56 01 00 51 56 01 00     QV..QV..QV..QV..
+   1505c:	51 56 01 00 51 56 01 00 51 56 01 00 51 56 01 00     QV..QV..QV..QV..
+   1506c:	dd 55 01 00 51 56 01 00 51 56 01 00 51 56 01 00     .U..QV..QV..QV..
+   1507c:	51 56 01 00 51 56 01 00 51 56 01 00 51 56 01 00     QV..QV..QV..QV..
+   1508c:	51 56 01 00 51 56 01 00 51 56 01 00 51 56 01 00     QV..QV..QV..QV..
+   1509c:	51 56 01 00 51 56 01 00 51 56 01 00 51 56 01 00     QV..QV..QV..QV..
+   150ac:	51 56 01 00 51 56 01 00 51 56 01 00 51 56 01 00     QV..QV..QV..QV..
+   150bc:	51 56 01 00 51 56 01 00 51 56 01 00 51 56 01 00     QV..QV..QV..QV..
+   150cc:	51 56 01 00 51 56 01 00 51 56 01 00 51 56 01 00     QV..QV..QV..QV..
+   150dc:	51 56 01 00 51 56 01 00 51 56 01 00 00 00 00 00     QV..QV..QV......
+	...
+   150f4:	a5 55 01 00 51 56 01 00 51 56 01 00 51 56 01 00     .U..QV..QV..QV..
+   15104:	51 56 01 00 51 56 01 00 51 56 01 00 51 56 01 00     QV..QV..QV..QV..
+   15114:	51 56 01 00 51 56 01 00 51 56 01 00 51 56 01 00     QV..QV..QV..QV..
+   15124:	51 56 01 00 51 56 01 00 51 56 01 00 51 56 01 00     QV..QV..QV..QV..
+   15134:	51 56 01 00 51 56 01 00 51 56 01 00 51 56 01 00     QV..QV..QV..QV..
+   15144:	51 56 01 00 51 56 01 00 51 56 01 00 51 56 01 00     QV..QV..QV..QV..
+   15154:	51 56 01 00 51 56 01 00 51 56 01 00 51 56 01 00     QV..QV..QV..QV..
+   15164:	51 56 01 00 51 56 01 00 51 56 01 00 51 56 01 00     QV..QV..QV..QV..
+   15174:	51 56 01 00 00 00 00 00 00 00 00 00 51 56 01 00     QV..........QV..
+   15184:	51 56 01 00 51 56 01 00 51 56 01 00 00 00 00 00     QV..QV..QV......
+   15194:	31 56 01 00 51 56 01 00 51 56 01 00 51 56 01 00     1V..QV..QV..QV..
+   151a4:	51 56 01 00 51 56 01 00 51 56 01 00 41 56 01 00     QV..QV..QV..AV..
+   151b4:	51 56 01 00 51 56 01 00 51 56 01 00 51 56 01 00     QV..QV..QV..QV..
+   151c4:	51 56 01 00 51 56 01 00 51 56 01 00 51 56 01 00     QV..QV..QV..QV..
+   151d4:	51 56 01 00 51 56 01 00 51 56 01 00 51 56 01 00     QV..QV..QV..QV..
+   151e4:	51 56 01 00 51 56 01 00 51 56 01 00 51 56 01 00     QV..QV..QV..QV..
+   151f4:	51 56 01 00 51 56 01 00 51 56 01 00 51 56 01 00     QV..QV..QV..QV..
+   15204:	51 56 01 00 51 56 01 00 51 56 01 00 51 56 01 00     QV..QV..QV..QV..
+   15214:	51 56 01 00 51 56 01 00 51 56 01 00 51 56 01 00     QV..QV..QV..QV..
+   15224:	51 56 01 00 51 56 01 00 51 56 01 00 51 56 01 00     QV..QV..QV..QV..
+   15234:	51 56 01 00 51 56 01 00 51 56 01 00 51 56 01 00     QV..QV..QV..QV..
+   15244:	51 56 01 00 51 56 01 00 51 56 01 00 51 56 01 00     QV..QV..QV..QV..
+   15254:	51 56 01 00 51 56 01 00 51 56 01 00 51 56 01 00     QV..QV..QV..QV..
+
+00015264 <deregister_tm_clones>:
+   15264:	4803      	ldr	r0, [pc, #12]	@ (15274 <deregister_tm_clones+0x10>)
+   15266:	4b04      	ldr	r3, [pc, #16]	@ (15278 <deregister_tm_clones+0x14>)
+   15268:	4283      	cmp	r3, r0
+   1526a:	d002      	beq.n	15272 <deregister_tm_clones+0xe>
+   1526c:	4b03      	ldr	r3, [pc, #12]	@ (1527c <deregister_tm_clones+0x18>)
+   1526e:	b103      	cbz	r3, 15272 <deregister_tm_clones+0xe>
+   15270:	4718      	bx	r3
+   15272:	4770      	bx	lr
+   15274:	00015910 	.word	0x00015910
+   15278:	00015910 	.word	0x00015910
+   1527c:	00000000 	.word	0x00000000
+
+00015280 <register_tm_clones>:
+   15280:	4805      	ldr	r0, [pc, #20]	@ (15298 <register_tm_clones+0x18>)
+   15282:	4b06      	ldr	r3, [pc, #24]	@ (1529c <register_tm_clones+0x1c>)
+   15284:	1a1b      	subs	r3, r3, r0
+   15286:	0fd9      	lsrs	r1, r3, #31
+   15288:	eb01 01a3 	add.w	r1, r1, r3, asr #2
+   1528c:	1049      	asrs	r1, r1, #1
+   1528e:	d002      	beq.n	15296 <register_tm_clones+0x16>
+   15290:	4b03      	ldr	r3, [pc, #12]	@ (152a0 <register_tm_clones+0x20>)
+   15292:	b103      	cbz	r3, 15296 <register_tm_clones+0x16>
+   15294:	4718      	bx	r3
+   15296:	4770      	bx	lr
+   15298:	00015910 	.word	0x00015910
+   1529c:	00015910 	.word	0x00015910
+   152a0:	00000000 	.word	0x00000000
+
+000152a4 <__do_global_dtors_aux>:
+   152a4:	b510      	push	{r4, lr}
+   152a6:	4c06      	ldr	r4, [pc, #24]	@ (152c0 <__do_global_dtors_aux+0x1c>)
+   152a8:	7823      	ldrb	r3, [r4, #0]
+   152aa:	b943      	cbnz	r3, 152be <__do_global_dtors_aux+0x1a>
+   152ac:	f7ff ffda 	bl	15264 <deregister_tm_clones>
+   152b0:	4b04      	ldr	r3, [pc, #16]	@ (152c4 <__do_global_dtors_aux+0x20>)
+   152b2:	b113      	cbz	r3, 152ba <__do_global_dtors_aux+0x16>
+   152b4:	4804      	ldr	r0, [pc, #16]	@ (152c8 <__do_global_dtors_aux+0x24>)
+   152b6:	f3af 8000 	nop.w
+   152ba:	2301      	movs	r3, #1
+   152bc:	7023      	strb	r3, [r4, #0]
+   152be:	bd10      	pop	{r4, pc}
+   152c0:	2003b000 	.word	0x2003b000
+   152c4:	00000000 	.word	0x00000000
+   152c8:	00015910 	.word	0x00015910
+
+000152cc <frame_dummy>:
+   152cc:	b508      	push	{r3, lr}
+   152ce:	4b05      	ldr	r3, [pc, #20]	@ (152e4 <frame_dummy+0x18>)
+   152d0:	b11b      	cbz	r3, 152da <frame_dummy+0xe>
+   152d2:	4905      	ldr	r1, [pc, #20]	@ (152e8 <frame_dummy+0x1c>)
+   152d4:	4805      	ldr	r0, [pc, #20]	@ (152ec <frame_dummy+0x20>)
+   152d6:	f3af 8000 	nop.w
+   152da:	e8bd 4008 	ldmia.w	sp!, {r3, lr}
+   152de:	f7ff bfcf 	b.w	15280 <register_tm_clones>
+   152e2:	bf00      	nop
+   152e4:	00000000 	.word	0x00000000
+   152e8:	2003b004 	.word	0x2003b004
+   152ec:	00015910 	.word	0x00015910
+
+000152f0 <vApplicationStackOverflowHook>:
+// satisfy the link. (TaskHandle_t is a void*; declared loosely to avoid pulling in
+// FreeRTOS headers.)
+void vApplicationStackOverflowHook(void *xTask, signed char *pcTaskName) {
+    (void)xTask;
+    (void)pcTaskName;
+    while (1);
+   152f0:	e7fe      	b.n	152f0 <vApplicationStackOverflowHook>
+
+000152f2 <go_to_app>:
+}
+
+void go_to_app(void) {
+    // Read app's vector table (first value is SP, second value is PC)
+    long *vector_table = (long *)RAM_OS_BASE_ADDRESS;
+    long desired_sp = vector_table[0];
+   152f2:	f04f 5200 	mov.w	r2, #536870912	@ 0x20000000
+    long desired_pc = vector_table[1];
+   152f6:	e9d2 1300 	ldrd	r1, r3, [r2]
+
+    // Set the least significant bit of the PC to indicate that the reset vector is in Thumb mode
+    desired_pc |= 0x1;
+
+    // Tell the SAMD51 where the app's vector table is
+    *((long *)SCB_VTOR) = (long)vector_table;
+   152fa:	f04f 20e0 	mov.w	r0, #3758153728	@ 0xe000e000
+    desired_pc |= 0x1;
+   152fe:	f043 0301 	orr.w	r3, r3, #1
+    *((long *)SCB_VTOR) = (long)vector_table;
+   15302:	f8c0 2d08 	str.w	r2, [r0, #3336]	@ 0xd08
+
+    // Set SP to desired_sp and then jump to PC using assembly
+    __asm__ volatile(
+   15306:	468d      	mov	sp, r1
+   15308:	4718      	bx	r3
+        "mov sp, %0\n" // Move the value in desired_sp into SP
+        "bx %1"        // Branch to the address contained in desired_pc
+        :
+        : "r"(desired_sp), "r"(desired_pc) // Arguments to the assembly (accessed as %0 and %1 in the assembly code)
+        :);
+   1530a:	4770      	bx	lr
+
+0001530c <main>:
+int main(void) {
+   1530c:	b508      	push	{r3, lr}
+    uint32_t computed_checksum = crc32(cur_bootloader_start, BOOTLOADER_SIZE - sizeof(uint32_t));
+   1530e:	f642 71fc 	movw	r1, #12284	@ 0x2ffc
+   15312:	4b0b      	ldr	r3, [pc, #44]	@ (15340 <main+0x34>)
+   15314:	f44f 30a8 	mov.w	r0, #86016	@ 0x15000
+   15318:	4798      	blx	r3
+    if (computed_checksum != *test_checksum) {
+   1531a:	f44f 33b8 	mov.w	r3, #94208	@ 0x17000
+   1531e:	f8d3 3ffc 	ldr.w	r3, [r3, #4092]	@ 0xffc
+   15322:	4283      	cmp	r3, r0
+   15324:	d000      	beq.n	15328 <main+0x1c>
+        while (bootloader_index == 7);
+   15326:	e7fe      	b.n	15326 <main+0x1a>
+    watchdog_setup();
+   15328:	4b06      	ldr	r3, [pc, #24]	@ (15344 <main+0x38>)
+   1532a:	4798      	blx	r3
+        os_dst[i] = os_flash_src[i];
+   1532c:	f44f 3200 	mov.w	r2, #131072	@ 0x20000
+   15330:	4b05      	ldr	r3, [pc, #20]	@ (15348 <main+0x3c>)
+   15332:	4611      	mov	r1, r2
+   15334:	f04f 5000 	mov.w	r0, #536870912	@ 0x20000000
+   15338:	4798      	blx	r3
+    go_to_app();
+   1533a:	4b04      	ldr	r3, [pc, #16]	@ (1534c <main+0x40>)
+   1533c:	4798      	blx	r3
+    __builtin_unreachable();
+   1533e:	bf00      	nop
+   15340:	00015351 	.word	0x00015351
+   15344:	00015449 	.word	0x00015449
+   15348:	000158d5 	.word	0x000158d5
+   1534c:	000152f3 	.word	0x000152f3
+
+00015350 <crc32>:
+//     crc32_table_ready = true;
+// }
+
+uint32_t crc32_table[256];
+
+uint32_t crc32(const uint8_t *block, uint32_t size) {
+   15350:	b5f0      	push	{r4, r5, r6, r7, lr}
+   15352:	4d12      	ldr	r5, [pc, #72]	@ (1539c <crc32+0x4c>)
+    for (uint32_t i = 0; i < 256; i++) {
+        uint32_t crc = i;
+        for (int j = 0; j < 8; j++) {
+            uint32_t xor_val;
+            if (crc & 1) {
+                xor_val = 0xEDB88320;
+   15354:	f8df c048 	ldr.w	ip, [pc, #72]	@ 153a0 <crc32+0x50>
+    for (uint32_t i = 0; i < 256; i++) {
+   15358:	2200      	movs	r2, #0
+   1535a:	462f      	mov	r7, r5
+        uint32_t crc = i;
+   1535c:	4613      	mov	r3, r2
+   1535e:	2408      	movs	r4, #8
+                xor_val = 0xEDB88320;
+   15360:	f013 0601 	ands.w	r6, r3, #1
+   15364:	bf18      	it	ne
+   15366:	4666      	movne	r6, ip
+        for (int j = 0; j < 8; j++) {
+   15368:	3c01      	subs	r4, #1
+            } else xor_val = 0;
+            crc = (crc >> 1) ^ xor_val;
+   1536a:	ea86 0353 	eor.w	r3, r6, r3, lsr #1
+        for (int j = 0; j < 8; j++) {
+   1536e:	d1f7      	bne.n	15360 <crc32+0x10>
+    for (uint32_t i = 0; i < 256; i++) {
+   15370:	3201      	adds	r2, #1
+   15372:	f5b2 7f80 	cmp.w	r2, #256	@ 0x100
+        }
+        crc32_table[i] = crc;
+   15376:	f845 3b04 	str.w	r3, [r5], #4
+    for (uint32_t i = 0; i < 256; i++) {
+   1537a:	d1ef      	bne.n	1535c <crc32+0xc>
+   1537c:	4401      	add	r1, r0
+    }
+
+    uint32_t crc = 0xFFFFFFFF;
+   1537e:	f04f 32ff 	mov.w	r2, #4294967295	@ 0xffffffff
+    for (uint32_t i = 0; i < size; i++) {
+   15382:	4288      	cmp	r0, r1
+   15384:	d101      	bne.n	1538a <crc32+0x3a>
+        crc = (crc >> 8) ^ crc32_table[(crc ^ block[i]) & 0xFF];
+    }
+    return crc ^ 0xFFFFFFFF;
+   15386:	43d0      	mvns	r0, r2
+   15388:	bdf0      	pop	{r4, r5, r6, r7, pc}
+        crc = (crc >> 8) ^ crc32_table[(crc ^ block[i]) & 0xFF];
+   1538a:	f810 3b01 	ldrb.w	r3, [r0], #1
+   1538e:	4053      	eors	r3, r2
+   15390:	b2db      	uxtb	r3, r3
+   15392:	f857 3023 	ldr.w	r3, [r7, r3, lsl #2]
+   15396:	ea83 2212 	eor.w	r2, r3, r2, lsr #8
+    for (uint32_t i = 0; i < size; i++) {
+   1539a:	e7f2      	b.n	15382 <crc32+0x32>
+   1539c:	2003b01c 	.word	0x2003b01c
+   153a0:	edb88320 	.word	0xedb88320
+
+000153a4 <watchdog_wait_for_register_sync>:
+    NVIC_EnableIRQ(WDT_IRQn);                           // Enable the WDT_IRQn interrupt
+    NVIC_SetVector(WDT_IRQn, (uint32_t)(&WDT_Handler)); // When the WDT_IRQn interrupt is triggered, call the WDT_Handler function
+}
+
+void watchdog_wait_for_register_sync(hri_wdt_syncbusy_reg_t reg) {
+    while (p_watchdog->SYNCBUSY.reg & reg) {
+   153a4:	4a02      	ldr	r2, [pc, #8]	@ (153b0 <watchdog_wait_for_register_sync+0xc>)
+   153a6:	6893      	ldr	r3, [r2, #8]
+   153a8:	4203      	tst	r3, r0
+   153aa:	d1fc      	bne.n	153a6 <watchdog_wait_for_register_sync+0x2>
+        // Loop until the register is synchronized
+    }
+}
+   153ac:	4770      	bx	lr
+   153ae:	bf00      	nop
+   153b0:	40002000 	.word	0x40002000
+
+000153b4 <watchdog_get_always_on_bit>:
+
+bool watchdog_get_always_on_bit(void) {
+   153b4:	b508      	push	{r3, lr}
+    uint8_t tmp;
+    watchdog_wait_for_register_sync(WDT_SYNCBUSY_ENABLE | WDT_SYNCBUSY_WEN | WDT_SYNCBUSY_ALWAYSON);
+   153b6:	200e      	movs	r0, #14
+   153b8:	4b02      	ldr	r3, [pc, #8]	@ (153c4 <watchdog_get_always_on_bit+0x10>)
+   153ba:	4798      	blx	r3
+    tmp = p_watchdog->CTRLA.reg;
+   153bc:	4b02      	ldr	r3, [pc, #8]	@ (153c8 <watchdog_get_always_on_bit+0x14>)
+   153be:	7818      	ldrb	r0, [r3, #0]
+    tmp = (tmp & WDT_CTRLA_ALWAYSON) >> WDT_CTRLA_ALWAYSON_Pos;
+    return (bool)tmp;
+}
+   153c0:	09c0      	lsrs	r0, r0, #7
+   153c2:	bd08      	pop	{r3, pc}
+   153c4:	000153a5 	.word	0x000153a5
+   153c8:	40002000 	.word	0x40002000
+
+000153cc <watchdog_set_early_warning_offset>:
+
+void watchdog_set_early_warning_offset(hri_wdt_ewctrl_reg_t mask) {
+    WDT_CRITICAL_SECTION_ENTER();
+    p_watchdog->EWCTRL.reg |= WDT_EWCTRL_EWOFFSET(mask);
+   153cc:	4a03      	ldr	r2, [pc, #12]	@ (153dc <watchdog_set_early_warning_offset+0x10>)
+   153ce:	7893      	ldrb	r3, [r2, #2]
+   153d0:	f000 000f 	and.w	r0, r0, #15
+   153d4:	4303      	orrs	r3, r0
+   153d6:	7093      	strb	r3, [r2, #2]
+    WDT_CRITICAL_SECTION_LEAVE();
+}
+   153d8:	4770      	bx	lr
+   153da:	bf00      	nop
+   153dc:	40002000 	.word	0x40002000
+
+000153e0 <watchdog_set_period>:
+}
+
+void watchdog_set_period(hri_wdt_config_reg_t data) {
+    uint8_t tmp;
+    WDT_CRITICAL_SECTION_ENTER();
+    tmp = p_watchdog->CONFIG.reg;
+   153e0:	4a04      	ldr	r2, [pc, #16]	@ (153f4 <watchdog_set_period+0x14>)
+   153e2:	7853      	ldrb	r3, [r2, #1]
+    tmp &= ~WDT_CONFIG_PER_Msk;
+    tmp |= WDT_CONFIG_PER(data);
+   153e4:	f000 000f 	and.w	r0, r0, #15
+    tmp &= ~WDT_CONFIG_PER_Msk;
+   153e8:	f003 03f0 	and.w	r3, r3, #240	@ 0xf0
+    tmp |= WDT_CONFIG_PER(data);
+   153ec:	4303      	orrs	r3, r0
+    p_watchdog->CONFIG.reg = tmp;
+   153ee:	7053      	strb	r3, [r2, #1]
+    WDT_CRITICAL_SECTION_LEAVE();
+}
+   153f0:	4770      	bx	lr
+   153f2:	bf00      	nop
+   153f4:	40002000 	.word	0x40002000
+
+000153f8 <watchdog_enable>:
+    WDT_CRITICAL_SECTION_LEAVE();
+}
+
+int32_t watchdog_enable(void) {
+    WDT_CRITICAL_SECTION_ENTER();
+    p_watchdog->CTRLA.reg |= WDT_CTRLA_ENABLE;
+   153f8:	4a05      	ldr	r2, [pc, #20]	@ (15410 <watchdog_enable+0x18>)
+int32_t watchdog_enable(void) {
+   153fa:	b508      	push	{r3, lr}
+    p_watchdog->CTRLA.reg |= WDT_CTRLA_ENABLE;
+   153fc:	7813      	ldrb	r3, [r2, #0]
+   153fe:	f043 0302 	orr.w	r3, r3, #2
+   15402:	7013      	strb	r3, [r2, #0]
+    watchdog_wait_for_register_sync(WDT_SYNCBUSY_ENABLE | WDT_SYNCBUSY_WEN | WDT_SYNCBUSY_ALWAYSON);
+   15404:	200e      	movs	r0, #14
+   15406:	4b03      	ldr	r3, [pc, #12]	@ (15414 <watchdog_enable+0x1c>)
+   15408:	4798      	blx	r3
+    WDT_CRITICAL_SECTION_LEAVE();
+
+    return ERR_NONE;
+}
+   1540a:	2000      	movs	r0, #0
+   1540c:	bd08      	pop	{r3, pc}
+   1540e:	bf00      	nop
+   15410:	40002000 	.word	0x40002000
+   15414:	000153a5 	.word	0x000153a5
+
+00015418 <watchdog_disable>:
+
+int32_t watchdog_disable(void) {
+   15418:	b508      	push	{r3, lr}
+    if (watchdog_get_always_on_bit()) {
+   1541a:	4b08      	ldr	r3, [pc, #32]	@ (1543c <watchdog_disable+0x24>)
+   1541c:	4798      	blx	r3
+   1541e:	4601      	mov	r1, r0
+   15420:	b948      	cbnz	r0, 15436 <watchdog_disable+0x1e>
+        return ERR_DENIED;
+    } else {
+        WDT_CRITICAL_SECTION_ENTER();
+        p_watchdog->CTRLA.reg &= ~WDT_CTRLA_ENABLE;
+   15422:	4a07      	ldr	r2, [pc, #28]	@ (15440 <watchdog_disable+0x28>)
+   15424:	7813      	ldrb	r3, [r2, #0]
+   15426:	f003 03fd 	and.w	r3, r3, #253	@ 0xfd
+   1542a:	7013      	strb	r3, [r2, #0]
+        watchdog_wait_for_register_sync(WDT_SYNCBUSY_ENABLE | WDT_SYNCBUSY_WEN | WDT_SYNCBUSY_ALWAYSON);
+   1542c:	200e      	movs	r0, #14
+   1542e:	4b05      	ldr	r3, [pc, #20]	@ (15444 <watchdog_disable+0x2c>)
+   15430:	4798      	blx	r3
+        WDT_CRITICAL_SECTION_LEAVE();
+    }
+
+    return ERR_NONE;
+   15432:	4608      	mov	r0, r1
+}
+   15434:	bd08      	pop	{r3, pc}
+        return ERR_DENIED;
+   15436:	f06f 0010 	mvn.w	r0, #16
+   1543a:	e7fb      	b.n	15434 <watchdog_disable+0x1c>
+   1543c:	000153b5 	.word	0x000153b5
+   15440:	40002000 	.word	0x40002000
+   15444:	000153a5 	.word	0x000153a5
+
+00015448 <watchdog_setup>:
+void watchdog_setup(void) {
+   15448:	b508      	push	{r3, lr}
+    watchdog_disable();
+   1544a:	4b0e      	ldr	r3, [pc, #56]	@ (15484 <watchdog_setup+0x3c>)
+   1544c:	4798      	blx	r3
+    watchdog_set_early_warning_offset(watchdog_earlywarning_period); // Early warning will trigger halfway through the watchdog period
+   1544e:	4b0e      	ldr	r3, [pc, #56]	@ (15488 <watchdog_setup+0x40>)
+   15450:	200a      	movs	r0, #10
+   15452:	4798      	blx	r3
+    p_watchdog->INTENSET.reg = WDT_INTENSET_EW;
+   15454:	4b0d      	ldr	r3, [pc, #52]	@ (1548c <watchdog_setup+0x44>)
+   15456:	2201      	movs	r2, #1
+   15458:	715a      	strb	r2, [r3, #5]
+    watchdog_set_period(watchdog_period);                // Set the watchdog period
+   1545a:	200b      	movs	r0, #11
+   1545c:	4b0c      	ldr	r3, [pc, #48]	@ (15490 <watchdog_setup+0x48>)
+   1545e:	4798      	blx	r3
+    watchdog_wait_for_register_sync(WDT_SYNCBUSY_ENABLE | WDT_SYNCBUSY_WEN); // Wait for register synchronization
+   15460:	4b0c      	ldr	r3, [pc, #48]	@ (15494 <watchdog_setup+0x4c>)
+   15462:	2006      	movs	r0, #6
+   15464:	4798      	blx	r3
+    watchdog_enable();
+   15466:	4b0c      	ldr	r3, [pc, #48]	@ (15498 <watchdog_setup+0x50>)
+   15468:	4798      	blx	r3
+ */
+__STATIC_INLINE void __NVIC_SetPriority(IRQn_Type IRQn, uint32_t priority)
+{
+  if ((int32_t)(IRQn) >= 0)
+  {
+    NVIC->IP[((uint32_t)IRQn)]               = (uint8_t)((priority << (8U - __NVIC_PRIO_BITS)) & (uint32_t)0xFFUL);
+   1546a:	4b0c      	ldr	r3, [pc, #48]	@ (1549c <watchdog_setup+0x54>)
+   1546c:	2260      	movs	r2, #96	@ 0x60
+   1546e:	f883 230a 	strb.w	r2, [r3, #778]	@ 0x30a
+    NVIC->ISER[(((uint32_t)IRQn) >> 5UL)] = (uint32_t)(1UL << (((uint32_t)IRQn) & 0x1FUL));
+   15472:	f44f 6280 	mov.w	r2, #1024	@ 0x400
+   15476:	601a      	str	r2, [r3, #0]
+  \param [in]   IRQn      Interrupt number
+  \param [in]   vector    Address of interrupt handler function
+ */
+__STATIC_INLINE void __NVIC_SetVector(IRQn_Type IRQn, uint32_t vector)
+{
+  uint32_t *vectors = (uint32_t *)SCB->VTOR;
+   15478:	f503 6340 	add.w	r3, r3, #3072	@ 0xc00
+  vectors[(int32_t)IRQn + NVIC_USER_IRQ_OFFSET] = vector;
+   1547c:	4a08      	ldr	r2, [pc, #32]	@ (154a0 <watchdog_setup+0x58>)
+  uint32_t *vectors = (uint32_t *)SCB->VTOR;
+   1547e:	689b      	ldr	r3, [r3, #8]
+  vectors[(int32_t)IRQn + NVIC_USER_IRQ_OFFSET] = vector;
+   15480:	669a      	str	r2, [r3, #104]	@ 0x68
+}
+   15482:	bd08      	pop	{r3, pc}
+   15484:	00015419 	.word	0x00015419
+   15488:	000153cd 	.word	0x000153cd
+   1548c:	40002000 	.word	0x40002000
+   15490:	000153e1 	.word	0x000153e1
+   15494:	000153a5 	.word	0x000153a5
+   15498:	000153f9 	.word	0x000153f9
+   1549c:	e000e100 	.word	0xe000e100
+   154a0:	00015651 	.word	0x00015651
+
+000154a4 <vListInsertEnd>:
+}
+/*-----------------------------------------------------------*/
+
+void vListInsertEnd(List_t *const pxList, ListItem_t *const pxNewListItem)
+{
+	ListItem_t *const pxIndex = pxList->pxIndex;
+   154a4:	6843      	ldr	r3, [r0, #4]
+	listTEST_LIST_ITEM_INTEGRITY(pxNewListItem);
+
+	/* Insert a new list item into pxList, but rather than sort the list,
+	makes the new list item the last item to be removed by a call to
+	listGET_OWNER_OF_NEXT_ENTRY(). */
+	pxNewListItem->pxNext     = pxIndex;
+   154a6:	604b      	str	r3, [r1, #4]
+	pxNewListItem->pxPrevious = pxIndex->pxPrevious;
+   154a8:	689a      	ldr	r2, [r3, #8]
+   154aa:	608a      	str	r2, [r1, #8]
+
+	/* Only used during decision coverage testing. */
+	mtCOVERAGE_TEST_DELAY();
+
+	pxIndex->pxPrevious->pxNext = pxNewListItem;
+   154ac:	6051      	str	r1, [r2, #4]
+	pxIndex->pxPrevious         = pxNewListItem;
+   154ae:	6099      	str	r1, [r3, #8]
+
+	/* Remember which list the item is in. */
+	pxNewListItem->pvContainer = (void *)pxList;
+
+	(pxList->uxNumberOfItems)++;
+   154b0:	6803      	ldr	r3, [r0, #0]
+	pxNewListItem->pvContainer = (void *)pxList;
+   154b2:	6108      	str	r0, [r1, #16]
+	(pxList->uxNumberOfItems)++;
+   154b4:	3301      	adds	r3, #1
+   154b6:	6003      	str	r3, [r0, #0]
+}
+   154b8:	4770      	bx	lr
+
+000154ba <uxListRemove>:
+{
+	/* The list item knows which list it is in.  Obtain the list from the list
+	item. */
+	List_t *const pxList = (List_t *)pxItemToRemove->pvContainer;
+
+	pxItemToRemove->pxNext->pxPrevious = pxItemToRemove->pxPrevious;
+   154ba:	e9d0 1201 	ldrd	r1, r2, [r0, #4]
+	List_t *const pxList = (List_t *)pxItemToRemove->pvContainer;
+   154be:	6903      	ldr	r3, [r0, #16]
+	pxItemToRemove->pxNext->pxPrevious = pxItemToRemove->pxPrevious;
+   154c0:	608a      	str	r2, [r1, #8]
+	pxItemToRemove->pxPrevious->pxNext = pxItemToRemove->pxNext;
+   154c2:	6051      	str	r1, [r2, #4]
+
+	/* Only used during decision coverage testing. */
+	mtCOVERAGE_TEST_DELAY();
+
+	/* Make sure the index is left pointing to a valid item. */
+	if (pxList->pxIndex == pxItemToRemove) {
+   154c4:	6859      	ldr	r1, [r3, #4]
+   154c6:	4281      	cmp	r1, r0
+		pxList->pxIndex = pxItemToRemove->pxPrevious;
+   154c8:	bf08      	it	eq
+   154ca:	605a      	streq	r2, [r3, #4]
+	} else {
+		mtCOVERAGE_TEST_MARKER();
+	}
+
+	pxItemToRemove->pvContainer = NULL;
+   154cc:	2200      	movs	r2, #0
+   154ce:	6102      	str	r2, [r0, #16]
+	(pxList->uxNumberOfItems)--;
+   154d0:	681a      	ldr	r2, [r3, #0]
+   154d2:	3a01      	subs	r2, #1
+   154d4:	601a      	str	r2, [r3, #0]
+
+	return pxList->uxNumberOfItems;
+   154d6:	6818      	ldr	r0, [r3, #0]
+}
+   154d8:	4770      	bx	lr
+   154da:	0000      	movs	r0, r0
+   154dc:	0000      	movs	r0, r0
+	...
+
+000154e0 <SVCall_Handler>:
+}
+/*-----------------------------------------------------------*/
+
+void vPortSVCHandler(void)
+{
+	__asm volatile("	ldr	r3, pxCurrentTCBConst2		\n" /* Restore the context. */
+   154e0:	4b07      	ldr	r3, [pc, #28]	@ (15500 <pxCurrentTCBConst2>)
+   154e2:	6819      	ldr	r1, [r3, #0]
+   154e4:	6808      	ldr	r0, [r1, #0]
+   154e6:	e8b0 4ff0 	ldmia.w	r0!, {r4, r5, r6, r7, r8, r9, sl, fp, lr}
+   154ea:	f380 8809 	msr	PSP, r0
+   154ee:	f3bf 8f6f 	isb	sy
+   154f2:	f04f 0000 	mov.w	r0, #0
+   154f6:	f380 8811 	msr	BASEPRI, r0
+   154fa:	4770      	bx	lr
+   154fc:	f3af 8000 	nop.w
+
+00015500 <pxCurrentTCBConst2>:
+   15500:	2003b43c 	.word	0x2003b43c
+	...
+
+00015510 <PendSV_Handler>:
+
+void xPortPendSVHandler(void)
+{
+	/* This is a naked function. */
+
+	__asm volatile(
+   15510:	f3ef 8009 	mrs	r0, PSP
+   15514:	f3bf 8f6f 	isb	sy
+   15518:	4b15      	ldr	r3, [pc, #84]	@ (15570 <pxCurrentTCBConst>)
+   1551a:	681a      	ldr	r2, [r3, #0]
+   1551c:	f01e 0f10 	tst.w	lr, #16
+   15520:	bf08      	it	eq
+   15522:	ed20 8a10 	vstmdbeq	r0!, {s16-s31}
+   15526:	e920 4ff0 	stmdb	r0!, {r4, r5, r6, r7, r8, r9, sl, fp, lr}
+   1552a:	6010      	str	r0, [r2, #0]
+   1552c:	b409      	push	{r0, r3}
+   1552e:	f04f 0080 	mov.w	r0, #128	@ 0x80
+   15532:	f380 8811 	msr	BASEPRI, r0
+   15536:	f3bf 8f4f 	dsb	sy
+   1553a:	f3bf 8f6f 	isb	sy
+   1553e:	f000 f95b 	bl	157f8 <vTaskSwitchContext>
+   15542:	f04f 0000 	mov.w	r0, #0
+   15546:	f380 8811 	msr	BASEPRI, r0
+   1554a:	bc09      	pop	{r0, r3}
+   1554c:	6819      	ldr	r1, [r3, #0]
+   1554e:	6808      	ldr	r0, [r1, #0]
+   15550:	e8b0 4ff0 	ldmia.w	r0!, {r4, r5, r6, r7, r8, r9, sl, fp, lr}
+   15554:	f01e 0f10 	tst.w	lr, #16
+   15558:	bf08      	it	eq
+   1555a:	ecb0 8a10 	vldmiaeq	r0!, {s16-s31}
+   1555e:	f380 8809 	msr	PSP, r0
+   15562:	f3bf 8f6f 	isb	sy
+   15566:	4770      	bx	lr
+   15568:	f3af 8000 	nop.w
+   1556c:	f3af 8000 	nop.w
+
+00015570 <pxCurrentTCBConst>:
+   15570:	2003b43c 	.word	0x2003b43c
+
+00015574 <SysTick_Handler>:
+	    "pxCurrentTCBConst: .word pxCurrentTCB	\n" ::"i"(configMAX_SYSCALL_INTERRUPT_PRIORITY));
+}
+/*-----------------------------------------------------------*/
+
+void xPortSysTickHandler(void)
+{
+   15574:	b508      	push	{r3, lr}
+
+portFORCE_INLINE static void vPortRaiseBASEPRI(void)
+{
+	uint32_t ulNewBASEPRI;
+
+	__asm volatile("	mov %0, %1												\n"
+   15576:	f04f 0380 	mov.w	r3, #128	@ 0x80
+   1557a:	f383 8811 	msr	BASEPRI, r3
+   1557e:	f3bf 8f6f 	isb	sy
+   15582:	f3bf 8f4f 	dsb	sy
+	save and then restore the interrupt mask value as its value is already
+	known. */
+	portDISABLE_INTERRUPTS();
+	{
+		/* Increment the RTOS tick. */
+		if (xTaskIncrementTick() != pdFALSE) {
+   15586:	4b06      	ldr	r3, [pc, #24]	@ (155a0 <SysTick_Handler+0x2c>)
+   15588:	4798      	blx	r3
+   1558a:	b128      	cbz	r0, 15598 <SysTick_Handler+0x24>
+			/* A context switch is required.  Context switching is performed in
+			the PendSV interrupt.  Pend the PendSV interrupt. */
+			portNVIC_INT_CTRL_REG = portNVIC_PENDSVSET_BIT;
+   1558c:	f04f 23e0 	mov.w	r3, #3758153728	@ 0xe000e000
+   15590:	f04f 5280 	mov.w	r2, #268435456	@ 0x10000000
+   15594:	f8c3 2d04 	str.w	r2, [r3, #3332]	@ 0xd04
+}
+/*-----------------------------------------------------------*/
+
+portFORCE_INLINE static void vPortSetBASEPRI(uint32_t ulNewMaskValue)
+{
+	__asm volatile("	msr basepri, %0	" ::"r"(ulNewMaskValue) : "memory");
+   15598:	2300      	movs	r3, #0
+   1559a:	f383 8811 	msr	BASEPRI, r3
+		}
+	}
+	portENABLE_INTERRUPTS();
+}
+   1559e:	bd08      	pop	{r3, pc}
+   155a0:	000156f1 	.word	0x000156f1
+
+000155a4 <RAMECC_Handler>:
+	return tmp;
+}
+
+static inline hri_ramecc_intflag_reg_t hri_ramecc_read_INTFLAG_reg(const void *const hw)
+{
+	return ((Ramecc *)hw)->INTFLAG.reg;
+   155a4:	4a0b      	ldr	r2, [pc, #44]	@ (155d4 <RAMECC_Handler+0x30>)
+   155a6:	7893      	ldrb	r3, [r2, #2]
+
+/**
+ * \internal RAMECC interrupt handler
+ */
+void RAMECC_Handler(void)
+{
+   155a8:	b082      	sub	sp, #8
+   155aa:	b2db      	uxtb	r3, r3
+	struct _ramecc_device *dev      = (struct _ramecc_device *)&device;
+	volatile uint32_t      int_mask = hri_ramecc_read_INTFLAG_reg(RAMECC);
+   155ac:	9301      	str	r3, [sp, #4]
+
+	if (int_mask & RAMECC_INTFLAG_DUALE && dev->ramecc_cb.dual_bit_err) {
+   155ae:	9b01      	ldr	r3, [sp, #4]
+   155b0:	0799      	lsls	r1, r3, #30
+   155b2:	d505      	bpl.n	155c0 <RAMECC_Handler+0x1c>
+   155b4:	4b08      	ldr	r3, [pc, #32]	@ (155d8 <RAMECC_Handler+0x34>)
+   155b6:	681b      	ldr	r3, [r3, #0]
+   155b8:	b113      	cbz	r3, 155c0 <RAMECC_Handler+0x1c>
+	return tmp;
+}
+
+static inline hri_ramecc_erraddr_reg_t hri_ramecc_read_ERRADDR_reg(const void *const hw)
+{
+	return ((Ramecc *)hw)->ERRADDR.reg;
+   155ba:	6850      	ldr	r0, [r2, #4]
+	} else if (int_mask & RAMECC_INTFLAG_SINGLEE && dev->ramecc_cb.single_bit_err) {
+		dev->ramecc_cb.single_bit_err((uint32_t)hri_ramecc_read_ERRADDR_reg(RAMECC));
+	} else {
+		return;
+	}
+}
+   155bc:	b002      	add	sp, #8
+		dev->ramecc_cb.single_bit_err((uint32_t)hri_ramecc_read_ERRADDR_reg(RAMECC));
+   155be:	4718      	bx	r3
+	} else if (int_mask & RAMECC_INTFLAG_SINGLEE && dev->ramecc_cb.single_bit_err) {
+   155c0:	9b01      	ldr	r3, [sp, #4]
+   155c2:	07db      	lsls	r3, r3, #31
+   155c4:	d504      	bpl.n	155d0 <RAMECC_Handler+0x2c>
+   155c6:	4b04      	ldr	r3, [pc, #16]	@ (155d8 <RAMECC_Handler+0x34>)
+   155c8:	685b      	ldr	r3, [r3, #4]
+   155ca:	b10b      	cbz	r3, 155d0 <RAMECC_Handler+0x2c>
+   155cc:	4a01      	ldr	r2, [pc, #4]	@ (155d4 <RAMECC_Handler+0x30>)
+   155ce:	e7f4      	b.n	155ba <RAMECC_Handler+0x16>
+}
+   155d0:	b002      	add	sp, #8
+   155d2:	4770      	bx	lr
+   155d4:	41020000 	.word	0x41020000
+   155d8:	2003b41c 	.word	0x2003b41c
+
+000155dc <RTC_Handler>:
+/**
+ * \brief Rtc interrupt handler
+ */
+void RTC_Handler(void)
+{
+	_rtc_timer_interrupt_handler(_rtc_dev);
+   155dc:	4b07      	ldr	r3, [pc, #28]	@ (155fc <RTC_Handler+0x20>)
+{
+   155de:	b510      	push	{r4, lr}
+	_rtc_timer_interrupt_handler(_rtc_dev);
+   155e0:	681c      	ldr	r4, [r3, #0]
+	uint16_t flag = hri_rtcmode0_read_INTFLAG_reg(dev->hw);
+   155e2:	68e3      	ldr	r3, [r4, #12]
+	return tmp;
+}
+
+static inline hri_rtcmode0_intflag_reg_t hri_rtcmode0_read_INTFLAG_reg(const void *const hw)
+{
+	return ((Rtc *)hw)->MODE0.INTFLAG.reg;
+   155e4:	899b      	ldrh	r3, [r3, #12]
+	if (flag & RTC_MODE0_INTFLAG_CMP0) {
+   155e6:	05db      	lsls	r3, r3, #23
+   155e8:	d507      	bpl.n	155fa <RTC_Handler+0x1e>
+		if (dev->timer_cb.period_expired) {
+   155ea:	6823      	ldr	r3, [r4, #0]
+   155ec:	b10b      	cbz	r3, 155f2 <RTC_Handler+0x16>
+			dev->timer_cb.period_expired(dev);
+   155ee:	4620      	mov	r0, r4
+   155f0:	4798      	blx	r3
+		hri_rtcmode0_clear_interrupt_CMP0_bit(dev->hw);
+   155f2:	68e3      	ldr	r3, [r4, #12]
+	((Rtc *)hw)->MODE0.INTFLAG.reg = RTC_MODE0_INTFLAG_CMP0;
+   155f4:	f44f 7280 	mov.w	r2, #256	@ 0x100
+   155f8:	819a      	strh	r2, [r3, #12]
+}
+   155fa:	bd10      	pop	{r4, pc}
+   155fc:	2003b42c 	.word	0x2003b42c
+
+00015600 <tcc_pwm_interrupt_handler>:
+ * \internal TC interrupt handler for PWM
+ *
+ * \param[in] instance TC instance number
+ */
+static void tcc_pwm_interrupt_handler(struct _pwm_device *device)
+{
+   15600:	b570      	push	{r4, r5, r6, lr}
+	void *const hw = device->hw;
+   15602:	6905      	ldr	r5, [r0, #16]
+	((Tcc *)hw)->INTFLAG.reg = TCC_INTFLAG_MC5;
+}
+
+static inline bool hri_tcc_get_interrupt_OVF_bit(const void *const hw)
+{
+	return (((Tcc *)hw)->INTFLAG.reg & TCC_INTFLAG_OVF) >> TCC_INTFLAG_OVF_Pos;
+   15604:	6aeb      	ldr	r3, [r5, #44]	@ 0x2c
+
+	if (hri_tcc_get_interrupt_OVF_bit(hw)) {
+   15606:	07da      	lsls	r2, r3, #31
+{
+   15608:	4604      	mov	r4, r0
+	if (hri_tcc_get_interrupt_OVF_bit(hw)) {
+   1560a:	d504      	bpl.n	15616 <tcc_pwm_interrupt_handler+0x16>
+}
+
+static inline void hri_tcc_clear_interrupt_OVF_bit(const void *const hw)
+{
+	((Tcc *)hw)->INTFLAG.reg = TCC_INTFLAG_OVF;
+   1560c:	2301      	movs	r3, #1
+   1560e:	62eb      	str	r3, [r5, #44]	@ 0x2c
+		hri_tcc_clear_interrupt_OVF_bit(hw);
+		if (NULL != device->callback.pwm_period_cb) {
+   15610:	6803      	ldr	r3, [r0, #0]
+   15612:	b103      	cbz	r3, 15616 <tcc_pwm_interrupt_handler+0x16>
+			device->callback.pwm_period_cb(device);
+   15614:	4798      	blx	r3
+	((Tcc *)hw)->INTENSET.reg = TCC_INTENSET_ERR;
+}
+
+static inline bool hri_tcc_get_INTEN_ERR_bit(const void *const hw)
+{
+	return (((Tcc *)hw)->INTENSET.reg & TCC_INTENSET_ERR) >> TCC_INTENSET_ERR_Pos;
+   15616:	6aab      	ldr	r3, [r5, #40]	@ 0x28
+		}
+	}
+	if (hri_tcc_get_INTEN_ERR_bit(hw)) {
+   15618:	071b      	lsls	r3, r3, #28
+   1561a:	d507      	bpl.n	1562c <tcc_pwm_interrupt_handler+0x2c>
+	((Tcc *)hw)->INTFLAG.reg = TCC_INTFLAG_ERR;
+   1561c:	2308      	movs	r3, #8
+   1561e:	62eb      	str	r3, [r5, #44]	@ 0x2c
+		hri_tcc_clear_interrupt_ERR_bit(hw);
+		if (NULL != device->callback.pwm_error_cb) {
+   15620:	6863      	ldr	r3, [r4, #4]
+   15622:	b11b      	cbz	r3, 1562c <tcc_pwm_interrupt_handler+0x2c>
+			device->callback.pwm_error_cb(device);
+   15624:	4620      	mov	r0, r4
+		}
+	}
+}
+   15626:	e8bd 4070 	ldmia.w	sp!, {r4, r5, r6, lr}
+			device->callback.pwm_error_cb(device);
+   1562a:	4718      	bx	r3
+}
+   1562c:	bd70      	pop	{r4, r5, r6, pc}
+	...
+
+00015630 <TCC0_0_Handler>:
+/**
+ * \brief TCC interrupt handler
+ */
+void TCC0_0_Handler(void)
+{
+	tcc_pwm_interrupt_handler(_tcc0_dev);
+   15630:	4b01      	ldr	r3, [pc, #4]	@ (15638 <TCC0_0_Handler+0x8>)
+   15632:	6818      	ldr	r0, [r3, #0]
+   15634:	4b01      	ldr	r3, [pc, #4]	@ (1563c <TCC0_0_Handler+0xc>)
+   15636:	4718      	bx	r3
+   15638:	2003b430 	.word	0x2003b430
+   1563c:	00015601 	.word	0x00015601
+
+00015640 <TCC1_0_Handler>:
+/**
+ * \brief TCC interrupt handler
+ */
+void TCC1_0_Handler(void)
+{
+	tcc_pwm_interrupt_handler(_tcc1_dev);
+   15640:	4b01      	ldr	r3, [pc, #4]	@ (15648 <TCC1_0_Handler+0x8>)
+   15642:	6858      	ldr	r0, [r3, #4]
+   15644:	4b01      	ldr	r3, [pc, #4]	@ (1564c <TCC1_0_Handler+0xc>)
+   15646:	4718      	bx	r3
+   15648:	2003b430 	.word	0x2003b430
+   1564c:	00015601 	.word	0x00015601
+
+00015650 <Dummy_Handler>:
+/**
+ * \brief Default interrupt handler for unused IRQs.
+ */
+void Dummy_Handler(void)
+{
+	while (1) {
+   15650:	e7fe      	b.n	15650 <Dummy_Handler>
+	...
+
+00015654 <Reset_Handler>:
+{
+   15654:	b508      	push	{r3, lr}
+	if (pSrc != pDest) {
+   15656:	4a14      	ldr	r2, [pc, #80]	@ (156a8 <Reset_Handler+0x54>)
+   15658:	4b14      	ldr	r3, [pc, #80]	@ (156ac <Reset_Handler+0x58>)
+   1565a:	429a      	cmp	r2, r3
+   1565c:	d002      	beq.n	15664 <Reset_Handler+0x10>
+		for (; pDest < &_erelocate;) {
+   1565e:	4914      	ldr	r1, [pc, #80]	@ (156b0 <Reset_Handler+0x5c>)
+   15660:	428b      	cmp	r3, r1
+   15662:	d318      	bcc.n	15696 <Reset_Handler+0x42>
+	pSrc  = &_etext;
+   15664:	4b13      	ldr	r3, [pc, #76]	@ (156b4 <Reset_Handler+0x60>)
+	for (pDest = &_szero; pDest < &_ezero;) {
+   15666:	4a14      	ldr	r2, [pc, #80]	@ (156b8 <Reset_Handler+0x64>)
+		*pDest++ = 0;
+   15668:	2100      	movs	r1, #0
+	for (pDest = &_szero; pDest < &_ezero;) {
+   1566a:	4293      	cmp	r3, r2
+   1566c:	d318      	bcc.n	156a0 <Reset_Handler+0x4c>
+	SCB->VTOR = ((uint32_t)pSrc & SCB_VTOR_TBLOFF_Msk);
+   1566e:	4a13      	ldr	r2, [pc, #76]	@ (156bc <Reset_Handler+0x68>)
+   15670:	4b13      	ldr	r3, [pc, #76]	@ (156c0 <Reset_Handler+0x6c>)
+   15672:	f022 027f 	bic.w	r2, r2, #127	@ 0x7f
+   15676:	609a      	str	r2, [r3, #8]
+	SCB->CPACR |= (0xFu << 20);
+   15678:	f8d3 2088 	ldr.w	r2, [r3, #136]	@ 0x88
+   1567c:	f442 0270 	orr.w	r2, r2, #15728640	@ 0xf00000
+   15680:	f8c3 2088 	str.w	r2, [r3, #136]	@ 0x88
+  \details Acts as a special kind of Data Memory Barrier.
+           It completes when all explicit memory accesses before this instruction complete.
+ */
+__STATIC_FORCEINLINE void __DSB(void)
+{
+  __ASM volatile ("dsb 0xF":::"memory");
+   15684:	f3bf 8f4f 	dsb	sy
+  __ASM volatile ("isb 0xF":::"memory");
+   15688:	f3bf 8f6f 	isb	sy
+	__libc_init_array();
+   1568c:	4b0d      	ldr	r3, [pc, #52]	@ (156c4 <Reset_Handler+0x70>)
+   1568e:	4798      	blx	r3
+	main();
+   15690:	4b0d      	ldr	r3, [pc, #52]	@ (156c8 <Reset_Handler+0x74>)
+   15692:	4798      	blx	r3
+	while (1)
+   15694:	e7fe      	b.n	15694 <Reset_Handler+0x40>
+			*pDest++ = *pSrc++;
+   15696:	f852 0b04 	ldr.w	r0, [r2], #4
+   1569a:	f843 0b04 	str.w	r0, [r3], #4
+   1569e:	e7df      	b.n	15660 <Reset_Handler+0xc>
+		*pDest++ = 0;
+   156a0:	f843 1b04 	str.w	r1, [r3], #4
+   156a4:	e7e1      	b.n	1566a <Reset_Handler+0x16>
+   156a6:	bf00      	nop
+   156a8:	00015910 	.word	0x00015910
+   156ac:	2003b000 	.word	0x2003b000
+   156b0:	2003b000 	.word	0x2003b000
+   156b4:	2003b000 	.word	0x2003b000
+   156b8:	2003b538 	.word	0x2003b538
+   156bc:	00015000 	.word	0x00015000
+   156c0:	e000ed00 	.word	0xe000ed00
+   156c4:	0001588d 	.word	0x0001588d
+   156c8:	0001530d 	.word	0x0001530d
+
+000156cc <prvResetNextTaskUnblockTime>:
+
+static void prvResetNextTaskUnblockTime(void)
+{
+	TCB_t *pxTCB;
+
+	if (listLIST_IS_EMPTY(pxDelayedTaskList) != pdFALSE) {
+   156cc:	4b07      	ldr	r3, [pc, #28]	@ (156ec <prvResetNextTaskUnblockTime+0x20>)
+   156ce:	f8d3 20d0 	ldr.w	r2, [r3, #208]	@ 0xd0
+   156d2:	6812      	ldr	r2, [r2, #0]
+   156d4:	b922      	cbnz	r2, 156e0 <prvResetNextTaskUnblockTime+0x14>
+		/* The new current delayed list is empty.  Set xNextTaskUnblockTime to
+		the maximum possible value so it is	extremely unlikely that the
+		if( xTickCount >= xNextTaskUnblockTime ) test will pass until
+		there is an item in the delayed list. */
+		xNextTaskUnblockTime = portMAX_DELAY;
+   156d6:	f04f 32ff 	mov.w	r2, #4294967295	@ 0xffffffff
+		/* The new current delayed list is not empty, get the value of
+		the item at the head of the delayed list.  This is the time at
+		which the task at the head of the delayed list should be removed
+		from the Blocked state. */
+		(pxTCB)              = (TCB_t *)listGET_OWNER_OF_HEAD_ENTRY(pxDelayedTaskList);
+		xNextTaskUnblockTime = listGET_LIST_ITEM_VALUE(&((pxTCB)->xStateListItem));
+   156da:	f8c3 20e8 	str.w	r2, [r3, #232]	@ 0xe8
+	}
+}
+   156de:	4770      	bx	lr
+		(pxTCB)              = (TCB_t *)listGET_OWNER_OF_HEAD_ENTRY(pxDelayedTaskList);
+   156e0:	f8d3 20d0 	ldr.w	r2, [r3, #208]	@ 0xd0
+   156e4:	68d2      	ldr	r2, [r2, #12]
+		xNextTaskUnblockTime = listGET_LIST_ITEM_VALUE(&((pxTCB)->xStateListItem));
+   156e6:	68d2      	ldr	r2, [r2, #12]
+   156e8:	6852      	ldr	r2, [r2, #4]
+   156ea:	e7f6      	b.n	156da <prvResetNextTaskUnblockTime+0xe>
+   156ec:	2003b438 	.word	0x2003b438
+
+000156f0 <xTaskIncrementTick>:
+{
+   156f0:	e92d 4ff8 	stmdb	sp!, {r3, r4, r5, r6, r7, r8, r9, sl, fp, lr}
+	if (uxSchedulerSuspended == (UBaseType_t)pdFALSE) {
+   156f4:	4c3b      	ldr	r4, [pc, #236]	@ (157e4 <xTaskIncrementTick+0xf4>)
+   156f6:	f8d4 30f0 	ldr.w	r3, [r4, #240]	@ 0xf0
+   156fa:	2b00      	cmp	r3, #0
+   156fc:	d16b      	bne.n	157d6 <xTaskIncrementTick+0xe6>
+		const TickType_t xConstTickCount = xTickCount + (TickType_t)1;
+   156fe:	f8d4 70e4 	ldr.w	r7, [r4, #228]	@ 0xe4
+   15702:	3701      	adds	r7, #1
+		xTickCount = xConstTickCount;
+   15704:	f8c4 70e4 	str.w	r7, [r4, #228]	@ 0xe4
+		if (xConstTickCount
+   15708:	b9df      	cbnz	r7, 15742 <xTaskIncrementTick+0x52>
+			taskSWITCH_DELAYED_LISTS();
+   1570a:	f8d4 30d0 	ldr.w	r3, [r4, #208]	@ 0xd0
+   1570e:	681b      	ldr	r3, [r3, #0]
+   15710:	b143      	cbz	r3, 15724 <xTaskIncrementTick+0x34>
+	__asm volatile("	mov %0, %1												\n"
+   15712:	f04f 0380 	mov.w	r3, #128	@ 0x80
+   15716:	f383 8811 	msr	BASEPRI, r3
+   1571a:	f3bf 8f6f 	isb	sy
+   1571e:	f3bf 8f4f 	dsb	sy
+   15722:	e7fe      	b.n	15722 <xTaskIncrementTick+0x32>
+   15724:	f8d4 30d0 	ldr.w	r3, [r4, #208]	@ 0xd0
+   15728:	f8d4 20d4 	ldr.w	r2, [r4, #212]	@ 0xd4
+   1572c:	f8c4 20d0 	str.w	r2, [r4, #208]	@ 0xd0
+   15730:	f8c4 30d4 	str.w	r3, [r4, #212]	@ 0xd4
+   15734:	f8d4 30f4 	ldr.w	r3, [r4, #244]	@ 0xf4
+   15738:	3301      	adds	r3, #1
+   1573a:	f8c4 30f4 	str.w	r3, [r4, #244]	@ 0xf4
+   1573e:	4b2a      	ldr	r3, [pc, #168]	@ (157e8 <xTaskIncrementTick+0xf8>)
+   15740:	4798      	blx	r3
+		if (xConstTickCount >= xNextTaskUnblockTime) {
+   15742:	f8d4 30e8 	ldr.w	r3, [r4, #232]	@ 0xe8
+   15746:	42bb      	cmp	r3, r7
+	BaseType_t xSwitchRequired = pdFALSE;
+   15748:	f04f 0500 	mov.w	r5, #0
+		if (xConstTickCount >= xNextTaskUnblockTime) {
+   1574c:	d80d      	bhi.n	1576a <xTaskIncrementTick+0x7a>
+					(void)uxListRemove(&(pxTCB->xStateListItem));
+   1574e:	f8df 909c 	ldr.w	r9, [pc, #156]	@ 157ec <xTaskIncrementTick+0xfc>
+					prvAddTaskToReadyList(pxTCB);
+   15752:	f8df b09c 	ldr.w	fp, [pc, #156]	@ 157f0 <xTaskIncrementTick+0x100>
+   15756:	f8df a09c 	ldr.w	sl, [pc, #156]	@ 157f4 <xTaskIncrementTick+0x104>
+				if (listLIST_IS_EMPTY(pxDelayedTaskList) != pdFALSE) {
+   1575a:	f8d4 30d0 	ldr.w	r3, [r4, #208]	@ 0xd0
+   1575e:	681b      	ldr	r3, [r3, #0]
+   15760:	b9b3      	cbnz	r3, 15790 <xTaskIncrementTick+0xa0>
+					    = portMAX_DELAY; /*lint !e961 MISRA exception as the casts are only redundant for some ports. */
+   15762:	f04f 33ff 	mov.w	r3, #4294967295	@ 0xffffffff
+						xNextTaskUnblockTime = xItemValue;
+   15766:	f8c4 30e8 	str.w	r3, [r4, #232]	@ 0xe8
+			if (listCURRENT_LIST_LENGTH(&(pxReadyTasksLists[pxCurrentTCB->uxPriority])) > (UBaseType_t)1) {
+   1576a:	6863      	ldr	r3, [r4, #4]
+   1576c:	6adb      	ldr	r3, [r3, #44]	@ 0x2c
+   1576e:	2214      	movs	r2, #20
+   15770:	fb02 4303 	mla	r3, r2, r3, r4
+   15774:	689b      	ldr	r3, [r3, #8]
+   15776:	2b01      	cmp	r3, #1
+   15778:	bf94      	ite	ls
+   1577a:	4628      	movls	r0, r5
+   1577c:	f045 0001 	orrhi.w	r0, r5, #1
+		if (xYieldPending != pdFALSE) {
+   15780:	f8d4 30fc 	ldr.w	r3, [r4, #252]	@ 0xfc
+}
+   15784:	2b00      	cmp	r3, #0
+   15786:	bf18      	it	ne
+   15788:	f040 0001 	orrne.w	r0, r0, #1
+   1578c:	e8bd 8ff8 	ldmia.w	sp!, {r3, r4, r5, r6, r7, r8, r9, sl, fp, pc}
+					pxTCB      = (TCB_t *)listGET_OWNER_OF_HEAD_ENTRY(pxDelayedTaskList);
+   15790:	f8d4 30d0 	ldr.w	r3, [r4, #208]	@ 0xd0
+   15794:	68db      	ldr	r3, [r3, #12]
+   15796:	68de      	ldr	r6, [r3, #12]
+					xItemValue = listGET_LIST_ITEM_VALUE(&(pxTCB->xStateListItem));
+   15798:	6873      	ldr	r3, [r6, #4]
+					if (xConstTickCount < xItemValue) {
+   1579a:	429f      	cmp	r7, r3
+   1579c:	d3e3      	bcc.n	15766 <xTaskIncrementTick+0x76>
+					(void)uxListRemove(&(pxTCB->xStateListItem));
+   1579e:	1d30      	adds	r0, r6, #4
+   157a0:	47c8      	blx	r9
+					if (listLIST_ITEM_CONTAINER(&(pxTCB->xEventListItem)) != NULL) {
+   157a2:	6ab3      	ldr	r3, [r6, #40]	@ 0x28
+   157a4:	b113      	cbz	r3, 157ac <xTaskIncrementTick+0xbc>
+						(void)uxListRemove(&(pxTCB->xEventListItem));
+   157a6:	f106 0018 	add.w	r0, r6, #24
+   157aa:	47c8      	blx	r9
+					prvAddTaskToReadyList(pxTCB);
+   157ac:	6af3      	ldr	r3, [r6, #44]	@ 0x2c
+   157ae:	f8d4 20e0 	ldr.w	r2, [r4, #224]	@ 0xe0
+   157b2:	2014      	movs	r0, #20
+   157b4:	4293      	cmp	r3, r2
+   157b6:	fb00 b003 	mla	r0, r0, r3, fp
+   157ba:	f106 0104 	add.w	r1, r6, #4
+   157be:	bf88      	it	hi
+   157c0:	f8c4 30e0 	strhi.w	r3, [r4, #224]	@ 0xe0
+   157c4:	47d0      	blx	sl
+						if (pxTCB->uxPriority >= pxCurrentTCB->uxPriority) {
+   157c6:	6863      	ldr	r3, [r4, #4]
+   157c8:	6af2      	ldr	r2, [r6, #44]	@ 0x2c
+   157ca:	6adb      	ldr	r3, [r3, #44]	@ 0x2c
+   157cc:	429a      	cmp	r2, r3
+   157ce:	bf28      	it	cs
+   157d0:	f045 0501 	orrcs.w	r5, r5, #1
+   157d4:	e7c1      	b.n	1575a <xTaskIncrementTick+0x6a>
+		++uxPendedTicks;
+   157d6:	f8d4 30f8 	ldr.w	r3, [r4, #248]	@ 0xf8
+   157da:	3301      	adds	r3, #1
+   157dc:	f8c4 30f8 	str.w	r3, [r4, #248]	@ 0xf8
+	BaseType_t xSwitchRequired = pdFALSE;
+   157e0:	2000      	movs	r0, #0
+   157e2:	e7cd      	b.n	15780 <xTaskIncrementTick+0x90>
+   157e4:	2003b438 	.word	0x2003b438
+   157e8:	000156cd 	.word	0x000156cd
+   157ec:	000154bb 	.word	0x000154bb
+   157f0:	2003b440 	.word	0x2003b440
+   157f4:	000154a5 	.word	0x000154a5
+
+000157f8 <vTaskSwitchContext>:
+{
+   157f8:	b538      	push	{r3, r4, r5, lr}
+	if (uxSchedulerSuspended != (UBaseType_t)pdFALSE) {
+   157fa:	4c21      	ldr	r4, [pc, #132]	@ (15880 <vTaskSwitchContext+0x88>)
+   157fc:	f8d4 30f0 	ldr.w	r3, [r4, #240]	@ 0xf0
+   15800:	b11b      	cbz	r3, 1580a <vTaskSwitchContext+0x12>
+		xYieldPending = pdTRUE;
+   15802:	2301      	movs	r3, #1
+   15804:	f8c4 30fc 	str.w	r3, [r4, #252]	@ 0xfc
+}
+   15808:	bd38      	pop	{r3, r4, r5, pc}
+		xYieldPending = pdFALSE;
+   1580a:	f8c4 30fc 	str.w	r3, [r4, #252]	@ 0xfc
+		taskCHECK_FOR_STACK_OVERFLOW();
+   1580e:	6863      	ldr	r3, [r4, #4]
+   15810:	6b1b      	ldr	r3, [r3, #48]	@ 0x30
+   15812:	681a      	ldr	r2, [r3, #0]
+   15814:	f1b2 3fa5 	cmp.w	r2, #2779096485	@ 0xa5a5a5a5
+   15818:	d10b      	bne.n	15832 <vTaskSwitchContext+0x3a>
+   1581a:	685a      	ldr	r2, [r3, #4]
+   1581c:	f1b2 3fa5 	cmp.w	r2, #2779096485	@ 0xa5a5a5a5
+   15820:	d107      	bne.n	15832 <vTaskSwitchContext+0x3a>
+   15822:	689a      	ldr	r2, [r3, #8]
+   15824:	f1b2 3fa5 	cmp.w	r2, #2779096485	@ 0xa5a5a5a5
+   15828:	d103      	bne.n	15832 <vTaskSwitchContext+0x3a>
+   1582a:	68db      	ldr	r3, [r3, #12]
+   1582c:	f1b3 3fa5 	cmp.w	r3, #2779096485	@ 0xa5a5a5a5
+   15830:	d004      	beq.n	1583c <vTaskSwitchContext+0x44>
+   15832:	6860      	ldr	r0, [r4, #4]
+   15834:	6861      	ldr	r1, [r4, #4]
+   15836:	4b13      	ldr	r3, [pc, #76]	@ (15884 <vTaskSwitchContext+0x8c>)
+   15838:	3134      	adds	r1, #52	@ 0x34
+   1583a:	4798      	blx	r3
+		taskSELECT_HIGHEST_PRIORITY_TASK();
+   1583c:	f8d4 20e0 	ldr.w	r2, [r4, #224]	@ 0xe0
+   15840:	2514      	movs	r5, #20
+   15842:	fb05 f002 	mul.w	r0, r5, r2
+   15846:	1821      	adds	r1, r4, r0
+   15848:	688b      	ldr	r3, [r1, #8]
+   1584a:	b16b      	cbz	r3, 15868 <vTaskSwitchContext+0x70>
+   1584c:	68cb      	ldr	r3, [r1, #12]
+   1584e:	4d0e      	ldr	r5, [pc, #56]	@ (15888 <vTaskSwitchContext+0x90>)
+   15850:	685b      	ldr	r3, [r3, #4]
+   15852:	60cb      	str	r3, [r1, #12]
+   15854:	4428      	add	r0, r5
+   15856:	4283      	cmp	r3, r0
+   15858:	bf04      	itt	eq
+   1585a:	685b      	ldreq	r3, [r3, #4]
+   1585c:	60cb      	streq	r3, [r1, #12]
+   1585e:	68db      	ldr	r3, [r3, #12]
+   15860:	6063      	str	r3, [r4, #4]
+   15862:	f8c4 20e0 	str.w	r2, [r4, #224]	@ 0xe0
+}
+   15866:	e7cf      	b.n	15808 <vTaskSwitchContext+0x10>
+		taskSELECT_HIGHEST_PRIORITY_TASK();
+   15868:	b942      	cbnz	r2, 1587c <vTaskSwitchContext+0x84>
+   1586a:	f04f 0380 	mov.w	r3, #128	@ 0x80
+   1586e:	f383 8811 	msr	BASEPRI, r3
+   15872:	f3bf 8f6f 	isb	sy
+   15876:	f3bf 8f4f 	dsb	sy
+   1587a:	e7fe      	b.n	1587a <vTaskSwitchContext+0x82>
+   1587c:	3a01      	subs	r2, #1
+   1587e:	e7e0      	b.n	15842 <vTaskSwitchContext+0x4a>
+   15880:	2003b438 	.word	0x2003b438
+   15884:	000152f1 	.word	0x000152f1
+   15888:	2003b448 	.word	0x2003b448
+
+0001588c <__libc_init_array>:
+   1588c:	b570      	push	{r4, r5, r6, lr}
+   1588e:	4b0d      	ldr	r3, [pc, #52]	@ (158c4 <__libc_init_array+0x38>)
+   15890:	4c0d      	ldr	r4, [pc, #52]	@ (158c8 <__libc_init_array+0x3c>)
+   15892:	2600      	movs	r6, #0
+   15894:	1b1d      	subs	r5, r3, r4
+   15896:	ebb6 0fa5 	cmp.w	r6, r5, asr #2
+   1589a:	d109      	bne.n	158b0 <__libc_init_array+0x24>
+   1589c:	f000 f828 	bl	158f0 <_init>
+   158a0:	4c0a      	ldr	r4, [pc, #40]	@ (158cc <__libc_init_array+0x40>)
+   158a2:	4b0b      	ldr	r3, [pc, #44]	@ (158d0 <__libc_init_array+0x44>)
+   158a4:	2600      	movs	r6, #0
+   158a6:	1b1d      	subs	r5, r3, r4
+   158a8:	ebb6 0fa5 	cmp.w	r6, r5, asr #2
+   158ac:	d105      	bne.n	158ba <__libc_init_array+0x2e>
+   158ae:	bd70      	pop	{r4, r5, r6, pc}
+   158b0:	f854 3b04 	ldr.w	r3, [r4], #4
+   158b4:	4798      	blx	r3
+   158b6:	3601      	adds	r6, #1
+   158b8:	e7ed      	b.n	15896 <__libc_init_array+0xa>
+   158ba:	f854 3b04 	ldr.w	r3, [r4], #4
+   158be:	4798      	blx	r3
+   158c0:	3601      	adds	r6, #1
+   158c2:	e7f1      	b.n	158a8 <__libc_init_array+0x1c>
+   158c4:	000158fc 	.word	0x000158fc
+   158c8:	000158fc 	.word	0x000158fc
+   158cc:	000158fc 	.word	0x000158fc
+   158d0:	00015900 	.word	0x00015900
+
+000158d4 <memcpy>:
+   158d4:	440a      	add	r2, r1
+   158d6:	4291      	cmp	r1, r2
+   158d8:	f100 33ff 	add.w	r3, r0, #4294967295	@ 0xffffffff
+   158dc:	d100      	bne.n	158e0 <memcpy+0xc>
+   158de:	4770      	bx	lr
+   158e0:	b510      	push	{r4, lr}
+   158e2:	f811 4b01 	ldrb.w	r4, [r1], #1
+   158e6:	f803 4f01 	strb.w	r4, [r3, #1]!
+   158ea:	4291      	cmp	r1, r2
+   158ec:	d1f9      	bne.n	158e2 <memcpy+0xe>
+   158ee:	bd10      	pop	{r4, pc}
+
+000158f0 <_init>:
+   158f0:	b5f8      	push	{r3, r4, r5, r6, r7, lr}
+   158f2:	bf00      	nop
+   158f4:	bcf8      	pop	{r3, r4, r5, r6, r7}
+   158f6:	bc08      	pop	{r3}
+   158f8:	469e      	mov	lr, r3
+   158fa:	4770      	bx	lr
+
+000158fc <__frame_dummy_init_array_entry>:
+   158fc:	52cd 0001                                   .R..
+
+00015900 <_fini>:
+   15900:	b5f8      	push	{r3, r4, r5, r6, r7, lr}
+   15902:	bf00      	nop
+   15904:	bcf8      	pop	{r3, r4, r5, r6, r7}
+   15906:	bc08      	pop	{r3}
+   15908:	469e      	mov	lr, r3
+   1590a:	4770      	bx	lr
+
+0001590c <__do_global_dtors_aux_fini_array_entry>:
+   1590c:	52a5 0001                                   .R..

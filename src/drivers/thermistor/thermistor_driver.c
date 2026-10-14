@@ -27,15 +27,13 @@ static bool heater_on[THERM_HEATER_COUNT] = {false, false};
 
 // ---------------------- Pure math helpers ----------------------
 
-// Converts a ratiometric ADC code to thermistor resistance (ohms).
+// Converts a ratiometric ADC code to thermistor resistance (ohms) for the as-built
+// 3-element divider (Vrail - R_T1 - tap - R_T2 - NTC - GND):
+//   k = code/FS = Vtap/Vrail = (R_T2 + Rth) / (R_T1 + R_T2 + Rth)
+//   =>  Rth = k*R_T1/(1 - k) - R_T2
 static float therm_resistance_from_code(uint16_t code) {
-#if THERM_DIVIDER_HIGHSIDE
-    // Vnode = Vref * Rfixed/(Rfixed+Rth)  ->  Rth = Rfixed*(FS/code - 1)
-    return THERM_R_FIXED_OHMS * (THERM_ADC_FS / (float)code - 1.0f);
-#else
-    // Vnode = Vref * Rth/(Rfixed+Rth)  ->  Rth = Rfixed*code/(FS - code)
-    return THERM_R_FIXED_OHMS * (float)code / (THERM_ADC_FS - (float)code);
-#endif
+    float k = (float)code / THERM_ADC_FS;
+    return k * THERM_R_T1_OHMS / (1.0f - k) - THERM_R_T2_OHMS;
 }
 
 // Converts thermistor resistance (ohms) to temperature (degrees C) via the Beta model.
@@ -135,39 +133,41 @@ status_t therm_read_all(float temps[THERM_COUNT]) {
 // ---------------------- Heater control ----------------------
 
 void heater_control_update(void) {
-    float temps[THERM_COUNT];
+    // Temporary threshold control directly on the ADC node voltage (the temperature
+    // conversion does not yet match the as-built 3-element divider). On this divider a
+    // HIGHER node voltage means COLDER, so turn the heater ON when voltage > 2.3 V.
+    float volts[THERM_COUNT];
     status_t ok[THERM_COUNT];
     for (uint8_t i = 0; i < THERM_COUNT; i++) {
-        temps[i] = 0.0f;
-        ok[i] = therm_read_celsius(i, &temps[i]);
+        uint16_t code = 0;
+        ok[i] = therm_read_raw(i, &code);
+        volts[i] = (float)code / THERM_ADC_FS * 3.3f; // ratiometric, VREF = VDDANA
     }
 
     for (uint8_t h = 0; h < THERM_HEATER_COUNT; h++) {
         uint8_t a = HEATER_THERMS[h][0];
         uint8_t b = HEATER_THERMS[h][1];
 
-        // Coldest valid thermistor of the pair drives the decision. If a reading failed,
-        // fall back to the other; if both failed, force the heater off (fail safe).
+        // Coldest valid thermistor of the pair drives the decision (coldest = highest
+        // voltage). If a reading failed, fall back to the other; if both failed, force
+        // the heater off (fail safe).
         bool have = false;
         float ctrl = 0.0f;
         if (ok[a] == SUCCESS) {
-            ctrl = temps[a];
+            ctrl = volts[a];
             have = true;
         }
         if (ok[b] == SUCCESS) {
-            ctrl = have ? fminf(ctrl, temps[b]) : temps[b];
+            ctrl = have ? fmaxf(ctrl, volts[b]) : volts[b];
             have = true;
         }
 
         if (!have) {
             warning("heater %u: both thermistors failed - forcing OFF\n", h + 1);
             heater_on[h] = false;
-        } else if (ctrl < HEATER_SETPOINT_C - HEATER_HYST_C) {
-            heater_on[h] = true;
-        } else if (ctrl > HEATER_SETPOINT_C + HEATER_HYST_C) {
-            heater_on[h] = false;
+        } else {
+            heater_on[h] = (ctrl > HEATER_ON_VOLTAGE);
         }
-        // else: within the hysteresis band -> hold previous state.
 
         gpio_set_pin_level(HEATER_PIN[h], heater_on[h] ? HEATER_ON_LEVEL : HEATER_OFF_LEVEL);
     }
