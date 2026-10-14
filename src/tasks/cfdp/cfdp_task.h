@@ -106,7 +106,7 @@ typedef enum cfdp_result {
     CFDP_RESULT_INVALID_ARG
 } cfdp_result_t;
 
-typedef struct {
+typedef struct cfdp_buff_header {
     size_t ref_count;
     StaticSemaphore_t _semaphore_mem;
     SemaphoreHandle_t semaphore;

@@ -16,6 +16,8 @@
 #include <stdint.h>
 #include <task.h>
 
+#include "cfdp_task.h"
+
 /* ---------- LOGGING CONSTANTS ---------- */
 
 #if defined(RELEASE)
@@ -44,7 +46,7 @@ typedef enum {
     // Error Responses
     ERROR_READ_FAILED,
     ERROR_WRITE_FAILED,
-    ERROR_BAD_ARGS, 
+    ERROR_BAD_ARGS,
     ERROR_SPI_TRANSFER_FAILED,
     ERROR_I2C_FAILED,
     ERROR_TASK_DISABLED,
@@ -60,22 +62,38 @@ typedef enum {
 typedef enum {
     // General operations (can be overloaded by any task)
     OPERATION_POWER_OFF = 0,
+    OPERATION_ENABLE_DISABLE_DEVICE,      // p_data: uplink_cmd_t* uplink_cmd
+    OPERATION_SET_DEVICE_BROKEN_UNBROKEN, // p_data: uplink_cmd_t* uplink_cmd
 
     // Watchdog operations
     OPERATION_CHECKIN, // p_data: TaskHandle_t *handle
 
     // Task-Manager operations
-    OPERATION_INIT_SUBTASKS,   // p_data: NULL
-    OPERATION_ENABLE_SUBTASK,  // p_data: TaskHandle_t *handle
-    OPERATION_DISABLE_SUBTASK, // p_data: TaskHandle_t *handle
+    OPERATION_INIT_SUBTASKS,    // p_data: NULL
+    OPERATION_ENABLE_SUBTASK,   // p_data: TaskHandle_t *handle
+    OPERATION_DISABLE_SUBTASK,  // p_data: TaskHandle_t *handle
+    OPERATION_REBOOT,           // p_data: uplink_cmd_t* uplink_cmd
+    OPERATION_SLEEP_TRANSMIT,   // p_data: uplink_cmd_t* uplink_cmd
+    OPERATION_DISABLE_TRANSMIT, // p_data: uplink_cmd_t* uplink_cmd
+    OPERATION_SET_POWER_MODE,   // p_data: uplink_cmd_t* uplink_cmd
 
     // Display operations
-    OPERATION_DISPLAY_IMAGE, // p_data: color_t *p_buffer
+    OPERATION_DISPLAY_IMAGE, // p_data: uplink_cmd_t* uplink_cmd
     OPERATION_CLEAR_IMAGE,   // p_data: NULL
 
     // Magnetometer & Photodiode operations
     OPERATION_READ,    // p_data: photomag_read_args_t *readings
     OPERATION_PROCESS, // p_data: TBD
+
+    // Camera Operations
+    OPERATION_TAKE_PHOTO, // uplink_cmd_t* uplink_cmd
+    OPERATION_SEND_PHOTO, // uplink_cmd_t* uplink_cmd
+
+    // ADCS Operations
+    OPERATION_SET_KEPLER_COEFF, // p_data: uplink_cmd_t* uplink_cmd
+    OPERATION_SET_UNIX_TIME,    // p_data: uplink_cmd_t* uplink_cmd
+    OPERATION_SET_ADCS_OP_MODE, // p_data: uplink_cmd_t* uplink_cmd
+    OPERATION_ADCS_UPDATE_PARAMS,
 
     // CFDP Operations
     OPERATION_CFDP_PUT,    // p_data: cfdp_request_t* req
@@ -165,7 +183,15 @@ typedef struct adcs_data adcs_data_t;
 typedef union cfdp_request_data cfdp_request_data_t;
 typedef struct cfdp_transaction cfdp_transaction_t;
 
+typedef struct cfdp_buff_header cfdp_buff_header_t;
+
+typedef struct {
+    size_t buff_offset;
+    cfdp_buff_header_t *header;
+} uplink_cmd_t;
+
 typedef union command_data {
+    uplink_cmd_t uplink_cmd; // Can't be a pointer: Data has to live in the command queue -> must be in the command_t struct
     adcs_data_t *adcs_data;
     const uint8_t *display_data;
     TaskHandle_t *task_handle;
@@ -181,7 +207,8 @@ typedef enum {
     CMD_DATA_TASK_HANDLE,
     CMD_DATA_PVDX_TASK,
     CMD_CFDP_REQ,
-    CMD_CFDP_TIMEOUT
+    CMD_CFDP_TIMEOUT,
+    CMD_DATA_UPLINK
 } command_data_type_t;
 
 // A struct to represent a command that OS tasks can execute

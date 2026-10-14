@@ -2,7 +2,10 @@
 
 #include "cfdp_task.h"
 #include "cfdp_utils.h"
+#include "globals.h"
+#include "libraries/cmd_dispatcher/cmd_dispatcher.h"
 #include "logging.h"
+#include "task_list.h"
 
 static inline uint32_t big_endian_to_uint32(const uint8_t arr[4]) {
     return ((uint32_t)arr[0] << 24) | ((uint32_t)arr[1] << 16) | ((uint32_t)arr[2] << 8) | ((uint32_t)arr[3]);
@@ -83,12 +86,73 @@ int parse_uplink_cmd(cfdp_buff_header_t *buff, size_t offset, size_t n) {
     if (n - 6 < cmd_sz)
         return -3;
 
-    void *data = raw + 6;
+    pvdx_task_t *target;
+    operation_t op;
+    status_t result = SUCCESS;
 
-    (void)cmd_type;
-    (void)data;
+    switch (cmd_type) {
+        case (ENABLE_DISABLE_DEVICE):
+            target = NULL; // TODO
+            op = OPERATION_ENABLE_DISABLE_DEVICE;
+            break;
+        case (SET_DEVICE_BROKEN_UNBROKEN):
+            target = NULL; // TODO
+            op = OPERATION_SET_DEVICE_BROKEN_UNBROKEN;
+            break;
+        case (UPDATE_DISPLAY):
+            target = p_display_task;
+            op = OPERATION_DISPLAY_IMAGE;
+            break;
+        case (DISABLE_TRANSMIT):
+            target = p_task_manager_task;
+            op = OPERATION_DISABLE_TRANSMIT;
+            break;
+        case (SLEEP_TRANSMIT):
+            target = p_task_manager_task;
+            op = OPERATION_SLEEP_TRANSMIT;
+            break;
+        case (REBOOT):
+            target = p_task_manager_task;
+            op = OPERATION_REBOOT;
+            break;
+        case (TAKE_PHOTO):
+            target = NULL; // camera
+            op = OPERATION_TAKE_PHOTO;
+            break;
+        case (SEND_PHOTO):
+            target = NULL; // camera;
+            op = OPERATION_SEND_PHOTO;
+            break;
+        case (SET_KEPLER_COEFF):
+            target = p_adcs_task;
+            op = OPERATION_SET_KEPLER_COEFF;
+            break;
+        case (SET_UNIX_TIME):
+            target = p_adcs_task;
+            op = OPERATION_SET_UNIX_TIME;
+            break;
+        case (SET_ADCS_OP_MODE):
+            target = p_adcs_task;
+            op = OPERATION_SET_ADCS_OP_MODE;
+            break;
+        case (ADCS_UPDATE_PARAMS):
+            target = p_adcs_task;
+            op = OPERATION_ADCS_UPDATE_PARAMS;
+            break;
+        case (SET_PWR_MODE):
+            target = p_task_manager_task;
+            op = OPERATION_SET_POWER_MODE;
+            break;
+        default:
+            return -4;
+    }
 
-    // TODO: Dispatch data to correct task.
-    // Will forward task buff_header + offset; (how? TBD)
+    command_t cmd = (command_t){.data = {(uplink_cmd_t){.header = buff, .buff_offset = offset + 6}},
+                                .data_type = CMD_DATA_UPLINK,
+                                .operation = op,
+                                .result = result,
+                                .target = target};
+
+    enqueue_command(&cmd);
     return 6 + cmd_sz;
 }

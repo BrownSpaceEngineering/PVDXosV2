@@ -7,12 +7,11 @@
 #include "cfdp_task.h"
 
 typedef enum uplink_cmd_type {
-    ENABLE_DEVICE = 0,
-    DISABLE_DEVICE,
-    SET_DEVICE_BROKEN,
-    SET_DEVICE_UNBROKEN,
+    ENABLE_DISABLE_DEVICE = 0,
+    SET_DEVICE_BROKEN_UNBROKEN,
     UPDATE_DISPLAY,
-    SLEEP,
+    SLEEP_TRANSMIT,
+    DISABLE_TRANSMIT,
     REBOOT,
     TAKE_PHOTO,
     SEND_PHOTO,
@@ -24,12 +23,6 @@ typedef enum uplink_cmd_type {
 } uplink_cmd_type_e;
 
 typedef uint16_t uplink_cmd_type_t;
-
-typedef struct uplink_cmd {
-    uplink_cmd_type_t cmd_type;
-    size_t data_field_length;
-    uint8_t data_field[];
-} uplink_cmd_t;
 
 typedef struct uplink_packet {
     uint8_t callsign[6];
