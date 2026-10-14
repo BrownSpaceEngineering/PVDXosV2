@@ -5,6 +5,8 @@
 #include "cfdp_task.h"
 #include "mutexes.h"
 #include "radio/radio_task.h"
+#include "rtos_start.h"
+#include "spp.h"
 
 uint32_t next_seq_num(void) {
     static uint32_t counter = 0;
@@ -14,9 +16,6 @@ uint32_t next_seq_num(void) {
 int cfdp_send(void *buff, size_t sz) {
 #if defined(UNITTEST)
     memcpy(test_mem, buff, sz);
-#else
-    (void)buff;
-    (void)sz;
 #endif
     if (sz == 0 || sz > RADIO_DOWNLINK_MAX_SIZE - SPP_PRIMARY_HEADER_SIZE - SPP_SECONDARY_HEADER_SIZE) {
         return -1; // PDU doesn't fit
@@ -39,7 +38,7 @@ int cfdp_send(void *buff, size_t sz) {
         .callsign = {'B', 'S', 'E', 'B', 'S', 'E'}, // TODO: real callsign
     };
 
-    radio_downlink_item_t item;
+    radio_queue_item_t item;
 
     size_t packet_len = 0;
     if (spp_packet_serialize(&primary_header, &secondary_header, buff, sz, item.data, sizeof(item.data), &packet_len)) {
@@ -57,10 +56,27 @@ int cfdp_send(void *buff, size_t sz) {
 }
 
 int cfdp_recv(void *buff, size_t sz) {
-    (void)buff;
-    (void)sz;
-    // TODO: receive from radio board
-    return 0;
+    if (sz < RADIO_DOWNLINK_MAX_SIZE + 2) {
+        return -1; // buff is too small to recieve radio_queue_item_t
+    }
+
+    if (xQueueReceive(uplink_queue, buff, 0) != pdPASS) {
+        return 0; // queue empty, nothing to recieve.
+    }
+
+    radio_queue_item_t *item = (radio_queue_item_t *)buff;
+
+    spp_packet_view_t packet_view;
+    if (spp_packet_parse(&packet_view, item->data, item->len)) {
+        return -1; // spp parse failed
+    }
+
+    // TODO: SPP Checks
+
+    size_t len = packet_view.header.data_length + 1;
+    memmove(buff, packet_view.data, len);
+
+    return (int)len;
 }
 
 void cfdp_nak_buf_push(cfdp_nak_buf_t *buf, cfdp_pdu_segment_request_t segment) {

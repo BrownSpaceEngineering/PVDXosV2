@@ -16,6 +16,7 @@
 // Radio Task memory structures
 radio_task_memory_t radio_mem;
 QueueHandle_t downlink_queue;
+QueueHandle_t uplink_queue;
 
 /**
  * \fn init_radio
@@ -34,9 +35,11 @@ QueueHandle_t init_radio(void) {
         fatal("Failed to create radio command queue!\n");
     }
 
-    downlink_queue = xQueueCreateStatic(RADIO_DOWNLINK_QUEUE_LENGTH, sizeof(radio_downlink_item_t), radio_mem.downlink_queue_buffer,
+    downlink_queue = xQueueCreateStatic(RADIO_DOWNLINK_QUEUE_LENGTH, sizeof(radio_queue_item_t), radio_mem.downlink_queue_buffer,
                                         &radio_mem.downlink_queue_mem);
 
+    uplink_queue = xQueueCreateStatic(RADIO_UPLINK_QUEUE_LENGTH, sizeof(radio_queue_item_t), radio_mem.uplink_queue_buffer,
+                                      &radio_mem.uplink_queue_mem);
     if (downlink_queue == NULL) {
         fatal("Failed to create radio downlink queue!\n");
     }
@@ -62,7 +65,7 @@ void main_radio(void *pvParameters) {
     const TickType_t queue_block_time_ticks = get_command_queue_block_time_ticks(current_task);
     // Variable to hold commands popped off the queue
     command_t cmd;
-    radio_downlink_item_t item;
+    radio_queue_item_t item;
 
     while (true) {
         // Block waiting for at least one command to appear in the command queue
