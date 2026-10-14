@@ -2,10 +2,7 @@
 #define MRAM_H
 
 // Set this flag to commit the OS and bootloaders from flash into MRAM (for development)
-// #define MRAM_OS_WRITE
-
-// Set this flag to load the OS from MRAM on boot and reflash the bootloaders from MRAM
-// #define MRAM_OS_READ
+// #define WRITE_FLASH_TO_MRAM
 
 #define MRAM_OS_BASE_ADDRESS (0x00020000) // Address of OS in MRAM
 #define MRAM_OS_SIZE (0x20000)            // Size of OS in MRAM
