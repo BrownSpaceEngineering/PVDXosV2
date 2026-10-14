@@ -13,11 +13,12 @@
 #define RADIO_DOWNLINK_MAX_SIZE (SPP_PRIMARY_HEADER_SIZE + 512) // 6-byte header + largest CFDP PDU
 
 #define RADIO_DOWNLINK_QUEUE_LENGTH 4 // TODO: How long should queue be?
+#define RADIO_UPLINK_QUEUE_LENGTH 4
 
 typedef struct {
     uint16_t len;
     uint8_t data[RADIO_DOWNLINK_MAX_SIZE]; // SPP header followed by the CFDP PDU
-} radio_downlink_item_t;
+} radio_queue_item_t;
 
 // Placed in a struct to ensure that the TCB is placed higher than the stack in memory
 //^ This ensures that stack overflows do not corrupt the TCB (since the stack grows downwards)
@@ -25,7 +26,8 @@ typedef struct {
     StackType_t overflow_buffer[TASK_STACK_OVERFLOW_PADDING];
     StackType_t radio_task_stack[RADIO_TASK_STACK_SIZE];
     uint8_t radio_command_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
-    uint8_t downlink_queue_buffer[RADIO_DOWNLINK_QUEUE_LENGTH * sizeof(radio_downlink_item_t)];
+    uint8_t downlink_queue_buffer[RADIO_DOWNLINK_QUEUE_LENGTH * sizeof(radio_queue_item_t)];
+    uint8_t uplink_queue_buffer[RADIO_UPLINK_QUEUE_LENGTH * sizeof(radio_queue_item_t)];
     StaticQueue_t radio_task_queue;
     StaticQueue_t uplink_queue_mem;
     StaticQueue_t downlink_queue_mem;

@@ -16,6 +16,7 @@
 // Radio Task memory structures
 radio_task_memory_t radio_mem;
 QueueHandle_t downlink_queue;
+QueueHandle_t uplink_queue;
 
 /**
  * \fn init_radio
@@ -34,9 +35,11 @@ QueueHandle_t init_radio(void) {
         fatal("Failed to create radio command queue!\n");
     }
 
-    downlink_queue = xQueueCreateStatic(RADIO_DOWNLINK_QUEUE_LENGTH, sizeof(radio_downlink_item_t), radio_mem.downlink_queue_buffer,
+    downlink_queue = xQueueCreateStatic(RADIO_DOWNLINK_QUEUE_LENGTH, sizeof(radio_queue_item_t), radio_mem.downlink_queue_buffer,
                                         &radio_mem.downlink_queue_mem);
 
+    uplink_queue = xQueueCreateStatic(RADIO_UPLINK_QUEUE_LENGTH, sizeof(radio_queue_item_t), radio_mem.uplink_queue_buffer,
+                                      &radio_mem.uplink_queue_mem);
     if (downlink_queue == NULL) {
         fatal("Failed to create radio downlink queue!\n");
     }
