@@ -130,8 +130,67 @@ bool spp_packet_parse(spp_packet_view_t *view, uint8_t *data, uint32_t len) {
     return false;
 }
 
-// TODO: Actually implement
-bool spp_primary_header_serialize(const spp_primary_packet_header_t *header, uint8_t *buf, size_t buf_size) {
+// TODO: have telemetry's serialize_spp_headers use this instead of packing the headers itself
+bool spp_packet_serialize(const spp_primary_packet_header_t *primary, const spp_secondary_packet_header_t *secondary, const uint8_t *data,
+                          size_t data_len, uint8_t *buf, size_t buf_size, size_t *packet_len) {
+    if (primary == NULL || buf == NULL || packet_len == NULL || (data == NULL && data_len > 0)) {
+        return true;
+    }
+
+    bool has_secondary = primary->secondary_header_flag;
+    if (has_secondary && secondary == NULL) {
+        return true;
+    }
+
+    // The packet data field is everything after the primary header: the secondary header (if any) and the data
+    size_t data_field_len = (has_secondary ? SPP_SECONDARY_HEADER_SIZE : 0) + data_len;
+
+    // The packet data length field holds data_field_len - 1, so the data field must be 1 to 65536 octets
+    // Reference: SPP Blue Book 4.1.3.5.3
+    if (data_field_len == 0 || data_field_len > 0x10000) {
+        return true;
+    }
+
+    size_t total_len = SPP_PRIMARY_HEADER_SIZE + data_field_len;
+    if (total_len > buf_size) {
+        return true; // not enough room for the packet
+    }
+
+    // ~~~ Packet Primary Header ~~~
+    // The inverse of the unpacking in spp_packet_parse: every field is most significant bit first
+    uint16_t data_length = (uint16_t)(data_field_len - 1);
+    buf[0] = (primary->version_number << 5) | (primary->packet_type << 4) | (has_secondary << 3) |
+        ((primary->application_process_id >> 8) & 0x07);
+    buf[1] = primary->application_process_id & 0xFF;
+    buf[2] = (primary->sequence_flags << 6) | ((primary->sequence_count >> 8) & 0x3F);
+    buf[3] = primary->sequence_count & 0xFF;
+    buf[4] = data_length >> 8;
+    buf[5] = data_length & 0xFF;
+
+    size_t offset = SPP_PRIMARY_HEADER_SIZE;
+
+    // ~~~ Packet Secondary Header ~~~
+    // Same order spp_packet_parse reads it in, each integer most significant octet first
+    if (has_secondary) {
+        uint8_t *sh = &buf[offset];
+        sh[0] = secondary->timestamp >> 24;
+        sh[1] = (secondary->timestamp >> 16) & 0xFF;
+        sh[2] = (secondary->timestamp >> 8) & 0xFF;
+        sh[3] = secondary->timestamp & 0xFF;
+        sh[4] = secondary->boot_timestamp >> 24;
+        sh[5] = (secondary->boot_timestamp >> 16) & 0xFF;
+        sh[6] = (secondary->boot_timestamp >> 8) & 0xFF;
+        sh[7] = secondary->boot_timestamp & 0xFF;
+        memcpy(&sh[8], secondary->callsign, SPP_SECONDARY_HEADER_CALLSIGN_SIZE);
+        offset += SPP_SECONDARY_HEADER_SIZE;
+    }
+
+    // ~~~ User Data Field ~~~
+    if (data_len > 0) {
+        memcpy(&buf[offset], data, data_len);
+    }
+
+    *packet_len = total_len;
     return false;
 }
 

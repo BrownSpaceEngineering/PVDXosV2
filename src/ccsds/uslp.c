@@ -14,6 +14,7 @@
 
 #include "mutexes.h"
 #include "spp.h" // for SPP_VERSION_NUMBER
+#include "tasks/radio/radio_task.h"
 
 /// Counter for number of frames for each of the 64 possible vc channels
 static uint8_t vc_frame_counts[USLP_VIRTUAL_CHANNEL_COUNT];
@@ -195,8 +196,7 @@ static bool uslp_send(uslp_transfer_frame_view_t *view) {
     tx_len = total_len;
 #endif
 
-    // TODO: send tx_buffer to comms
-    return false;
+    return radio_transmit(tx_buffer, total_len);
 }
 
 bool uslp_transfer_frame_parse(uslp_transfer_frame_view_t *view, uint8_t *data, uint32_t len) {

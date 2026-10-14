@@ -7,8 +7,8 @@
  * Authors: Noah Shepard
  */
 
-#include "command_dispatcher_task.h"
-#include "globals.h"
+#include "ccsds/uslp.h"
+#include "cmd_dispatcher.h"
 #include "logging.h"
 #include "radio_task.h"
 #include "watchdog_task.h"
@@ -65,6 +65,7 @@ void main_radio(void *pvParameters) {
     const TickType_t queue_block_time_ticks = get_command_queue_block_time_ticks(current_task);
     // Variable to hold commands popped off the queue
     command_t cmd;
+    radio_queue_item_t item;
 
     while (true) {
         // Block waiting for at least one command to appear in the command queue
@@ -73,6 +74,12 @@ void main_radio(void *pvParameters) {
             info("Radio: performing command\n");
         }
         debug("Radio: No more commands queued.\n");
+
+        if (xQueueReceive(downlink_queue, &item, queue_block_time_ticks) == pdPASS) {
+            if (uslp_mapp_request(item.data, item.len, RADIO_GMAP_ID, SPP_VERSION_NUMBER, RADIO_SDU_ID, USLP_QOS_EXPEDITED)) {
+                warning("Radio: failed to send packet");
+            }
+        }
 
         // Check in with the watchdog task
         if (should_checkin(current_task)) {
