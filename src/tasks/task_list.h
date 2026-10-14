@@ -10,6 +10,8 @@ extern pvdx_task_t *const p_task_manager_task;
 extern pvdx_task_t *const p_adcs_task;
 extern pvdx_task_t *const p_shell_task;
 extern pvdx_task_t *const p_display_task;
+extern pvdx_task_t *const p_arducam_task;
+extern pvdx_task_t *const p_magnetometer_task;
 extern pvdx_task_t *const p_heartbeat_task;
 extern pvdx_task_t *const p_cfdp_task;
 extern pvdx_task_t *task_list[];

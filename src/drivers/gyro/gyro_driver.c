@@ -47,6 +47,7 @@
 
 #include "globals.h"
 #include "hal_delay.h"
+#include "mutexes.h"
 
 // The configuration from gyro_driver.h, in the shape the setter functions want it
 static const SCH1_filter_t gyro_filter = {
@@ -169,6 +170,9 @@ static uint64_t gyro_apply_ta_select(uint64_t request) {
 static status_t gyro_spi_request(uint64_t request, uint64_t *const p_response) {
     const uint64_t frame = gyro_apply_ta_select(request);
 
+    // Protect shared frame buffers as well as the CS-low transaction.
+    lock_magnetometer_gyro_spi();
+
     // The sensor clocks frames out MSB first, so byte 0 carries bits 47..40
     for (uint8_t i = 0; i < SCH16T_FRAME_SIZE_BYTES; i++) {
         spi_tx_buffer[i] = (uint8_t)(frame >> (8 * (SCH16T_FRAME_SIZE_BYTES - 1 - i)));
@@ -181,6 +185,7 @@ static status_t gyro_spi_request(uint64_t request, uint64_t *const p_response) {
     GYRO_CS_HIGH(); // deselect the gyro for SPI communication
 
     if (response != (int32_t)gyro_xfer.size) {
+        unlock_magnetometer_gyro_spi();
         return ERROR_SPI_TRANSFER_FAILED;
     }
 
@@ -192,6 +197,7 @@ static status_t gyro_spi_request(uint64_t request, uint64_t *const p_response) {
         *p_response = received;
     }
 
+    unlock_magnetometer_gyro_spi();
     return SUCCESS;
 }
 
@@ -808,9 +814,9 @@ static status_t gyro_configure(void) {
  *       so that a transient fault gets a second attempt rather than failing the whole init.
  */
 status_t init_gyro_hardware(void) {
-    spi_m_sync_enable(&SPI_MAGNETOMETER_GYRO); // if you forget this line, every transfer returns -20
-
-    GYRO_CS_HIGH(); // leave the gyro deselected until a transfer wants it
+    // Initialize the bus once, without racing an RM3100 transfer or holding it over delays.
+    lock_magnetometer_gyro_spi();
+    unlock_magnetometer_gyro_spi();
     gyro_reset();
 
     status_t status = ERROR_NOT_READY;

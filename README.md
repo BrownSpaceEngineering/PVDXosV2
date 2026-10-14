@@ -4,6 +4,43 @@ The real-time operating system for Brown Space Engineering's second satellite, P
 
 ![PVDXos Diagram](pvdxos.png)
 
+## Camera and RM3100 integration
+
+The ArduCam OV2640 and RM3100 run as separate `SENSOR` tasks under the task manager.
+Both run in `STATE_IDLE`, `STATE_FAKE_HEARTBEAT`, and `STATE_STUDENT_PICTURE_CAPTURE`;
+other states, including low-power idle, suspend them. Existing task behavior and the
+current generated ASF pin configuration are retained.
+
+| Device               | Signal                 | SAMD51 pin                |
+| -------------------- | ---------------------- | ------------------------- |
+| RM3100 (SERCOM4)     | SCK / MOSI / MISO / CS | PA12 / PA13 / PB14 / PC19 |
+| ArduCam (SERCOM2)    | SCK / MOSI / MISO / CS | PB27 / PB26 / PA14 / PC14 |
+| OV2640 I2C (SERCOM6) | SCL / SDA              | PD08 / PD09               |
+
+Tie RM3100 `I2CEN` low for SPI mode and use 3.3 V power and a common ground.
+The RM3100 shares a transaction mutex with the gyro; camera I2C shares a transaction
+mutex with the PMB. Task suspension drains active transfers/captures before stopping
+a task, so suspended tasks do not retain bus locks or asserted camera CS. Coordinate
+ownership separately if multiple tasks access the same sensor. Camera initialization requires connected hardware and is fatal on failure;
+the magnetometer task retries failed initialization while servicing its watchdog.
+
+The camera captures 320x240 JPEG images approximately every three seconds and streams
+bytes on RTT channel 2, with framing logs on channel 1. The magnetometer logs samples
+approximately every two seconds. Camera capture is currently a diagnostic stream, not
+mission image storage/downlink or a command-driven capture implementation.
+
+For development builds with INFO logs enabled, `python3 -B scripts/rtt_logs.py` receives
+JPEGs into `logs/` (requires `pylink-square` and J-Link). Start the receiver with empty
+RTT buffers. Interrupted or truncated images remain `.jpg.part`; after a framing error,
+stop capture and clear stale RTT data before restarting the receiver. Without a receiver,
+image transmission times out rather than blocking the scheduler indefinitely.
+
+Run receiver tests without hardware:
+
+```sh
+python3 -B -m unittest discover -s scripts -p test_rtt_logs.py -v
+```
+
 # Project Setup and Toolchain Installation Guide
 
 Our OS is designed to run on the SAMD51 microcontroller. Therefore, to run our code, we use a development board with that chip (the Adafruit Grand Central), which the club provides to members.

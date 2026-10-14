@@ -83,11 +83,11 @@ void init_states(void) {
 
     mission_states[STATE_INITIAL]                 = (state_t){.enabled_tasks = {},                                 .fetch_next_state = initial_next_state};
     mission_states[STATE_BURN_WIRE]               = (state_t){.enabled_tasks = {},                                 .fetch_next_state = burn_wire_next_state};
-    mission_states[STATE_IDLE]                    = (state_t){.enabled_tasks = {},                                 .fetch_next_state = idle_next_state};
-    mission_states[STATE_STUDENT_PICTURE_CAPTURE] = (state_t){.enabled_tasks = {p_adcs_task, p_display_task},      .fetch_next_state = student_picture_capture_next_state};
+    mission_states[STATE_IDLE]                    = (state_t){.enabled_tasks = {p_arducam_task, p_magnetometer_task}, .fetch_next_state = idle_next_state};
+    mission_states[STATE_STUDENT_PICTURE_CAPTURE] = (state_t){.enabled_tasks = {p_adcs_task, p_display_task, p_arducam_task, p_magnetometer_task}, .fetch_next_state = student_picture_capture_next_state};
     mission_states[STATE_SBAND_TRANS]             = (state_t){.enabled_tasks = {p_adcs_task, p_cfdp_task},         .fetch_next_state = sband_trans_next_state};
     mission_states[STATE_LOW_POWER_IDLE]          = (state_t){.enabled_tasks = {},                                 .fetch_next_state = low_power_idle_next_state};
-    mission_states[STATE_FAKE_HEARTBEAT]          = (state_t){.enabled_tasks = {p_heartbeat_task},                 .fetch_next_state = fake_heartbeat_next_state};
+    mission_states[STATE_FAKE_HEARTBEAT]          = (state_t){.enabled_tasks = {p_heartbeat_task, p_arducam_task, p_magnetometer_task}, .fetch_next_state = fake_heartbeat_next_state};
     // ... one line per state in state_id_t
 }
 

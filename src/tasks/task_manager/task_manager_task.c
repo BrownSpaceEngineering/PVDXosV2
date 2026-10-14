@@ -12,6 +12,7 @@
 #include "task_manager_task.h"
 
 #include "logging.h"
+#include "mutexes.h"
 #include "state_machine.h"
 #include "watchdog_task.h"
 
@@ -79,22 +80,32 @@ void task_manager_enable_task(pvdx_task_t *const p_task) {
  *
  * \returns void
  *
- * \warning requires the task list mutex
- * \warning modifies a task struct
+ * \warning caller must not hold the task list mutex or peripheral locks
+ * \warning modifies a task struct; waits for peripheral operations before suspending
  */
 void task_manager_disable_task(pvdx_task_t *const p_task) {
+    if (p_task == NULL || p_task->task_type == OS) {
+        fatal("task_manager: Cannot disable a null or OS task\n");
+        return;
+    }
+
+    // A camera operation may need ~4 seconds to finish. Do not hold task_list_mutex
+    // while draining peripherals: watchdog checkins also need it (with a 1s timeout).
+    watchdog_checkin(p_task_manager_task);
+    if (!lock_task_suspend_resources()) {
+        fatal("task_manager: Peripheral suspension barrier timed out\n");
+        return;
+    }
     lock_mutex(task_list_mutex);
 
-    // If given an unintialized task, something went wrong
-    if (p_task->handle == NULL) {
-        fatal("task_manager: Trying to disable task that was never initialized");
+    if (p_task->handle == NULL || !p_task->enabled) {
+        unlock_mutex(task_list_mutex);
+        unlock_task_suspend_resources();
+        fatal("task_manager: Cannot disable an uninitialized or already disabled task\n");
+        return;
     }
 
-    // If given an already disabled task, something went wrong
-    if (!p_task->enabled) {
-        fatal("task_manager: Tried to disable a task that has already been disabled");
-    }
-
+    // All protected transfers are now idle, and the target cannot start another.
     vTaskSuspend(p_task->handle);
     p_task->enabled = false;
 
@@ -102,6 +113,8 @@ void task_manager_disable_task(pvdx_task_t *const p_task) {
     unregister_task_with_watchdog(p_task);
 
     unlock_mutex(task_list_mutex);
+    unlock_task_suspend_resources();
+    watchdog_checkin(p_task_manager_task);
     debug("task_manager: %s task disabled\n", p_task->name);
 }
 
@@ -151,6 +164,12 @@ void init_task_pointer(pvdx_task_t *const p_task) {
         p_task->command_queue = queue_handle;
     }
 
+    // A disabled task must not run (and acquire a bus) before its initial suspension.
+    // Also publish its TLS pointer before a newly created runtime task can execute.
+    const bool scheduler_running = xTaskGetSchedulerState() == taskSCHEDULER_RUNNING;
+    if (scheduler_running) {
+        vTaskSuspendAll();
+    }
     p_task->handle = xTaskCreateStatic(p_task->function, p_task->name, p_task->stack_size, p_task->pvParameters, p_task->priority,
                                        p_task->stack_buffer, p_task->task_tcb);
 
@@ -173,6 +192,9 @@ void init_task_pointer(pvdx_task_t *const p_task) {
         // it so that vTaskStartScheduler() doesn't run the task.
         vTaskSuspend(p_task->handle);
         info("%s task is disabled on startup.\n", p_task->name);
+    }
+    if (scheduler_running) {
+        xTaskResumeAll();
     }
     // unlock_mutex(task_list_mutex);
 }
