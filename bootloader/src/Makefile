@@ -13,16 +13,12 @@
 
 export NUM_BOOTLOADERS := 8
 
-### ALL C FILES SHOULD HAVE AN OBJECT FILE LISTED HERE ###
-STAGE1_OBJS := \
-../src/preboot.o
-
 STAGE2_OBJS := \
 ../src/bootloader.o \
 ../src/mram_driver.o \
 ../src/watchdog_driver.o
 
-export OBJS := $(STAGE1_OBJS) $(STAGE2_OBJS)
+export OBJS := $(STAGE2_OBJS)
 
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###
 ### THESE ARE WRITTEN RELATIVE TO THE ./ASF/gcc/Makefile FILE ###
@@ -95,8 +91,6 @@ export DEPS_AS_ARGS := $(patsubst %.o,%.d,$(OBJS_AS_ARGS))
 
 .PHONY: all clean update_bootloader_asf
 
-STAGE1_OBJS_AS_ARGS := $(patsubst ../%,%,$(STAGE1_OBJS))
-STAGE1_DEPS_AS_ARGS := $(patsubst %.o,%.d,$(STAGE1_OBJS_AS_ARGS))
 STAGE2_OBJS_AS_ARGS := $(patsubst ../%,%,$(STAGE2_OBJS))
 STAGE2_DEPS_AS_ARGS := $(patsubst %.o,%.d,$(STAGE2_OBJS_AS_ARGS))
 
@@ -104,12 +98,8 @@ STAGE2_DEPS_AS_ARGS := $(patsubst %.o,%.d,$(STAGE2_OBJS_AS_ARGS))
 all: clean #Might as well clean before compiling the release build
 	@set -eu; \
 	python3 ../../scripts/gen_bootloaders.py $(NUM_BOOTLOADERS); \
-	OBJS="$(STAGE1_OBJS)" \
-	OBJS_AS_ARGS="$(STAGE1_OBJS_AS_ARGS)" \
-	DEPS_AS_ARGS="$(STAGE1_DEPS_AS_ARGS)" \
-	$(MAKE) -C $(CHILD_MAKEFILE_PATH) CFLAGS="$(CFLAGS)" LINKER_SCRIPT="../../src/preboot_flash.ld"; \
-	cp -f ../ASF/gcc/PVDXos_bootloader.bin ./preboot.bin; \
-	cp -f ../ASF/gcc/PVDXos_bootloader.elf ./preboot.elf; \
+	arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -Os -flto -nostdlib -nostartfiles -ffunction-sections -fdata-sections -Wl,--gc-sections -T ./preboot_flash.ld ./preboot.c -o ./preboot.elf; \
+	arm-none-eabi-objcopy -O binary ./preboot.elf ./preboot.bin; \
 	for index in $$(seq 1 $(NUM_BOOTLOADERS)); do \
 		echo "Building Stage 2 bootloader $$index"; \
 		rm -f ../ASF/gcc/PVDXos_bootloader.elf; \
