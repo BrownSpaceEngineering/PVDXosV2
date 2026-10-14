@@ -109,12 +109,12 @@ int main(void) {
     //     info("[+] Fuel gauges initialized\n");
     // }
 
-    // status_t th_status = init_thermistors();
-    // if (th_status != SUCCESS) {
-    //     warning("[!] init_thermistors() failed (status=%d)\n", th_status);
-    // } else {
-    //     info("[+] Thermistors initialized\n");
-    // }
+    status_t th_status = init_thermistors();
+    if (th_status != SUCCESS) {
+        warning("[!] init_thermistors() failed (status=%d)\n", th_status);
+    } else {
+        info("[+] Thermistors initialized\n");
+    }
 
     // status_t phd_status = init_photodiodes();
     // if (phd_status != SUCCESS) {
@@ -123,34 +123,25 @@ int main(void) {
     //     info("[+] Photodiodes initialized\n");
     // }
 
-    status_t mtq_status = init_magnetorquers();
-    if (mtq_status != SUCCESS) {
-        warning("[!] init_magnetorquers() failed (status=%d)\n", mtq_status);
-    } else {
-        info("[+] Magnetorquers initialized (stopped)\n");
-    }
+    /* ---------- THERMISTOR 0 VOLTAGE READOUT ---------- */
 
-    /* ---------- MAGNETORQUER SWEEP LOOP ---------- */
-
-    // Sweep the X magnetorquer duty through a smooth triangle: 0 -> +1 -> 0 -> -1 -> 0,
-    // stepping in 0.1 increments with a short dwell at each step. Duty is tracked in
-    // integer tenths to avoid float-equality comparisons in the loop conditions.
-    static const int sweep_waypoints[] = {0, 10, 0, -10, 0}; // duty * 10
-    const int num_waypoints = (int)(sizeof(sweep_waypoints) / sizeof(sweep_waypoints[0]));
-    const uint16_t step_dwell_ms = 200; // time spent at each 0.1 step
-
+    // Read the raw ADC code for thermistor 0 and convert to the divider-node voltage.
+    // Reads are ratiometric against VDDANA (~3.3 V), so V = code / full_scale * VREF.
     while (true) {
-        for (int w = 0; w < num_waypoints - 1; w++) {
-            int from = sweep_waypoints[w];
-            int to = sweep_waypoints[w + 1];
-            int dir = (to > from) ? 1 : -1;
-
-            // Walk from the current waypoint toward the next, hitting each 0.1 step.
-            for (int tenths = from; tenths != to; tenths += dir) {
-                mtq_set(MTQ_X, (float)tenths / 10.0f);
-                info("mtq X duty = %ld/10\n", (long)tenths);
-                delay_ms(step_dwell_ms);
-            }
+        uint16_t code = 0;
+        status_t rs = therm_read_raw(0, &code);
+        if (rs == SUCCESS) {
+            float v = (float)code / THERM_ADC_FS * 3.3f;
+            // Log mV (integer) to avoid relying on %f in the embedded printf.
+            info("therm 0: code=%u V=%ld mV\n", code, (long)(v * 1000.0f));
+        } else {
+            warning("therm 0: read failed (status=%d)\n", rs);
         }
+
+        // Drive the heaters from the voltage threshold (ON above 2.3 V = cold).
+        heater_control_update();
+        info("heaters: 1=%s 2=%s\n", heater_is_on(0) ? "ON" : "off", heater_is_on(1) ? "ON" : "off");
+
+        delay_ms(1000);
     }
 }

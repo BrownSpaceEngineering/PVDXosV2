@@ -29,14 +29,15 @@
 #define THERM_ADC_FS          4095.0f // 12-bit full scale
 #define THERM_ADC_AVG_SAMPLES 4       // samples averaged per reading (after a settling discard)
 
-// ---- Divider ----
-// 1 = thermistor on the high side (to 3V3), fixed resistor to GND.
-// 0 = thermistor on the low side (to GND), fixed resistor to 3V3.
-#ifndef THERM_DIVIDER_HIGHSIDE
-    #define THERM_DIVIDER_HIGHSIDE 1
+// ---- Divider (as-built, see thermistor_diagram.png) ----
+// Three-element string from the rail to ground:
+//   Vrail --[ R_T1 ]--+-- ADC tap --[ R_T2 ]-- NTC(thermistor) -- GND
+// so Vtap/Vrail = (R_T2 + Rth) / (R_T1 + R_T2 + Rth).
+#ifndef THERM_R_T1_OHMS
+    #define THERM_R_T1_OHMS 15700.0f // top resistor (rail -> tap)
 #endif
-#ifndef THERM_R_FIXED_OHMS
-    #define THERM_R_FIXED_OHMS 10000.0f // divider fixed resistor (adjust to match the board)
+#ifndef THERM_R_T2_OHMS
+    #define THERM_R_T2_OHMS 5780.0f // middle resistor (tap -> thermistor)
 #endif
 
 // ---- Thermistor Beta model (derived from the datasheet points
@@ -48,6 +49,10 @@
 // ---- Heater control (bang-bang with hysteresis) ----
 #define HEATER_SETPOINT_C 5.0f // target temperature
 #define HEATER_HYST_C     1.0f // ON below (setpoint - hyst), OFF above (setpoint + hyst)
+
+// Temporary threshold control on the ADC node voltage (higher voltage = colder on the
+// as-built divider). Heater turns ON when the controlling thermistor is above this.
+#define HEATER_ON_VOLTAGE 2.3f // volts
 
 status_t init_thermistors(void);
 status_t therm_read_raw(uint8_t index, uint16_t *code);
