@@ -4,7 +4,7 @@
  * Defines global datatypes, structures and headers.
  *
  * Created:
- * Authors: Siddharta Laloux, Zach Mahan
+ * Authors: Siddharta Laloux, Zach Mahan, Aanya K Agrawal
  */
 
 #ifndef GLOBALS_H
@@ -83,6 +83,9 @@ typedef enum {
 
     OPERATION_CFDP_TIMEOUT_INACTIVITY, // p_data: cfdp_transaction_t* txn
     OPERATION_CFDP_TIMEOUT_RETRANSMIT, // p_data: cfdp_transaction_t* txn
+
+    // State machine operations
+    OPERATION_UPDATE_STATE_INPUTS,
 
     // TESTING
     TEST_OP, // p_data: char message[]
@@ -164,6 +167,7 @@ typedef struct {
 typedef struct adcs_data adcs_data_t;
 typedef union cfdp_request_data cfdp_request_data_t;
 typedef struct cfdp_transaction cfdp_transaction_t;
+typedef struct input_update_data input_update_data_t;
 
 typedef union command_data {
     adcs_data_t *adcs_data;
@@ -172,6 +176,7 @@ typedef union command_data {
     pvdx_task_t *pvdx_task;
     cfdp_request_data_t *cfdp_request;
     cfdp_transaction_t *cfdp_timeout_data;
+    input_update_data_t *state_input_update_data;
 } command_data_t;
 
 typedef enum {
@@ -181,7 +186,8 @@ typedef enum {
     CMD_DATA_TASK_HANDLE,
     CMD_DATA_PVDX_TASK,
     CMD_CFDP_REQ,
-    CMD_CFDP_TIMEOUT
+    CMD_CFDP_TIMEOUT,
+    CMD_STATE_INPUT_UPDATE,
 } command_data_type_t;
 
 // A struct to represent a command that OS tasks can execute

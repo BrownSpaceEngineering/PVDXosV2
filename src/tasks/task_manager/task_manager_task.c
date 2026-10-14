@@ -6,12 +6,13 @@
  *
  * Created: April 14, 2024
  * Authors: Oren Kohavi, Ignacio Blancas Rodriguez, Tanish Makadia, Yi Liu, Aidan Wang, Simon Juknelis, Defne Doken,
- * Aidan Wang, Jai Garg, Alex Khosrowshahi, Siddharta Laloux
+ * Aidan Wang, Jai Garg, Alex Khosrowshahi, Siddharta Laloux, Aanya K Agrawal
  */
 
 #include "task_manager_task.h"
 
 #include "logging.h"
+#include "state_machine.h"
 #include "watchdog_task.h"
 
 /* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
@@ -98,7 +99,7 @@ void task_manager_disable_task(pvdx_task_t *const p_task) {
     p_task->enabled = false;
 
     // Unregister the task with the watchdog so it is no longer monitored
-    unregister_task_with_watchdog(p_task->handle);
+    unregister_task_with_watchdog(p_task);
 
     unlock_mutex(task_list_mutex);
     debug("task_manager: %s task disabled\n", p_task->name);
@@ -191,6 +192,12 @@ void exec_command_task_manager(command_t *const p_cmd) {
     switch (p_cmd->operation) {
         case OPERATION_INIT_SUBTASKS:
             task_manager_init_subtasks();
+            // The state machine decides which subtasks run from here on
+            state_machine_init();
+            p_cmd->result = SUCCESS;
+            break;
+        case OPERATION_UPDATE_STATE_INPUTS:
+            state_machine_apply_input_update(p_cmd->data.state_input_update_data);
             p_cmd->result = SUCCESS;
             break;
         case OPERATION_ENABLE_SUBTASK:

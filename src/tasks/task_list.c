@@ -114,7 +114,7 @@ pvdx_task_t heartbeat_task = {
     .watchdog_timeout_ms = 10000,
     .last_checkin_time_ticks = 0xDEADBEEF,
     .has_registered = false,
-    .task_type = OS // ACTUATOR
+    .task_type = ACTUATOR // not OS, so that the state machine can turn it on and off (see STATE_FAKE_HEARTBEAT)
 };
 
 pvdx_task_t cfdp_task = {.name = "CFDP",
