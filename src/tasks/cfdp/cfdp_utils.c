@@ -18,26 +18,40 @@ int cfdp_send(void *buff, size_t sz) {
     (void)buff;
     (void)sz;
 #endif
-    // TODO: send to radio board
-
-    if (sz == 0 || sz > RADIO_DOWNLINK_MAX_SIZE - SPP_PRIMARY_HEADER_SIZE) {
+    if (sz == 0 || sz > RADIO_DOWNLINK_MAX_SIZE - SPP_PRIMARY_HEADER_SIZE - SPP_SECONDARY_HEADER_SIZE) {
         return -1; // PDU doesn't fit
     }
 
-    spp_primary_packet_header_t header = {};
+    static uint16_t spp_seq_count = 0;
+
+    spp_primary_packet_header_t primary_header = {
+        .version_number = SPP_VERSION_NUMBER,
+        .packet_type = SPP_PACKET_TYPE_REPORTING,
+        .secondary_header_flag = SPP_SECONDARY_HEADER_PRESENT,
+        .application_process_id = CFDP_APID,
+        .sequence_flags = SPP_SEQ_FLAG_UNSEGMENTED_DATA,
+        .sequence_count = spp_seq_count & 0x3FFF,
+    };
+
+    spp_secondary_packet_header_t secondary_header = {
+        .timestamp = 0,                             // TODO: unix time
+        .boot_timestamp = 0,                        // TODO: unix time of last boot
+        .callsign = {'B', 'S', 'E', 'B', 'S', 'E'}, // TODO: real callsign
+    };
 
     radio_downlink_item_t item;
-    if (spp_primary_header_serialize(&header, item.data, sizeof(item.data))) {
+
+    size_t packet_len = 0;
+    if (spp_packet_serialize(&primary_header, &secondary_header, buff, sz, item.data, sizeof(item.data), &packet_len)) {
         return -1;
     }
-
-    // TODO: Add secondary header once telemetry branch is merged
-    memcpy(item.data, buff, sz);
-    item.len = sz;
+    item.len = packet_len;
 
     if (xQueueSend(downlink_queue, &item, 0) != pdPASS) {
         return -1; // queue full, caller retries later
     }
+
+    spp_seq_count++;
 
     return 0;
 }

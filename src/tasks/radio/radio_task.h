@@ -9,10 +9,15 @@
 #include "globals.h"
 #include "queue.h"
 
-#define RADIO_TASK_STACK_SIZE 1024                              // Size of the stack in words (multiply by 4 to get bytes)
-#define RADIO_DOWNLINK_MAX_SIZE (SPP_PRIMARY_HEADER_SIZE + 512) // 6-byte header + largest CFDP PDU
+#define RADIO_TASK_STACK_SIZE 1024 // Size of the stack in words (multiply by 4 to get bytes)
+#define RADIO_DOWNLINK_MAX_SIZE (SPP_PRIMARY_HEADER_SIZE + SPP_SECONDARY_HEADER_SIZE + 512)
 
 #define RADIO_DOWNLINK_QUEUE_LENGTH 4 // TODO: How long should queue be?
+#define RADIO_SCID 0x0001             // Spacecraft id
+#define RADIO_DOWNLINK_VCID 0         // Virtual Channel
+#define RADIO_DOWNLINK_MAP_ID 0       // Map ID
+#define RADIO_GMAP_ID (((uint32_t)USLP_TFVN << 26) | ((uint32_t)RADIO_SCID << 10) | (RADIO_DOWNLINK_VCID << 4) | RADIO_DOWNLINK_MAP_ID)
+#define RADIO_SDU_ID 0
 
 typedef struct {
     uint16_t len;
@@ -57,6 +62,8 @@ typedef struct {
 
 QueueHandle_t init_radio(void);
 void main_radio(void *pvParameters);
+
+bool radio_transmit(const uint8_t *frame, size_t len);
 
 // Add functionality to handle case of data being pointed to yet not in radio?
 #endif
