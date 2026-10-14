@@ -55,7 +55,7 @@ int main(void) {
         }
     } else {
         char *os_flash_src = (char *)FLASH_OS_BASE_ADDRESS;
-        for (long i = 0; i < MRAM_OS_SIZE; i++) {
+        for (uint32_t i = 0; i < MRAM_OS_SIZE; i++) {
             os_dst[i] = os_flash_src[i];
         }
     }
@@ -66,15 +66,15 @@ int main(void) {
 
 void go_to_app(void) {
     // Read app's vector table (first value is SP, second value is PC)
-    long *vector_table = (long *)RAM_OS_BASE_ADDRESS;
-    long desired_sp = vector_table[0];
-    long desired_pc = vector_table[1];
+    uint32_t *vector_table = (uint32_t *)RAM_OS_BASE_ADDRESS;
+    uint32_t desired_sp = vector_table[0];
+    uint32_t desired_pc = vector_table[1];
 
     // Set the least significant bit of the PC to indicate that the reset vector is in Thumb mode
     desired_pc |= 0x1;
 
     // Tell the SAMD51 where the app's vector table is
-    *((long *)SCB_VTOR) = (long)vector_table;
+    *((uint32_t *)SCB_VTOR) = (uint32_t)vector_table;
 
     // Set SP to desired_sp and then jump to PC using assembly
     __asm__ volatile(
