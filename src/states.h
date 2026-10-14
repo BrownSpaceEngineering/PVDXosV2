@@ -15,7 +15,7 @@
 
 #define MAX_ENABLED_TASKS 9
 
-typedef enum {
+typedef enum { // preliminary contents; still under discussion
 	STATE_INITIAL,
 	STATE_FIRST_BOOT,
 	STATE_BURN_WIRE,
@@ -32,10 +32,10 @@ typedef enum {
 	NUM_STATES
 } state_id_t;
 
-typedef struct {
+typedef struct { // preliminary contents; still under discussion
 	bool burn_wire_burned;
 	bool in_sunlight;
-	float battery_level; // ??
+	float battery_level; // not sure yet how this will be stored/fetched
 	bool image_ready_to_display;
 	bool photo_taken_for_downlink;
 	// Filled in by the task manager itself; never sent as an input update
@@ -44,7 +44,7 @@ typedef struct {
 	// etc
 } input_t;
 
-typedef enum {
+typedef enum { // preliminary contents; still under discussion
 	BURN_WIRE_STATUS_UPDATE,
 	SUNLIGHT_STATUS_UPDATE,
 	BATTERY_LEVEL_UPDATE,

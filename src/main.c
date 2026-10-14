@@ -90,6 +90,7 @@ int main(void) {
         }
     }
 
+    // COMMENTED OUT because this is now controlled by the task manager
     // Initialize all sensor integrity tasks
     // for (pvdx_task_t **curr_task = task_list; *curr_task != NULL; curr_task++) {
     //     if ((*curr_task)->task_type == SENSOR) {
@@ -104,7 +105,7 @@ int main(void) {
     #if defined(UNITTEST)
     cm_args.frequency = 1;
     #endif
-    #if defined(DEVBUILD)
+    #if defined(DEVBUILD) // set to 0 for now for ease of debugging
     cm_args.frequency = 0; // Bitflips per second
     #endif
 
