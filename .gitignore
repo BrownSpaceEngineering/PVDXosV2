@@ -54,3 +54,4 @@ compile_commands.json
 #Bootloader build files
 bootloader_flash*.ld
 bootloader_index.h
+preboot_flash.ld

@@ -1,68 +1,64 @@
-#include "bootloader_index.h"
 #include "mram_driver.h"
 #include "watchdog_driver.h"
 
-#define FLASH_OS_BASE_ADDRESS (0x00020000)  // Address of OS in flash (after bootloaders)
-                                            // Note: in final version, OS copies will only be in MRAM
-                                            // so this will be unused!
-
-#define RAM_OS_BASE_ADDRESS (0x20000000)    // Where to load OS into RAM
-#define BOOTLOADER_SIZE (0x3000)            // Size of each bootloader in the chain
+#define FLASH_OS_BASE_ADDRESS (0x020000) // Address of OS in flash (after bootloaders)
+#define RAM_OS_BASE_ADDRESS (0x20000000) // Where to load OS into RAM
 
 #define SCS_BASE (0xE000E000UL)
 #define SCB_BASE (SCS_BASE + 0x0D00UL)
-#define SCB_VTOR (SCB_BASE + 0x08)          // VTOR: Vector Table Offset Register
+#define SCB_VTOR (SCB_BASE + 0x08) // VTOR: Vector Table Offset Register
 
-#define RSTC_RCAUSE (0x40000C00UL)          // Reset Cause Register
+#define RSTC_RCAUSE (0x40000C00UL) // Reset Cause Register
 
 int main(void);
 void go_to_app(void);
 
+bool mram_checksum_matches(const uint8_t *os_address) {
+    const uint8_t *checksum = os_address + MRAM_OS_SIZE - sizeof(uint32_t);
+    uint32_t stored_checksum = ((uint32_t)checksum[0] << 0)
+                             | ((uint32_t)checksum[1] << 8)
+                             | ((uint32_t)checksum[2] << 16)
+                             | ((uint32_t)checksum[3] << 24);
+    return crc32(os_address, MRAM_OS_SIZE - sizeof(uint32_t)) == stored_checksum;
+}
+
 int main(void) {
-    uint8_t bootloader_index = (BOOTLOADER_INDEX);
-    // If no bootloader flag was defined, panic
-    while (bootloader_index == 255);
-
-    uint8_t *cur_bootloader_start = (uint8_t *)(bootloader_index * BOOTLOADER_SIZE);
-
-    uint32_t computed_checksum = crc32(cur_bootloader_start, BOOTLOADER_SIZE - sizeof(uint32_t));
-    uint32_t* test_checksum = (uint32_t *)(cur_bootloader_start + BOOTLOADER_SIZE - sizeof(uint32_t));
-
-    if (computed_checksum != *test_checksum) {
-        // If checksum fails on the last bootloader, there is nowhere to jump so panic
-        while (bootloader_index == 7);
-
-        uint32_t next_sp = *(uint32_t *)((bootloader_index + 1) * BOOTLOADER_SIZE);
-        uint32_t next_pc = *(uint32_t *)((bootloader_index + 1) * BOOTLOADER_SIZE + 0x0004);
-        __asm__ volatile(
-            "mov sp, %0\n" // Move the value in desired_sp into SP
-            "bx %1"        // Branch to the address contained in desired_pc
-            :
-            : "r"(next_sp), "r"(next_pc) // Arguments to the assembly (accessed as %0 and %1 in the assembly code)
-            :);
-    }
-
     watchdog_setup();
 
-#if defined(MRAM_OS_WRITE) || defined(MRAM_OS_READ)
-    mram_init();
-#endif
+    mram_status_t mram_status = mram_init();
 
-    char *os_flash_src = (char *)FLASH_OS_BASE_ADDRESS;
+    bool mram_ok = (get_mram_state(mram_status, 1) == MRAM_STATE_OK)
+                || (get_mram_state(mram_status, 2) == MRAM_STATE_OK)
+                || (get_mram_state(mram_status, 3) == MRAM_STATE_OK);
+
     char *os_dst = (char *)RAM_OS_BASE_ADDRESS;
 
-#ifdef MRAM_OS_WRITE
-    mram_write_bytes(MRAM_OS_BASE_ADDRESS, (uint8_t *)os_flash_src, MRAM_OS_SIZE);
-    mram_write_bytes(MRAM_FLASH_BASE_ADDRESS, (uint8_t *)0x00000000, MRAM_FLASH_SIZE);
-#endif
-
-#ifdef MRAM_OS_READ
-    mram_read_bytes(MRAM_OS_BASE_ADDRESS, (uint8_t *)os_dst, MRAM_OS_SIZE);
-#else
-    for (long i = 0; i < MRAM_OS_SIZE; i++) {
-        os_dst[i] = os_flash_src[i];
+// only for debugging; will not be present in final
+#ifdef WRITE_FLASH_TO_MRAM
+    if (mram_ok) {
+        mram_write_bytes(MRAM_FLASH_BASE_ADDRESS, (uint8_t *)0x00000000, MRAM_FLASH_SIZE);
     }
 #endif
+
+    if (mram_ok) {
+        mram_read_bytes(MRAM_OS_BASE_ADDRESS + 0 * MRAM_OS_SIZE, (uint8_t *)os_dst, MRAM_OS_SIZE);
+        if (mram_checksum_matches((uint8_t *)os_dst)) {
+            go_to_app();
+        }
+        mram_read_bytes(MRAM_OS_BASE_ADDRESS + 1 * MRAM_OS_SIZE, (uint8_t *)os_dst, MRAM_OS_SIZE);
+        if (mram_checksum_matches((uint8_t *)os_dst)) {
+            go_to_app();
+        }
+        mram_read_bytes(MRAM_OS_BASE_ADDRESS + 2 * MRAM_OS_SIZE, (uint8_t *)os_dst, MRAM_OS_SIZE);
+        if (mram_checksum_matches((uint8_t *) os_dst)) {
+            go_to_app();
+        }
+    } else {
+        char *os_flash_src = (char *)FLASH_OS_BASE_ADDRESS;
+        for (uint32_t i = 0; i < MRAM_OS_SIZE; i++) {
+            os_dst[i] = os_flash_src[i];
+        }
+    }
 
     go_to_app();
     __builtin_unreachable();
@@ -70,15 +66,15 @@ int main(void) {
 
 void go_to_app(void) {
     // Read app's vector table (first value is SP, second value is PC)
-    long *vector_table = (long *)RAM_OS_BASE_ADDRESS;
-    long desired_sp = vector_table[0];
-    long desired_pc = vector_table[1];
+    uint32_t *vector_table = (uint32_t *)RAM_OS_BASE_ADDRESS;
+    uint32_t desired_sp = vector_table[0];
+    uint32_t desired_pc = vector_table[1];
 
     // Set the least significant bit of the PC to indicate that the reset vector is in Thumb mode
     desired_pc |= 0x1;
 
     // Tell the SAMD51 where the app's vector table is
-    *((long *)SCB_VTOR) = (long)vector_table;
+    *((uint32_t *)SCB_VTOR) = (uint32_t)vector_table;
 
     // Set SP to desired_sp and then jump to PC using assembly
     __asm__ volatile(

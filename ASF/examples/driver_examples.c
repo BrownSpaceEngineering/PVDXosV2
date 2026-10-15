@@ -29,33 +29,31 @@ static uint8_t chk_data[512];
 /**
  * Example of using FLASH_0 to read and write Flash main array.
  */
-void FLASH_0_example(void)
-{
-	uint32_t page_size;
-	uint16_t i;
+void FLASH_0_example(void) {
+    uint32_t page_size;
+    uint16_t i;
 
-	/* Init source data */
-	page_size = flash_get_page_size(&FLASH_0);
+    /* Init source data */
+    page_size = flash_get_page_size(&FLASH_0);
 
-	for (i = 0; i < page_size; i++) {
-		src_data[i] = i;
-	}
+    for (i = 0; i < page_size; i++) {
+        src_data[i] = i;
+    }
 
-	/* Write data to flash */
-	flash_write(&FLASH_0, 0x3200, src_data, page_size);
+    /* Write data to flash */
+    flash_write(&FLASH_0, 0x3200, src_data, page_size);
 
-	/* Read data from flash */
-	flash_read(&FLASH_0, 0x3200, chk_data, page_size);
+    /* Read data from flash */
+    flash_read(&FLASH_0, 0x3200, chk_data, page_size);
 }
 
-void I2C_SBAND_example(void)
-{
-	struct io_descriptor *I2C_SBAND_io;
+void I2C_SBAND_example(void) {
+    struct io_descriptor *I2C_SBAND_io;
 
     i2c_m_sync_get_io_descriptor(&I2C_SBAND, &I2C_SBAND_io);
     i2c_m_sync_enable(&I2C_SBAND);
     i2c_m_sync_set_slaveaddr(&I2C_SBAND, 0x12, I2C_M_SEVEN);
-    io_write(I2C_SBAND_io, (uint8_t *)"Hello World!", 12);
+    io_write(I2C_SBAND_io, (uint8_t *)"Hello World!", 13);
 }
 
 void I2C_MAG_GYRO_example(void) {
@@ -64,7 +62,7 @@ void I2C_MAG_GYRO_example(void) {
     i2c_m_sync_get_io_descriptor(&I2C_MAG_GYRO, &I2C_MAG_GYRO_io);
     i2c_m_sync_enable(&I2C_MAG_GYRO);
     i2c_m_sync_set_slaveaddr(&I2C_MAG_GYRO, 0x12, I2C_M_SEVEN);
-    io_write(I2C_MAG_GYRO_io, (uint8_t *)"Hello World!", 12);
+    io_write(I2C_MAG_GYRO_io, (uint8_t *)"Hello World!", 13);
 }
 
 void I2C_CAMERA_example(void) {
@@ -73,7 +71,7 @@ void I2C_CAMERA_example(void) {
     i2c_m_sync_get_io_descriptor(&I2C_CAMERA, &I2C_CAMERA_io);
     i2c_m_sync_enable(&I2C_CAMERA);
     i2c_m_sync_set_slaveaddr(&I2C_CAMERA, 0x12, I2C_M_SEVEN);
-    io_write(I2C_CAMERA_io, (uint8_t *)"Hello World!", 12);
+    io_write(I2C_CAMERA_io, (uint8_t *)"Hello World!", 13);
 }
 
 /**

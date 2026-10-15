@@ -13,11 +13,12 @@
 
 export NUM_BOOTLOADERS := 8
 
-### ALL C FILES SHOULD HAVE AN OBJECT FILE LISTED HERE ###
-export OBJS := \
+STAGE2_OBJS := \
 ../src/bootloader.o \
 ../src/mram_driver.o \
 ../src/watchdog_driver.o
+
+export OBJS := $(STAGE2_OBJS)
 
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###
 ### THESE ARE WRITTEN RELATIVE TO THE ./ASF/gcc/Makefile FILE ###
@@ -90,27 +91,31 @@ export DEPS_AS_ARGS := $(patsubst %.o,%.d,$(OBJS_AS_ARGS))
 
 .PHONY: all clean update_bootloader_asf
 
-# Base addresses and sizes
-ROM_BASE   = 0x08000000
-ROM_STEP   = 0x4000      # 16KB per bootloader
-RAM_BASE   = 0x20000000
-RAM_STEP   = 0x1000      # 4KB per bootloader
+STAGE2_OBJS_AS_ARGS := $(patsubst ../%,%,$(STAGE2_OBJS))
+STAGE2_DEPS_AS_ARGS := $(patsubst %.o,%.d,$(STAGE2_OBJS_AS_ARGS))
 
 # Default target
 all: clean #Might as well clean before compiling the release build
-	@python3 ../../scripts/gen_bootloaders.py $(NUM_BOOTLOADERS) \
-	&& for i in $$(seq 1 $(NUM_BOOTLOADERS)); do \
-		echo $$i \
-		&& $(MAKE) -C $(CHILD_MAKEFILE_PATH) CFLAGS=" $(CFLAGS) -DBOOTLOADER_$$i" LINKER_SCRIPT="../../src/bootloader_flash$$i.ld" \
-		&& cp -f ../ASF/gcc/PVDXos_bootloader.bin ./bootloader$$i.bin \
-		&& cp -f ../ASF/gcc/PVDXos_bootloader.elf ./bootloader$$i.elf; \
+	@set -eu; \
+	python3 ../../scripts/gen_bootloaders.py $(NUM_BOOTLOADERS); \
+	arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -Os -flto -nostdlib -nostartfiles -ffunction-sections -fdata-sections -Wl,--gc-sections -T ./preboot_flash.ld ./preboot.c -o ./preboot.elf; \
+	arm-none-eabi-objcopy -O binary ./preboot.elf ./preboot.bin; \
+	for index in $$(seq 1 $(NUM_BOOTLOADERS)); do \
+		echo "Building Stage 2 bootloader $$index"; \
+		rm -f ../ASF/gcc/PVDXos_bootloader.elf; \
+		OBJS="$(STAGE2_OBJS)" \
+		OBJS_AS_ARGS="$(STAGE2_OBJS_AS_ARGS)" \
+		DEPS_AS_ARGS="$(STAGE2_DEPS_AS_ARGS)" \
+		$(MAKE) -C $(CHILD_MAKEFILE_PATH) CFLAGS="$(CFLAGS)" LINKER_SCRIPT="../../src/bootloader_flash$$index.ld"; \
+		cp -f ../ASF/gcc/PVDXos_bootloader.bin ./bootloader$$index.bin; \
+		cp -f ../ASF/gcc/PVDXos_bootloader.elf ./bootloader$$index.elf; \
 	done
-	@echo " --- Finished Building 20 PVDXos Bootloaders --- "
+	@echo " --- Finished Building Stage 1 and $(NUM_BOOTLOADERS) Stage 2 Bootloaders --- "
 
 # Clean target
 clean:
 	@$(MAKE) -C $(CHILD_MAKEFILE_PATH) clean \
-	&& rm -f *.o *.elf *.bin *.hex *.map bootloader_flash*.ld bootloader_index.h \
+	&& rm -f *.o *.elf *.bin *.hex *.map bootloader_flash*.ld preboot_flash.ld bootloader_index.h \
 	&& echo " --- Cleaned Bootloader Build Files --- "
 
 # When updating the ASF configuration, this must be run once in order to automatically integrate the new ASF config
