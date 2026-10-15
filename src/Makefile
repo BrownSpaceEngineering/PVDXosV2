@@ -14,7 +14,6 @@ EXCLUDE_PATHS := $(PVDXOS_DIR)/src/libraries/adcs \
 				 $(PVDXOS_DIR)/src/linalg/LinearAlgebra/quadprog.c \
 				 $(PVDXOS_DIR)/src/linalg/LinearAlgebra/kf.c \
 				 $(PVDXOS_DIR)/src/tests/test_linalg.c \
-				 $(PVDXOS_DIR)/src/tasks/radio \
 				 $(PVDXOS_DIR)/src/drivers/magnetorquer \
 
 # generate flags to pass to find to exclude paths from above

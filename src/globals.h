@@ -16,8 +16,6 @@
 #include <stdint.h>
 #include <task.h>
 
-#include "cfdp_task.h"
-
 /* ---------- LOGGING CONSTANTS ---------- */
 
 #if defined(RELEASE)

@@ -9,9 +9,9 @@
  * Defne Doken, Aidan Wang, Jai Garg, Alex Khosrowshahi, Zach Mahan
  */
 
+#include "cmd_dispatcher.h"
 #include "task_manager_task.h"
 #include "watchdog_task.h"
-#include "cmd_dispatcher.h"
 
 task_manager_task_memory_t task_manager_mem;
 SemaphoreHandle_t task_list_mutex = NULL;
@@ -45,7 +45,7 @@ void main_task_manager(void *pvParameters) {
     command_t initialise_all_tasks = {
         .target = p_task_manager_task,
         .operation = OPERATION_INIT_SUBTASKS,
-        .data = {0},
+        .data = {{0}},
         .data_type = CMD_DATA_NONE,
         .result = NO_STATUS_RETURN,
 
