@@ -8,8 +8,8 @@
  * Authors: Oren Kohavi, Tanish Makadia, Siddharta Laloux
  */
 
+#include "libraries/cmd_dispatcher/cmd_dispatcher.h"
 #include "watchdog_task.h"
-#include "cmd_dispatcher.h"
 
 watchdog_task_memory_t watchdog_mem;
 QueueHandle_t watchdog_command_queue_handle;

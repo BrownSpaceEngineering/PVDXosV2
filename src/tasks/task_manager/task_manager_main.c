@@ -9,7 +9,7 @@
  * Defne Doken, Aidan Wang, Jai Garg, Alex Khosrowshahi, Zach Mahan
  */
 
-#include "cmd_dispatcher.h"
+#include "libraries/cmd_dispatcher/cmd_dispatcher.h"
 #include "task_manager_task.h"
 #include "watchdog_task.h"
 

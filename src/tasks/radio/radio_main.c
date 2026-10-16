@@ -8,7 +8,7 @@
  */
 
 #include "ccsds/uslp.h"
-#include "cmd_dispatcher.h"
+#include "libraries/cmd_dispatcher/cmd_dispatcher.h"
 #include "logging.h"
 #include "radio_task.h"
 #include "watchdog_task.h"
