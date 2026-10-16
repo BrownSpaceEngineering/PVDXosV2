@@ -72,11 +72,10 @@ void report_reset_cause(void) {
 // *** DESTRUCTIVE: erases the entire array and the OTP area. Intended to run ONCE per
 //     chip after assembly. Remove the MRAM_RUN_FACTORY_INIT define after a successful run.
 //
-// Caveat on step 1 ("JESD reset to a known 1S state"): a never-initialized part powers up
-// in the factory-default 1S mode already (EST 3000 section 2), so the software reset
-// (0x66/0x99) below suffices for first power-on. If a part's nonvolatile I/O-mode register
-// is corrupted into a non-1S protocol, only a JESD252 signal reset (GPIO bit-bang of
-// datasheet Figure 5) or a power cycle will return it to 1S first.
+// Step 1 is the JESD252 signal reset (see mram_jesd_reset below), which forces the device
+// interface back to single-SPI 1S regardless of the nonvolatile I/O-mode register. This is
+// required by EST 3000 step 1 and is the only reset that works on a reflow-fresh part whose
+// NV config is undefined (a software 0x66/0x99 reset would just reload that garbage config).
 //
 // Read-verify steps in EST 3000 are explicitly optional (and a full-array verify at the
 // 50 kHz bus clock would take minutes), so they are omitted; WIP is polled after every
@@ -169,14 +168,71 @@ static void mram_bulk_erase(uint32_t cs) {
     mram_wait_wip(cs);
 }
 
-// Runs the full EST 3000 section-13 initialization on a single chip (by CS pin).
-static void mram_factory_init(uint32_t cs) {
-    // 1) Reset to a known 1S state (software reset: Reset Enable then Reset Memory).
+// JESD252 "Reset with Signal Sequence" (datasheet section 18.3, Figure 37; EST 3000 step 1
+// and section 3). This is the ONLY reset that forces the interface back to single-SPI 1S
+// regardless of the nonvolatile I/O-mode register, so it must run first on a reflow-fresh
+// part whose NV config is undefined. A software reset (0x66/0x99) can't do this: it reloads
+// the (possibly garbage) NV I/O mode.
+//
+// Sequence (bit-banged with SERCOM0 SCK/MOSI temporarily remapped to GPIO):
+//   - CK held static low (SPI mode 0); IO[1]/MISO left High-Z (input).
+//   - Four CS# low pulses, each >= tSL/tSH (500 ns), with IO[0]/MOSI driven to the pattern
+//     0,1,0,1 (stable across each falling edge: set up in the preceding CS#-high gap, held
+//     through the pulse). The device resets ~200 ns after the 4th CS# rising edge.
+// Register contents are NOT changed by this reset; it only returns control logic to a known
+// 1S state so the DFIM/config sequence below can talk to the part.
+static void mram_jesd_reset(uint32_t cs) {
+    const uint8_t pattern[4] = {0, 1, 0, 1}; // IO[0] value during CS# low pulses 1..4
+
+    // Remap SCK (PB25) and MOSI (PB24) from SERCOM0 to GPIO outputs. MISO (PC18) stays an
+    // input = High-Z, as Figure 37 requires for IO[1].
+    gpio_set_pin_function(MRAM_SCK, GPIO_PIN_FUNCTION_OFF);
+    gpio_set_pin_direction(MRAM_SCK, GPIO_DIRECTION_OUT);
+    gpio_set_pin_level(MRAM_SCK, false); // CK static low (mode 0)
+    gpio_set_pin_function(MRAM_MOSI, GPIO_PIN_FUNCTION_OFF);
+    gpio_set_pin_direction(MRAM_MOSI, GPIO_DIRECTION_OUT);
+
+    gpio_set_pin_level(cs, true); // start deselected
+    delay_us(1);                  // >= tSH before first pulse
+
+    for (int i = 0; i < 4; i++) {
+        gpio_set_pin_level(MRAM_MOSI, pattern[i] != 0); // set IO[0] before CS# falls (tDVSR)
+        delay_us(1);
+        gpio_set_pin_level(cs, false); // CS# low pulse (>= tSL = 500 ns)
+        delay_us(1);
+        gpio_set_pin_level(cs, true); // CS# high (>= tSH = 500 ns); IO[0] held stable (tSDVR)
+        delay_us(1);
+    }
+    delay_us(1); // let the internal reset (~200 ns after 4th rising edge) complete
+
+    // Restore SCK/MOSI to their SERCOM0 pinmux so normal SPI works again.
+    gpio_set_pin_function(MRAM_SCK, PINMUX_PB25C_SERCOM0_PAD1);
+    gpio_set_pin_function(MRAM_MOSI, PINMUX_PB24C_SERCOM0_PAD0);
+}
+
+// Software reset: Reset Enable (0x66) then Reset Memory (0x99). Simpler than the JESD252
+// signal reset, but it reloads the nonvolatile I/O-mode register, so it only works if that
+// register is already a valid single-SPI mode (e.g. a part that powers up in factory-default
+// 1S). It cannot rescue a part whose NV I/O mode is corrupted into a non-1S protocol -- use
+// the JESD252 signal reset for that case.
+static void mram_software_reset(uint32_t cs) {
     uint8_t c;
     c = MRAM_CMD_RESET_EN;
     mram_cmd(cs, &c, 1);
     c = MRAM_CMD_RESET_MEM;
     mram_cmd(cs, &c, 1);
+}
+
+// Runs the full EST 3000 section-13 initialization on a single chip (by CS pin).
+// use_jesd_reset selects step 1: true = JESD252 signal reset (required for a reflow-fresh
+// part with undefined NV config), false = software 0x66/0x99 reset.
+static void mram_factory_init(uint32_t cs, bool use_jesd_reset) {
+    // 1) Reset to a known single-SPI 1S interface state.
+    if (use_jesd_reset) {
+        mram_jesd_reset(cs);
+    } else {
+        mram_software_reset(cs);
+    }
     delay_ms(1);
 
     // 4) Enter DFIM: write the manufacturer-ID key into volatile register 0x1E.
@@ -217,8 +273,9 @@ static void mram_factory_init(uint32_t cs) {
 }
 
 // Runs factory init on all three MRAMs. Enables SPI + parks CS high first, same as the
-// ID smoke test below.
-static void mram_init_all(void) {
+// ID smoke test below. Marked unused: the call in main() is normally commented out because
+// it is destructive (full erase); uncomment it to run the one-time init.
+__attribute__((unused)) static void mram_init_all(bool use_jesd_reset) {
     const uint32_t cs_pins[3] = {MRAM1_CS, MRAM2_CS, MRAM3_CS};
 
     spi_m_sync_enable(&SPI_MRAM);
@@ -228,8 +285,9 @@ static void mram_init_all(void) {
     delay_ms(50);
 
     for (int i = 0; i < 1; i++) {
-        info("[MRAM INIT] Running EST 3000 factory init on MRAM%d...\n", i + 1);
-        mram_factory_init(cs_pins[i]);
+        info("[MRAM INIT] Running EST 3000 factory init on MRAM%d (%s reset)...\n", i + 1,
+             use_jesd_reset ? "JESD252" : "software");
+        mram_factory_init(cs_pins[i], use_jesd_reset);
         info("[MRAM INIT] MRAM%d factory init complete\n", i + 1);
     }
 }
@@ -280,9 +338,8 @@ int main(void) {
     info_impl("[+] Built from commit: %s\n", GIT_COMMIT_HASH);
     report_reset_cause();
 
-    // One-time Everspin EST 3000 factory init (DESTRUCTIVE: full erase). Run once on a
-    // freshly-reflowed board, then remove this define so subsequent boots don't re-erase.
-    // mram_init_all();
+    // One-time Everspin EST 3000 factory init (DESTRUCTIVE: full erase).
+    // mram_init_all(false);
 
     // Standalone MRAM ID test (runs before anything that touches MRAM).
     test_mram();
