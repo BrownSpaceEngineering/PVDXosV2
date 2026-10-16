@@ -943,7 +943,7 @@ drivers:
       domain_group: null
   SPI_MRAM:
     user_label: SPI_MRAM
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::SERCOM5::driver_config_definition::SPI.Master::HAL:Driver:SPI.Master.Sync
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::SERCOM0::driver_config_definition::SPI.Master::HAL:Driver:SPI.Master.Sync
     functionality: SPI
     api: HAL:Driver:SPI_Master_Sync
     configuration:
@@ -962,14 +962,14 @@ drivers:
     variant:
       specification: TXPO=0, RXPO=2
       required_signals:
-      - name: SERCOM5/PAD/0
-        pad: PB16
+      - name: SERCOM0/PAD/0
+        pad: PB24
         label: MOSI
-      - name: SERCOM5/PAD/1
-        pad: PB17
+      - name: SERCOM0/PAD/1
+        pad: PB25
         label: SCK
-      - name: SERCOM5/PAD/2
-        pad: PB18
+      - name: SERCOM0/PAD/2
+        pad: PC18
         label: MISO
     clocks:
       domain_group:
@@ -1015,55 +1015,55 @@ pads:
     configuration:
       pad_initial_level: High
   MRAM3_RST:
-    name: PC10
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC10
+    name: PB11
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB11
     mode: Digital output
     user_label: MRAM3_RST
     configuration:
       pad_initial_level: High
   MRAM3_CS:
-    name: PC11
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC11
+    name: PB10
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB10
     mode: Digital output
     user_label: MRAM3_CS
     configuration:
       pad_initial_level: High
   MRAM3_WP:
-    name: PC12
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC12
+    name: PB15
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB15
     mode: Digital output
     user_label: MRAM3_WP
     configuration:
       pad_initial_level: High
   MRAM1_WP:
-    name: PC14
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC14
+    name: PB12
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB12
     mode: Digital output
     user_label: MRAM1_WP
     configuration:
       pad_initial_level: High
   MRAM2_WP:
-    name: PC15
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC15
+    name: PB13
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB13
     mode: Digital output
     user_label: MRAM2_WP
     configuration:
       pad_initial_level: High
   MRAM_MOSI:
-    name: PB16
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB16
+    name: PB24
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB24
     mode: Digital output
     user_label: MRAM_MOSI
     configuration: null
   MRAM_SCK:
-    name: PB17
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB17
+    name: PB25
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB25
     mode: Digital output
     user_label: MRAM_SCK
     configuration: null
   MRAM_MISO:
-    name: PB18
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB18
+    name: PC18
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC18
     mode: Digital input
     user_label: MRAM_MISO
     configuration: null

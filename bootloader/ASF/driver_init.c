@@ -26,7 +26,7 @@ void SPI_MRAM_PORT_init(void)
 	// Set pin direction to output
 	gpio_set_pin_direction(MRAM_MOSI, GPIO_DIRECTION_OUT);
 
-	gpio_set_pin_function(MRAM_MOSI, PINMUX_PB16C_SERCOM5_PAD0);
+	gpio_set_pin_function(MRAM_MOSI, PINMUX_PB24C_SERCOM0_PAD0);
 
 	gpio_set_pin_level(MRAM_SCK,
 	                   // <y> Initial level
@@ -38,7 +38,7 @@ void SPI_MRAM_PORT_init(void)
 	// Set pin direction to output
 	gpio_set_pin_direction(MRAM_SCK, GPIO_DIRECTION_OUT);
 
-	gpio_set_pin_function(MRAM_SCK, PINMUX_PB17C_SERCOM5_PAD1);
+	gpio_set_pin_function(MRAM_SCK, PINMUX_PB25C_SERCOM0_PAD1);
 
 	// Set pin direction to input
 	gpio_set_pin_direction(MRAM_MISO, GPIO_DIRECTION_IN);
@@ -51,21 +51,21 @@ void SPI_MRAM_PORT_init(void)
 	                       // <GPIO_PULL_DOWN"> Pull-down
 	                       GPIO_PULL_OFF);
 
-	gpio_set_pin_function(MRAM_MISO, PINMUX_PB18C_SERCOM5_PAD2);
+	gpio_set_pin_function(MRAM_MISO, PINMUX_PC18D_SERCOM0_PAD2);
 }
 
 void SPI_MRAM_CLOCK_init(void)
 {
-	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM5_GCLK_ID_CORE, CONF_GCLK_SERCOM5_CORE_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
-	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM5_GCLK_ID_SLOW, CONF_GCLK_SERCOM5_SLOW_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM0_GCLK_ID_CORE, CONF_GCLK_SERCOM0_CORE_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM0_GCLK_ID_SLOW, CONF_GCLK_SERCOM0_SLOW_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
 
-	hri_mclk_set_APBDMASK_SERCOM5_bit(MCLK);
+	hri_mclk_set_APBAMASK_SERCOM0_bit(MCLK);
 }
 
 void SPI_MRAM_init(void)
 {
 	SPI_MRAM_CLOCK_init();
-	spi_m_sync_init(&SPI_MRAM, SERCOM5);
+	spi_m_sync_init(&SPI_MRAM, SERCOM0);
 	SPI_MRAM_PORT_init();
 }
 
@@ -134,7 +134,7 @@ void system_init(void)
 
 	gpio_set_pin_function(MRAM2_RST, GPIO_PIN_FUNCTION_OFF);
 
-	// GPIO on PC10
+	// GPIO on PB11
 
 	gpio_set_pin_level(MRAM3_RST,
 	                   // <y> Initial level
@@ -148,7 +148,7 @@ void system_init(void)
 
 	gpio_set_pin_function(MRAM3_RST, GPIO_PIN_FUNCTION_OFF);
 
-	// GPIO on PC11
+	// GPIO on PB10
 
 	gpio_set_pin_level(MRAM3_CS,
 	                   // <y> Initial level
@@ -162,7 +162,7 @@ void system_init(void)
 
 	gpio_set_pin_function(MRAM3_CS, GPIO_PIN_FUNCTION_OFF);
 
-	// GPIO on PC12
+	// GPIO on PB15
 
 	gpio_set_pin_level(MRAM3_WP,
 	                   // <y> Initial level
@@ -176,7 +176,7 @@ void system_init(void)
 
 	gpio_set_pin_function(MRAM3_WP, GPIO_PIN_FUNCTION_OFF);
 
-	// GPIO on PC14
+	// GPIO on PB12
 
 	gpio_set_pin_level(MRAM1_WP,
 	                   // <y> Initial level
@@ -190,7 +190,7 @@ void system_init(void)
 
 	gpio_set_pin_function(MRAM1_WP, GPIO_PIN_FUNCTION_OFF);
 
-	// GPIO on PC15
+	// GPIO on PB13
 
 	gpio_set_pin_level(MRAM2_WP,
 	                   // <y> Initial level
