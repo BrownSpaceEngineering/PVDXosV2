@@ -54,8 +54,7 @@ int main(void) {
 
     /* ---------- FUEL GAUGE BRING-UP ---------- */
 
-    // Probe the shared I2C bus first (logs which 7-bit addresses ACK). A gauge channel
-    // must be open to see 0x36/0x0B; the mux itself (0x70) should ACK regardless.
+    // Probe only gauge addresses (and the mux, when enabled).
     fg_i2c_scan();
 
     status_t fg_status = init_fuel_gauges();
@@ -67,7 +66,7 @@ int main(void) {
 
     /* ---------- FUEL GAUGE TELEMETRY LOOP ---------- */
 
-    // Read all four packs once per second and log decoded telemetry. Floats are printed as
+    // Read the configured packs once per second. Floats are printed as
     // integer milli-units to avoid relying on %f in the embedded printf.
     while (true) {
         fg_reading_t packs[FG_NUM_PACKS];
@@ -78,12 +77,16 @@ int main(void) {
 
         for (uint8_t ch = 0; ch < FG_NUM_PACKS; ch++) {
             fg_reading_t *p = &packs[ch];
+            if (!p->valid) {
+                warning("pack %u: telemetry unavailable (I2C read failed)\n", ch);
+                continue;
+            }
             info("pack %u: SOC=%ld m%%  Vpack=%ld mV  I=%ld mA  T=%ld mC\n", ch,
                  (long)(p->soc_pct * 1000.0f), (long)(p->pack_voltage * 1000.0f),
                  (long)(p->current_a * 1000.0f), (long)(p->temp_c * 1000.0f));
         }
 
-        // Shared active-low ALRT line: if asserted, scan all four for the fault source.
+        // Active-low ALRT line: if asserted, read status to identify the fault source.
         if (fg_alrt_asserted()) {
             warning("fuel gauge ALRT asserted - scanning\n");
             fg_scan_alerts();
