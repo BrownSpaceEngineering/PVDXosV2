@@ -36,6 +36,8 @@ int main(void) {
 // only for debugging; will not be present in final
 #ifdef WRITE_FLASH_TO_MRAM
     if (mram_ok) {
+        // When origin address is 0, SPI interprets it as a null address and sends dummy bytes
+        // instead of the actual data we want.
         uint8_t byte0 = *(const uint8_t *)0x00000000;
         mram_write_bytes(MRAM_FLASH_BASE_ADDRESS, &byte0, 1);
         mram_write_bytes(MRAM_FLASH_BASE_ADDRESS + 1, (const uint8_t *)0x00000001, MRAM_FLASH_SIZE - 1);
