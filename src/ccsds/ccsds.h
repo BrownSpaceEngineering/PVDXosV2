@@ -10,6 +10,8 @@
 
 #include "uslp.h"
 
+#define CCSDS_SCID 0x0001
+
 /// initializes all ccsds utilities
 /// - should be called once, on boot and before the task loop begins
 static inline void ccsds_init(void) {

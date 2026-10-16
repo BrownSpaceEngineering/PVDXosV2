@@ -5,6 +5,7 @@
 #include <driver_init.h>
 
 #include "FreeRTOS.h"
+#include "ccsds/ccsds.h"
 #include "ccsds/spp.h"
 #include "globals.h"
 #include "queue.h"
@@ -14,7 +15,7 @@
 
 #define RADIO_DOWNLINK_QUEUE_LENGTH 4 // TODO: How long should queue be?
 #define RADIO_UPLINK_QUEUE_LENGTH 4
-#define RADIO_SCID 0x0001       // Spacecraft id
+#define RADIO_SCID CCSDS_SCID   // Spacecraft id
 #define RADIO_DOWNLINK_VCID 0   // Virtual Channel
 #define RADIO_DOWNLINK_MAP_ID 0 // Map ID
 #define RADIO_GMAP_ID (((uint32_t)USLP_TFVN << 26) | ((uint32_t)RADIO_SCID << 10) | (RADIO_DOWNLINK_VCID << 4) | RADIO_DOWNLINK_MAP_ID)
