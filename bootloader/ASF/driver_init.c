@@ -56,16 +56,16 @@ void SPI_MRAM_PORT_init(void)
 
 void SPI_MRAM_CLOCK_init(void)
 {
-	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM5_GCLK_ID_CORE, CONF_GCLK_SERCOM5_CORE_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
-	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM5_GCLK_ID_SLOW, CONF_GCLK_SERCOM5_SLOW_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM0_GCLK_ID_CORE, CONF_GCLK_SERCOM0_CORE_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM0_GCLK_ID_SLOW, CONF_GCLK_SERCOM0_SLOW_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
 
-	hri_mclk_set_APBDMASK_SERCOM5_bit(MCLK);
+	hri_mclk_set_APBDMASK_SERCOM0_bit(MCLK);
 }
 
 void SPI_MRAM_init(void)
 {
 	SPI_MRAM_CLOCK_init();
-	spi_m_sync_init(&SPI_MRAM, SERCOM5);
+	spi_m_sync_init(&SPI_MRAM, SERCOM0);
 	SPI_MRAM_PORT_init();
 }
 
