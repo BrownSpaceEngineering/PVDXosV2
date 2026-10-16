@@ -12,6 +12,7 @@
 
 int main(void);
 void go_to_app(void);
+extern const volatile uint8_t __flash_address_zero;
 
 bool mram_checksum_matches(const uint8_t *os_address) {
     const uint8_t *checksum = os_address + MRAM_OS_SIZE - sizeof(uint32_t);
@@ -36,9 +37,8 @@ int main(void) {
 // only for debugging; will not be present in final
 #ifdef WRITE_FLASH_TO_MRAM
     if (mram_ok) {
-        // When origin address is 0, SPI interprets it as a null address and sends dummy bytes
-        // instead of the actual data we want.
-        uint8_t byte0 = *(const uint8_t *)0x00000000;
+        // Stage address zero in RAM so the MRAM write receives a non-null source buffer.
+        uint8_t byte0 = __flash_address_zero;
         mram_write_bytes(MRAM_FLASH_BASE_ADDRESS, &byte0, 1);
         mram_write_bytes(MRAM_FLASH_BASE_ADDRESS + 1, (const uint8_t *)0x00000001, MRAM_FLASH_SIZE - 1);
     }
