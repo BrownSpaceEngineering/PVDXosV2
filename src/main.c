@@ -17,10 +17,7 @@
 #include "fuel_gauge_driver.h"
 #include "globals.h"
 #include "logging.h"
-#include "magnetorquer_driver.h"
-#include "photodiode_driver.h"
 #include "tests/test.h"
-#include "thermistor_driver.h"
 
 static void PVDX_init(void) {
     // WARNING: Segger RTT channel 0 is pre-configured at compile time according to Segger documentation
@@ -32,46 +29,6 @@ static void PVDX_init(void) {
         SEGGER_RTT_LOG_BUFFER_SIZE, SEGGER_RTT_MODE_NO_BLOCK_SKIP
     );
 }
-
-// The SERCOM6 I2C pins: PD09 = SDA (PAD0), PD08 = SCL (PAD1).
-#define PIN_SDA GPIO(GPIO_PORTD, 9)
-#define PIN_SCL GPIO(GPIO_PORTD, 8)
-
-// Continuity/bring-up aid: drives PD09/PD08 as plain GPIO so each line can be traced with a
-// multimeter to the gauge's SDA/SCL pins. Overrides the I2C pinmux and LOOPS FOREVER, so it
-// runs instead of normal bring-up. Watch RTT ch.1 to know the current state, or set a
-// breakpoint and single-step. Expected at the gauge pin: HIGH ~= 3.3 V, LOW ~= 0 V.
-// Remove the call in main() to return to normal boot.
-// static void pin_toggle_test(void) {
-//     gpio_set_pin_function(PIN_SDA, GPIO_PIN_FUNCTION_OFF);
-//     gpio_set_pin_function(PIN_SCL, GPIO_PIN_FUNCTION_OFF);
-//     gpio_set_pin_direction(PIN_SDA, GPIO_DIRECTION_OUT);
-//     gpio_set_pin_direction(PIN_SCL, GPIO_DIRECTION_OUT);
-
-//     info("[PIN TEST] Driving PD09(SDA)/PD08(SCL) as GPIO. Probe at the gauge's SDA/SCL pins.\n");
-
-//     while (true) {
-//         gpio_set_pin_level(PIN_SDA, true);
-//         gpio_set_pin_level(PIN_SCL, false);
-//         info("[PIN TEST] PD09(SDA)=HIGH  PD08(SCL)=LOW\n");
-//         delay_ms(3000);
-
-//         gpio_set_pin_level(PIN_SDA, false);
-//         gpio_set_pin_level(PIN_SCL, true);
-//         info("[PIN TEST] PD09(SDA)=LOW   PD08(SCL)=HIGH\n");
-//         delay_ms(3000);
-
-//         gpio_set_pin_level(PIN_SDA, true);
-//         gpio_set_pin_level(PIN_SCL, true);
-//         info("[PIN TEST] PD09(SDA)=HIGH  PD08(SCL)=HIGH\n");
-//         delay_ms(3000);
-
-//         gpio_set_pin_level(PIN_SDA, false);
-//         gpio_set_pin_level(PIN_SCL, false);
-//         info("[PIN TEST] PD09(SDA)=LOW   PD08(SCL)=LOW\n");
-//         delay_ms(3000);
-//     }
-// }
 
 int main(void) {
     /* ---------- HARDWARE & LOGGING INITIALIZATION ---------- */
@@ -87,9 +44,6 @@ int main(void) {
     info("[+] Built from branch: %s\n", GIT_BRANCH_NAME);
     info("[+] Built from commit: %s\n", GIT_COMMIT_HASH);
 
-    // Pin continuity probe (loops forever). Remove this call to resume normal boot.
-    // pin_toggle_test();
-
 #ifdef UNITTEST
     // Hardware-in-the-loop tests; then idle (skip the normal telemetry loop).
     tests_run();
@@ -98,49 +52,42 @@ int main(void) {
     }
 #endif
 
-    /* ---------- DRIVER BRING-UP ---------- */
+    /* ---------- FUEL GAUGE BRING-UP ---------- */
 
-    // fg_i2c_scan();
+    // Probe the shared I2C bus first (logs which 7-bit addresses ACK). A gauge channel
+    // must be open to see 0x36/0x0B; the mux itself (0x70) should ACK regardless.
+    fg_i2c_scan();
 
-    // status_t fg_status = init_fuel_gauges();
-    // if (fg_status != SUCCESS) {
-    //     warning("[!] init_fuel_gauges() failed (status=%d)\n", fg_status);
-    // } else {
-    //     info("[+] Fuel gauges initialized\n");
-    // }
-
-    status_t th_status = init_thermistors();
-    if (th_status != SUCCESS) {
-        warning("[!] init_thermistors() failed (status=%d)\n", th_status);
+    status_t fg_status = init_fuel_gauges();
+    if (fg_status != SUCCESS) {
+        warning("[!] init_fuel_gauges() failed (status=%d)\n", fg_status);
     } else {
-        info("[+] Thermistors initialized\n");
+        info("[+] Fuel gauges initialized\n");
     }
 
-    // status_t phd_status = init_photodiodes();
-    // if (phd_status != SUCCESS) {
-    //     warning("[!] init_photodiodes() failed (status=%d)\n", phd_status);
-    // } else {
-    //     info("[+] Photodiodes initialized\n");
-    // }
+    /* ---------- FUEL GAUGE TELEMETRY LOOP ---------- */
 
-    /* ---------- THERMISTOR 0 VOLTAGE READOUT ---------- */
-
-    // Read the raw ADC code for thermistor 0 and convert to the divider-node voltage.
-    // Reads are ratiometric against VDDANA (~3.3 V), so V = code / full_scale * VREF.
+    // Read all four packs once per second and log decoded telemetry. Floats are printed as
+    // integer milli-units to avoid relying on %f in the embedded printf.
     while (true) {
-        uint16_t code = 0;
-        status_t rs = therm_read_raw(0, &code);
-        if (rs == SUCCESS) {
-            float v = (float)code / THERM_ADC_FS * 3.3f;
-            // Log mV (integer) to avoid relying on %f in the embedded printf.
-            info("therm 0: code=%u V=%ld mV\n", code, (long)(v * 1000.0f));
-        } else {
-            warning("therm 0: read failed (status=%d)\n", rs);
+        fg_reading_t packs[FG_NUM_PACKS];
+        status_t rs = fg_read_all(packs);
+        if (rs != SUCCESS) {
+            warning("fg_read_all failed (status=%d)\n", rs);
         }
 
-        // Drive the heaters from the voltage threshold (ON above 2.3 V = cold).
-        heater_control_update();
-        info("heaters: 1=%s 2=%s\n", heater_is_on(0) ? "ON" : "off", heater_is_on(1) ? "ON" : "off");
+        for (uint8_t ch = 0; ch < FG_NUM_PACKS; ch++) {
+            fg_reading_t *p = &packs[ch];
+            info("pack %u: SOC=%ld m%%  Vpack=%ld mV  I=%ld mA  T=%ld mC\n", ch,
+                 (long)(p->soc_pct * 1000.0f), (long)(p->pack_voltage * 1000.0f),
+                 (long)(p->current_a * 1000.0f), (long)(p->temp_c * 1000.0f));
+        }
+
+        // Shared active-low ALRT line: if asserted, scan all four for the fault source.
+        if (fg_alrt_asserted()) {
+            warning("fuel gauge ALRT asserted - scanning\n");
+            fg_scan_alerts();
+        }
 
         delay_ms(1000);
     }
