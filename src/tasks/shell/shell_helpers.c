@@ -9,7 +9,8 @@
  */
 
 #include "shell_helpers.h"
-#include "cmd_dispatcher.h"
+
+#include "libraries/cmd_dispatcher/cmd_dispatcher.h"
 
 /* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
 

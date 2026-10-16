@@ -10,9 +10,9 @@
 
 #include "adcs_task.h"
 #include "globals.h"
+#include "libraries/cmd_dispatcher/cmd_dispatcher.h"
 #include "logging.h"
 #include "watchdog_task.h"
-#include "cmd_dispatcher.h"
 // ADCS Task memory structures
 adcs_task_memory_t adcs_mem;
 
