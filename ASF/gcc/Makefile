@@ -33,6 +33,7 @@ SUB_DIRS +=  \
 hpl/adc \
 hpl/ramecc \
 samd51a/gcc/gcc \
+hpl/tcc \
 examples \
 hpl/systick \
 hpl/oscctrl \
@@ -44,6 +45,7 @@ hal/src \
 samd51a/gcc \
 hal/utils/src \
 hpl/wdt \
+hpl/rtc \
 hpl/trng \
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/portable/GCC/ARM_CM4F \
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/portable/MemMang \
@@ -51,6 +53,7 @@ hpl/mclk \
 hpl/cmcc \
 hpl/gclk \
 hpl/pm \
+hpl/dac \
 hpl/sercom \
 hpl/nvmctrl \
 hpl/core
@@ -59,6 +62,7 @@ hpl/core
 OBJS +=  \
 hal/src/hal_io.o \
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/list.o \
+thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/portable/MemMang/heap_1.o \
 hpl/systick/hpl_systick.o \
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/portable/GCC/ARM_CM4F/port.o \
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/event_groups.o \
@@ -68,10 +72,16 @@ samd51a/gcc/system_samd51.o \
 hpl/core/hpl_core_m4.o \
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/stream_buffer.o \
 hal/utils/src/utils_syscalls.o \
+<<<<<<< HEAD
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/portable/MemMang/heap_1.o \
 hpl/nvmctrl/hpl_nvmctrl.o \
+=======
+hpl/mclk/hpl_mclk.o \
+>>>>>>> origin/main
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/queue.o \
 hal/src/hal_spi_m_sync.o \
+hal/src/hal_timer.o \
+hal/src/hal_pwm.o \
 hal/src/hal_i2c_m_sync.o \
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/timers.o \
 hal/src/hal_delay.o \
@@ -84,7 +94,7 @@ hpl/dmac/hpl_dmac.o \
 hpl/oscctrl/hpl_oscctrl.o \
 hal/src/hal_rand_sync.o \
 hpl/trng/hpl_trng.o \
-hpl/mclk/hpl_mclk.o \
+hpl/dac/hpl_dac.o \
 hpl/ramecc/hpl_ramecc.o \
 hal/src/hal_flash.o \
 hal/src/hal_init.o \
@@ -92,15 +102,21 @@ thirdparty/RTOS/freertos/FreeRTOSV10.0.0/rtos_port.o \
 rtos_start.o \
 hal/utils/src/utils_list.o \
 hpl/osc32kctrl/hpl_osc32kctrl.o \
+hpl/rtc/hpl_rtc.o \
 examples/driver_examples.o \
 driver_init.o \
 hal/src/hal_adc_sync.o \
+hal/src/hal_dac_sync.o \
 hpl/sercom/hpl_sercom.o \
 hal/src/hal_atomic.o \
 hal/src/hal_gpio.o \
 hal/utils/src/utils_event.o \
 hal/src/hal_sleep.o \
 hal/src/hal_cache.o \
+<<<<<<< HEAD
+=======
+hpl/tcc/hpl_tcc.o \
+>>>>>>> origin/main
 samd51a/gcc/gcc/startup_samd51.o \
 atmel_start.o \
 hpl/cmcc/hpl_cmcc.o \
@@ -110,6 +126,7 @@ hpl/adc/hpl_adc.o
 OBJS_AS_ARGS +=  \
 "hal/src/hal_io.o" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/list.o" \
+"thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/portable/MemMang/heap_1.o" \
 "hpl/systick/hpl_systick.o" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/portable/GCC/ARM_CM4F/port.o" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/event_groups.o" \
@@ -119,10 +136,16 @@ OBJS_AS_ARGS +=  \
 "hpl/core/hpl_core_m4.o" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/stream_buffer.o" \
 "hal/utils/src/utils_syscalls.o" \
+<<<<<<< HEAD
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/portable/MemMang/heap_1.o" \
 "hpl/nvmctrl/hpl_nvmctrl.o" \
+=======
+"hpl/mclk/hpl_mclk.o" \
+>>>>>>> origin/main
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/queue.o" \
 "hal/src/hal_spi_m_sync.o" \
+"hal/src/hal_timer.o" \
+"hal/src/hal_pwm.o" \
 "hal/src/hal_i2c_m_sync.o" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/timers.o" \
 "hal/src/hal_delay.o" \
@@ -135,7 +158,7 @@ OBJS_AS_ARGS +=  \
 "hpl/oscctrl/hpl_oscctrl.o" \
 "hal/src/hal_rand_sync.o" \
 "hpl/trng/hpl_trng.o" \
-"hpl/mclk/hpl_mclk.o" \
+"hpl/dac/hpl_dac.o" \
 "hpl/ramecc/hpl_ramecc.o" \
 "hal/src/hal_flash.o" \
 "hal/src/hal_init.o" \
@@ -143,15 +166,21 @@ OBJS_AS_ARGS +=  \
 "rtos_start.o" \
 "hal/utils/src/utils_list.o" \
 "hpl/osc32kctrl/hpl_osc32kctrl.o" \
+"hpl/rtc/hpl_rtc.o" \
 "examples/driver_examples.o" \
 "driver_init.o" \
 "hal/src/hal_adc_sync.o" \
+"hal/src/hal_dac_sync.o" \
 "hpl/sercom/hpl_sercom.o" \
 "hal/src/hal_atomic.o" \
 "hal/src/hal_gpio.o" \
 "hal/utils/src/utils_event.o" \
 "hal/src/hal_sleep.o" \
 "hal/src/hal_cache.o" \
+<<<<<<< HEAD
+=======
+"hpl/tcc/hpl_tcc.o" \
+>>>>>>> origin/main
 "samd51a/gcc/gcc/startup_samd51.o" \
 "atmel_start.o" \
 "hpl/cmcc/hpl_cmcc.o" \
@@ -168,6 +197,7 @@ DIR_INCLUDES +=  \
 -I"../hpl/adc" \
 -I"../hpl/cmcc" \
 -I"../hpl/core" \
+-I"../hpl/dac" \
 -I"../hpl/dmac" \
 -I"../hpl/gclk" \
 -I"../hpl/mclk" \
@@ -177,8 +207,10 @@ DIR_INCLUDES +=  \
 -I"../hpl/pm" \
 -I"../hpl/port" \
 -I"../hpl/ramecc" \
+-I"../hpl/rtc" \
 -I"../hpl/sercom" \
 -I"../hpl/systick" \
+-I"../hpl/tcc" \
 -I"../hpl/trng" \
 -I"../hpl/wdt" \
 -I"../hri" \
@@ -210,12 +242,18 @@ DEPS_AS_ARGS +=  \
 "samd51a/gcc/system_samd51.d" \
 "hal/src/hal_i2c_m_sync.d" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/timers.d" \
+<<<<<<< HEAD
 "hpl/nvmctrl/hpl_nvmctrl.d" \
+=======
+"hal/src/hal_pwm.d" \
+"hal/src/hal_timer.d" \
+>>>>>>> origin/main
 "hal/src/hal_spi_m_sync.d" \
 "hal/src/hal_wdt.d" \
 "hpl/cmcc/hpl_cmcc.d" \
 "hpl/dmac/hpl_dmac.d" \
 "hal/utils/src/utils_assert.d" \
+"hpl/mclk/hpl_mclk.d" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/stream_buffer.d" \
 "hal/src/hal_delay.d" \
 "hpl/core/hpl_init.d" \
@@ -226,25 +264,28 @@ DEPS_AS_ARGS +=  \
 "hal/src/hal_init.d" \
 "hpl/trng/hpl_trng.d" \
 "hal/src/hal_rand_sync.d" \
-"hpl/mclk/hpl_mclk.d" \
+"hpl/dac/hpl_dac.d" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/portable/GCC/ARM_CM4F/port.d" \
 "driver_init.d" \
 "hal/src/hal_adc_sync.d" \
 "hpl/osc32kctrl/hpl_osc32kctrl.d" \
 "rtos_start.d" \
 "examples/driver_examples.d" \
+"hpl/rtc/hpl_rtc.d" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/list.d" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/queue.d" \
 "hal/src/hal_cache.d" \
 "hal/utils/src/utils_list.d" \
 "hal/src/hal_sleep.d" \
 "hpl/sercom/hpl_sercom.d" \
+"hal/src/hal_dac_sync.d" \
 "hal/src/hal_gpio.d" \
 "hal/src/hal_atomic.d" \
 "hpl/oscctrl/hpl_oscctrl.d" \
 "hpl/adc/hpl_adc.d" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/tasks.d" \
 "samd51a/gcc/gcc/startup_samd51.d" \
+"hpl/tcc/hpl_tcc.d" \
 "atmel_start.d"
 
 OUTPUT_FILE_NAME :=PVDXos
@@ -265,7 +306,7 @@ $(OUTPUT_FILE_PATH): $(OBJS)
 	@echo Building target: $(strip $(patsubst ../%, %, $@))
 	@echo Invoking: ARM/GNU Linker
 	$(QUOTE)arm-none-eabi-gcc$(QUOTE) -o $(OUTPUT_FILE_NAME).elf $(OBJS_AS_ARGS) -Wl,--start-group -lm -Wl,--end-group -mthumb \
--Wl,-Map="$(OUTPUT_FILE_NAME).map" --specs=nano.specs -Wl,--gc-sections -mcpu=cortex-m4 \
+-Wl,-Map="$(OUTPUT_FILE_NAME).map" --specs=nano.specs -Wl,--gc-sections -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 \
  \
 -T"../../src/src_ram.ld" \
 -L"../samd51a/gcc/gcc"
@@ -287,7 +328,7 @@ $(OUTPUT_FILE_PATH): $(OBJS)
 	@echo Building file: $<
 	@echo ARM/GNU C Compiler
 	$(QUOTE)arm-none-eabi-gcc$(QUOTE) -x c -mthumb $(CFLAGS) -D__FILENAME__=\"$(notdir $<)\" -Os -ffunction-sections -mlong-calls -g3 -Wall -c -std=gnu99 \
--D__SAMD51P20A__ -mcpu=cortex-m4 -mfloat-abi=softfp -mfpu=fpv4-sp-d16 \
+-D__SAMD51P20A__ -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 \
 $(DIR_INCLUDES) \
 -MD -MP -MF "$(patsubst ../%,%, $(@:%.o=%.d))" -MT"$(patsubst ../%,%, $(@:%.o=%.d))" -MT"$(patsubst ../%,%, $(@:%.o=%.o))"  -o "$(strip $(patsubst ../%, %, $@))" "$<"
 	@echo Finished building: $<
@@ -296,7 +337,7 @@ $(DIR_INCLUDES) \
 	@echo Building file: $<
 	@echo ARM/GNU Assembler
 	$(QUOTE)arm-none-eabi-as$(QUOTE) -x c -mthumb $(CFLAGS) -D__FILENAME__=\"$(notdir $<)\" -Os -ffunction-sections -mlong-calls -g3 -Wall -c -std=gnu99 \
--D__SAMD51P20A__ -mcpu=cortex-m4 -mfloat-abi=softfp -mfpu=fpv4-sp-d16 \
+-D__SAMD51P20A__ -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 \
 $(DIR_INCLUDES) \
 -MD -MP -MF "$(patsubst ../%,%, $(@:%.o=%.d))" -MT"$(patsubst ../%,%, $(@:%.o=%.d))" -MT"$(patsubst ../%,%, $(@:%.o=%.o))"  -o "$(strip $(patsubst ../%, %, $@))" "$<"
 	@echo Finished building: $<
@@ -305,7 +346,7 @@ $(DIR_INCLUDES) \
 	@echo Building file: $<
 	@echo ARM/GNU Preprocessing Assembler
 	$(QUOTE)arm-none-eabi-gcc$(QUOTE) -x c -mthumb $(CFLAGS) -D__FILENAME__=\"$(notdir $<)\" -Os -ffunction-sections -mlong-calls -g3 -Wall -c -std=gnu99 \
--D__SAMD51P20A__ -mcpu=cortex-m4 -mfloat-abi=softfp -mfpu=fpv4-sp-d16 \
+-D__SAMD51P20A__ -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 \
 $(DIR_INCLUDES) \
 -MD -MP -MF "$(patsubst ../%,%, $(@:%.o=%.d))" -MT"$(patsubst ../%,%, $(@:%.o=%.d))" -MT"$(patsubst ../%,%, $(@:%.o=%.o))"  -o "$(strip $(patsubst ../%, %, $@))" "$<"
 	@echo Finished building: $<

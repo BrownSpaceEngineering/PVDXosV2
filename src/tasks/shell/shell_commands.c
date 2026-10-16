@@ -10,11 +10,18 @@
 #include "shell_commands.h"
 
 #include <atmel_start.h>
-
+#include "display_task.h"
+#include "image_buffers/image_buffer_BrownLogo.h"
+#include "image_buffers/image_buffer_PVDX.h"
 #include "logging.h"
 #include "shell_helpers.h"
+<<<<<<< HEAD
 #include "watchdog_driver.h"
 
+=======
+#include "watchdog_task.h"
+#include "cmd_dispatcher.h"
+>>>>>>> origin/main
 shell_command_t shell_commands[] = {
     {"help", shell_help, help_help},
     {"echo", shell_echo, help_echo},
@@ -33,7 +40,7 @@ shell_command_t shell_commands[] = {
  * \brief This function is a utility that will only exist on the ground station
  *
  * \param args the command and arguments the shell command recieves
- * 
+ *
  * \param arg_count the number of total arguments provided
  *
  */
@@ -73,14 +80,13 @@ void help_help() {
 
 /* ---------- ECHO COMMAND ---------- */
 
-
 /**
  * \fn shell_echo
  *
  * \brief This function echos the command recieved
  *
  * \param args the command and arguments the shell command recieves
- * 
+ *
  * \param arg_count the number of total arguments provided
  *
  */
@@ -119,7 +125,7 @@ void help_echo() {
  * \brief Clears the shell
  *
  * \param args the command and arguments the shell command recieves
- * 
+ *
  * \param arg_count the number of total arguments provided
  *
  */
@@ -152,7 +158,7 @@ char *log_level_string_mappings[] = {"DEBUG", "INFO", "EVENT", "WARNING"};
  * \brief Sets or displays the log_level of the shell
  *
  * \param args the command and arguments the shell command recieves
- * 
+ *
  * \param arg_count the number of total arguments provided
  *
  */
@@ -200,7 +206,7 @@ void help_loglevel() {
  * \brief reboots the shell
  *
  * \param args the command and arguments the shell command recieves
- * 
+ *
  * \param arg_count the number of total arguments provided
  *
  */
@@ -234,7 +240,7 @@ void help_reboot() {
  * \brief displays the image on the display
  *
  * \param args the command and arguments the shell command recieves
- * 
+ *
  * \param arg_count the number of total arguments provided
  *
  */
@@ -246,7 +252,10 @@ void shell_display(char **args, int arg_count) {
 
     const uint8_t *image_buffers[] = {IMAGE_BUFFER_BROWNLOGO, IMAGE_BUFFER_PVDX};
     command_t display_image_command = get_display_image_command(image_buffers[args[1][0] - '0']);
-    enqueue_command(&display_image_command);
+    
+    while (enqueue_command(&display_image_command) != SUCCESS) {
+        warning("shell: Failed to enqueue display image command\n");
+    }
     terminal_printf("fr\n");
 }
 

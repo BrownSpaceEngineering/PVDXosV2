@@ -1,5 +1,9 @@
 /**
+<<<<<<< HEAD
  * src/task/rado/spp.h
+=======
+ * src/tests/test.h
+>>>>>>> origin/main
  *
  * header file to manage tests
  *
@@ -9,17 +13,52 @@
 #ifndef TESTS_TEST_H
 #define TESTS_TEST_H
 
+<<<<<<< HEAD
 #define PVDX_ASSERT_MSG(x, msg)                                                                                                            \
     do {                                                                                                                                   \
         if (!(x)) {                                                                                                                        \
             warning("[!] ASSERT FAILED: " msg);                                                                                            \
         }                                                                                                                                  \
+=======
+// Each test is only compiled when its TEST_<NAME> macro is defined, which `make test TESTS="spp cfdp"`
+// does via -DTEST_SPP -DTEST_CFDP. If no test is selected, all of them are compiled.
+// Keep this list in sync with TEST_NAMES in src/Makefile
+#if !defined(TEST_SPP) && !defined(TEST_CFDP) && !defined(TEST_USLP) && !defined(TEST_PMB) &&                     \
+    !defined(TEST_TELEMETRY) && !defined(TEST_FLOAT)
+    #define TEST_CFDP
+    #define TEST_SPP
+    #define TEST_USLP
+    #define TEST_PMB
+    #define TEST_TELEMETRY
+    #define TEST_FLOAT
+#endif
+
+extern int tests_passed;
+extern int tests_total;
+
+#define PVDX_ASSERT_MSG(x, msg)                                                                                                            \
+    do {                                                                                                                                   \
+        if (!(x)) {                                                                                                                        \
+            /* msg is an argument, not pasted into the format, so every assert shares one format string in RAM */                          \
+            warning("[!] ASSERT FAILED: %s", msg);                                                                                         \
+        } else {                                                                                                                           \
+            ++tests_passed;                                                                                                                \
+        }                                                                                                                                  \
+        ++tests_total;                                                                                                                     \
+>>>>>>> origin/main
     } while (0)
 #define PVDX_ASSERT(x)                                                                                                                     \
     do {                                                                                                                                   \
         if (!(x)) {                                                                                                                        \
             warning("[!] ASSERT FAILED");                                                                                                  \
+<<<<<<< HEAD
         }                                                                                                                                  \
+=======
+        } else {                                                                                                                           \
+            ++tests_passed;                                                                                                                \
+        }                                                                                                                                  \
+        ++tests_total;                                                                                                                     \
+>>>>>>> origin/main
     } while (0)
 void tests_run(void);
 

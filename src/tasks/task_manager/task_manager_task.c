@@ -1,16 +1,19 @@
 /**
  * task_manager_task.c
  *
- * RTOS task responsible for initializing and enabling/disabling all other tasks 
+ * RTOS task responsible for initializing and enabling/disabling all other tasks
  * in the system based on PVDX's satellite state diagram.
  *
  * Created: April 14, 2024
  * Authors: Oren Kohavi, Ignacio Blancas Rodriguez, Tanish Makadia, Yi Liu, Aidan Wang, Simon Juknelis, Defne Doken,
- * Aidan Wang, Jai Garg, Alex Khosrowshahi, Siddharta Laloux
+ * Aidan Wang, Jai Garg, Alex Khosrowshahi, Siddharta Laloux, Aanya K Agrawal
  */
 
-#include "logging.h"
 #include "task_manager_task.h"
+
+#include "logging.h"
+#include "state_machine.h"
+#include "watchdog_task.h"
 
 /* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
 
@@ -69,7 +72,7 @@ void task_manager_enable_task(pvdx_task_t *const p_task) {
 /**
  * \fn task_manager_disable_task
  *
- * \brief Disables a task so that it cannot be run by the RTOS scheduler. 
+ * \brief Disables a task so that it cannot be run by the RTOS scheduler.
  *      Automatically unregisters the task with the watchdog.
  *
  * \param p_task constant task pointer corresponding to the task to be disabled
@@ -96,7 +99,7 @@ void task_manager_disable_task(pvdx_task_t *const p_task) {
     p_task->enabled = false;
 
     // Unregister the task with the watchdog so it is no longer monitored
-    unregister_task_with_watchdog(p_task->handle);
+    unregister_task_with_watchdog(p_task);
 
     unlock_mutex(task_list_mutex);
     debug("task_manager: %s task disabled\n", p_task->name);
@@ -108,10 +111,10 @@ void task_manager_disable_task(pvdx_task_t *const p_task) {
  * \fn init_task_manager
  *
  * \brief Initializes task manager task dependencies
- * 
+ *
  * \returns QueueHandle_t, a handle to the created queue
- * 
- * \note Initialises task manager command queue, before `init_task_pointer()`. See`init_task_pointer()` 
+ *
+ * \note Initialises task manager command queue, before `init_task_pointer()`. See`init_task_pointer()`
  *       for usage of functions of the type `init_<TASK>()`
  */
 QueueHandle_t init_task_manager(void) {
@@ -135,7 +138,7 @@ QueueHandle_t init_task_manager(void) {
  *
  * \warning acquires the task list mutex
  * \warning modifies a task struct
- * 
+ *
  * \note See `register_task_with_watchdog()`
  */
 void init_task_pointer(pvdx_task_t *const p_task) {
@@ -176,9 +179,9 @@ void init_task_pointer(pvdx_task_t *const p_task) {
 
 /**
  * \fn exec_command_task_manager
- * 
+ *
  * \brief Executes function corresponding to the command
- * 
+ *
  * \param p_cmd a pointer to a command forwarded to the task manager
  */
 void exec_command_task_manager(command_t *const p_cmd) {
@@ -189,14 +192,20 @@ void exec_command_task_manager(command_t *const p_cmd) {
     switch (p_cmd->operation) {
         case OPERATION_INIT_SUBTASKS:
             task_manager_init_subtasks();
+            // The state machine decides which subtasks run from here on
+            state_machine_init();
+            p_cmd->result = SUCCESS;
+            break;
+        case OPERATION_UPDATE_STATE_INPUTS:
+            state_machine_apply_input_update(p_cmd->data.state_input_update_data);
             p_cmd->result = SUCCESS;
             break;
         case OPERATION_ENABLE_SUBTASK:
-            task_manager_enable_task((pvdx_task_t *)p_cmd->p_data); // Turn this into an index
+            task_manager_enable_task(p_cmd->data.pvdx_task); // Turn this into an index
             p_cmd->result = SUCCESS;
             break;
         case OPERATION_DISABLE_SUBTASK:
-            task_manager_disable_task((pvdx_task_t *)p_cmd->p_data); // Turn this into an index
+            task_manager_disable_task(p_cmd->data.pvdx_task); // Turn this into an index
             p_cmd->result = SUCCESS;
             break;
         default:

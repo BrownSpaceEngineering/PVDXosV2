@@ -9,7 +9,11 @@
  */
 
 #include "watchdog_task.h"
+<<<<<<< HEAD
 #include "watchdog_driver.h"
+=======
+#include "cmd_dispatcher.h"
+>>>>>>> origin/main
 
 watchdog_task_memory_t watchdog_mem;
 QueueHandle_t watchdog_command_queue_handle;
@@ -72,7 +76,9 @@ void main_watchdog(void *pvParameters) {
 
         // Watchdog Task must also check-in with itself
         if (should_checkin(current_task)) {
-            enqueue_command(&cmd_checkin);
+            while (enqueue_command(&cmd_checkin) != SUCCESS) {
+                warning("watchdog: Failed to enqueue watchdog checkin command\n");
+            }
             debug("watchdog: Enqueued watchdog checkin command\n");
         }
 

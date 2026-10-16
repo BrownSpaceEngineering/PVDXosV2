@@ -3,8 +3,8 @@
 
 // Includes
 #include "atmel_start.h"
+#include "drivers/watchdog/watchdog_driver.h"
 #include "globals.h"
-#include "watchdog_driver.h"
 #include "logging.h"
 #include "mutexes.h"
 #include "rtos_start.h"

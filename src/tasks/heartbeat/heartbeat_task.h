@@ -4,14 +4,14 @@
 // Includes
 #include <atmel_start.h>
 #include <driver_init.h>
-#include "globals.h"
-#include "rtos_start.h"
-#include "watchdog_task.h"
 
-//Memory for the heartbeat task
+#include "globals.h"
+#include "tasks/watchdog/watchdog_task.h"
+
+// Memory for the heartbeat task
 #define HEARTBEAT_TASK_STACK_SIZE 1024 // Size of the stack in words (multiply by 4 to get bytes)
 
-//Placed in a struct to ensure that the TCB is placed higher than the stack in memory
+// Placed in a struct to ensure that the TCB is placed higher than the stack in memory
 //^ This ensures that stack overflows do not corrupt the TCB (since the stack grows downwards)
 typedef struct {
     StackType_t overflow_buffer[TASK_STACK_OVERFLOW_PADDING];

@@ -34,7 +34,11 @@ void fatal_impl(const char *string, ...) {
     vTaskDelay(pdMS_TO_TICKS(1000)); // Wait for the message to be printed
 
     // Force reboot
+<<<<<<< HEAD
     watchdog_kick();
+=======
+    kick_watchdog();
+>>>>>>> origin/main
 
     // This line should never be reached, but we include it to adhere to the va_list contract
     va_end(args);
@@ -42,7 +46,11 @@ void fatal_impl(const char *string, ...) {
 
 void fatal_no_log_impl(void) {
     // Force reboot
+<<<<<<< HEAD
     watchdog_kick();
+=======
+    kick_watchdog();
+>>>>>>> origin/main
 }
 
 void warning_impl(const char *string, ...) {

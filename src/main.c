@@ -6,7 +6,9 @@
  * the FreeRTOS scheduler.
  *
  * Created: November 20, 2023
- * Authors: Oren Kohavi, Siddharta Laloux, Tanish Makadia, Yi Liu, Defne Doken, Aidan Wang, Ignacio Blancas Rodriguez
+ * Modified: November 9, 2025
+ * Authors: Oren Kohavi, Siddharta Laloux, Tanish Makadia, Yi Liu,
+ *          Defne Doken, Aidan Wang, Ignacio Blancas Rodriguez, Alexander Thaep
  */
 
 #include "main.h"
@@ -21,6 +23,17 @@
 #include "logging.h"
 #include "rtos_start.h"
 #include "task_list.h"
+#include "tests/test.h"
+
+#include "SEGGER_RTT.h"
+#include "ccsds/ccsds.h"
+#include "checks/device_checks.h"
+#include "cosmic_monkey_task.h"
+#include "globals.h"
+#include "logging.h"
+#include "rtos_start.h"
+#include "task_list.h"
+#include "tasks/task_manager/task_manager_task.h"
 #include "tests/test.h"
 
 cosmic_monkey_task_arguments_t cm_args = {0};
@@ -68,6 +81,7 @@ int main(void) {
     atmel_start_init();
     init_logging();
     // info_impl(RTT_CTRL_RESET RTT_CTRL_CLEAR); // Reset the terminal
+<<<<<<< HEAD
     info_impl("--- Atmel & Hardware Initialization Complete ---\n");
     info_impl("[+] Build Type: %s\n", BUILD_TYPE);
     info_impl("[+] Build Date: %s\n", BUILD_DATE);
@@ -75,6 +89,14 @@ int main(void) {
     info_impl("[+] Built from branch: %s\n", GIT_BRANCH_NAME);
     info_impl("[+] Built from commit: %s\n", GIT_COMMIT_HASH);
     report_reset_cause();
+=======
+    info("--- Atmel & Hardware Initialization Complete ---\n");
+    info("[+] Build Type: %s\n", BUILD_TYPE);
+    info("[+] Build Date: %s\n", BUILD_DATE);
+    info("[+] Build Time: %s\n", BUILD_TIME);
+    info("[+] Built from branch: %s\n", GIT_BRANCH_NAME);
+    info("[+] Built from commit: %s\n", GIT_COMMIT_HASH);
+>>>>>>> origin/main
 
     reflash_bootloaders(false);
 
@@ -82,6 +104,11 @@ int main(void) {
 
     info("AT_LEAST_ONE_DEVICE_FAILED: %d\n", check_all_devices_on_startup());
 
+<<<<<<< HEAD
+=======
+    ccsds_init();
+
+>>>>>>> origin/main
 /* -------------------------------------- TESTS ---------------------------------------------- */
 #ifdef UNITTEST
     tests_run();
@@ -93,6 +120,7 @@ int main(void) {
     if (task_list_mutex == NULL) {
         fatal("Failed to create PVDX task list mutex");
     }
+
     if (task_list[0] != p_watchdog_task) {
         fatal("Watchdog is not first in task_list!");
     }
@@ -105,8 +133,18 @@ int main(void) {
         }
     }
 
+    // COMMENTED OUT because this is now controlled by the task manager
+    // Initialize all sensor integrity tasks
+    // for (pvdx_task_t **curr_task = task_list; *curr_task != NULL; curr_task++) {
+    //     if ((*curr_task)->task_type == SENSOR) {
+    //         init_task_pointer(*curr_task);
+    //         info("%s initialized\n", (*curr_task)->name);
+    //     }
+    // }
+
     /* ---------- COSMIC MONKEY TASK ---------- */
 
+<<<<<<< HEAD
 // #if defined(UNITTEST) || defined(DEVBUILD)
 //     #if defined(UNITTEST)
 //     cm_args.frequency = 10;
@@ -124,6 +162,25 @@ int main(void) {
 //         info("Cosmic Monkey Task initialized\n");
 //     }
 // #endif // Cosmic Monkey
+=======
+#if defined(UNITTEST) || defined(DEVBUILD)
+    #if defined(UNITTEST)
+    cm_args.frequency = 1;
+    #endif
+    #if defined(DEVBUILD) // set to 0 for now for ease of debugging
+    cm_args.frequency = 0; // Bitflips per second
+    #endif
+
+    TaskHandle_t cosmic_monkey_task_handle =
+        xTaskCreateStatic(main_cosmic_monkey, "CosmicMonkey", COSMIC_MONKEY_TASK_STACK_SIZE, (void *)&cm_args, 1,
+                          cosmic_monkey_mem.cosmic_monkey_task_stack, &cosmic_monkey_mem.cosmic_monkey_task_tcb);
+    if (cosmic_monkey_task_handle == NULL) {
+        warning("Cosmic Monkey Task Creation Failed!\n");
+    } else {
+        info("Cosmic Monkey Task initialized\n");
+    }
+#endif // Cosmic Monkey
+>>>>>>> origin/main
 
     /* ---------- START FREERTOS SCHEDULER ---------- */
 

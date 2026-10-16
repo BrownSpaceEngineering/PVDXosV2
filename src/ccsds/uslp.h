@@ -1,0 +1,182 @@
+/**
+ * src/ccsds/uslp.h
+ *
+ * header file for the PVDX implementation of the CCSDS Unified Space Data Link Protocol (USLP)
+ *
+ * Created: 20260429 SUN
+ * Updated: 202600927 THU
+ * Authors: Zach Mahan, Ilan Goldfein
+ */
+
+#ifndef PVDX_CCSDS_USLP_H
+#define PVDX_CCSDS_USLP_H
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#include "drivers/at86rf215/at86rf215.h" // for AT86RF215_MAX_PDU
+
+// USLP allows up to 64 virtual channels. we probably won't need this many, though, so lower this from 64 as needed
+#define USLP_VIRTUAL_CHANNEL_COUNT 64
+
+// VC #63 is explicitly reserved by the protocol for transmitting Only Idle Frames (OID) when running in Fixed-Aligned Mode
+#define USLP_IDLE_ONLY_FRAME_INDEX 63
+
+// Transfer Frame Version Number, always 0b1100 for USLP
+// Reference: USLP Blue Book 4.1.2.2.2.2
+#define USLP_TFVN 0b1100
+
+// Values for the Source-or-Destination Identifier
+// Reference: USLP Blue Book 4.1.3.3
+#define USLP_SCID_IS_SOURCE 0
+#define USLP_SCID_IS_DESTINATION 1
+
+// USLP Protocol Identifier (UPID) values
+// Reference: SANA registry, sanaregistry.org/r/uslp_protocol_id
+#define USLP_UPID_SPACE_PACKETS 0b00000
+
+// The radio's frame buffer is 2047 bytes and the length given to the radio
+// must include the checksum the chip appends (up to 4 bytes)
+#define USLP_MAX_FRAME_SIZE (AT86RF215_MAX_PDU - 4) // 2043
+
+// Sizes, in bytes, of the fixed parts of a transfer frame
+// Reference: USLP Blue Book Figure 4-2 (pg. 4-3), Figure 4-4 (pg. 4-13)
+#define USLP_PRIMARY_HEADER_FIXED_SIZE 7 // everything except the VC frame count
+#define USLP_DATA_FIELD_HEADER_SIZE 1    // rule 111 does not use the optional 16-bit pointer
+
+// The Frame Error Control Field (FECF) is a CRC-16 over the rest of the frame, carried in the
+// final two octets. Whether frames carry one is a managed parameter -- nothing in the frame
+// itself announces it -- so the ground station has to be configured to expect it.
+// Set this to 0 to send frames without a FECF.
+// Reference: USLP Blue Book Annex B
+#define USLP_FECF_SIZE 2
+
+// Size, in bytes, of the Operational Control Field, present when the OCF flag is set
+// Reference: USLP Blue Book 4.1.5
+#define USLP_OCF_SIZE 4
+
+/// USLP Transfer Frame Primary Header
+///
+/// Reference: USLP Blue Book pg. 70 - ~90
+///
+/// - This struct internally reorders some fields and using bitfields,
+///   so the ordering does not necessarily match the specification
+/// - This struct is intended to be used for internal representation in
+///   the OS and should not be transmitted over comms in any way
+typedef struct uslp_transfer_frame_primary_header {
+    uint64_t vc_frame_count : 56;
+    uint16_t spacecraft_id;
+    uint16_t frame_length;
+    uint8_t version_num : 4;
+    uint8_t src_or_dest : 1;
+    uint8_t virtual_channel_id : 6;
+    uint8_t map_id : 4;
+    uint8_t end_of_frame_primary_header_flag : 1;
+    uint8_t bypass_sequence_control_flag : 1;
+    uint8_t protocol_control_command_flag : 1;
+    uint8_t spare : 2;
+    uint8_t ocf_flag : 1;
+    uint8_t vc_frame_count_length : 3;
+} uslp_transfer_frame_primary_header_t;
+
+/// USLP Transfer Frame Data Field Header
+///
+/// Reference: USLP Blue Book figure 4.1.2.11.3 (pg. 96)
+///
+/// - This struct internally reorders some fields and using bitfields,
+///   so the ordering does not necessarily match the specification
+/// - This struct is intended to be used for internal representation in
+///   the OS and should not be transmitted over comms in any way
+typedef struct uslp_transfer_frame_data_field_header {
+    /// Transer Frame Data Zone (TFDZ) Construction Rules
+    uint8_t tfdz_construction_rules : 3;
+    uint8_t protocol_identifier : 5;
+} uslp_transfer_frame_data_field_header_t;
+
+// ~~~ Rules for Transer Frame Data Zone (TFDZ) Construction Rules ~~~
+
+#define USLP_TFDZ_PACKETS_SPAN_MULTIPLE_FRAME 0b000
+#define USLP_TFDZ_COMPLETE_OR_PORTION_OF_MAPA_SDU 0b001
+#define USLP_TFDZ_CONTINUING_PORTION_OF_MAPA_SDU 0b010
+#define USLP_TFDZ_BYTE_STREAM 0b011
+#define USLP_TFDZ_STARTING_SEGMENT 0b100
+#define USLP_TFDZ_CONTINUING_SEGMENT 0b101
+#define USLP_TFDZ_LAST_SEGMENT 0b110
+#define USLP_TFDZ_NO_SEGMENT 0b111
+
+// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+// USLP Transer Frame with a flexible array memeber as the data field
+typedef struct uslp_transfer_frame {
+    uslp_transfer_frame_primary_header_t primary_header;
+    uslp_transfer_frame_data_field_header_t data_field_header;
+    uint8_t datafield[];
+} uslp_transfer_frame_t;
+
+// USLP Transer Frame with a pointer as the data field
+typedef struct uslp_transfer_frame_view {
+    uslp_transfer_frame_primary_header_t primary_header;
+    uslp_transfer_frame_data_field_header_t data_field_header;
+    uint8_t *datafield;
+    uint16_t datafield_len;
+} uslp_transfer_frame_view_t;
+
+// Quality of Serice (QoS) options
+// Reference - USLP Blue Book 3-5
+typedef enum uslp_qos {
+    USLP_QOS_SEQUENCE_CONTROLLED = 0,
+    USLP_QOS_EXPEDITED = 1
+} uslp_qos_t;
+
+/*
+ * Creates the mutex that serializes access to the USLP transmit path.
+ * Must be called once, before any task calls uslp_mapp_request().
+ */
+void uslp_init(void);
+
+/*
+ * MAPP.request function
+ * Reference: USLP Blue book page 3-6
+ *
+ * - This function is the Service Access Point for USLP
+ *
+ * \param sdu - pointer to the start of the packet to send
+ * \param sdu_len - length, in bytes, of the packet
+ *
+ * \return true on failure, else false
+ */
+bool uslp_mapp_request(uint8_t *sdu, uint16_t sdu_len, uint32_t gmap_id, uint8_t pvn, uint32_t sdu_id, uslp_qos_t qos);
+
+/**
+ * Parsing for USLP Transfer Frames
+ *
+ * - No copy (on success, view->datafield points into data, so data must outlive the view)
+ * - Bytes in data past the end given by the frame length field are ignored
+ * - If the frame carries an Operational Control Field, it is skipped and not included in the datafield
+ * - Truncated frames and the fixed-length TFDZ construction rules (000-010) are not supported
+ *
+ * \param view - transfer frame view to fill in; left unspecified on failure
+ * \param data - pointer to start of raw byte-stream data
+ * \param len - length, in bytes, of the byte stream
+ *
+ * \return true on failure (malformed, unsupported, or failed FECF check), else false
+ *
+ * Reference: USLP Blue Book Figure 4-2 (pg. 91), 4-4 (pg. 101)
+ */
+bool uslp_transfer_frame_parse(uslp_transfer_frame_view_t *view, uint8_t *data, uint32_t len);
+
+#ifdef UNITTEST
+/**
+ * Test-only access to the last frame uslp_mapp_request serialized, since there is no radio to capture it from
+ *
+ * - Not locked: only call this while no other task can be sending
+ *
+ * \param len - set to the length, in bytes, of the frame (0 if nothing has been sent)
+ *
+ * \return pointer to the start of the frame
+ */
+const uint8_t *uslp_test_last_frame(uint32_t *len);
+#endif
+
+#endif

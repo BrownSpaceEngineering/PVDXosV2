@@ -33,7 +33,11 @@ static device_check_state_t device_states[NUM_DEVICES] = {0}; // inits to {false
 static bool (*device_check_functions[NUM_DEVICES])(void) = {
     //    func ptr      |  device_id_t
     // -------------------------------
+<<<<<<< HEAD
     &check_magnetometer, // MAGNETOMETER_ID
+=======
+    NULL, // &check_magnetometer, // MAGNETOMETER_ID
+>>>>>>> origin/main
     NULL,                // PHOTODIODE_ID
     NULL,                // GYROSCOPE_ID
     NULL,                // MRAM_ID
@@ -41,7 +45,11 @@ static bool (*device_check_functions[NUM_DEVICES])(void) = {
     NULL,                // SBAND_ID
     NULL,                // UHF_ID
     NULL,                // EPS_ID
+<<<<<<< HEAD
     &check_display,      // DISPLAY_ID
+=======
+    NULL,                // DISPLAY_ID — init done inside the display task post-scheduler
+>>>>>>> origin/main
     NULL,                // CAMERA_ID
 };
 
@@ -101,9 +109,15 @@ const char *device_name_of(device_id_t device_id) {
 // ------------------- check function definitions ----------------------
 // - these should wrap device drivers/hardware interaction functions
 
+<<<<<<< HEAD
 bool check_magnetometer(void) {
     return init_rm3100() == SUCCESS;
 }
+=======
+//bool check_magnetometer(void) {
+//    return init_rm3100() == SUCCESS;
+//}
+>>>>>>> origin/main
 
 bool check_display(void) {
     return init_display_hardware() == SUCCESS;

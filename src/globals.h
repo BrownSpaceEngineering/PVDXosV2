@@ -4,7 +4,7 @@
  * Defines global datatypes, structures and headers.
  *
  * Created:
- * Authors: Siddharta Laloux,
+ * Authors: Siddharta Laloux, Zach Mahan, Aanya K Agrawal
  */
 
 #ifndef GLOBALS_H
@@ -13,6 +13,7 @@
 #include <FreeRTOS.h>
 #include <queue.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <task.h>
 
 /* ---------- LOGGING CONSTANTS ---------- */
@@ -43,11 +44,14 @@ typedef enum {
     // Error Responses
     ERROR_READ_FAILED,
     ERROR_WRITE_FAILED,
+    ERROR_BAD_ARGS, 
     ERROR_SPI_TRANSFER_FAILED,
     ERROR_I2C_FAILED,
     ERROR_TASK_DISABLED,
     ERROR_BAD_TARGET,
+    ERROR_QUEUE_ERROR,
     ERROR_SANITY_CHECK_FAILED,
+    ERROR_PROCESSING_FAILED,
     ERROR_NOT_READY,
 } status_t;
 
@@ -69,11 +73,24 @@ typedef enum {
     OPERATION_DISPLAY_IMAGE, // p_data: color_t *p_buffer
     OPERATION_CLEAR_IMAGE,   // p_data: NULL
 
+<<<<<<< HEAD
     // Magnetometer operations
     OPERATION_READ, // p_data: magnetometer_read_args_t *readings
+=======
+    // Magnetometer & Photodiode operations
+    OPERATION_READ,    // p_data: photomag_read_args_t *readings
+    OPERATION_PROCESS, // p_data: TBD
+>>>>>>> origin/main
 
-    // Photodiode operations
-    OPERATION_PHOTODIODE_READ,
+    // CFDP Operations
+    OPERATION_CFDP_PUT,    // p_data: cfdp_request_t* req
+    OPERATION_CFDP_CANCEL, // p_data: cfdp_request_t* req
+
+    OPERATION_CFDP_TIMEOUT_INACTIVITY, // p_data: cfdp_transaction_t* txn
+    OPERATION_CFDP_TIMEOUT_RETRANSMIT, // p_data: cfdp_transaction_t* txn
+
+    // State machine operations
+    OPERATION_UPDATE_STATE_INPUTS,
 
     // TESTING
     TEST_OP, // p_data: char message[]
@@ -120,6 +137,19 @@ typedef QueueHandle_t (*init_function)(void);
 
 /* ---------- STRUCTS ---------- */
 
+// integer and float 3d vector types.
+typedef struct {
+    int32_t x;
+    int32_t y;
+    int32_t z;
+} int32_3d_t;
+
+typedef struct {
+    float x;
+    float y;
+    float z;
+} float_3d_t;
+
 // A struct defining a task's lifecycle in the PVDXos RTOS
 typedef struct {
     const char *const name;             // Name of the task
@@ -139,14 +169,39 @@ typedef struct {
     const task_type_t task_type;        // Whether the task is OS-integrity, a sensor, or an actuator
 } pvdx_task_t;
 
+typedef struct adcs_data adcs_data_t;
+typedef union cfdp_request_data cfdp_request_data_t;
+typedef struct cfdp_transaction cfdp_transaction_t;
+typedef struct input_update_data input_update_data_t;
+
+typedef union command_data {
+    adcs_data_t *adcs_data;
+    const uint8_t *display_data;
+    TaskHandle_t *task_handle;
+    pvdx_task_t *pvdx_task;
+    cfdp_request_data_t *cfdp_request;
+    cfdp_transaction_t *cfdp_timeout_data;
+    input_update_data_t *state_input_update_data;
+} command_data_t;
+
+typedef enum {
+    CMD_DATA_NONE = 0,
+    CMD_DATA_ADCS,
+    CMD_DATA_DISPLAY,
+    CMD_DATA_TASK_HANDLE,
+    CMD_DATA_PVDX_TASK,
+    CMD_CFDP_REQ,
+    CMD_CFDP_TIMEOUT,
+    CMD_STATE_INPUT_UPDATE,
+} command_data_type_t;
+
 // A struct to represent a command that OS tasks can execute
 typedef struct {
-    pvdx_task_t *const target;            // The target task for the command
-    const operation_t operation;          // The operation to perform
-    const void *const p_data;             // Pointer to data needed for the operation
-    const size_t len;                     // Length of the data
-    status_t result;                      // Pointer to the result of the operation
-    void (*callback)(status_t *p_result); // Callback function to call after the operation is complete
+    pvdx_task_t *const target;           // The target task for the command
+    const command_data_t data;           // Union containing a pointer to the data needed for the operation
+    const command_data_type_t data_type; // Tag indicating the type of data help
+    const operation_t operation;         // The operation to perform
+    status_t result;                     // Ttatus indicating result of the operation
 } command_t;
 
 /* ---------- BUILD CONSTANTS ---------- */

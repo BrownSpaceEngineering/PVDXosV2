@@ -6,10 +6,13 @@
  *
  * Created: April 14, 2024
  * Authors: Oren Kohavi, Ignacio Blancas Rodriguez, Tanish Makadia, Yi Liu, Siddharta Laloux, Aidan Wang, Simon Juknelis,
- * Defne Doken, Aidan Wang, Jai Garg, Alex Khosrowshahi
+ * Defne Doken, Aidan Wang, Jai Garg, Alex Khosrowshahi, Zach Mahan, Aanya K Agrawal
  */
 
 #include "task_manager_task.h"
+#include "watchdog_task.h"
+#include "cmd_dispatcher.h"
+#include "state_machine.h"
 
 task_manager_task_memory_t task_manager_mem;
 SemaphoreHandle_t task_list_mutex = NULL;
@@ -36,7 +39,11 @@ void main_task_manager(void *pvParameters) {
     // Cache the watchdog checkin command to avoid creating it every iteration
     command_t cmd_checkin = get_watchdog_checkin_command(current_task);
     // Calculate the maximum time the command dispatcher should block (and thus be unable to check in with the watchdog)
-    const TickType_t queue_block_time_ticks = get_command_queue_block_time_ticks(current_task);
+    // ...but wake at least every TASK_MANAGER_QUEUE_WAIT_MS so that time-based state transitions are checked promptly
+    const TickType_t watchdog_block_time_ticks = get_command_queue_block_time_ticks(current_task);
+    const TickType_t state_check_period_ticks = pdMS_TO_TICKS(TASK_MANAGER_QUEUE_WAIT_MS);
+    const TickType_t queue_block_time_ticks =
+        (state_check_period_ticks < watchdog_block_time_ticks) ? state_check_period_ticks : watchdog_block_time_ticks;
     // Varible to hold commands popped off the queue
     command_t cmd;
     
@@ -53,6 +60,21 @@ void main_task_manager(void *pvParameters) {
 
     enqueue_command(p_initialise_all_tasks); 
 
+    command_t initialise_all_tasks = {
+        .target = p_task_manager_task,
+        .operation = OPERATION_INIT_SUBTASKS,
+        .data = {0},
+        .data_type = CMD_DATA_NONE,
+        .result = NO_STATUS_RETURN,
+
+    };
+
+    command_t *const p_initialise_all_tasks = &initialise_all_tasks;
+
+    while (enqueue_command(p_initialise_all_tasks) != SUCCESS) {
+        warning("task_manager: Failed to task initialise command\n");
+    }
+
     while (true) {
         debug("\n---------- Task Manager Task Loop ----------\n");
 
@@ -65,9 +87,14 @@ void main_task_manager(void *pvParameters) {
         }
         debug("task_manager: No more commands queued.\n");
 
+        // Move to a new state if the current state's transition function asks for one
+        state_machine_check_transition();
+
         // Check in with the watchdog task
         if (should_checkin(current_task)) {
-            enqueue_command(&cmd_checkin);
+            while (enqueue_command(&cmd_checkin) != SUCCESS) {
+                warning("task_manager: Failed to enqueue watchdog checkin command\n");
+            }
             debug("task_manager: Enqueued watchdog checkin command\n");
         }
     }
