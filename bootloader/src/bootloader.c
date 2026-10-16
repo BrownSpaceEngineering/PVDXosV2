@@ -36,7 +36,9 @@ int main(void) {
 // only for debugging; will not be present in final
 #ifdef WRITE_FLASH_TO_MRAM
     if (mram_ok) {
-        mram_write_bytes(MRAM_FLASH_BASE_ADDRESS, (uint8_t *)0x00000000, MRAM_FLASH_SIZE);
+        uint8_t byte0 = *(const uint8_t *)0x00000000;
+        mram_write_bytes(MRAM_FLASH_BASE_ADDRESS, &byte0, 1);
+        mram_write_bytes(MRAM_FLASH_BASE_ADDRESS + 1, (const uint8_t *)0x00000001, MRAM_FLASH_SIZE - 1);
     }
 #endif
 
