@@ -26,7 +26,7 @@ void SPI_MRAM_PORT_init(void)
 	// Set pin direction to output
 	gpio_set_pin_direction(MRAM_MOSI, GPIO_DIRECTION_OUT);
 
-	gpio_set_pin_function(MRAM_MOSI, PINMUX_PB16C_SERCOM5_PAD0);
+	gpio_set_pin_function(MRAM_MOSI, PINMUX_PB24C_SERCOM0_PAD0);
 
 	gpio_set_pin_level(MRAM_SCK,
 	                   // <y> Initial level
@@ -38,7 +38,7 @@ void SPI_MRAM_PORT_init(void)
 	// Set pin direction to output
 	gpio_set_pin_direction(MRAM_SCK, GPIO_DIRECTION_OUT);
 
-	gpio_set_pin_function(MRAM_SCK, PINMUX_PB17C_SERCOM5_PAD1);
+	gpio_set_pin_function(MRAM_SCK, PINMUX_PB25C_SERCOM0_PAD1);
 
 	// Set pin direction to input
 	gpio_set_pin_direction(MRAM_MISO, GPIO_DIRECTION_IN);
@@ -51,7 +51,7 @@ void SPI_MRAM_PORT_init(void)
 	                       // <GPIO_PULL_DOWN"> Pull-down
 	                       GPIO_PULL_OFF);
 
-	gpio_set_pin_function(MRAM_MISO, PINMUX_PB18C_SERCOM5_PAD2);
+	gpio_set_pin_function(MRAM_MISO, PINMUX_PB18D_SERCOM0_PAD2);
 }
 
 void SPI_MRAM_CLOCK_init(void)
