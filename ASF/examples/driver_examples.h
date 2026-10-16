@@ -14,13 +14,7 @@ extern "C" {
 
 void ADC_0_example(void);
 
-<<<<<<< HEAD
-void FLASH_0_example(void);
-
-void I2C_SBAND_example(void);
-=======
 void ADC_1_example(void);
->>>>>>> origin/main
 
 void DAC_0_example(void);
 

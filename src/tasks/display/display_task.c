@@ -107,10 +107,6 @@ void exec_command_display(command_t *const p_cmd) {
  * \returns the command queue for the display
  */
 QueueHandle_t init_display(void) {
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/main
     // Initialize the display command queue
     QueueHandle_t display_command_queue_handle = xQueueCreateStatic(
         COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE, display_mem.display_command_queue_buffer, &display_mem.display_task_queue);

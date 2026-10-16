@@ -73,14 +73,9 @@ typedef enum {
     OPERATION_DISPLAY_IMAGE, // p_data: color_t *p_buffer
     OPERATION_CLEAR_IMAGE,   // p_data: NULL
 
-<<<<<<< HEAD
-    // Magnetometer operations
-    OPERATION_READ, // p_data: magnetometer_read_args_t *readings
-=======
     // Magnetometer & Photodiode operations
     OPERATION_READ,    // p_data: photomag_read_args_t *readings
     OPERATION_PROCESS, // p_data: TBD
->>>>>>> origin/main
 
     // CFDP Operations
     OPERATION_CFDP_PUT,    // p_data: cfdp_request_t* req

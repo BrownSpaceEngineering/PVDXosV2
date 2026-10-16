@@ -136,8 +136,6 @@ spp_packet_view_t spp_packet_view_from(spp_packet_t *packet);
  */
 void spp_packet_view_clear_data(spp_packet_view_t view);
 
-<<<<<<< HEAD:src/tasks/radio/spp.h
-=======
 /**
  * Parsing for SPP Space Packets
  *
@@ -156,5 +154,4 @@ void spp_packet_view_clear_data(spp_packet_view_t view);
  */
 bool spp_packet_parse(spp_packet_view_t *view, uint8_t *data, uint32_t len);
 
->>>>>>> origin/main:src/ccsds/spp.h
 #endif // !RADIO_SPP_H

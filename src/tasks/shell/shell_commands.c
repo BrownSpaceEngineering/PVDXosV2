@@ -15,13 +15,8 @@
 #include "image_buffers/image_buffer_PVDX.h"
 #include "logging.h"
 #include "shell_helpers.h"
-<<<<<<< HEAD
-#include "watchdog_driver.h"
-
-=======
 #include "watchdog_task.h"
 #include "cmd_dispatcher.h"
->>>>>>> origin/main
 shell_command_t shell_commands[] = {
     {"help", shell_help, help_help},
     {"echo", shell_echo, help_echo},
@@ -218,7 +213,7 @@ void shell_reboot(char **args, int arg_count) {
     warning("Reboot command executed by user\n");
     terminal_printf("Rebooting the satellite...\n");
     delay_ms(1000);  // Give the message time to print
-    watchdog_kick(); // Kick the watchdog to trigger a reboot
+    kick_watchdog(); // Kick the watchdog to trigger a reboot
 }
 
 /**

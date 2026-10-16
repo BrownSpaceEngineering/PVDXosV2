@@ -17,9 +17,6 @@
 #include "logging.h"
 #include "utils_assert.h"
 
-#include "logging.h"
-#include "utils_assert.h"
-
 void spp_packet_view_init(spp_packet_view_t *packet, void *data, uint16_t apid, uint8_t secondary_header_flag, uint8_t packet_type,
                           uint8_t sequence_flags, uint16_t packet_seq_count_or_name, uint16_t data_length) {
     packet->data = data;

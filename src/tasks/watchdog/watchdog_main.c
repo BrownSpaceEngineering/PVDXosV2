@@ -9,11 +9,7 @@
  */
 
 #include "watchdog_task.h"
-<<<<<<< HEAD
-#include "watchdog_driver.h"
-=======
 #include "cmd_dispatcher.h"
->>>>>>> origin/main
 
 watchdog_task_memory_t watchdog_mem;
 QueueHandle_t watchdog_command_queue_handle;
@@ -72,7 +68,7 @@ void main_watchdog(void *pvParameters) {
         debug("watchdog: No more commands queued.\n");
 
         // if we get here, then all tasks have checked in within the allowed time
-        watchdog_pet();
+        pet_watchdog();
 
         // Watchdog Task must also check-in with itself
         if (should_checkin(current_task)) {

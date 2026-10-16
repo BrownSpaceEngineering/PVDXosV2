@@ -22,27 +22,7 @@ extern "C" {
 #include <hal_i2c_m_sync.h>
 #include <hal_init.h>
 #include <hal_io.h>
-<<<<<<< HEAD
-#include <hal_sleep.h>
-
-#include <hal_adc_sync.h>
-
-#include <hal_flash.h>
-
-#include <hal_i2c_m_sync.h>
-
-#include <hal_i2c_m_sync.h>
-
-#include <hal_i2c_m_sync.h>
-#include <hal_spi_m_sync.h>
-#include <hal_spi_m_sync.h>
-#include <hal_spi_m_sync.h>
-
-#include <hal_delay.h>
-
-=======
 #include <hal_pwm.h>
->>>>>>> origin/main
 #include <hal_rand_sync.h>
 #include <hal_sleep.h>
 #include <hal_spi_m_sync.h>
@@ -52,13 +32,7 @@ extern "C" {
 
 extern struct adc_sync_descriptor ADC_0;
 
-<<<<<<< HEAD
-extern struct flash_descriptor FLASH_0;
-
-extern struct i2c_m_sync_desc I2C_SBAND;
-=======
 extern struct adc_sync_descriptor ADC_1;
->>>>>>> origin/main
 
 extern struct dac_sync_descriptor DAC_0;
 extern struct timer_descriptor TIMER_0;
@@ -85,18 +59,9 @@ void ADC_0_PORT_init(void);
 void ADC_0_CLOCK_init(void);
 void ADC_0_init(void);
 
-<<<<<<< HEAD
-void FLASH_0_init(void);
-void FLASH_0_CLOCK_init(void);
-
-void I2C_SBAND_CLOCK_init(void);
-void I2C_SBAND_init(void);
-void I2C_SBAND_PORT_init(void);
-=======
 void ADC_1_PORT_init(void);
 void ADC_1_CLOCK_init(void);
 void ADC_1_init(void);
->>>>>>> origin/main
 
 void DAC_0_PORT_init(void);
 void DAC_0_CLOCK_init(void);

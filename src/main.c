@@ -12,18 +12,6 @@
  */
 
 #include "main.h"
-#include "reflash_task.h"
-
-#define RSTC_RCAUSE (0x40000C00UL)  // Reset Cause Register
-
-#include "SEGGER_RTT.h"
-#include "checks/device_checks.h"
-#include "cosmic_monkey_task.h"
-#include "globals.h"
-#include "logging.h"
-#include "rtos_start.h"
-#include "task_list.h"
-#include "tests/test.h"
 
 #include "SEGGER_RTT.h"
 #include "ccsds/ccsds.h"
@@ -38,77 +26,46 @@
 
 cosmic_monkey_task_arguments_t cm_args = {0};
 
-void init_logging(void) {
+static status_t PVDX_init(void) {
     // Segger Buffer 0 is pre-configured at compile time according to segger documentation
     // Config the logging output channel (assuming it's not zero)
     if (LOGGING_RTT_OUTPUT_CHANNEL != 0) {
         SEGGER_RTT_ConfigUpBuffer(LOGGING_RTT_OUTPUT_CHANNEL, "Log Output", SEGGER_RTT_LOG_BUFFER, SEGGER_RTT_LOG_BUFFER_SIZE,
                                   SEGGER_RTT_MODE_NO_BLOCK_SKIP);
     }
-}
-
-void report_reset_cause(void) {
-    uint8_t cause = *((uint8_t *)RSTC_RCAUSE);
-
-    info_impl("[+] Last reset cause(s):\n");
-    if (cause & 0x01) {
-        info_impl("- Power on Reset\n");
-    }
-    if (cause & 0x02) {
-        info_impl("- Brown-Out Detector Core Reset\n");
-    }
-    if (cause & 0x04) {
-        info_impl("- Brown-Out Detector VDD Reset\n");
-    }
-    if (cause & 0x10) {
-        info_impl("- NVM Reset\n");
-    }
-    if (cause & 0x20) {
-        info_impl("- External Reset\n");
-    }
-    if (cause & 0x40) {
-        info_impl("- Watchdog Reset\n");
-    }
-    if (cause & 0x80) {
-        info_impl("- System Reset Request\n");
-    }
+    return SUCCESS;
 }
 
 int main(void) {
-    /* ---------- HARDWARE & LOGGING INITIALIZATION ---------- */
+    /* ---------- HARDWARE & LOGGING INITIALIZATION + BOOTLOADER CHECK ---------- */
 
     /* Initializes MCU, drivers and middleware */
     atmel_start_init();
-    init_logging();
+    PVDX_init();
     // info_impl(RTT_CTRL_RESET RTT_CTRL_CLEAR); // Reset the terminal
-<<<<<<< HEAD
-    info_impl("--- Atmel & Hardware Initialization Complete ---\n");
-    info_impl("[+] Build Type: %s\n", BUILD_TYPE);
-    info_impl("[+] Build Date: %s\n", BUILD_DATE);
-    info_impl("[+] Build Time: %s\n", BUILD_TIME);
-    info_impl("[+] Built from branch: %s\n", GIT_BRANCH_NAME);
-    info_impl("[+] Built from commit: %s\n", GIT_COMMIT_HASH);
-    report_reset_cause();
-=======
     info("--- Atmel & Hardware Initialization Complete ---\n");
     info("[+] Build Type: %s\n", BUILD_TYPE);
     info("[+] Build Date: %s\n", BUILD_DATE);
     info("[+] Build Time: %s\n", BUILD_TIME);
     info("[+] Built from branch: %s\n", GIT_BRANCH_NAME);
     info("[+] Built from commit: %s\n", GIT_COMMIT_HASH);
->>>>>>> origin/main
 
-    reflash_bootloaders(false);
+    // Bootloader sets a magic number in backup RAM to indicate that it has run successfully
+    uint32_t *p_magic_number = (uint32_t *)BOOTLOADER_MAGIC_NUMBER_ADDRESS;
+    uint32_t magic_number = *p_magic_number;
+    *p_magic_number = 0; // Clear the magic number so that this value doesn't linger
+    if (magic_number == BOOTLOADER_MAGIC_NUMBER_VALUE) {
+        info_impl("[+] Bootloader executed normally\n");
+    } else {
+        warning_impl("[!] Abnormal bootloader behavior (Magic Number: %x)\n", magic_number);
+    }
 
     /* ---------- INIT WATCHDOG, COMMAND_DISPATCHER, TASK_MANAGER TASKS (in that order) ---------- */
 
     info("AT_LEAST_ONE_DEVICE_FAILED: %d\n", check_all_devices_on_startup());
 
-<<<<<<< HEAD
-=======
     ccsds_init();
 
->>>>>>> origin/main
 /* -------------------------------------- TESTS ---------------------------------------------- */
 #ifdef UNITTEST
     tests_run();
@@ -144,25 +101,6 @@ int main(void) {
 
     /* ---------- COSMIC MONKEY TASK ---------- */
 
-<<<<<<< HEAD
-// #if defined(UNITTEST) || defined(DEVBUILD)
-//     #if defined(UNITTEST)
-//     cm_args.frequency = 10;
-//     #endif
-//     #if defined(DEVBUILD)
-//     cm_args.frequency = 1; // Bitflips per second
-//     #endif
-
-//     TaskHandle_t cosmic_monkey_task_handle =
-//         xTaskCreateStatic(main_cosmic_monkey, "CosmicMonkey", COSMIC_MONKEY_TASK_STACK_SIZE, (void *)&cm_args, 1,
-//                           cosmic_monkey_mem.cosmic_monkey_task_stack, &cosmic_monkey_mem.cosmic_monkey_task_tcb);
-//     if (cosmic_monkey_task_handle == NULL) {
-//         warning("Cosmic Monkey Task Creation Failed!\n");
-//     } else {
-//         info("Cosmic Monkey Task initialized\n");
-//     }
-// #endif // Cosmic Monkey
-=======
 #if defined(UNITTEST) || defined(DEVBUILD)
     #if defined(UNITTEST)
     cm_args.frequency = 1;
@@ -180,7 +118,6 @@ int main(void) {
         info("Cosmic Monkey Task initialized\n");
     }
 #endif // Cosmic Monkey
->>>>>>> origin/main
 
     /* ---------- START FREERTOS SCHEDULER ---------- */
 

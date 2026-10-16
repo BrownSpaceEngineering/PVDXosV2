@@ -19,8 +19,6 @@
 # Debug files
 *.d
 *.map
-*.lss
-*.eep
 /debug
 
 # Build
@@ -58,7 +56,6 @@ compile_commands.json
 # scratch
 scratch/
 
-#Bootloader build files
+# bootloader files
 bootloader_flash*.ld
-bootloader_index.h
 preboot_flash.ld

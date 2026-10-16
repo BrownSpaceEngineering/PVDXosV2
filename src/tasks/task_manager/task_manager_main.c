@@ -46,19 +46,6 @@ void main_task_manager(void *pvParameters) {
         (state_check_period_ticks < watchdog_block_time_ticks) ? state_check_period_ticks : watchdog_block_time_ticks;
     // Varible to hold commands popped off the queue
     command_t cmd;
-    
-    command_t initialise_all_tasks = {
-        .target = p_task_manager_task, 
-        .operation = OPERATION_INIT_SUBTASKS, 
-        .p_data = NULL, 
-        .len = 0, 
-        .result = NO_STATUS_RETURN,
-        .callback = NULL, 
-    }; 
-
-    command_t *const p_initialise_all_tasks = &initialise_all_tasks; 
-
-    enqueue_command(p_initialise_all_tasks); 
 
     command_t initialise_all_tasks = {
         .target = p_task_manager_task,

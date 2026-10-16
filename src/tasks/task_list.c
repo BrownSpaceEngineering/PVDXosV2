@@ -67,61 +67,6 @@ pvdx_task_t adcs_task = {.name = "ADCS",
                          .has_registered = false,
                          .task_type = SENSOR};
 
-<<<<<<< HEAD
-pvdx_task_t reflash_task = {
-    .name = "ReflashBootloaders",
-    .enabled = true,
-    .handle = NULL,
-    .command_queue = NULL,
-    .init = NULL,
-    .function = main_reflash_task,
-    .stack_size = TASK_MANAGER_TASK_STACK_SIZE,
-    .stack_buffer = reflash_mem.reflash_task_stack,
-    .pvParameters = NULL,
-    .priority = 4,
-    .task_tcb = &reflash_mem.reflash_task_tcb,
-    .watchdog_timeout_ms = 20000,
-    .last_checkin_time_ticks = 0xDEADBEEF,
-    .has_registered = false,
-    .task_type = OS
-};
-
-pvdx_task_t shell_task = {
-    .name = "Shell",
-    .enabled = false,
-    .handle = NULL,
-    .command_queue = NULL,
-    .init = NULL,
-    .function = main_shell,
-    .stack_size = SHELL_TASK_STACK_SIZE,
-    .stack_buffer = shell_mem.shell_task_stack,
-    .pvParameters = NULL,
-    .priority = 2,
-    .task_tcb = &shell_mem.shell_task_tcb,
-    .watchdog_timeout_ms = 10000,
-    .last_checkin_time_ticks = 0xDEADBEEF,
-    .has_registered = false,
-    .task_type = TESTING
-};
-
-pvdx_task_t display_task = {
-    .name = "Display",
-    .enabled = false,
-    .handle = NULL,
-    .command_queue = NULL,
-    .init = init_display,
-    .function = main_display,
-    .stack_size = DISPLAY_TASK_STACK_SIZE,
-    .stack_buffer = display_mem.display_task_stack,
-    .pvParameters = NULL,
-    .priority = 2,
-    .task_tcb = &display_mem.display_task_tcb,
-    .watchdog_timeout_ms = 10000,
-    .last_checkin_time_ticks = 0xDEADBEEF,
-    .has_registered = false,
-    .task_type = ACTUATOR
-};
-=======
 pvdx_task_t shell_task = {.name = "Shell",
                           .enabled = false,
                           .handle = NULL,
@@ -153,7 +98,6 @@ pvdx_task_t display_task = {.name = "Display",
                             .last_checkin_time_ticks = 0xDEADBEEF,
                             .has_registered = false,
                             .task_type = ACTUATOR};
->>>>>>> origin/main
 
 pvdx_task_t heartbeat_task = {
     .name = "Heartbeat",
@@ -192,18 +136,11 @@ pvdx_task_t cfdp_task = {.name = "CFDP",
 // and define their constant pointers
 pvdx_task_t *const p_watchdog_task = &watchdog_task;
 pvdx_task_t *const p_task_manager_task = &task_manager_task;
-<<<<<<< HEAD
-pvdx_task_t *const p_shell_task = &shell_task;
-pvdx_task_t *const p_display_task = &display_task;
-pvdx_task_t *const p_heartbeat_task = &heartbeat_task;
-pvdx_task_t *const p_reflash_task = &reflash_task;
-=======
 pvdx_task_t *const p_adcs_task = &adcs_task;
 pvdx_task_t *const p_shell_task = &shell_task;
 pvdx_task_t *const p_display_task = &display_task;
 pvdx_task_t *const p_heartbeat_task = &heartbeat_task;
 pvdx_task_t *const p_cfdp_task = &cfdp_task;
->>>>>>> origin/main
 pvdx_task_t *const task_list_null_terminator = NULL;
 
 // Global list of all tasks running on PVDXos (see `pvdx_task_t` definition in globals.h)
@@ -213,19 +150,8 @@ pvdx_task_t *const task_list_null_terminator = NULL;
 // NOTE: Watchdog task must be first in the list, Command Dispatcher second, and Task Manager third.
 // If you change the order of any of these, make sure that main.c reflects the change and update this comment.
 pvdx_task_t *task_list[] = {
-<<<<<<< HEAD
-    p_watchdog_task,
-    p_command_dispatcher_task,
-    p_task_manager_task,
-    p_reflash_task,
-    p_shell_task,
-    p_display_task,
-    p_heartbeat_task,
-    task_list_null_terminator,
-=======
     p_watchdog_task, p_task_manager_task, p_adcs_task, p_shell_task, p_display_task, p_heartbeat_task,
     p_cfdp_task,     task_list_null_terminator,
->>>>>>> origin/main
 };
 
 /**

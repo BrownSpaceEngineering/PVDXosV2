@@ -1,9 +1,5 @@
 /**
-<<<<<<< HEAD
- * src/task/rado/spp.h
-=======
  * src/tests/test.h
->>>>>>> origin/main
  *
  * header file to manage tests
  *
@@ -13,13 +9,6 @@
 #ifndef TESTS_TEST_H
 #define TESTS_TEST_H
 
-<<<<<<< HEAD
-#define PVDX_ASSERT_MSG(x, msg)                                                                                                            \
-    do {                                                                                                                                   \
-        if (!(x)) {                                                                                                                        \
-            warning("[!] ASSERT FAILED: " msg);                                                                                            \
-        }                                                                                                                                  \
-=======
 // Each test is only compiled when its TEST_<NAME> macro is defined, which `make test TESTS="spp cfdp"`
 // does via -DTEST_SPP -DTEST_CFDP. If no test is selected, all of them are compiled.
 // Keep this list in sync with TEST_NAMES in src/Makefile
@@ -45,20 +34,15 @@ extern int tests_total;
             ++tests_passed;                                                                                                                \
         }                                                                                                                                  \
         ++tests_total;                                                                                                                     \
->>>>>>> origin/main
     } while (0)
 #define PVDX_ASSERT(x)                                                                                                                     \
     do {                                                                                                                                   \
         if (!(x)) {                                                                                                                        \
             warning("[!] ASSERT FAILED");                                                                                                  \
-<<<<<<< HEAD
-        }                                                                                                                                  \
-=======
         } else {                                                                                                                           \
             ++tests_passed;                                                                                                                \
         }                                                                                                                                  \
         ++tests_total;                                                                                                                     \
->>>>>>> origin/main
     } while (0)
 void tests_run(void);
 

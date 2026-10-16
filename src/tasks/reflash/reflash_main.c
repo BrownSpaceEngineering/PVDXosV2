@@ -1,10 +1,14 @@
 #include "reflash_task.h"
+#include "hal_flash.h"
+#include "logging.h"
 #include "mram_driver.h"
 #include "watchdog_driver.h"
+#include "hri_mclk_d51.h"
 
 #include "FreeRTOS.h"
 
-extern struct flash_descriptor FLASH_0;
+static struct flash_descriptor reflash_flash;
+static bool reflash_flash_initialized;
 
 #define FLASH_BLOCK_SIZE 512
 #define FLASK_BLOCK_COUNT (MRAM_FLASH_SIZE / FLASH_BLOCK_SIZE)
@@ -18,6 +22,14 @@ void reflash_bootloaders(bool sched_running) {
 #ifndef MRAM_OS_READ
     // return;
 #endif
+
+    if (!reflash_flash_initialized) {
+        hri_mclk_set_AHBMASK_NVMCTRL_bit(MCLK);
+        if (flash_init(&reflash_flash, NVMCTRL) != ERR_NONE) {
+            fatal("Failed to initialize flash for bootloader reflash\n");
+        }
+        reflash_flash_initialized = true;
+    }
 
     uint8_t mram_block[FLASH_BLOCK_SIZE];
 
@@ -58,8 +70,8 @@ void reflash_bootloaders(bool sched_running) {
                 __disable_irq();
             }
 
-            flash_erase(&FLASH_0, i * FLASH_BLOCK_SIZE, 1);
-            flash_write(&FLASH_0, i * FLASH_BLOCK_SIZE, mram_block, FLASH_BLOCK_SIZE);
+            flash_erase(&reflash_flash, i * FLASH_BLOCK_SIZE, 1);
+            flash_write(&reflash_flash, i * FLASH_BLOCK_SIZE, mram_block, FLASH_BLOCK_SIZE);
 
             if (sched_running) {
                 //taskEXIT_CRITICAL();

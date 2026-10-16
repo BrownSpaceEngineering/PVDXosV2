@@ -37,19 +37,11 @@ void main_heartbeat(void *pvParameters)                                         
     gpio_set_pin_level(LED_ORANGE2, true)                                                            ;
 #endif
 
-<<<<<<< HEAD
-    while (true) {
-        debug("\n---------- Heartbeat Task Loop ----------\n");
-
-        // Print the current time
-        debug("heartbeat: Current time is %d\n", xTaskGetTickCount());
-=======
     while (true)                                                                                     {
         debug("\n---------- Heartbeat Task Loop ----------\n")                                       ;
 
         // Print the current time
         debug("heartbeat: Current time is %d\n", xTaskGetTickCount())                                ;
->>>>>>> origin/main
 
 // Devbuild heartbeat pattern (Smoothly turning on and off LEDs in a line)
 #if defined(DEVBUILD)

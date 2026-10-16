@@ -297,32 +297,3 @@ Many thanks to Daniel Martenson, whose [EmbeddedLapack](https://github.com/Danie
 and [CControl](https://github.com/DanielMartensson/CControl) projects
 were the basis for the linear algebra subroutines used to implement
 our ADCS systems.
-
-## Building Docs 
-- Make sure you have Doxygen installed on your system (see instructions for installing with a package manager):
-```bash 
-# macOS
-brew install doxygen
-
-# fedora
-sudo dnf install doxygen
-
-# debian/ubuntu
-sudo apt install doxygen
-```
-- [Manual Doxygen download](https://www.doxygen.nl/download.html)
-- Build the docs with doxygen:
-```bash
-doxygen Doxyfile
-```
-- Download the `Live Server` extension on VSCode
-    - Open the `build-docs/html/index.html` file by right clicking -> `Open with Live Server`
-    - A tab in your browser will open with the full docs page
-
-
-# Acknowledgements
-
-Many thanks to Daniel Martenson, whose [EmbeddedLapack](https://github.com/DanielMartensson/EmbeddedLapack)
-and [CControl](https://github.com/DanielMartensson/CControl) projects 
-were the basis for the linear algebra subroutines used to implement 
-our ADCS systems. 

@@ -50,36 +50,16 @@ void main_display(void *pvParameters) {
         }
         debug("display: No more commands queued.\n");
 
-<<<<<<< HEAD
-        // TODO: is this a correct modification?
-        // Set the display buffer to the first image
-
-=======
         // Enqueue image display commands. Commands are copied by value into the queue, so
         // .result cannot be checked here (it reflects only the pre-enqueue PROCESSING state).
         // TODO: add a blocking/callback mechanism to observe the per-command result.
->>>>>>> origin/main
         {
             command_t display_image_command = get_display_image_command(IMAGE_BUFFER_PVDX);
             enqueue_command(&display_image_command);
-<<<<<<< HEAD
-
-            if (display_image_command.result != SUCCESS) {
-                warning("display: Failed to display image. Error code: %d\n", display_image_command.result);
-            }
-=======
->>>>>>> origin/main
         }
         {
             command_t display_image_command = get_display_image_command(IMAGE_BUFFER_BROWNLOGO);
             enqueue_command(&display_image_command);
-<<<<<<< HEAD
-
-            if (display_image_command.result != SUCCESS) {
-                warning("display: Failed to display image. Error code: %d\n", display_image_command.result);
-            }
-=======
->>>>>>> origin/main
         }
 
         // Check in with the watchdog task

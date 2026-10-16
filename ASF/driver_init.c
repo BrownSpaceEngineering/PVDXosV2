@@ -25,13 +25,9 @@ struct spi_m_sync_descriptor SPI_UHF;
 
 struct adc_sync_descriptor ADC_0;
 
-<<<<<<< HEAD
-struct flash_descriptor FLASH_0;
-=======
 struct adc_sync_descriptor ADC_1;
 
 struct dac_sync_descriptor DAC_0;
->>>>>>> origin/main
 
 struct i2c_m_sync_desc I2C_SBAND;
 
@@ -137,23 +133,7 @@ void ADC_0_init(void)
 	adc_sync_init(&ADC_0, ADC0, (void *)NULL);
 }
 
-<<<<<<< HEAD
-void FLASH_0_CLOCK_init(void)
-{
-
-	hri_mclk_set_AHBMASK_NVMCTRL_bit(MCLK);
-}
-
-void FLASH_0_init(void)
-{
-	FLASH_0_CLOCK_init();
-	flash_init(&FLASH_0, NVMCTRL);
-}
-
-void I2C_SBAND_PORT_init(void)
-=======
 void ADC_1_PORT_init(void)
->>>>>>> origin/main
 {
 
 	// Disable digital pin circuitry
@@ -1209,13 +1189,7 @@ void system_init(void)
 
 	ADC_0_init();
 
-<<<<<<< HEAD
-	FLASH_0_init();
-
-	I2C_SBAND_init();
-=======
 	ADC_1_init();
->>>>>>> origin/main
 
 	DAC_0_init();
 

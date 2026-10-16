@@ -88,10 +88,6 @@ status_t mag_modify_interrupts(uint8_t cmm_value, uint8_t poll_value);
 rm3100_power_mode_t mag_set_power_mode(rm3100_power_mode_t mode);
 uint16_t mag_set_sample_rate(uint16_t sample_rate);
 status_t mag_change_cycle_count(uint16_t newCC);
-<<<<<<< HEAD
-status_t magnetometer_read(int32_t *const raw_readings, float *const gain_adj_readings); 
-=======
 status_t magnetometer_read(mag_raw_reading_t *const raw_readings, mag_data_t *const gain_adj_readings); 
->>>>>>> origin/main
 
 #endif // MAGNETOMETER_DRIVER_H

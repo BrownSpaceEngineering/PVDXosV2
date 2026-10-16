@@ -50,12 +50,12 @@ hpl/trng \
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/portable/GCC/ARM_CM4F \
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/portable/MemMang \
 hpl/mclk \
+hpl/nvmctrl \
 hpl/cmcc \
 hpl/gclk \
 hpl/pm \
 hpl/dac \
 hpl/sercom \
-hpl/nvmctrl \
 hpl/core
 
 # List the object files
@@ -67,17 +67,13 @@ hpl/systick/hpl_systick.o \
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/portable/GCC/ARM_CM4F/port.o \
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/event_groups.o \
 hpl/wdt/hpl_wdt.o \
+hpl/nvmctrl/hpl_nvmctrl.o \
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/croutine.o \
 samd51a/gcc/system_samd51.o \
 hpl/core/hpl_core_m4.o \
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/stream_buffer.o \
 hal/utils/src/utils_syscalls.o \
-<<<<<<< HEAD
-thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/portable/MemMang/heap_1.o \
-hpl/nvmctrl/hpl_nvmctrl.o \
-=======
 hpl/mclk/hpl_mclk.o \
->>>>>>> origin/main
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/queue.o \
 hal/src/hal_spi_m_sync.o \
 hal/src/hal_timer.o \
@@ -89,6 +85,7 @@ hpl/pm/hpl_pm.o \
 hpl/core/hpl_init.o \
 hpl/gclk/hpl_gclk.o \
 hal/src/hal_wdt.o \
+hal/src/hal_flash.o \
 hal/utils/src/utils_assert.o \
 hpl/dmac/hpl_dmac.o \
 hpl/oscctrl/hpl_oscctrl.o \
@@ -96,7 +93,6 @@ hal/src/hal_rand_sync.o \
 hpl/trng/hpl_trng.o \
 hpl/dac/hpl_dac.o \
 hpl/ramecc/hpl_ramecc.o \
-hal/src/hal_flash.o \
 hal/src/hal_init.o \
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/rtos_port.o \
 rtos_start.o \
@@ -113,10 +109,7 @@ hal/src/hal_gpio.o \
 hal/utils/src/utils_event.o \
 hal/src/hal_sleep.o \
 hal/src/hal_cache.o \
-<<<<<<< HEAD
-=======
 hpl/tcc/hpl_tcc.o \
->>>>>>> origin/main
 samd51a/gcc/gcc/startup_samd51.o \
 atmel_start.o \
 hpl/cmcc/hpl_cmcc.o \
@@ -131,17 +124,13 @@ OBJS_AS_ARGS +=  \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/portable/GCC/ARM_CM4F/port.o" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/event_groups.o" \
 "hpl/wdt/hpl_wdt.o" \
+"hpl/nvmctrl/hpl_nvmctrl.o" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/croutine.o" \
 "samd51a/gcc/system_samd51.o" \
 "hpl/core/hpl_core_m4.o" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/stream_buffer.o" \
 "hal/utils/src/utils_syscalls.o" \
-<<<<<<< HEAD
-"thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/portable/MemMang/heap_1.o" \
-"hpl/nvmctrl/hpl_nvmctrl.o" \
-=======
 "hpl/mclk/hpl_mclk.o" \
->>>>>>> origin/main
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/queue.o" \
 "hal/src/hal_spi_m_sync.o" \
 "hal/src/hal_timer.o" \
@@ -153,6 +142,7 @@ OBJS_AS_ARGS +=  \
 "hpl/core/hpl_init.o" \
 "hpl/gclk/hpl_gclk.o" \
 "hal/src/hal_wdt.o" \
+"hal/src/hal_flash.o" \
 "hal/utils/src/utils_assert.o" \
 "hpl/dmac/hpl_dmac.o" \
 "hpl/oscctrl/hpl_oscctrl.o" \
@@ -160,7 +150,6 @@ OBJS_AS_ARGS +=  \
 "hpl/trng/hpl_trng.o" \
 "hpl/dac/hpl_dac.o" \
 "hpl/ramecc/hpl_ramecc.o" \
-"hal/src/hal_flash.o" \
 "hal/src/hal_init.o" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/rtos_port.o" \
 "rtos_start.o" \
@@ -177,10 +166,7 @@ OBJS_AS_ARGS +=  \
 "hal/utils/src/utils_event.o" \
 "hal/src/hal_sleep.o" \
 "hal/src/hal_cache.o" \
-<<<<<<< HEAD
-=======
 "hpl/tcc/hpl_tcc.o" \
->>>>>>> origin/main
 "samd51a/gcc/gcc/startup_samd51.o" \
 "atmel_start.o" \
 "hpl/cmcc/hpl_cmcc.o" \
@@ -232,6 +218,7 @@ DEPS_AS_ARGS +=  \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/event_groups.d" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/croutine.d" \
 "hpl/wdt/hpl_wdt.d" \
+"hpl/nvmctrl/hpl_nvmctrl.d" \
 "hal/utils/src/utils_event.d" \
 "hal/src/hal_io.d" \
 "hpl/ramecc/hpl_ramecc.d" \
@@ -242,14 +229,11 @@ DEPS_AS_ARGS +=  \
 "samd51a/gcc/system_samd51.d" \
 "hal/src/hal_i2c_m_sync.d" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/timers.d" \
-<<<<<<< HEAD
-"hpl/nvmctrl/hpl_nvmctrl.d" \
-=======
 "hal/src/hal_pwm.d" \
 "hal/src/hal_timer.d" \
->>>>>>> origin/main
 "hal/src/hal_spi_m_sync.d" \
 "hal/src/hal_wdt.d" \
+"hal/src/hal_flash.d" \
 "hpl/cmcc/hpl_cmcc.d" \
 "hpl/dmac/hpl_dmac.d" \
 "hal/utils/src/utils_assert.d" \
@@ -258,7 +242,6 @@ DEPS_AS_ARGS +=  \
 "hal/src/hal_delay.d" \
 "hpl/core/hpl_init.d" \
 "hpl/pm/hpl_pm.d" \
-"hal/src/hal_flash.d" \
 "hpl/gclk/hpl_gclk.d" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/rtos_port.d" \
 "hal/src/hal_init.d" \
@@ -324,6 +307,10 @@ $(OUTPUT_FILE_PATH): $(OBJS)
 	
 
 # Compiler targets
+
+
+
+
 %.o: %.c
 	@echo Building file: $<
 	@echo ARM/GNU C Compiler
