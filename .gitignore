@@ -48,3 +48,6 @@ logs/*
 #Compilation Database
 compile_commands.json
 .cache
+
+# Datasheets / reference PDFs (kept locally, not tracked)
+datasheets/
