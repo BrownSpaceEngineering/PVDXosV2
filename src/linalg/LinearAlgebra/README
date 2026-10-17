@@ -1,0 +1,7 @@
+The files in this directory, apart from kf.c, are adapted from Daniel Martenson's 
+EmbeddedLapack project (https://github.com/DanielMartensson/EmbeddedLapack), 
+available under an MIT license. Many thanks to Mr Martenson for making 
+this software available. 
+
+kf.c is adapted from Mr Martenson's CControl project 
+(https://github.com/DanielMartensson/CControl). 

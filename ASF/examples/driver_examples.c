@@ -38,21 +38,6 @@ void ADC_1_example(void)
 	}
 }
 
-/**
- * Example of using DAC_0 to generate waveform.
- */
-void DAC_0_example(void)
-{
-	uint16_t i = 0;
-
-	dac_sync_enable_channel(&DAC_0, 0);
-
-	for (;;) {
-		dac_sync_write(&DAC_0, 0, &i, 1);
-		i = (i + 1) % 1024;
-	}
-}
-
 static struct timer_task TIMER_0_task1, TIMER_0_task2;
 /**
  * Example of using TIMER_0.
@@ -186,24 +171,6 @@ void SPI_UHF_example(void)
 void delay_example(void)
 {
 	delay_ms(5000);
-}
-
-/**
- * Example of using MAGNETORQUER_1.
- */
-void MAGNETORQUER_1_example(void)
-{
-	pwm_set_parameters(&MAGNETORQUER_1, 10000, 5000);
-	pwm_enable(&MAGNETORQUER_1);
-}
-
-/**
- * Example of using MAGNETORQUER_2.
- */
-void MAGNETORQUER_2_example(void)
-{
-	pwm_set_parameters(&MAGNETORQUER_2, 10000, 5000);
-	pwm_enable(&MAGNETORQUER_2);
 }
 
 /**

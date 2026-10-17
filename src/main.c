@@ -1,94 +1,116 @@
 /**
  * main.c
  *
- * Bare-metal entry point for the PVDX driver development build.
+ * The main entry point for PVDXos. This file initializes the hardware, verifies that the bootloader executed
+ * successfully, creates the high-level OS integrity tasks along with the Cosmic Monkey task, and finally starts
+ * the FreeRTOS scheduler.
  *
- * This is a stripped-down harness for bringing up new drivers: there is no
- * FreeRTOS scheduler, no watchdog, and no other tasks. main() simply brings up
- * the hardware and logging, then drops into an idle loop. Add driver init and
- * exercise code as needed.
- *
- * Original OS authors: Oren Kohavi, Siddharta Laloux, Tanish Makadia, Yi Liu,
- * Defne Doken, Aidan Wang, Ignacio Blancas Rodriguez
+ * Created: November 20, 2023
+ * Authors: Oren Kohavi, Siddharta Laloux, Tanish Makadia, Yi Liu, Defne Doken, Aidan Wang, Ignacio Blancas Rodriguez
  */
 
 #include "main.h"
 
-#include "fuel_gauge_driver.h"
+#include "checks/device_checks.h"
 #include "globals.h"
 #include "logging.h"
 #include "tests/test.h"
 
-static void PVDX_init(void) {
+cosmic_monkey_task_arguments_t cm_args = {0};
+
+static status_t PVDX_init(void) {
     // WARNING: Segger RTT channel 0 is pre-configured at compile time according to Segger documentation
     // Attempting to use channel 0 may result in errors.
 
     // Logging output channel (ch. 1)
     SEGGER_RTT_ConfigUpBuffer(
-        LOGGING_RTT_OUTPUT_CHANNEL, "Log Output", SEGGER_RTT_LOG_BUFFER,
+        LOGGING_RTT_OUTPUT_CHANNEL, "Log Output", SEGGER_RTT_LOG_BUFFER, 
         SEGGER_RTT_LOG_BUFFER_SIZE, SEGGER_RTT_MODE_NO_BLOCK_SKIP
     );
+
+    // Image streaming channel (ch. 2)
+    SEGGER_RTT_ConfigUpBuffer(
+        CAMERA_RTT_OUTPUT_CHANNEL, "Image", SEGGER_RTT_IMAGE_BUFFER, 
+        SEGGER_RTT_IMAGE_BUFFER_SIZE, SEGGER_RTT_MODE_BLOCK_IF_FIFO_FULL
+    );
+
+    return SUCCESS;
 }
 
 int main(void) {
-    /* ---------- HARDWARE & LOGGING INITIALIZATION ---------- */
+    /* ---------- HARDWARE & LOGGING INITIALIZATION + BOOTLOADER CHECK ---------- */
 
-    // Initializes MCU, drivers and middleware (clocks, pins, SERCOM SPI/I2C, delay timer)
+    /* Initializes MCU, drivers and middleware */
     atmel_start_init();
     PVDX_init();
-
-    info("--- Bare-metal Driver Development Build ---\n");
+    // info_impl(RTT_CTRL_RESET RTT_CTRL_CLEAR); // Reset the terminal
+    info("--- Atmel & Hardware Initialization Complete ---\n");
     info("[+] Build Type: %s\n", BUILD_TYPE);
     info("[+] Build Date: %s\n", BUILD_DATE);
     info("[+] Build Time: %s\n", BUILD_TIME);
     info("[+] Built from branch: %s\n", GIT_BRANCH_NAME);
     info("[+] Built from commit: %s\n", GIT_COMMIT_HASH);
 
-#ifdef UNITTEST
-    // Hardware-in-the-loop tests; then idle (skip the normal telemetry loop).
-    tests_run();
-    while (true) {
-        delay_ms(1000);
+    // Bootloader sets a magic number in backup RAM to indicate that it has run successfully
+    uint32_t *p_magic_number = (uint32_t *)BOOTLOADER_MAGIC_NUMBER_ADDRESS;
+    uint32_t magic_number = *p_magic_number;
+    *p_magic_number = 0; // Clear the magic number so that this value doesn't linger
+    if (magic_number == BOOTLOADER_MAGIC_NUMBER_VALUE) {
+        info_impl("[+] Bootloader executed normally\n");
+    } else {
+        warning_impl("[!] Abnormal bootloader behavior (Magic Number: %x)\n", magic_number);
     }
+
+    /* ---------- INIT WATCHDOG, COMMAND_DISPATCHER, TASK_MANAGER TASKS (in that order) ---------- */
+
+    info("AT_LEAST_ONE_DEVICE_FAILED: %d\n", check_all_devices_on_startup());
+
+/* -------------------------------------- TESTS ---------------------------------------------- */
+#ifdef UNITTEST
+    tests_run();
 #endif
 
-    /* ---------- FUEL GAUGE BRING-UP ---------- */
+    // Initialize a mutex wrapping the shared PVDX task list struct
+    task_list_mutex = xSemaphoreCreateMutexStatic(&task_list_mutex_buffer);
 
-    // Probe the shared I2C bus first (logs which 7-bit addresses ACK). A gauge channel
-    // must be open to see 0x36/0x0B; the mux itself (0x70) should ACK regardless.
-    fg_i2c_scan();
+    if (task_list_mutex == NULL) {
+        fatal("Failed to create PVDX task list mutex");
+    }
+    if (task_list[0] != p_watchdog_task) {
+        fatal("Watchdog is not first in task_list!");
+    }
 
-    status_t fg_status = init_fuel_gauges();
-    if (fg_status != SUCCESS) {
-        warning("[!] init_fuel_gauges() failed (status=%d)\n", fg_status);
+    // Initialize all OS integrity tasks
+    for (pvdx_task_t *const*curr_task = task_list; *curr_task != NULL; curr_task++) {
+        if ((*curr_task)->task_type == OS) {
+            init_task_pointer(*curr_task);
+            info("%s initialized\n", (*curr_task)->name);
+        }
+    }
+
+    /* ---------- COSMIC MONKEY TASK ---------- */
+
+#if defined(UNITTEST) || defined(DEVBUILD)
+    #if defined(UNITTEST)
+    cm_args.frequency = 10;
+    #endif
+    #if defined(DEVBUILD)
+    cm_args.frequency = 0; // Bitflips per second
+    #endif
+
+    TaskHandle_t cosmic_monkey_task_handle =
+        xTaskCreateStatic(main_cosmic_monkey, "CosmicMonkey", COSMIC_MONKEY_TASK_STACK_SIZE, (void *)&cm_args, 1,
+                          cosmic_monkey_mem.cosmic_monkey_task_stack, &cosmic_monkey_mem.cosmic_monkey_task_tcb);
+    if (cosmic_monkey_task_handle == NULL) {
+        warning("Cosmic Monkey Task Creation Failed!\n");
     } else {
-        info("[+] Fuel gauges initialized\n");
+        info("Cosmic Monkey Task initialized\n");
     }
+#endif // Cosmic Monkey
 
-    /* ---------- FUEL GAUGE TELEMETRY LOOP ---------- */
+    /* ---------- START FREERTOS SCHEDULER ---------- */
 
-    // Read all four packs once per second and log decoded telemetry. Floats are printed as
-    // integer milli-units to avoid relying on %f in the embedded printf.
-    while (true) {
-        fg_reading_t packs[FG_NUM_PACKS];
-        status_t rs = fg_read_all(packs);
-        if (rs != SUCCESS) {
-            warning("fg_read_all failed (status=%d)\n", rs);
-        }
-
-        for (uint8_t ch = 0; ch < FG_NUM_PACKS; ch++) {
-            fg_reading_t *p = &packs[ch];
-            info("pack %u: SOC=%ld m%%  Vpack=%ld mV  I=%ld mA  T=%ld mC\n", ch,
-                 (long)(p->soc_pct * 1000.0f), (long)(p->pack_voltage * 1000.0f),
-                 (long)(p->current_a * 1000.0f), (long)(p->temp_c * 1000.0f));
-        }
-
-        // Shared active-low ALRT line: if asserted, scan all four for the fault source.
-        if (fg_alrt_asserted()) {
-            warning("fuel gauge ALRT asserted - scanning\n");
-            fg_scan_alerts();
-        }
-
-        delay_ms(1000);
-    }
+    // Start the scheduler
+    vTaskStartScheduler();
+    fatal("vTaskStartScheduler Returned! -- Should never happen!\n");
 }
