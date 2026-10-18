@@ -11,9 +11,10 @@
 
 // Each test is only compiled when its TEST_<NAME> macro is defined, which `make test TESTS="spp cfdp"`
 // does via -DTEST_SPP -DTEST_CFDP. If no test is selected, all of them are compiled.
+// TEST_AT86_TX never returns, so it is never part of the default set and must be selected on its own.
 // Keep this list in sync with TEST_NAMES in src/Makefile
 #if !defined(TEST_SPP) && !defined(TEST_CFDP) && !defined(TEST_USLP) && !defined(TEST_PMB) &&                     \
-    !defined(TEST_TELEMETRY) && !defined(TEST_FLOAT) && !defined(TEST_AT86)
+    !defined(TEST_TELEMETRY) && !defined(TEST_FLOAT) && !defined(TEST_AT86) && !defined(TEST_AT86_TX)
     #define TEST_CFDP
     #define TEST_SPP
     #define TEST_USLP

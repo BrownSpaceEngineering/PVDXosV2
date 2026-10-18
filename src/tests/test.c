@@ -52,6 +52,9 @@ void tests_run(void) {
 #ifdef TEST_AT86
     test_at86();
 #endif
+#ifdef TEST_AT86_TX
+    test_at86_tx(); // does not return
+#endif
     test_log("test results: %d/%d passed", tests_passed, tests_total);
 }
 

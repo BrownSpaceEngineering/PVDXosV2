@@ -2470,7 +2470,7 @@ at86rf215_bb_conf(struct at86rf215 *h, at86rf215_radio_t radio,
     return -AT86RF215_INVAL_PARAM;
   }
   uint8_t val = conf->pt | (conf->fcst << 3) | (conf->txafcs << 4) |
-                (conf->fcsfe << 6) | (conf->ctx << 3);
+                (conf->fcsfe << 6) | (conf->ctx << 7);
 
   uint16_t reg = 0;
   if (radio == AT86RF215_RF09) {
@@ -2520,7 +2520,7 @@ at86rf215_bb_enable(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t en)
   }
   const struct at86rf215_bb_conf *conf = &h->priv.bbc[radio];
   uint8_t val = conf->pt | ((en & 0x1) << 2) | (conf->fcst << 3) |
-                (conf->txafcs << 4) | (conf->fcsfe << 6) | (conf->ctx << 3);
+                (conf->txafcs << 4) | (conf->fcsfe << 6) | (conf->ctx << 7);
   uint16_t reg = 0;
   if (radio == AT86RF215_RF09) {
     reg = REG_BBC0_PC;
