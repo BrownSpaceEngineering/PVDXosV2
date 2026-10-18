@@ -16,10 +16,8 @@ extern const volatile uint8_t __flash_address_zero;
 
 bool mram_checksum_matches(const uint8_t *os_address) {
     const uint8_t *checksum = os_address + MRAM_OS_SIZE - sizeof(uint32_t);
-    uint32_t stored_checksum = ((uint32_t)checksum[0] << 0)
-                             | ((uint32_t)checksum[1] << 8)
-                             | ((uint32_t)checksum[2] << 16)
-                             | ((uint32_t)checksum[3] << 24);
+    uint32_t stored_checksum =
+        ((uint32_t)checksum[0] << 0) | ((uint32_t)checksum[1] << 8) | ((uint32_t)checksum[2] << 16) | ((uint32_t)checksum[3] << 24);
     return crc32(os_address, MRAM_OS_SIZE - sizeof(uint32_t)) == stored_checksum;
 }
 
@@ -28,9 +26,8 @@ int main(void) {
 
     mram_status_t mram_status = mram_init();
 
-    bool mram_ok = (get_mram_state(mram_status, 1) == MRAM_STATE_OK)
-                || (get_mram_state(mram_status, 2) == MRAM_STATE_OK)
-                || (get_mram_state(mram_status, 3) == MRAM_STATE_OK);
+    bool mram_ok = (get_mram_state(mram_status, 1) == MRAM_STATE_OK) || (get_mram_state(mram_status, 2) == MRAM_STATE_OK) ||
+        (get_mram_state(mram_status, 3) == MRAM_STATE_OK);
 
     char *os_dst = (char *)RAM_OS_BASE_ADDRESS;
 
@@ -55,14 +52,15 @@ int main(void) {
             go_to_app();
         }
         mram_read_bytes(MRAM_OS_BASE_ADDRESS + 2 * MRAM_OS_SIZE, (uint8_t *)os_dst, MRAM_OS_SIZE);
-        if (mram_checksum_matches((uint8_t *) os_dst)) {
+        if (mram_checksum_matches((uint8_t *)os_dst)) {
             go_to_app();
         }
     } else {
         char *os_flash_src = (char *)FLASH_OS_BASE_ADDRESS;
         for (uint32_t i = 0; i < MRAM_OS_SIZE; i++) {
-            /** TODO: update to make majority vote */
-            os_dst[i] = os_flash_src[i];
+            os_dst[i] = (os_flash_src[i + 0 * MRAM_OS_SIZE] & os_flash_src[i + 1 * MRAM_OS_SIZE]) |
+                        (os_flash_src[i + 1 * MRAM_OS_SIZE] & os_flash_src[i + 2 * MRAM_OS_SIZE]) |
+                        (os_flash_src[i + 0 * MRAM_OS_SIZE] & os_flash_src[i + 2 * MRAM_OS_SIZE]);
         }
     }
 
