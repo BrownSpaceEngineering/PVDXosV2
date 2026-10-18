@@ -66,7 +66,22 @@ typedef struct {
 QueueHandle_t init_radio(void);
 void main_radio(void *pvParameters);
 
+typedef struct at86_config at86_config_t;
+typedef struct at86_health at86_health_t;
+
 bool radio_transmit(const uint8_t *frame, size_t len);
+
+int switch_at86_rx_tx();
+
+int change_at86_config(at86_config_t *config);
+
+int at86_send_frame(uint8_t *buf, size_t sz);
+
+bool at86_peek_frame();
+
+int at86_pop_frame(uint8_t *buf, size_t sz);
+
+int at86_check_health(at86_health_t *health);
 
 // Add functionality to handle case of data being pointed to yet not in radio?
 #endif

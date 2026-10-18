@@ -215,6 +215,11 @@ bool uslp_transfer_frame_parse(uslp_transfer_frame_view_t *view, uint8_t *data, 
     }
 
     ph->spacecraft_id = ((data[0] & 0x0F) << 12) | (data[1] << 4) | (data[2] >> 4);
+
+    if (ph->spacecraft_id != CCSDS_SCID) {
+        return true; // USLP frame not intended for this spacecraft
+    }
+
     ph->src_or_dest = (data[2] >> 3) & 0x01;
     ph->virtual_channel_id = ((data[2] & 0x07) << 3) | (data[3] >> 5);
     ph->map_id = (data[3] >> 1) & 0x0F;
