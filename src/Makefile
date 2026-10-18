@@ -138,7 +138,7 @@ export OBJS_AS_ARGS := $(foreach obj,$(OBJS),$(patsubst ../%,%,$(obj)))
 
 export DEPS_AS_ARGS := $(patsubst %.o,%.d,$(OBJS_AS_ARGS))
 
-.PHONY: all dev release test clean connect update_asf flash_bootloader
+.PHONY: all dev release test clean list_files update_asf
 
 # objects files don't depend on CFLAGS, so switching build types (e.g. dev -> test)
 # would otherwise relink stale objects, so ecord the last build type and clean on change.

@@ -23,22 +23,24 @@ else
 	endif
 endif
 
+.PHONY: all bootloader_target dev release test flash_monkey connect connect_bl clean
+
 all: dev
 
 # can't be called bootloader bc that's the folder name
 bootloader_target:
-	make -C bootloader/src
+	$(MAKE) -C bootloader/src
 
 dev: bootloader_target
-	make -C src dev \
+	$(MAKE) -C src dev \
 	&& python3 scripts/create_flash_segment.py
 
 release: bootloader_target
-	make -C src release \
+	$(MAKE) -C src release \
 	&& python3 scripts/create_flash_segment.py
 
 test: bootloader_target
-	make -C src test \
+	$(MAKE) -C src test \
 	&& python3 scripts/create_flash_segment.py
 
 flash_monkey:
@@ -77,5 +79,5 @@ connect_bl:
 
 clean:
 	rm -f flash.bin \
-	&& make -C bootloader/src clean \
-	&& make -C src clean
+	&& $(MAKE) -C bootloader/src clean \
+	&& $(MAKE) -C src clean
