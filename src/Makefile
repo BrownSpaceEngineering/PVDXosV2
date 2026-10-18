@@ -82,6 +82,9 @@ export OBJS :=                                              	\
 ../src/drivers/watchdog/watchdog_driver.o                     	\
 ../src/drivers/arducam/arducam_driver.o                         \
 ../src/drivers/arducam/arducam_registers.o 						\
+../src/drivers/fuel_gauge/fuel_gauge_driver.o \
+../src/drivers/thermistor/thermistor_driver.o \
+../src/drivers/magnetorquer/magnetorquer_driver.o \
                                                             	\
 ../src/tasks/heartbeat/heartbeat_main.o                     	\
                                                             	\
@@ -111,6 +114,9 @@ export OBJS :=                                              	\
 																\
 ../src/tasks/magnetometer/magnetometer_main.o 					\
 ../src/tasks/magnetometer/magnetometer_task.o 					\
+../src/tasks/fuel_gauge/fuel_gauge_main.o \
+../src/tasks/thermistor/thermistor_main.o \
+../src/tasks/magnetorquer/magnetorquer_main.o \
 																\
 ../src/checks/device_checks.o 									\
 ../src/tasks/task_list.o                                        \
@@ -134,6 +140,8 @@ export EXTRA_VPATH := \
 ../../src/drivers/magnetometer \
 ../../src/drivers/magnetorquer \
 ../../src/drivers/photodiode \
+../../src/drivers/fuel_gauge \
+../../src/drivers/thermistor \
 ../../src/drivers/watchdog \
 ../../src/drivers/arducam \
 ../../src/tasks \
@@ -147,6 +155,9 @@ export EXTRA_VPATH := \
 ../../src/tasks/shell \
 ../../src/tasks/arducam \
 ../../src/tasks/magnetometer \
+../../src/tasks/fuel_gauge \
+../../src/tasks/thermistor \
+../../src/tasks/magnetorquer \
 ../../src/tasks/radio \
 ../../src/mutexes \
 ../../src/checks \

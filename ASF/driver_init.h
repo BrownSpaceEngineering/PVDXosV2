@@ -43,6 +43,9 @@ extern "C" {
 
 #include <hal_wdt.h>
 
+#include <hal_pwm.h>
+#include <hpl_tcc.h>
+
 extern struct adc_sync_descriptor ADC_0;
 
 extern struct adc_sync_descriptor   ADC_1;
@@ -57,6 +60,9 @@ extern struct spi_m_sync_descriptor SPI_SBAND;
 
 extern struct i2c_m_sync_desc       I2C_CAMERA;
 extern struct spi_m_sync_descriptor SPI_UHF;
+
+extern struct pwm_descriptor MAGNETORQUER_1;
+extern struct pwm_descriptor MAGNETORQUER_2;
 
 extern struct rand_sync_desc RAND_0;
 
@@ -101,6 +107,14 @@ void I2C_CAMERA_PORT_init(void);
 void SPI_UHF_PORT_init(void);
 void SPI_UHF_CLOCK_init(void);
 void SPI_UHF_init(void);
+
+void MAGNETORQUER_1_PORT_init(void);
+void MAGNETORQUER_1_CLOCK_init(void);
+void MAGNETORQUER_1_init(void);
+
+void MAGNETORQUER_2_PORT_init(void);
+void MAGNETORQUER_2_CLOCK_init(void);
+void MAGNETORQUER_2_init(void);
 
 void delay_driver_init(void);
 

@@ -1727,11 +1727,11 @@ pads:
     mode: Digital output
     user_label: DISPLAY_SCK
     configuration: null
-  PC00:
+  PHD_0:
     name: PC00
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC00
     mode: Analog
-    user_label: PC00
+    user_label: PHD_0
     configuration: null
   PC01:
     name: PC01
@@ -1739,53 +1739,53 @@ pads:
     mode: Analog
     user_label: PC01
     configuration: null
-  PC02:
+  PHD_16:
     name: PC02
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC02
     mode: Analog
-    user_label: PC02
+    user_label: PHD_16
     configuration: null
-  PC03:
+  PHD_17:
     name: PC03
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC03
     mode: Analog
-    user_label: PC03
+    user_label: PHD_17
     configuration: null
-  PA02:
+  PVD_CRNT:
     name: PA02
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA02
     mode: Analog
-    user_label: PA02
+    user_label: PVD_CRNT
     configuration: null
-  PA03:
+  PHD_1:
     name: PA03
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA03
     mode: Analog
-    user_label: PA03
+    user_label: PHD_1
     configuration: null
-  PB04:
+  THERM_0:
     name: PB04
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB04
     mode: Analog
-    user_label: PB04
+    user_label: THERM_0
     configuration: null
-  PB05:
+  THERM_1:
     name: PB05
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB05
     mode: Analog
-    user_label: PB05
+    user_label: THERM_1
     configuration: null
-  PD00:
+  THERM_2:
     name: PD00
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PD00
     mode: Analog
-    user_label: PD00
+    user_label: THERM_2
     configuration: null
-  PD01:
+  THERM_3:
     name: PD01
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PD01
     mode: Analog
-    user_label: PD01
+    user_label: THERM_3
     configuration: null
   PB06:
     name: PB06
@@ -1799,41 +1799,41 @@ pads:
     mode: Analog
     user_label: PB07
     configuration: null
-  PB08:
+  PHD_2:
     name: PB08
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB08
     mode: Analog
-    user_label: PB08
+    user_label: PHD_2
     configuration: null
-  PB09:
+  PHD_3:
     name: PB09
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB09
     mode: Analog
-    user_label: PB09
+    user_label: PHD_3
     configuration: null
-  PA04:
+  PHD_4:
     name: PA04
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA04
     mode: Analog
-    user_label: PA04
+    user_label: PHD_4
     configuration: null
-  PA05:
+  PHD_5:
     name: PA05
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA05
     mode: Analog
-    user_label: PA05
+    user_label: PHD_5
     configuration: null
-  PA06:
+  PHD_6:
     name: PA06
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA06
     mode: Analog
-    user_label: PA06
+    user_label: PHD_6
     configuration: null
-  PA07:
+  PHD_7:
     name: PA07
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA07
     mode: Analog
-    user_label: PA07
+    user_label: PHD_7
     configuration: null
   MRAM1_CS:
     name: PC04
@@ -1863,29 +1863,29 @@ pads:
     user_label: MRAM2_RST
     configuration:
       pad_initial_level: High
-  PA08:
+  PHD_8:
     name: PA08
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA08
     mode: Analog
-    user_label: PA08
+    user_label: PHD_8
     configuration: null
-  PA09:
+  PHD_9:
     name: PA09
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA09
     mode: Analog
-    user_label: PA09
+    user_label: PHD_9
     configuration: null
-  PA10:
+  PHD_10:
     name: PA10
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA10
     mode: Analog
-    user_label: PA10
+    user_label: PHD_10
     configuration: null
-  PA11:
+  PHD_11:
     name: PA11
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA11
     mode: Analog
-    user_label: PA11
+    user_label: PHD_11
     configuration: null
   MRAM3_CS:
     name: PB10
@@ -2158,29 +2158,29 @@ pads:
     mode: Analog
     user_label: PC31
     configuration: null
-  PB00:
+  PHD_12:
     name: PB00
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB00
     mode: Analog
-    user_label: PB00
+    user_label: PHD_12
     configuration: null
-  PB01:
+  PHD_13:
     name: PB01
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB01
     mode: Analog
-    user_label: PB01
+    user_label: PHD_13
     configuration: null
-  PB02:
+  PHD_14:
     name: PB02
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB02
     mode: Analog
-    user_label: PB02
+    user_label: PHD_14
     configuration: null
-  PB03:
+  PHD_15:
     name: PB03
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB03
     mode: Analog
-    user_label: PB03
+    user_label: PHD_15
     configuration: null
 toolchain_options: []
 static_files: []

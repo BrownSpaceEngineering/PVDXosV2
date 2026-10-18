@@ -748,6 +748,32 @@
 #define CONF_GCLK_SERCOM7_SLOW_FREQUENCY 32768
 #endif
 
+// <i> Select the clock source for TCC.
+#ifndef CONF_GCLK_TCC0_SRC
+#define CONF_GCLK_TCC0_SRC GCLK_PCHCTRL_GEN_GCLK0_Val
+#endif
+
+/**
+ * \def CONF_GCLK_TCC0_FREQUENCY
+ * \brief TCC0's Clock frequency
+ */
+#ifndef CONF_GCLK_TCC0_FREQUENCY
+#define CONF_GCLK_TCC0_FREQUENCY 12000000
+#endif
+
+// <i> Select the clock source for TCC.
+#ifndef CONF_GCLK_TCC1_SRC
+#define CONF_GCLK_TCC1_SRC GCLK_PCHCTRL_GEN_GCLK0_Val
+#endif
+
+/**
+ * \def CONF_GCLK_TCC1_FREQUENCY
+ * \brief TCC1's Clock frequency
+ */
+#ifndef CONF_GCLK_TCC1_FREQUENCY
+#define CONF_GCLK_TCC1_FREQUENCY 12000000
+#endif
+
 // <<< end of configuration section >>>
 
 #endif // PERIPHERAL_CLK_CONFIG_H

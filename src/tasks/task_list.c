@@ -155,6 +155,60 @@ pvdx_task_t heartbeat_task = {
     .task_type = OS // ACTUATOR
 };
 
+pvdx_task_t fuel_gauge_task = {
+    .name = "FuelGauge",
+    .enabled = true,
+    .handle = NULL,
+    .command_queue = NULL,
+    .init = NULL,
+    .function = main_fuel_gauge,
+    .stack_size = FUEL_GAUGE_TASK_STACK_SIZE,
+    .stack_buffer = fuel_gauge_mem.fuel_gauge_task_stack,
+    .pvParameters = NULL,
+    .priority = 2,
+    .task_tcb = &fuel_gauge_mem.fuel_gauge_task_tcb,
+    .watchdog_timeout_ms = 10000,
+    .last_checkin_time_ticks = 0xDEADBEEF,
+    .has_registered = false,
+    .task_type = SENSOR
+};
+
+pvdx_task_t thermistor_task = {
+    .name = "Thermistor",
+    .enabled = true,
+    .handle = NULL,
+    .command_queue = NULL,
+    .init = NULL,
+    .function = main_thermistor,
+    .stack_size = THERMISTOR_TASK_STACK_SIZE,
+    .stack_buffer = thermistor_mem.thermistor_task_stack,
+    .pvParameters = NULL,
+    .priority = 2,
+    .task_tcb = &thermistor_mem.thermistor_task_tcb,
+    .watchdog_timeout_ms = 10000,
+    .last_checkin_time_ticks = 0xDEADBEEF,
+    .has_registered = false,
+    .task_type = SENSOR
+};
+
+pvdx_task_t magnetorquer_task = {
+    .name = "Magnetorquer",
+    .enabled = true,
+    .handle = NULL,
+    .command_queue = NULL,
+    .init = NULL,
+    .function = main_magnetorquer,
+    .stack_size = MAGNETORQUER_TASK_STACK_SIZE,
+    .stack_buffer = magnetorquer_mem.magnetorquer_task_stack,
+    .pvParameters = NULL,
+    .priority = 2,
+    .task_tcb = &magnetorquer_mem.magnetorquer_task_tcb,
+    .watchdog_timeout_ms = 10000,
+    .last_checkin_time_ticks = 0xDEADBEEF,
+    .has_registered = false,
+    .task_type = ACTUATOR
+};
+
 // and define their constant pointers
 pvdx_task_t *const p_watchdog_task = &watchdog_task;
 pvdx_task_t *const p_command_dispatcher_task = &command_dispatcher_task;
@@ -163,6 +217,9 @@ pvdx_task_t *const p_shell_task = &shell_task;
 pvdx_task_t *const p_display_task = &display_task;
 pvdx_task_t *const p_arducam_task = &arducam_task;
 pvdx_task_t *const p_magnetometer_task = &magnetometer_task;
+pvdx_task_t *const p_fuel_gauge_task = &fuel_gauge_task;
+pvdx_task_t *const p_thermistor_task = &thermistor_task;
+pvdx_task_t *const p_magnetorquer_task = &magnetorquer_task;
 pvdx_task_t *const p_heartbeat_task = &heartbeat_task;
 pvdx_task_t *const task_list_null_terminator = NULL;
 
@@ -180,6 +237,9 @@ pvdx_task_t *const task_list[] = {
     p_display_task,
     p_arducam_task,
     p_magnetometer_task,
+    p_fuel_gauge_task,
+    p_thermistor_task,
+    p_magnetorquer_task,
     p_heartbeat_task,
     NULL,
 };

@@ -53,6 +53,7 @@ hpl/cmcc \
 hpl/gclk \
 hpl/pm \
 hpl/sercom \
+hpl/tcc \
 hpl/core
 
 # List the object files
@@ -95,6 +96,8 @@ hpl/rtc/hpl_rtc.o \
 examples/driver_examples.o \
 driver_init.o \
 hal/src/hal_adc_sync.o \
+hal/src/hal_pwm.o \
+hpl/tcc/hpl_tcc.o \
 hpl/sercom/hpl_sercom.o \
 hal/src/hal_atomic.o \
 hal/src/hal_gpio.o \
@@ -146,6 +149,8 @@ OBJS_AS_ARGS +=  \
 "examples/driver_examples.o" \
 "driver_init.o" \
 "hal/src/hal_adc_sync.o" \
+"hal/src/hal_pwm.o" \
+"hpl/tcc/hpl_tcc.o" \
 "hpl/sercom/hpl_sercom.o" \
 "hal/src/hal_atomic.o" \
 "hal/src/hal_gpio.o" \
@@ -178,6 +183,7 @@ DIR_INCLUDES +=  \
 -I"../hpl/ramecc" \
 -I"../hpl/rtc" \
 -I"../hpl/sercom" \
+-I"../hpl/tcc" \
 -I"../hpl/systick" \
 -I"../hpl/trng" \
 -I"../hpl/wdt" \
@@ -229,6 +235,8 @@ DEPS_AS_ARGS +=  \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/portable/GCC/ARM_CM4F/port.d" \
 "driver_init.d" \
 "hal/src/hal_adc_sync.d" \
+"hal/src/hal_pwm.d" \
+"hpl/tcc/hpl_tcc.d" \
 "hpl/osc32kctrl/hpl_osc32kctrl.d" \
 "rtos_start.d" \
 "examples/driver_examples.d" \

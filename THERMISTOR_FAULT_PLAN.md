@@ -63,18 +63,31 @@ divide-by-zero / negative. Keep a `k >= ~0.99` or `Rth <= 0` guard so a hard fau
 a clean "invalid" instead of a NaN/inf that would poison the median before it can be
 rejected.
 
-## (2) Replacement — substitute the consensus
+## (2) Replacement — substitute the pair partner
 
-When a sensor is flagged, do not feed its value anywhere; replace it with the **median
-(or the mean of the remaining good sensors)**. Because all four are physically close, the
-group consensus is a good estimate of what the broken one should read. Then run the
-existing per-heater pair logic on the repaired set:
+When a sensor is flagged, do not feed its value anywhere; replace it with the **other
+thermistor in its heater pair**, not the median/consensus of all four. The two sensors in
+a pair sit on the same heater zone, so the partner is the closest available proxy for what
+the broken one should read, and it keeps each heater's decision sourced from its own zone
+rather than borrowing a cross-board average that could be colder/warmer than the zone the
+heater actually controls.
 
-- Heater 1 ← thermistors 0,1 (flagged ones swapped for the consensus)
-- Heater 2 ← thermistors 2,3 (same)
+- Heater 1 ← thermistors 0,1: if one is flagged, the heater runs off the other.
+- Heater 2 ← thermistors 2,3: same.
 
-So a dead sensor's slot gets a sane stand-in from its three neighbors rather than just
-being dropped.
+In practice this collapses into the existing per-heater logic: drop the flagged sensor and
+let the surviving partner drive that heater (coldest-of-pair over whichever members are
+still valid). A dead sensor's slot is covered by its pair partner rather than a four-way
+consensus value.
+
+**Both sensors of a pair broken:** there is no partner to fall back on, so fall back to the
+**consensus** of the remaining good sensors (the median/mean of whatever is still valid —
+in the 4-sensor layout that is the other pair). This borrows the other heater's zone, which
+is less accurate than a same-zone reading, but it keeps the heater running off a real
+temperature estimate instead of going blind. So the replacement order is: pair partner
+first, four-way consensus only when the whole pair is gone. (Degenerate case: if *every*
+sensor is invalid there is no consensus left either, and that still needs a fail-safe
+default — hold last-good or a fixed safe duty.)
 
 ## Things to get right
 
@@ -95,8 +108,8 @@ being dropped.
 ## Scope / status
 
 - Not implemented. When approved, wire into `thermistor_driver.c`: a per-sensor validity
-  pass (electrical guard + median-outlier test), substitution of the consensus for any
-  flagged sensor, feeding the existing two-heater control.
+  pass (electrical guard + median-outlier test), substitution of the **pair partner** for
+  any flagged sensor, feeding the existing two-heater control.
 - Related: the resistance->temperature conversion already matches this circuit
   (`therm_resistance_from_code` uses the 3-element model above). The Beta midrange error
   (~0.4 C near 25 C) is a separate, accepted approximation.

@@ -54,6 +54,16 @@
 // as-built divider). Heater turns ON when the controlling thermistor is above this.
 #define HEATER_ON_VOLTAGE 2.3f // volts
 
+// ---- Single-fault tolerance (see THERMISTOR_FAULT_PLAN.md) ----
+// Electrical guard: k = code/FS at/above this means the divider has railed (open NTC or
+// tap shorted to the rail), which drives the Rth model to a divide-by-zero. Reject such a
+// reading before it can poison the consensus median.
+#define THERM_K_OPEN 0.99f
+// Consensus outlier band, in volts (the control domain): a reading more than this away from
+// the median of the electrically-valid sensors is flagged broken. PROVISIONAL - tune from
+// the measured real spread; ~0.25 V is roughly an 8 C gap near the ~5 C setpoint.
+#define THERM_DELTA_FAULT_V 0.25f
+
 status_t init_thermistors(void);
 status_t therm_read_raw(uint8_t index, uint16_t *code);
 status_t therm_read_celsius(uint8_t index, float *temp_c);

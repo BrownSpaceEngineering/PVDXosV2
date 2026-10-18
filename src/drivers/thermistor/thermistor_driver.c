@@ -130,43 +130,121 @@ status_t therm_read_all(float temps[THERM_COUNT]) {
     return worst;
 }
 
+// ---------------------- Fault detection (see THERMISTOR_FAULT_PLAN.md) ----------------------
+
+// Median of n floats (n <= THERM_COUNT). Copies and sorts in place; for even n returns the
+// average of the two middle values (so a single wild outlier sorts to an end and cannot
+// drag the reference off the good cluster).
+static float therm_median(const float *v, uint8_t n) {
+    if (n == 0) {
+        return 0.0f;
+    }
+    float s[THERM_COUNT];
+    for (uint8_t i = 0; i < n; i++) {
+        s[i] = v[i];
+    }
+    for (uint8_t i = 1; i < n; i++) { // insertion sort; n is tiny
+        float key = s[i];
+        int8_t j = (int8_t)i - 1;
+        while (j >= 0 && s[j] > key) {
+            s[j + 1] = s[j];
+            j--;
+        }
+        s[j + 1] = key;
+    }
+    if (n & 1u) {
+        return s[n / 2];
+    }
+    return 0.5f * (s[n / 2 - 1] + s[n / 2]);
+}
+
+// Electrical validity guard: a railed/short divider yields a k = code/FS that drives the
+// Rth model to a divide-by-zero or a non-physical (<= 0) resistance. Reject those before
+// they can poison the consensus median (open NTC -> k -> 1; tap short -> Rth <= 0).
+static bool therm_electrically_valid(uint16_t code) {
+    if (code == 0) {
+        return false;
+    }
+    if ((float)code / THERM_ADC_FS >= THERM_K_OPEN) {
+        return false;
+    }
+    return therm_resistance_from_code(code) > 0.0f;
+}
+
 // ---------------------- Heater control ----------------------
 
 void heater_control_update(void) {
-    // Temporary threshold control directly on the ADC node voltage (the temperature
-    // conversion does not yet match the as-built 3-element divider). On this divider a
-    // HIGHER node voltage means COLDER, so turn the heater ON when voltage > 2.3 V.
+    // Per THERMISTOR_FAULT_PLAN.md: (1) read all four, apply the electrical guard, then flag
+    // consensus outliers; (2) replace a broken sensor with its pair partner, or - when both
+    // of a pair are broken - with the four-way consensus of the remaining good sensors.
+    // Control still runs on the ADC node voltage (higher voltage = colder on this divider).
     float volts[THERM_COUNT];
-    status_t ok[THERM_COUNT];
+    bool good[THERM_COUNT];
+    float valid_v[THERM_COUNT];
+    uint8_t n_valid = 0;
+
+    // ---- (1a) Read + electrical guard ----
     for (uint8_t i = 0; i < THERM_COUNT; i++) {
         uint16_t code = 0;
-        ok[i] = therm_read_raw(i, &code);
+        bool elec_ok = (therm_read_raw(i, &code) == SUCCESS) && therm_electrically_valid(code);
         volts[i] = (float)code / THERM_ADC_FS * 3.3f; // ratiometric, VREF = VDDANA
+        good[i] = elec_ok; // provisional; the consensus test below may clear it
+        if (elec_ok) {
+            valid_v[n_valid++] = volts[i];
+        }
     }
 
+    // ---- (1b) Consensus outlier test over the electrically-valid set ----
+    if (n_valid > 0) {
+        float med = therm_median(valid_v, n_valid);
+        for (uint8_t i = 0; i < THERM_COUNT; i++) {
+            if (good[i] && fabsf(volts[i] - med) > THERM_DELTA_FAULT_V) {
+                good[i] = false;
+                warning("thermistor %u flagged broken: %d mV vs median %d mV\n", i,
+                        (int)(volts[i] * 1000.0f), (int)(med * 1000.0f));
+            }
+        }
+    }
+
+    // Four-way consensus (mean of all good sensors): the fallback when a whole pair is dead.
+    float good_sum = 0.0f;
+    uint8_t n_good = 0;
+    for (uint8_t i = 0; i < THERM_COUNT; i++) {
+        if (good[i]) {
+            good_sum += volts[i];
+            n_good++;
+        }
+    }
+    float consensus_v = (n_good > 0) ? good_sum / (float)n_good : 0.0f;
+
+    // ---- (2) Per-heater control with pair-partner / consensus replacement ----
     for (uint8_t h = 0; h < THERM_HEATER_COUNT; h++) {
         uint8_t a = HEATER_THERMS[h][0];
         uint8_t b = HEATER_THERMS[h][1];
 
-        // Coldest valid thermistor of the pair drives the decision (coldest = highest
-        // voltage). If a reading failed, fall back to the other; if both failed, force
-        // the heater off (fail safe).
         bool have = false;
         float ctrl = 0.0f;
-        if (ok[a] == SUCCESS) {
-            ctrl = volts[a];
+        if (good[a] && good[b]) {
+            ctrl = fmaxf(volts[a], volts[b]); // coldest valid of the pair
             have = true;
-        }
-        if (ok[b] == SUCCESS) {
-            ctrl = have ? fmaxf(ctrl, volts[b]) : volts[b];
+        } else if (good[a]) {
+            ctrl = volts[a]; // pair partner stands in for the broken one
             have = true;
+        } else if (good[b]) {
+            ctrl = volts[b]; // pair partner stands in for the broken one
+            have = true;
+        } else if (n_good > 0) {
+            ctrl = consensus_v; // whole pair broken -> four-way consensus
+            have = true;
+            warning("heater %u: both pair thermistors broken - using consensus\n", h + 1);
         }
 
-        if (!have) {
-            warning("heater %u: both thermistors failed - forcing OFF\n", h + 1);
-            heater_on[h] = false;
-        } else {
+        if (have) {
             heater_on[h] = (ctrl > HEATER_ON_VOLTAGE);
+        } else {
+            // All four sensors invalid: no consensus available. Hold the last-good state.
+            warning("heater %u: no valid thermistors - holding last state (%s)\n", h + 1,
+                    heater_on[h] ? "ON" : "OFF");
         }
 
         gpio_set_pin_level(HEATER_PIN[h], heater_on[h] ? HEATER_ON_LEVEL : HEATER_OFF_LEVEL);
