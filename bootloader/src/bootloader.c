@@ -36,6 +36,7 @@ int main(void) {
 
 // only for debugging; will not be present in final
 #ifdef WRITE_FLASH_TO_MRAM
+    // Could Potentially Trigger the Watchdog If Copying the Memory is Slow Enough
     if (mram_ok) {
         // Stage address zero in RAM so the MRAM write receives a non-null source buffer.
         uint8_t byte0 = __flash_address_zero;
