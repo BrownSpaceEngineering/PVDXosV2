@@ -11,6 +11,7 @@
 #include "cfdp/cfdp_utils.h"
 #include "logging.h"
 #include "telemetry/telemetry.h"
+#include "tests/test_magnetorquer.h"
 #include "tests/test_pmb.h"
 
 int tests_passed = 0;
@@ -43,6 +44,9 @@ void tests_run(void) {
 #endif
   #ifdef TEST_FLOAT
     test_float();
+#endif
+#ifdef TEST_MAGNETORQUER
+    test_magnetorquer();
 #endif
 #ifdef TEST_TELEMETRY
     test_telemetry_downlink();

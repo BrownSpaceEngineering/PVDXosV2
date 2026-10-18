@@ -16,10 +16,12 @@
 #include "globals.h"
 #include "logging.h"
 #include "magnetometer_driver.h"
+#include "magnetorquer_driver.h"
 
 // forward declarations of check functions
 bool check_magnetometer(void);
 bool check_display(void);
+bool check_magnetorquers(void);
 // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 // ~~~ for safety, these structures should be local to this source file ~~~
@@ -37,7 +39,7 @@ static bool (*device_check_functions[NUM_DEVICES])(void) = {
     NULL,                // PHOTODIODE_ID
     NULL,                // GYROSCOPE_ID
     NULL,                // MRAM_ID
-    NULL,                // MAGNETORQUERS_ID
+    &check_magnetorquers, // MAGNETORQUERS_ID
     NULL,                // SBAND_ID
     NULL,                // UHF_ID
     NULL,                // EPS_ID
@@ -107,4 +109,9 @@ const char *device_name_of(device_id_t device_id) {
 
 bool check_display(void) {
     return init_display_hardware() == SUCCESS;
+}
+
+// Initializes the PWM with every bridge asleep; the DRV8837C has no readback, so this cannot detect a missing board
+bool check_magnetorquers(void) {
+    return init_magnetorquer_hardware() == SUCCESS;
 }
