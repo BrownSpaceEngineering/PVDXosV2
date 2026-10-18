@@ -63,6 +63,11 @@ typedef struct {
     char *data;
 } downlink_data_t;
 
+typedef enum {
+    MR_O_QPSK
+
+} at86_config_t;
+
 QueueHandle_t init_radio(void);
 void main_radio(void *pvParameters);
 
@@ -71,7 +76,9 @@ typedef struct at86_health at86_health_t;
 
 bool radio_transmit(const uint8_t *frame, size_t len);
 
-int switch_at86_rx_tx();
+int set_at86_rx_mode();
+
+int set_at86_tx_mode();
 
 int change_at86_config(at86_config_t *config);
 

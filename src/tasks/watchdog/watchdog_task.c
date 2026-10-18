@@ -32,8 +32,9 @@ void watchdog_checkin(pvdx_task_t *const p_task)                                
         fatal("Attempted to update checkin time of null task!")                                                                         ;}
 
     if (!(p_task->has_registered))                                                                                                      {
-        // something went wrong because a task that is checking in should have 'has_registered' set to true
-        fatal("watchdog: %s task tried to check in without registering\n", p_task->name)                                                ;}
+        // A task that was just disabled can still have a checkin waiting in the queue, so this is not an error
+        debug("watchdog: ignoring checkin from unregistered %s task\n", p_task->name);
+        return                                                ;}
 
     lock_mutex(task_list_mutex)                                                                                                         ;
 

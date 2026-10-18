@@ -70,6 +70,8 @@ void main_radio(void *pvParameters) {
     while (true) {
         // Block waiting for at least one command to appear in the command queue
         if (xQueueReceive(p_radio_task->command_queue, &cmd, queue_block_time_ticks) == pdPASS) {
+
+
             // Once there is at least one command in the queue, empty the entire queue
             info("Radio: performing command\n");
         }
