@@ -61,6 +61,7 @@ int main(void) {
     } else {
         char *os_flash_src = (char *)FLASH_OS_BASE_ADDRESS;
         for (uint32_t i = 0; i < MRAM_OS_SIZE; i++) {
+            /** TODO: update to make majority vote */
             os_dst[i] = os_flash_src[i];
         }
     }
