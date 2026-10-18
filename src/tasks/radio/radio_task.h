@@ -47,6 +47,7 @@ extern QueueHandle_t downlink_queue;
 extern radio_task_memory_t radio_mem;
 
 #define RADIO_BUFFER_SIZE 128
+#define AT86_MAX_PSDU_SIZE 2047 // TXFLH:TXFLL is an 11-bit frame length
 
 typedef struct {
     uint8_t target;
@@ -95,7 +96,9 @@ int set_at86_tx_prep_mode();
 
 int change_at86_config(at86_config_t *config);
 
-int at86_send_frame(uint8_t *buf, size_t sz);
+struct at86rf215;
+
+int at86_send_frame(struct at86rf215 *h, const uint8_t *buf, size_t sz, size_t timeout_ms);
 
 bool at86_peek_frame();
 
