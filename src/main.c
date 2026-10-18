@@ -5,8 +5,8 @@
  *
  * This is a stripped-down harness for bringing up new drivers: there is no
  * FreeRTOS scheduler, no watchdog, and no other tasks. main() simply brings up
- * the hardware and logging, then drops into an idle loop. Add driver init and
- * exercise code as needed.
+ * the hardware and logging, then exercises the Y-axis magnetorquer H-bridge
+ * from 0% to 100% duty in both directions, stopping between sweeps.
  *
  * Original OS authors: Oren Kohavi, Siddharta Laloux, Tanish Makadia, Yi Liu,
  * Defne Doken, Aidan Wang, Ignacio Blancas Rodriguez
@@ -14,7 +14,7 @@
 
 #include "main.h"
 
-#include "fuel_gauge_driver.h"
+#include "magnetorquer_driver.h"
 #include "globals.h"
 #include "logging.h"
 #include "tests/test.h"
@@ -45,53 +45,40 @@ int main(void) {
     info("[+] Built from commit: %s\n", GIT_COMMIT_HASH);
 
 #ifdef UNITTEST
-    // Hardware-in-the-loop tests; then idle (skip the normal telemetry loop).
+    // Hardware-in-the-loop tests; then idle (skip the H-bridge bench loop).
     tests_run();
     while (true) {
         delay_ms(1000);
     }
 #endif
 
-    /* ---------- FUEL GAUGE BRING-UP ---------- */
+    /* ---------- H-BRIDGE BENCH TEST ---------- */
 
-    // Probe only gauge addresses (and the mux, when enabled).
-    fg_i2c_scan();
-
-    status_t fg_status = init_fuel_gauges();
-    if (fg_status != SUCCESS) {
-        warning("[!] init_fuel_gauges() failed (status=%d)\n", fg_status);
-    } else {
-        info("[+] Fuel gauges initialized\n");
+    status_t mtq_status = init_magnetorquers();
+    if (mtq_status != SUCCESS) {
+        warning("[!] init_magnetorquers() failed (status=%d)\n", mtq_status);
+        while (true) {
+            delay_ms(1000);
+        }
     }
 
-    /* ---------- FUEL GAUGE TELEMETRY LOOP ---------- */
+    // Change this axis to MTQ_X or MTQ_Z to test another bridge.
+    const mtq_axis_t test_axis = MTQ_Y;
+    info("[+] H-bridge bench test: axis=%u, duty=0..100%%, step=10%%, hold=2s, stop=1s\n",
+         (unsigned int)test_axis);
 
-    // Read the configured packs once per second. Floats are printed as
-    // integer milli-units to avoid relying on %f in the embedded printf.
     while (true) {
-        fg_reading_t packs[FG_NUM_PACKS];
-        status_t rs = fg_read_all(packs);
-        if (rs != SUCCESS) {
-            warning("fg_read_all failed (status=%d)\n", rs);
-        }
-
-        for (uint8_t ch = 0; ch < FG_NUM_PACKS; ch++) {
-            fg_reading_t *p = &packs[ch];
-            if (!p->valid) {
-                warning("pack %u: telemetry unavailable (I2C read failed)\n", ch);
-                continue;
+        for (int direction = 1; direction >= -1; direction -= 2) {
+            for (unsigned int percent = 0; percent <= 100; percent += 10) {
+                float duty = (float)direction * (float)percent / 100.0f;
+                info("MTQ: %s %u%%\n", direction > 0 ? "forward" : "reverse", percent);
+                mtq_set(test_axis, duty);
+                delay_ms(2000);
             }
-            info("pack %u: SOC=%ld m%%  Vpack=%ld mV  I=%ld mA  T=%ld mC\n", ch,
-                 (long)(p->soc_pct * 1000.0f), (long)(p->pack_voltage * 1000.0f),
-                 (long)(p->current_a * 1000.0f), (long)(p->temp_c * 1000.0f));
-        }
 
-        // Active-low ALRT line: if asserted, read status to identify the fault source.
-        if (fg_alrt_asserted()) {
-            warning("fuel gauge ALRT asserted - scanning\n");
-            fg_scan_alerts();
+            mtq_stop_all();
+            info("MTQ: stopped\n");
+            delay_ms(1000);
         }
-
-        delay_ms(1000);
     }
 }
