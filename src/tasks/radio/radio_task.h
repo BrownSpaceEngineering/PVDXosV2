@@ -63,15 +63,35 @@ typedef struct {
     char *data;
 } downlink_data_t;
 
+/**
+ * Valid PHY configs
+ *
+ * We specifically support MR-O-QPSK modes at 100K Chip/s and 6.25 kb/s or 12.5 kb/s
+ * We also have support for legacy O-QPSK, though this is primarily because it is
+ * well-supported with existing GNU Radio demodulators
+ */
+typedef enum {
+    AT86_O_QPSK_LEG = 0, // Used for testing, 250 kb/s
+    AT86_MR_O_QPSK_100CH_6_2_5KB = 1, // 6.25 KChip/s, 6.25 kb/s
+    AT86_MR_O_QPSK_100CH_12_5KB = 2, // 100 KChip/s, 12.5 kb/s
+} at86_config_t;
+
 QueueHandle_t init_radio(void);
 void main_radio(void *pvParameters);
 
 typedef struct at86_config at86_config_t;
-typedef struct at86_health at86_health_t;
+
+typedef struct {
+    uint8_t part_number; // RF_PN (0x000D): 0x34 for the AT86RF215
+    uint8_t version;     // RF_VN (0x000E): chip revision
+    uint8_t rf09_state;  // RF09_STATE (0x0102): sub-1GHz state, e.g. 0x2 = TRXOFF, 0x6 = TRANSITION
+} at86_health_t;
 
 bool radio_transmit(const uint8_t *frame, size_t len);
 
-int switch_at86_rx_tx();
+int set_at86_rx_mode();
+
+int set_at86_tx_prep_mode();
 
 int change_at86_config(at86_config_t *config);
 
