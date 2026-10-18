@@ -211,7 +211,7 @@ typedef enum {
     CMD_DATA_PVDX_TASK,
     CMD_CFDP_REQ,
     CMD_CFDP_TIMEOUT,
-    CMD_DATA_UPLINK
+    CMD_DATA_UPLINK,
     CMD_STATE_INPUT_UPDATE,
 } command_data_type_t;
 

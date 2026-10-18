@@ -12,11 +12,16 @@
 #include "logging.h"
 #include "radio_task.h"
 #include "watchdog_task.h"
+#include "at86rf215.h"
 
 // Radio Task memory structures
 radio_task_memory_t radio_mem;
 QueueHandle_t downlink_queue;
 QueueHandle_t uplink_queue;
+
+uint8_t at86_buffer[AT86_FRAME_MAX_SIZE];
+
+
 
 /**
  * \fn init_radio
@@ -70,17 +75,46 @@ void main_radio(void *pvParameters) {
     while (true) {
         // Block waiting for at least one command to appear in the command queue
         if (xQueueReceive(p_radio_task->command_queue, &cmd, queue_block_time_ticks) == pdPASS) {
-
-
             // Once there is at least one command in the queue, empty the entire queue
             info("Radio: performing command\n");
+
         }
         debug("Radio: No more commands queued.\n");
 
         if (xQueueReceive(downlink_queue, &item, queue_block_time_ticks) == pdPASS) {
-            if (uslp_mapp_request(item.data, item.len, RADIO_GMAP_ID, SPP_VERSION_NUMBER, RADIO_SDU_ID, USLP_QOS_EXPEDITED)) {
-                warning("Radio: failed to send packet");
+            set_at86_tx_mode();
+
+            size_t frame_sz = AT86_FRAME_MAX_SIZE;
+            if (uslp_mapp_request(&at86_buffer, &frame_sz, item.data, item.len, RADIO_GMAP_ID, SPP_VERSION_NUMBER, RADIO_SDU_ID, USLP_QOS_EXPEDITED)) {
+                warning("USLP: failed to prepare frame");
             }
+            at86_send_frame(&at86_buffer, uslp_frame_sz);
+
+            while(xQueueReceive(downlink_queue, &item, 0) == pdPASS) {
+                size_t frame_sz = AT86_FRAME_MAX_SIZE;
+                if (uslp_mapp_request(&at86_buffer, &frame_sz, item.data, item.len, RADIO_GMAP_ID, SPP_VERSION_NUMBER, RADIO_SDU_ID, USLP_QOS_EXPEDITED)) {
+                    warning("USLP: failed to prepare frame");
+                }
+                at86_send_frame(&at86_buffer, uslp_frame_sz);
+            }
+
+            set_at86_rx_mode();
+        }
+
+        while(at86_peek_frame()) {
+            int sz = 0;
+            if ((sz = at86_pop_frame(&at86_buffer, AT86_FRAME_MAX_SIZE)) < 0) {
+                warning("Radio: failed to pop frame from radio\n");
+                continue;
+            }
+
+
+            item = (radio_queue_item_t) {
+                .len = sz,
+                .data
+            }
+
+            xQueueSend(uplink_queue, )
         }
 
         // Check in with the watchdog task

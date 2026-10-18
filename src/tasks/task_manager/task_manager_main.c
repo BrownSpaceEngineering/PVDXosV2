@@ -12,11 +12,8 @@
 #include "libraries/cmd_dispatcher/cmd_dispatcher.h"
 #include "task_manager_task.h"
 #include "watchdog_task.h"
-<<<<<<< HEAD
-=======
 #include "cmd_dispatcher.h"
 #include "state_machine.h"
->>>>>>> main
 
 task_manager_task_memory_t task_manager_mem;
 SemaphoreHandle_t task_list_mutex = NULL;
