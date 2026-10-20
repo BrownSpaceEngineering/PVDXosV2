@@ -310,17 +310,42 @@ def channel_taps():
 
 
 def make_queue_sink(q):
-    from gnuradio import gr
+    """Returns (native sink block, stop function). A Python gr.sync_block segfaults on Python 3.14 with GNU Radio 3.10.12,
+    so a native file_descriptor_sink writes into a pipe and a reader thread fills the queue."""
+    import os
+    import threading
 
-    class QueueSink(gr.sync_block):
-        def __init__(self):
-            gr.sync_block.__init__(self, name="queue_sink", in_sig=[np.complex64], out_sig=None)
+    from gnuradio import blocks, gr
 
-        def work(self, input_items, output_items):
-            q.put(input_items[0].copy())
-            return len(input_items[0])
+    rfd, wfd = os.pipe()
+    sink = blocks.file_descriptor_sink(gr.sizeof_gr_complex, wfd)
+    stop = threading.Event()
 
-    return QueueSink()
+    def reader():
+        pending = b""
+        while not stop.is_set():
+            try:
+                data = os.read(rfd, 1 << 16)
+            except OSError:
+                break
+            if not data:
+                break
+            pending += data
+            n = len(pending) // 8 * 8
+            if n:
+                q.put(np.frombuffer(pending[:n], dtype=np.complex64).copy())
+                pending = pending[n:]
+
+    t = threading.Thread(target=reader, daemon=True)
+    t.start()
+
+    def close():
+        stop.set()
+        os.close(wfd)  # EOF wakes the reader
+        t.join(1.0)
+        os.close(rfd)
+
+    return sink, close
 
 
 def run_channel_filter_offline(samples: np.ndarray) -> np.ndarray:
@@ -383,7 +408,8 @@ class Radio:
         src.set_bb_gain(self.args.rx_vga)  # VGA: 0..62 dB, 2 dB steps
         src.set_bandwidth(1.75e6)
         xlat = filter.freq_xlating_fir_filter_ccc(DECIM, channel_taps(), -LO_OFFSET, DEV_RATE)
-        tb.connect(src, xlat, make_queue_sink(q))
+        qsink, close_sink = make_queue_sink(q)
+        tb.connect(src, xlat, qsink)
         if self.args.dump_iq:
             tb.connect(xlat, blocks.file_sink(gr.sizeof_gr_complex, self.args.dump_iq, True))
         self.demod = Demod(self.args.sfd, self.args.verbose)  # fresh stream: sample indexes restart
@@ -403,6 +429,7 @@ class Radio:
         finally:
             tb.stop()
             tb.wait()
+            close_sink()
             del tb, src
         return result
 

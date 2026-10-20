@@ -12,7 +12,7 @@
 
 #include <stdint.h>
 
-#define LINK_CALLSIGN "NOCALL" // Exactly 6 characters, space padded. Replace with the licensed call sign before going on air
+#define LINK_CALLSIGN "KJ5QVG" // Exactly 6 characters, space padded. Replace with the licensed call sign before going on air
 #define LINK_VERSION 1
 #define LINK_SSID_AT86 1
 #define LINK_SSID_HACKRF 2
