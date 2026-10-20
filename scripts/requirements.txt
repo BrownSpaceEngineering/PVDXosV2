@@ -1,0 +1,14 @@
+# Python packages for the host scripts in this folder.
+# Install: python3 -m pip install --user -r scripts/requirements.txt
+#
+# rtt_logs.py (used by tools/rtt.sh and at86_selftest.py)
+pylink-square>=2.0
+# hackrf_link.py
+numpy>=1.24
+#
+# hackrf_link.py also needs GNU Radio 3.10 and gr-osmosdr. They are not on PyPI.
+# Install them with the system package manager, for example:
+#   Fedora:        sudo dnf install gnuradio gr-osmosdr hackrf
+#   Debian/Ubuntu: sudo apt install gnuradio gr-osmosdr hackrf
+# If you use a virtual environment, create it with --system-site-packages so it can import GNU Radio.
+# Use the system numpy in that case: GNU Radio is built against it.

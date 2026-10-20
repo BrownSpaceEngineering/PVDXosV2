@@ -2,6 +2,11 @@
 
 Run all commands from the repository root.
 
+## Setup
+
+1. Install GNU Radio, gr-osmosdr and the HackRF tools with the system package manager. On Fedora: `sudo dnf install gnuradio gr-osmosdr hackrf`
+2. Install the Python packages: `python3 -m pip install --user -r scripts/requirements.txt`
+
 ## Wiring (ATREB215-XPRO EXT header to Grand Central)
 
 | EXT pin | Signal | Grand Central |
