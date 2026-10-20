@@ -1,23 +1,33 @@
 #include "radio_task.h"
 
+#include <string.h>
+
 #include "at86rf215.h"
+#include "logging.h"
 #include "regs.h"
 
 bool radio_transmit(const uint8_t *frame, size_t len) {
     return false;
 }
 
-int at86_check_health(at86_health_t *health) {
-    at86rf215_radio_t radio = AT86RF215_RF09;
-
+int at86_check_health(struct at86rf215 *h, at86_health_t *health) {
     if (health == NULL) {
         return -AT86RF215_INVAL_PARAM;
     }
 
     spi_m_sync_enable(&SPI_UHF);
-    int ret = at86rf215_reg_read_8(&radio, &health->part_number, REG_RF_PN);
-    ret = at86rf215_reg_read_8(&radio, &health->verison, REG_RF_VN);
-    ret = at86rf215_reg_read_8(&radio, &health->rf09_state, REG_RF09_STATE);
+    int ret = at86rf215_reg_read_8(h, &health->part_number, REG_RF_PN);
+    if (ret) {
+        return ret;
+    }
+    ret = at86rf215_reg_read_8(h, &health->version, REG_RF_VN);
+    if (ret) {
+        return ret;
+    }
+    ret = at86rf215_reg_read_8(h, &health->rf09_state, REG_RF09_STATE);
+    if (ret) {
+        return ret;
+    }
 
     if (health->part_number != AT86RF215) {
         return -AT86RF215_UNKNOWN_IC;
@@ -42,7 +52,7 @@ int set_at86_tx_mode(struct at86rf215 *h, size_t timeout_ms) {
         return AT86RF215_OK;
     }
 
-    if (current_state != AT86RF215_STATE_RF_TX || current_state != AT86RF215_STATE_RF_RX || current_state != AT86RF215_STATE_RF_TRXOFF) {
+    if (current_state != AT86RF215_STATE_RF_RX && current_state != AT86RF215_STATE_RF_TRXOFF) {
         return -AT86RF215_INVAL_CONF;
     }
 
@@ -75,7 +85,7 @@ int set_at86_rx_mode(struct at86rf215 *h, size_t timeout_ms) {
         return AT86RF215_OK;
     }
 
-    if (current_state != AT86RF215_STATE_RF_TXPREP || current_state != AT86RF215_STATE_RF_TRXOFF) {
+    if (current_state != AT86RF215_STATE_RF_TXPREP && current_state != AT86RF215_STATE_RF_TRXOFF) {
         return -AT86RF215_INVAL_CONF;
     }
 
@@ -209,15 +219,17 @@ int at86_init_pvdx(struct at86rf215 *radio) {
     radio->irqp = 0;
     radio->pad_drv = AT86RF215_RF_DRV2;
     int ret = at86rf215_init(radio);
-    PVDX_ASSERT_MSG(ret == AT86RF215_OK, "tx init successful\n");
+    if (ret != AT86RF215_OK) {
+        warning("radio: at86rf215 init failed (%d)\n", ret);
+    }
     return ret;
 }
 
-int change_at86_config(struct at86rf215 *radio, at86_config_t *config) {
+int change_at86_config(struct at86rf215 *radio, at86_config_t config) {
     struct at86rf215_bb_conf bb_conf;
     memset(&bb_conf, 0, sizeof(bb_conf));
 
-    switch (at86_config_t) {
+    switch (config) {
         case AT86_O_QPSK_LEG:
             bb_conf.pt = AT86RF215_BB_MROQPSK;
             bb_conf.fcst = AT86RF215_FCS_16;
@@ -242,7 +254,7 @@ int change_at86_config(struct at86rf215 *radio, at86_config_t *config) {
             bb_conf.qpsk.rxm = AT86RF215_MROQPSK_RXM_MROQPSK_ONLY;
             bb_conf.qpsk.nsfd = AT86RF215_MROQPSK_NSFD_SFD1;
             break;
-        case AT86_MR_O_QPSK_100CH_12_5_KB:
+        case AT86_MR_O_QPSK_100CH_12_5KB:
             bb_conf.pt = AT86RF215_BB_MROQPSK;
             bb_conf.fcst = AT86RF215_FCS_16;
             bb_conf.txafcs = 1;
@@ -258,7 +270,9 @@ int change_at86_config(struct at86rf215 *radio, at86_config_t *config) {
             return -1;
             break;
     }
-    int ret = at86rf215_bb_conf(&radio, AT86RF215_RF09, &bb_conf);
-    PVDX_ASSERT_MSG(ret == AT86RF215_OK, "tx bb_conf\n");
+    int ret = at86rf215_bb_conf(radio, AT86RF215_RF09, &bb_conf);
+    if (ret != AT86RF215_OK) {
+        warning("radio: at86rf215 bb_conf failed (%d)\n", ret);
+    }
     return ret;
 }

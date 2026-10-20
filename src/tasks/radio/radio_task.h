@@ -7,6 +7,7 @@
 #include "FreeRTOS.h"
 #include "ccsds/ccsds.h"
 #include "ccsds/spp.h"
+#include "ccsds/uslp.h"
 #include "globals.h"
 #include "queue.h"
 
@@ -46,6 +47,10 @@ extern QueueHandle_t downlink_queue;
 // Global memory and configuration
 extern radio_task_memory_t radio_mem;
 
+// In progress: the radio TX/RX path in radio_main.c is not finished. While this macro is defined, that code is excluded from
+// the build and main_radio() only checks in with the watchdog. Remove this macro once the path is complete.
+#define RADIO_TXRX_IN_PROGRESS
+
 #define RADIO_BUFFER_SIZE 128
 #define AT86_MAX_PSDU_SIZE 2047 // TXFLH:TXFLL is an 11-bit frame length
 
@@ -77,10 +82,10 @@ typedef enum {
     AT86_MR_O_QPSK_100CH_12_5KB = 2, // 100 KChip/s, 12.5 kb/s
 } at86_config_t;
 
+struct at86rf215;
+
 QueueHandle_t init_radio(void);
 void main_radio(void *pvParameters);
-
-typedef struct at86_config at86_config_t;
 
 typedef struct {
     uint8_t part_number; // RF_PN (0x000D): 0x34 for the AT86RF215
@@ -90,21 +95,20 @@ typedef struct {
 
 bool radio_transmit(const uint8_t *frame, size_t len);
 
-int set_at86_rx_mode();
+int set_at86_rx_mode(struct at86rf215 *h, size_t timeout_ms);
 
-int set_at86_tx_prep_mode();
+int set_at86_tx_mode(struct at86rf215 *h, size_t timeout_ms);
 
-int change_at86_config(at86_config_t *config);
-
-struct at86rf215;
+int change_at86_config(struct at86rf215 *radio, at86_config_t config);
 
 int at86_send_frame(struct at86rf215 *h, const uint8_t *buf, size_t sz, size_t timeout_ms);
 
+// In progress: declared but not defined yet. Only the RX path in radio_main.c uses these.
 bool at86_peek_frame();
 
 int at86_pop_frame(uint8_t *buf, size_t sz);
 
-int at86_check_health(at86_health_t *health);
+int at86_check_health(struct at86rf215 *h, at86_health_t *health);
 
 // Add functionality to handle case of data being pointed to yet not in radio?
 #endif

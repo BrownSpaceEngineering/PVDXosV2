@@ -7,19 +7,17 @@
  * Authors: Noah Shepard
  */
 
-#include "ccsds/uslp.h"
 #include "libraries/cmd_dispatcher/cmd_dispatcher.h"
 #include "logging.h"
 #include "radio_task.h"
 #include "watchdog_task.h"
-#include "at86rf215.h"
 
 // Radio Task memory structures
 radio_task_memory_t radio_mem;
 QueueHandle_t downlink_queue;
 QueueHandle_t uplink_queue;
 
-uint8_t at86_buffer[AT86_FRAME_MAX_SIZE];
+uint8_t at86_buffer[AT86_MAX_PSDU_SIZE];
 
 
 
@@ -70,7 +68,9 @@ void main_radio(void *pvParameters) {
     const TickType_t queue_block_time_ticks = get_command_queue_block_time_ticks(current_task);
     // Variable to hold commands popped off the queue
     command_t cmd;
+#ifndef RADIO_TXRX_IN_PROGRESS
     radio_queue_item_t item;
+#endif
 
     while (true) {
         // Block waiting for at least one command to appear in the command queue
@@ -81,6 +81,7 @@ void main_radio(void *pvParameters) {
         }
         debug("Radio: No more commands queued.\n");
 
+#ifndef RADIO_TXRX_IN_PROGRESS
         if (xQueueReceive(downlink_queue, &item, queue_block_time_ticks) == pdPASS) {
             set_at86_tx_mode();
 
@@ -116,6 +117,7 @@ void main_radio(void *pvParameters) {
 
             xQueueSend(uplink_queue, )
         }
+#endif
 
         // Check in with the watchdog task
         if (should_checkin(current_task)) {
