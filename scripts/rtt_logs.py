@@ -2,19 +2,45 @@ import platform
 import pylink # pip install pylink-square
 import os
 import datetime
+import subprocess
+
+def find_rtt_block_address():
+    """Address of _SEGGER_RTT in src/PVDXos.elf, or None.
+
+    Without it, J-Link searches RAM for the "SEGGER RTT" ID and can lock onto a stale copy (the app is copied
+    into RAM by the bootloader), and then reads nothing. RTT_ADDR (hex) overrides the ELF lookup.
+    """
+    if os.environ.get('RTT_ADDR'):
+        return int(os.environ['RTT_ADDR'], 16)
+    elf = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'src', 'PVDXos.elf'))
+    try:
+        out = subprocess.run(['arm-none-eabi-nm', elf], capture_output=True, text=True, timeout=10).stdout
+    except (OSError, subprocess.SubprocessError):
+        return None
+    for line in out.splitlines():
+        parts = line.split()
+        if len(parts) == 3 and parts[2] == '_SEGGER_RTT':
+            return int(parts[0], 16)
+    return None
 
 def open_rtt_channels(logfile = None):
     jlink = pylink.JLink()
     jlink.open()
     jlink.connect(chip_name='ATSAMD51P20A')
-    jlink.rtt_start()
+    addr = find_rtt_block_address()
+    if addr is not None:
+        print(f"[rtt_logs] RTT control block at 0x{addr:08x} (from ELF)", flush=True)
+        jlink.rtt_start(addr)
+    else:
+        print("[rtt_logs] _SEGGER_RTT not found in src/PVDXos.elf; letting J-Link search RAM", flush=True)
+        jlink.rtt_start()
 
     while True:
         buf1 = jlink.rtt_read(1, 2048)
 
         if buf1:
             text1 = bytes(buf1).decode('ascii', errors='replace')
-            print(text1)
+            print(text1, end="", flush=True)  # RTT reads end mid-line; do not add a newline
             # Write to a log file if specified
             if logfile is not None:
                 logfile.write(text1)

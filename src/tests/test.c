@@ -12,6 +12,8 @@
 #include "logging.h"
 #include "telemetry/telemetry.h"
 #include "tests/test_pmb.h"
+#include "tests/test_at86.h"
+#include "tests/test_at86_link.h"
 
 int tests_passed = 0;
 int tests_total = 0;
@@ -47,6 +49,15 @@ void tests_run(void) {
 #ifdef TEST_TELEMETRY
     test_telemetry_downlink();
     test_telemetry_uplink();
+#endif
+#ifdef TEST_AT86
+    test_at86();
+#endif
+#ifdef TEST_AT86_TX
+    test_at86_tx(); // does not return
+#endif
+#ifdef TEST_AT86_LINK
+    test_at86_link(); // does not return while LINK_ROUNDS is 0
 #endif
     test_log("test results: %d/%d passed", tests_passed, tests_total);
 }
