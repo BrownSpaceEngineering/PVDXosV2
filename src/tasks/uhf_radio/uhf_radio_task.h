@@ -1,5 +1,5 @@
-#ifndef RADIO_TASK_H
-#define RADIO_TASK_H
+#ifndef UHF_RADIO_TASK_H
+#define UHF_RADIO_TASK_H
 
 #include <atmel_start.h>
 #include <driver_init.h>
@@ -10,7 +10,7 @@
 #include "globals.h"
 #include "queue.h"
 
-#define RADIO_TASK_STACK_SIZE 1024 // Size of the stack in words (multiply by 4 to get bytes)
+#define UHF_RADIO_TASK_STACK_SIZE 1024 // Size of the stack in words (multiply by 4 to get bytes)
 #define RADIO_DOWNLINK_MAX_SIZE (SPP_PRIMARY_HEADER_SIZE + SPP_SECONDARY_HEADER_SIZE + 512)
 
 #define RADIO_DOWNLINK_QUEUE_LENGTH 4 // TODO: How long should queue be?
@@ -30,39 +30,26 @@ typedef struct {
 //^ This ensures that stack overflows do not corrupt the TCB (since the stack grows downwards)
 typedef struct {
     StackType_t overflow_buffer[TASK_STACK_OVERFLOW_PADDING];
-    StackType_t radio_task_stack[RADIO_TASK_STACK_SIZE];
-    uint8_t radio_command_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
+    StackType_t uhf_radio_task_stack[UHF_RADIO_TASK_STACK_SIZE];
+    uint8_t uhf_radio_command_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
     uint8_t downlink_queue_buffer[RADIO_DOWNLINK_QUEUE_LENGTH * sizeof(radio_queue_item_t)];
     uint8_t uplink_queue_buffer[RADIO_UPLINK_QUEUE_LENGTH * sizeof(radio_queue_item_t)];
-    StaticQueue_t radio_task_queue;
+    StaticQueue_t uhf_radio_task_queue;
     StaticQueue_t uplink_queue_mem;
     StaticQueue_t downlink_queue_mem;
-    StaticTask_t radio_task_tcb;
-} radio_task_memory_t;
+    StaticTask_t uhf_radio_task_tcb;
+} uhf_radio_task_memory_t;
 
 extern QueueHandle_t uplink_queue;
 extern QueueHandle_t downlink_queue;
 
 // Global memory and configuration
-extern radio_task_memory_t radio_mem;
+extern uhf_radio_task_memory_t uhf_radio_mem;
 
-#define RADIO_BUFFER_SIZE 128
-#define AT86_MAX_PSDU_SIZE 2047 // TXFLH:TXFLL is an 11-bit frame length
-
-typedef struct {
-    uint8_t target;
-    uint8_t operation;
-    char data[8]; // TODO: We need to decide how to represent the data to send up images.
-    // Should "packeting" be done on the main board, or on the UHF board?
-} uplink_data_t;
-
-typedef struct {
-    uint8_t target;
-    uint8_t operation;
-    uint8_t status;
-    uint8_t data_type;
-    char *data;
-} downlink_data_t;
+// How long a radio state change may take before it is treated as failed
+#define AT86_STATE_CHANGE_TIMEOUT_MS 10
+// How long one frame may take to transmit. A full AT86RF215_MAX_PDU frame takes about 2.6 s at 6.25 kb/s
+#define AT86_TX_TIMEOUT_MS 3000
 
 /**
  * Valid PHY configs
@@ -70,17 +57,17 @@ typedef struct {
  * We specifically support MR-O-QPSK modes at 100K Chip/s and 6.25 kb/s or 12.5 kb/s
  * We also have support for legacy O-QPSK, though this is primarily because it is
  * well-supported with existing GNU Radio demodulators
+ *
+ * TODO: AT86_MR_O_QPSK_100CH_6_2_5KB is 100 kchip/s, not 6.25 kchip/s (datasheet Table 6-100)
  */
 typedef enum {
-    AT86_O_QPSK_LEG = 0, // Used for testing, 250 kb/s
+    AT86_O_QPSK_LEG = 0,              // Used for testing, 250 kb/s
     AT86_MR_O_QPSK_100CH_6_2_5KB = 1, // 6.25 KChip/s, 6.25 kb/s
-    AT86_MR_O_QPSK_100CH_12_5KB = 2, // 100 KChip/s, 12.5 kb/s
+    AT86_MR_O_QPSK_100CH_12_5KB = 2,  // 100 KChip/s, 12.5 kb/s
 } at86_config_t;
 
-QueueHandle_t init_radio(void);
-void main_radio(void *pvParameters);
-
-typedef struct at86_config at86_config_t;
+QueueHandle_t init_uhf_radio(void);
+void main_uhf_radio(void *pvParameters);
 
 typedef struct {
     uint8_t part_number; // RF_PN (0x000D): 0x34 for the AT86RF215
@@ -88,23 +75,19 @@ typedef struct {
     uint8_t rf09_state;  // RF09_STATE (0x0102): sub-1GHz state, e.g. 0x2 = TRXOFF, 0x6 = TRANSITION
 } at86_health_t;
 
-bool radio_transmit(const uint8_t *frame, size_t len);
+int set_at86_rx_mode(struct at86rf215 *h, size_t timeout_ms);
 
-int set_at86_rx_mode();
+int set_at86_tx_prep_mode(struct at86rf215 *h, size_t timeout_ms);
 
-int set_at86_tx_prep_mode();
-
-int change_at86_config(at86_config_t *config);
-
-struct at86rf215;
+int change_at86_config(struct at86rf215 *h, at86_config_t config);
 
 int at86_send_frame(struct at86rf215 *h, const uint8_t *buf, size_t sz, size_t timeout_ms);
 
-bool at86_peek_frame();
+bool at86_peek_frame(void);
 
 int at86_pop_frame(uint8_t *buf, size_t sz);
 
-int at86_check_health(at86_health_t *health);
+int at86_check_health(struct at86rf215 *h, at86_health_t *health);
 
 // Add functionality to handle case of data being pointed to yet not in radio?
 #endif

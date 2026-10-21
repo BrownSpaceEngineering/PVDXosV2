@@ -1,23 +1,31 @@
-#include "radio_task.h"
+#include "uhf_radio_task.h"
+
+#include <string.h>
 
 #include "at86rf215.h"
+#include "logging.h"
 #include "regs.h"
 
-bool radio_transmit(const uint8_t *frame, size_t len) {
-    return false;
-}
-
-int at86_check_health(at86_health_t *health) {
-    at86rf215_radio_t radio = AT86RF215_RF09;
-
-    if (health == NULL) {
+int at86_check_health(struct at86rf215 *h, at86_health_t *health) {
+    if (h == NULL || health == NULL) {
         return -AT86RF215_INVAL_PARAM;
     }
 
+    // TODO: move to chip setup; nothing else enables SPI_UHF yet
     spi_m_sync_enable(&SPI_UHF);
-    int ret = at86rf215_reg_read_8(&radio, &health->part_number, REG_RF_PN);
-    ret = at86rf215_reg_read_8(&radio, &health->verison, REG_RF_VN);
-    ret = at86rf215_reg_read_8(&radio, &health->rf09_state, REG_RF09_STATE);
+
+    int ret = at86rf215_reg_read_8(h, &health->part_number, REG_RF_PN);
+    if (ret) {
+        return ret;
+    }
+    ret = at86rf215_reg_read_8(h, &health->version, REG_RF_VN);
+    if (ret) {
+        return ret;
+    }
+    ret = at86rf215_reg_read_8(h, &health->rf09_state, REG_RF09_STATE);
+    if (ret) {
+        return ret;
+    }
 
     if (health->part_number != AT86RF215) {
         return -AT86RF215_UNKNOWN_IC;
@@ -26,70 +34,79 @@ int at86_check_health(at86_health_t *health) {
     return AT86RF215_OK;
 }
 
-int set_at86_tx_mode(struct at86rf215 *h, size_t timeout_ms) {
+/**
+ * Issues one state command to RF09 and polls until the radio reaches the target state.
+ *
+ * The command is only accepted from the states in `from` (see the datasheet's state machine); from any other state
+ * this returns -AT86RF215_INVAL_CONF without touching the radio.
+ */
+static int at86_change_state(struct at86rf215 *h, at86rf215_rf_cmd_t cmd, at86rf215_rf_state_t target, const at86rf215_rf_state_t *from,
+                             size_t from_len, size_t timeout_ms) {
     at86rf215_radio_t radio = AT86RF215_RF09;
 
-    size_t deadline = at86rf215_get_time_ms(h) + timeout_ms;
+    if (h == NULL) {
+        return -AT86RF215_INVAL_PARAM;
+    }
 
+    // The baseband core is bypassed in these modes, so frames can't be sent or received through it
     if (h->priv.chpm == AT86RF215_RF_MODE_RF || h->priv.chpm == AT86RF215_RF_MODE_BBRF09) {
         return -AT86RF215_INVAL_CHPM;
     }
 
-    at86rf215_rf_state_t current_state = AT86RF215_STATE_RF_TRANSITION;
-    at86rf215_get_state(h, &current_state, radio);
+    at86rf215_rf_state_t state = AT86RF215_STATE_RF_TRANSITION;
+    int ret = at86rf215_get_state(h, &state, radio);
+    if (ret) {
+        return ret;
+    }
 
-    if (current_state == AT86RF215_STATE_RF_TXPREP) {
+    if (state == target) {
         return AT86RF215_OK;
     }
 
-    if (current_state != AT86RF215_STATE_RF_TX || current_state != AT86RF215_STATE_RF_RX || current_state != AT86RF215_STATE_RF_TRXOFF) {
+    bool allowed = false;
+    for (size_t i = 0; i < from_len; i++) {
+        if (state == from[i]) {
+            allowed = true;
+            break;
+        }
+    }
+    if (!allowed) {
         return -AT86RF215_INVAL_CONF;
     }
 
-    at86rf215_rf_state_t state = AT86RF215_STATE_RF_TRANSITION;
-    while (state != AT86RF215_STATE_RF_TXPREP) {
-        if (at86rf215_get_time_ms(h) > deadline) {
+    ret = at86rf215_set_cmd(h, cmd, radio);
+    if (ret) {
+        return ret;
+    }
+
+    // Compare elapsed time rather than a deadline, since the millisecond clock can wrap
+    size_t start = at86rf215_get_time_ms(h);
+    while (state != target) {
+        if (at86rf215_get_time_ms(h) - start > timeout_ms) {
             return -AT86RF215_TIMEOUT;
         }
-        at86rf215_set_cmd(h, AT86RF215_CMD_RF_TXPREP, radio);
         at86rf215_delay_us(h, 100);
-        at86rf215_get_state(h, &state, radio);
+        ret = at86rf215_get_state(h, &state, radio);
+        if (ret) {
+            return ret;
+        }
     }
 
     return AT86RF215_OK;
 }
 
+int set_at86_tx_prep_mode(struct at86rf215 *h, size_t timeout_ms) {
+    // TXPREP is accepted from any non-sleep state; from TX or RX it aborts the frame in progress
+    // Reference: AT86RF215 datasheet 5.2.7 (pg. 35)
+    static const at86rf215_rf_state_t from[] = {AT86RF215_STATE_RF_TRXOFF, AT86RF215_STATE_RF_TX, AT86RF215_STATE_RF_RX,
+                                                AT86RF215_STATE_RF_TRANSITION};
+    return at86_change_state(h, AT86RF215_CMD_RF_TXPREP, AT86RF215_STATE_RF_TXPREP, from, sizeof(from) / sizeof(from[0]), timeout_ms);
+}
+
 int set_at86_rx_mode(struct at86rf215 *h, size_t timeout_ms) {
-    at86rf215_radio_t radio = AT86RF215_RF09;
-
-    size_t deadline = at86rf215_get_time_ms(h) + timeout_ms;
-
-    if (h->priv.chpm == AT86RF215_RF_MODE_RF || h->priv.chpm == AT86RF215_RF_MODE_BBRF09) {
-        return -AT86RF215_INVAL_CHPM;
-    }
-
-    at86rf215_rf_state_t current_state;
-    at86rf215_get_state(h, &current_state, radio);
-
-    if (current_state == AT86RF215_STATE_RF_RX) {
-        return AT86RF215_OK;
-    }
-
-    if (current_state != AT86RF215_STATE_RF_TXPREP || current_state != AT86RF215_STATE_RF_TRXOFF) {
-        return -AT86RF215_INVAL_CONF;
-    }
-
-    at86rf215_rf_state_t state = AT86RF215_STATE_RF_TRANSITION;
-    while (state != AT86RF215_STATE_RF_RX) {
-        if (at86rf215_get_time_ms(h) > deadline) {
-            return -AT86RF215_TIMEOUT;
-        }
-        at86rf215_set_cmd(h, AT86RF215_CMD_RF_RX, radio);
-        at86rf215_delay_us(h, 100);
-        at86rf215_get_state(h, &state, radio);
-    }
-
-    return AT86RF215_OK;
+    // Reference: AT86RF215 datasheet 5.2.9 (pg. 36)
+    static const at86rf215_rf_state_t from[] = {AT86RF215_STATE_RF_TRXOFF, AT86RF215_STATE_RF_TXPREP};
+    return at86_change_state(h, AT86RF215_CMD_RF_RX, AT86RF215_STATE_RF_RX, from, sizeof(from) / sizeof(from[0]), timeout_ms);
 }
 
 #define AT86_BBC_IRQ_TXFE (1u << 4) // BBCn_IRQS/IRQM bit 4: transmitter frame end
@@ -126,9 +143,11 @@ static int at86_write_tx_buffer(struct at86rf215 *h, const uint8_t *buf, size_t 
 int at86_send_frame(struct at86rf215 *h, const uint8_t *buf, size_t sz, size_t timeout_ms) {
     at86rf215_radio_t radio = AT86RF215_RF09;
 
-    size_t deadline = at86rf215_get_time_ms(h) + timeout_ms;
+    if (h == NULL) {
+        return -AT86RF215_INVAL_PARAM;
+    }
 
-    if (sz > AT86_MAX_PSDU_SIZE) {
+    if (sz > AT86RF215_MAX_PDU) {
         return -AT86RF215_INVAL_PARAM;
     }
 
@@ -178,9 +197,10 @@ int at86_send_frame(struct at86rf215 *h, const uint8_t *buf, size_t sz, size_t t
     }
 
     /* TXFE is set once the frame (incl. FCS and PA ramp-down) is sent; the radio then returns to TXPREP by itself */
+    size_t start = at86rf215_get_time_ms(h);
     irqs = 0;
     while (!(irqs & AT86_BBC_IRQ_TXFE)) {
-        if (at86rf215_get_time_ms(h) > deadline) {
+        if (at86rf215_get_time_ms(h) - start > timeout_ms) {
             /* Writing TXPREP while in TX aborts the transmission, leaving the radio ready for the next frame */
             at86rf215_set_cmd(h, AT86RF215_CMD_RF_TXPREP, radio);
             return -AT86RF215_TIMEOUT;
@@ -193,6 +213,16 @@ int at86_send_frame(struct at86rf215 *h, const uint8_t *buf, size_t sz, size_t t
     }
 
     return AT86RF215_OK;
+}
+
+// TODO: receive is not implemented yet. These stubs report that no frame is ever waiting, so the uplink path in
+// main_uhf_radio never runs
+bool at86_peek_frame(void) {
+    return false;
+}
+
+int at86_pop_frame(uint8_t *buf, size_t sz) {
+    return -AT86RF215_NOT_IMPL;
 }
 
 /**
@@ -209,15 +239,26 @@ int at86_init_pvdx(struct at86rf215 *radio) {
     radio->irqp = 0;
     radio->pad_drv = AT86RF215_RF_DRV2;
     int ret = at86rf215_init(radio);
-    PVDX_ASSERT_MSG(ret == AT86RF215_OK, "tx init successful\n");
+    if (ret) {
+        warning("AT86: init failed (%d)\n", ret);
+    }
     return ret;
 }
 
-int change_at86_config(struct at86rf215 *radio, at86_config_t *config) {
+int change_at86_config(struct at86rf215 *h, at86_config_t config) {
+    if (h == NULL) {
+        return -AT86RF215_INVAL_PARAM;
+    }
+
     struct at86rf215_bb_conf bb_conf;
     memset(&bb_conf, 0, sizeof(bb_conf));
 
-    switch (at86_config_t) {
+    switch (config) {
+        // TODO: legacy O-QPSK has a 7-bit frame length (datasheet Figure 6-27), so frames are at most 127 bytes:
+        // too small for one RADIO_DOWNLINK_MAX_SIZE packet, let alone a USLP_MAX_FRAME_SIZE frame. Either drop this
+        // mode or cap the size passed to uslp_mapp_request while it is selected
+        // TODO: 2000 kchip/s is the 2450 MHz legacy PHY; the 780/915 MHz one is 1000 kchip/s (datasheet Table 6-101).
+        // Confirm 2000 is intended on RF09 and that its ~2 MHz bandwidth is allowed in our band
         case AT86_O_QPSK_LEG:
             bb_conf.pt = AT86RF215_BB_MROQPSK;
             bb_conf.fcst = AT86RF215_FCS_16;
@@ -242,7 +283,9 @@ int change_at86_config(struct at86rf215 *radio, at86_config_t *config) {
             bb_conf.qpsk.rxm = AT86RF215_MROQPSK_RXM_MROQPSK_ONLY;
             bb_conf.qpsk.nsfd = AT86RF215_MROQPSK_NSFD_SFD1;
             break;
-        case AT86_MR_O_QPSK_100CH_12_5_KB:
+        // TODO: identical to the 6.25 kb/s config; 12.5 kb/s at 100 kchip/s is rate mode 1, i.e.
+        // AT86RF215_MROQPSK_DRATE_MOD_1 (datasheet Table 6-100)
+        case AT86_MR_O_QPSK_100CH_12_5KB:
             bb_conf.pt = AT86RF215_BB_MROQPSK;
             bb_conf.fcst = AT86RF215_FCS_16;
             bb_conf.txafcs = 1;
@@ -255,10 +298,12 @@ int change_at86_config(struct at86rf215 *radio, at86_config_t *config) {
             bb_conf.qpsk.nsfd = AT86RF215_MROQPSK_NSFD_SFD1;
             break;
         default:
-            return -1;
-            break;
+            return -AT86RF215_INVAL_PARAM;
     }
-    int ret = at86rf215_bb_conf(&radio, AT86RF215_RF09, &bb_conf);
-    PVDX_ASSERT_MSG(ret == AT86RF215_OK, "tx bb_conf\n");
+
+    int ret = at86rf215_bb_conf(h, AT86RF215_RF09, &bb_conf);
+    if (ret) {
+        warning("AT86: baseband config %d failed (%d)\n", config, ret);
+    }
     return ret;
 }

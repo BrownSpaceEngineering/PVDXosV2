@@ -28,7 +28,8 @@ extern "C" {
 #endif
 
 /**
- * Maximum PDU size that the frame buffer can hold
+ * Maximum PDU size that the frame buffer can hold. TXFLH:TXFLL (and RXFLH:RXFLL) is an 11-bit frame length,
+ * so this is the largest PSDU, including the FCS the chip appends, that one frame can carry
  */
 #define AT86RF215_MAX_PDU (2047)
 

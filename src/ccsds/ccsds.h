@@ -1,3 +1,6 @@
+#ifndef PVDX_CCSDS_H
+#define PVDX_CCSDS_H
+
 /**
  * src/ccsds/ccsds.h
  *
@@ -17,3 +20,5 @@
 static inline void ccsds_init(void) {
     uslp_init();
 }
+
+#endif // PVDX_CCSDS_H

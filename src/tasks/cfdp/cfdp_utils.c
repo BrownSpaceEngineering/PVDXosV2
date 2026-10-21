@@ -4,7 +4,7 @@
 
 #include "cfdp_task.h"
 #include "mutexes.h"
-#include "radio/radio_task.h"
+#include "uhf_radio/uhf_radio_task.h"
 #include "rtos_start.h"
 #include "spp.h"
 

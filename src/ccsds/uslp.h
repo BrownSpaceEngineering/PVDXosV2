@@ -140,13 +140,17 @@ void uslp_init(void);
  * Reference: USLP Blue book page 3-6
  *
  * - This function is the Service Access Point for USLP
+ * - Builds one complete transfer frame carrying the packet into buf; sending it is up to the caller
  *
+ * \param buf - buffer to write the serialized transfer frame into
+ * \param sz - on input, the size of buf in bytes; on output, the length of the frame written (0 on failure)
  * \param sdu - pointer to the start of the packet to send
  * \param sdu_len - length, in bytes, of the packet
  *
  * \return true on failure, else false
  */
-bool uslp_mapp_request(uint8_t *sdu, uint16_t sdu_len, uint32_t gmap_id, uint8_t pvn, uint32_t sdu_id, uslp_qos_t qos);
+bool uslp_mapp_request(uint8_t *buf, size_t *sz, uint8_t *sdu, uint16_t sdu_len, uint32_t gmap_id, uint8_t pvn, uint32_t sdu_id,
+                       uslp_qos_t qos);
 
 /**
  * Parsing for USLP Transfer Frames
@@ -165,18 +169,5 @@ bool uslp_mapp_request(uint8_t *sdu, uint16_t sdu_len, uint32_t gmap_id, uint8_t
  * Reference: USLP Blue Book Figure 4-2 (pg. 91), 4-4 (pg. 101)
  */
 bool uslp_transfer_frame_parse(uslp_transfer_frame_view_t *view, uint8_t *data, uint32_t len);
-
-#ifdef UNITTEST
-/**
- * Test-only access to the last frame uslp_mapp_request serialized, since there is no radio to capture it from
- *
- * - Not locked: only call this while no other task can be sending
- *
- * \param len - set to the length, in bytes, of the frame (0 if nothing has been sent)
- *
- * \return pointer to the start of the frame
- */
-const uint8_t *uslp_test_last_frame(uint32_t *len);
-#endif
 
 #endif

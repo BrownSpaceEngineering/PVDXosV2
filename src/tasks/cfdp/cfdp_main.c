@@ -16,18 +16,12 @@
 #include "logging.h"
 #include "watchdog_task.h"
 
-// Radio Task Memory Structure & CFDP Memory Stores
+// CFDP Memory Stores. PDUs go to and from the radio through its uplink_queue/downlink_queue (see cfdp_utils.c)
 cfdp_task_memory_t cfdp_mem;
 cfdp_transaction_store_t cfdp_txn_store;
 cfdp_large_buff_t cfdp_large_buff;
 cfdp_small_buff_t cfdp_small_buffs[CFDP_SMALL_BUFF_COUNT];
 fin_txn_buf_t cfdp_fin_txn;
-
-QueueHandle_t radio_uplink_queue;
-QueueHandle_t radio_downlink_queue;
-
-StaticQueue_t radio_uplink_queue_mem;
-StaticQueue_t radio_downlink_queue_mem;
 
 /**
  * \fn init_cfdp

@@ -718,7 +718,6 @@ void test_uslp(void) {
     uint8_t rule_000[] = {0xCA, 0xBC, 0xD0, 0xA6, 0x00, 0x12, 0x81, 0x00, 0x00, 0x08, 0x01, 0xC0, 0x00, 0x00, 0x01, 0xAA, 0xBB, 0x4F, 0xAC};
     PVDX_ASSERT_MSG(uslp_transfer_frame_parse(&view, rule_000, sizeof(rule_000)), "TFDZ rule 000 rejected\n");
 
-    #ifdef UNITTEST // uslp_test_last_frame only exists in unit test builds
     // VC frame counts are module state that persists between calls, so these tests assume nothing
     // has sent on VCs 5-7 since boot. That holds because tests run before any task is started
     test_log("uslp mapp request rejection tests:\n");
@@ -727,40 +726,58 @@ void test_uslp(void) {
     uint32_t gmap_id_idle_vc = ((uint32_t)USLP_TFVN << 26) | (0xABCDu << 10) | ((uint32_t)USLP_IDLE_ONLY_FRAME_INDEX << 4);
     uint32_t gmap_id_vc6 = ((uint32_t)USLP_TFVN << 26) | (0xABCDu << 10) | (6u << 4);
     uint32_t gmap_id_vc7 = ((uint32_t)USLP_TFVN << 26) | (0xABCDu << 10) | (7u << 4);
-    const uint8_t *last_frame;
-    uint32_t last_frame_len;
-
-    err = uslp_mapp_request(basic_payload, sizeof(basic_payload), gmap_id_bad_tfvn, SPP_VERSION_NUMBER, 0, USLP_QOS_EXPEDITED);
-    PVDX_ASSERT_MSG(err, "mapp request with wrong TFVN rejected\n");
-
-    err = uslp_mapp_request(basic_payload, sizeof(basic_payload), gmap_id_idle_vc, SPP_VERSION_NUMBER, 0, USLP_QOS_EXPEDITED);
-    PVDX_ASSERT_MSG(err, "mapp request on idle-only VC 63 rejected\n");
-
-    err = uslp_mapp_request(basic_payload, sizeof(basic_payload), gmap_id, 7, 0, USLP_QOS_EXPEDITED);
-    PVDX_ASSERT_MSG(err, "mapp request with non-SPP PVN rejected\n");
-
-    err = uslp_mapp_request(basic_payload, sizeof(basic_payload), gmap_id, SPP_VERSION_NUMBER, 0, USLP_QOS_SEQUENCE_CONTROLLED);
-    PVDX_ASSERT_MSG(err, "mapp request with sequence controlled QoS rejected\n");
-
-    uslp_test_last_frame(&last_frame_len);
-    PVDX_ASSERT_MSG(last_frame_len == 0, "rejected mapp requests send nothing\n");
-
-    // The parser needs a writable buffer, as it would get from the radio
+    // Static so a full-size frame doesn't use up the test's stack
     static uint8_t sent[USLP_MAX_FRAME_SIZE];
+    size_t sent_len;
+
+    sent_len = sizeof(sent);
+    err = uslp_mapp_request(sent, &sent_len, basic_payload, sizeof(basic_payload), gmap_id_bad_tfvn, SPP_VERSION_NUMBER, 0,
+                            USLP_QOS_EXPEDITED);
+    PVDX_ASSERT_MSG(err, "mapp request with wrong TFVN rejected\n");
+    PVDX_ASSERT_MSG(sent_len == 0, "mapp request with wrong TFVN writes nothing\n");
+
+    sent_len = sizeof(sent);
+    err = uslp_mapp_request(sent, &sent_len, basic_payload, sizeof(basic_payload), gmap_id_idle_vc, SPP_VERSION_NUMBER, 0,
+                            USLP_QOS_EXPEDITED);
+    PVDX_ASSERT_MSG(err, "mapp request on idle-only VC 63 rejected\n");
+    PVDX_ASSERT_MSG(sent_len == 0, "mapp request on idle-only VC 63 writes nothing\n");
+
+    sent_len = sizeof(sent);
+    err = uslp_mapp_request(sent, &sent_len, basic_payload, sizeof(basic_payload), gmap_id, 7, 0, USLP_QOS_EXPEDITED);
+    PVDX_ASSERT_MSG(err, "mapp request with non-SPP PVN rejected\n");
+    PVDX_ASSERT_MSG(sent_len == 0, "mapp request with non-SPP PVN writes nothing\n");
+
+    sent_len = sizeof(sent);
+    err = uslp_mapp_request(sent, &sent_len, basic_payload, sizeof(basic_payload), gmap_id, SPP_VERSION_NUMBER, 0,
+                            USLP_QOS_SEQUENCE_CONTROLLED);
+    PVDX_ASSERT_MSG(err, "mapp request with sequence controlled QoS rejected\n");
+    PVDX_ASSERT_MSG(sent_len == 0, "mapp request with sequence controlled QoS writes nothing\n");
+
+    // One byte short of what the basic frame needs
+    sent_len = sizeof(basic) - 1;
+    err = uslp_mapp_request(sent, &sent_len, basic_payload, sizeof(basic_payload), gmap_id, SPP_VERSION_NUMBER, 0, USLP_QOS_EXPEDITED);
+    PVDX_ASSERT_MSG(err, "mapp request into too small a buffer rejected\n");
+    PVDX_ASSERT_MSG(sent_len == 0, "mapp request into too small a buffer writes nothing\n");
+
+    PVDX_ASSERT_MSG(
+        uslp_mapp_request(NULL, &sent_len, basic_payload, sizeof(basic_payload), gmap_id, SPP_VERSION_NUMBER, 0, USLP_QOS_EXPEDITED),
+        "mapp request with NULL buffer rejected\n");
 
     test_log("uslp mapp request send tests:\n");
-    err = uslp_mapp_request(basic_payload, sizeof(basic_payload), gmap_id, SPP_VERSION_NUMBER, 0, USLP_QOS_EXPEDITED);
+    // A buffer exactly the size of the frame is enough
+    sent_len = sizeof(basic);
+    err = uslp_mapp_request(sent, &sent_len, basic_payload, sizeof(basic_payload), gmap_id, SPP_VERSION_NUMBER, 0, USLP_QOS_EXPEDITED);
     PVDX_ASSERT_MSG(!err, "mapp request sent\n");
-    last_frame = uslp_test_last_frame(&last_frame_len);
-    // The first frame on VC 5 has a count of 0, so it must match the independently built vector exactly
-    PVDX_ASSERT_MSG(last_frame_len == sizeof(basic), "first frame length\n");
-    PVDX_ASSERT_MSG(memcmp(last_frame, basic, sizeof(basic)) == 0, "first frame matches reference bytes\n");
+    // The first frame on VC 5 has a count of 0 (rejected requests above must not have used one up),
+    // so it must match the independently built vector exactly
+    PVDX_ASSERT_MSG(sent_len == sizeof(basic), "first frame length\n");
+    PVDX_ASSERT_MSG(memcmp(sent, basic, sizeof(basic)) == 0, "first frame matches reference bytes\n");
 
-    err = uslp_mapp_request(basic_payload, sizeof(basic_payload), gmap_id, SPP_VERSION_NUMBER, 0, USLP_QOS_EXPEDITED);
+    sent_len = sizeof(sent);
+    err = uslp_mapp_request(sent, &sent_len, basic_payload, sizeof(basic_payload), gmap_id, SPP_VERSION_NUMBER, 0, USLP_QOS_EXPEDITED);
     PVDX_ASSERT_MSG(!err, "second mapp request sent\n");
-    last_frame = uslp_test_last_frame(&last_frame_len);
-    memcpy(sent, last_frame, last_frame_len);
-    err = uslp_transfer_frame_parse(&view, sent, last_frame_len);
+    PVDX_ASSERT_MSG(sent_len == sizeof(basic), "second frame length\n");
+    err = uslp_transfer_frame_parse(&view, sent, sent_len);
     PVDX_ASSERT_MSG(!err, "second frame parses\n");
     PVDX_ASSERT_MSG(view.primary_header.vc_frame_count == 1, "second frame count\n");
     PVDX_ASSERT_MSG(view.datafield_len == sizeof(basic_payload), "second frame datafield_len\n");
@@ -774,26 +791,26 @@ void test_uslp(void) {
         big_payload[i] = (uint8_t)(i * 7);
     }
 
-    err = uslp_mapp_request(big_payload, max_payload_len + 1, gmap_id, SPP_VERSION_NUMBER, 0, USLP_QOS_EXPEDITED);
+    // Too big for USLP_MAX_FRAME_SIZE, even though the buffer itself is bigger than that
+    static uint8_t big_buf[USLP_MAX_FRAME_SIZE + 16];
+    sent_len = sizeof(big_buf);
+    err = uslp_mapp_request(big_buf, &sent_len, big_payload, max_payload_len + 1, gmap_id, SPP_VERSION_NUMBER, 0, USLP_QOS_EXPEDITED);
     PVDX_ASSERT_MSG(err, "oversized mapp request rejected\n");
-    uslp_test_last_frame(&last_frame_len);
-    PVDX_ASSERT_MSG(last_frame_len == sizeof(basic), "oversized mapp request sends nothing\n");
+    PVDX_ASSERT_MSG(sent_len == 0, "oversized mapp request writes nothing\n");
 
     // A rejected frame must not use up a count, so the next frame on VC 5 is 2, not 3
-    err = uslp_mapp_request(basic_payload, sizeof(basic_payload), gmap_id, SPP_VERSION_NUMBER, 0, USLP_QOS_EXPEDITED);
+    sent_len = sizeof(sent);
+    err = uslp_mapp_request(sent, &sent_len, basic_payload, sizeof(basic_payload), gmap_id, SPP_VERSION_NUMBER, 0, USLP_QOS_EXPEDITED);
     PVDX_ASSERT_MSG(!err, "mapp request after oversized request sent\n");
-    last_frame = uslp_test_last_frame(&last_frame_len);
-    memcpy(sent, last_frame, last_frame_len);
-    err = uslp_transfer_frame_parse(&view, sent, last_frame_len);
+    err = uslp_transfer_frame_parse(&view, sent, sent_len);
     PVDX_ASSERT_MSG(!err, "frame after oversized request parses\n");
     PVDX_ASSERT_MSG(view.primary_header.vc_frame_count == 2, "no count gap after oversized request\n");
 
-    err = uslp_mapp_request(big_payload, max_payload_len, gmap_id_vc7, SPP_VERSION_NUMBER, 0, USLP_QOS_EXPEDITED);
+    sent_len = sizeof(sent);
+    err = uslp_mapp_request(sent, &sent_len, big_payload, max_payload_len, gmap_id_vc7, SPP_VERSION_NUMBER, 0, USLP_QOS_EXPEDITED);
     PVDX_ASSERT_MSG(!err, "max size mapp request sent\n");
-    last_frame = uslp_test_last_frame(&last_frame_len);
-    PVDX_ASSERT_MSG(last_frame_len == USLP_MAX_FRAME_SIZE, "max size frame fills USLP_MAX_FRAME_SIZE\n");
-    memcpy(sent, last_frame, last_frame_len);
-    err = uslp_transfer_frame_parse(&view, sent, last_frame_len);
+    PVDX_ASSERT_MSG(sent_len == USLP_MAX_FRAME_SIZE, "max size frame fills USLP_MAX_FRAME_SIZE\n");
+    err = uslp_transfer_frame_parse(&view, sent, sent_len);
     PVDX_ASSERT_MSG(!err, "max size frame parses\n");
     PVDX_ASSERT_MSG(view.primary_header.virtual_channel_id == 7, "max size frame virtual_channel_id\n");
     PVDX_ASSERT_MSG(view.datafield_len == max_payload_len, "max size frame datafield_len\n");
@@ -801,15 +818,13 @@ void test_uslp(void) {
 
     test_log("uslp mapp request per-VC count tests:\n");
     // Each VC keeps its own count, so VC 6 starts at 0 even though VC 5 has sent 3 frames
-    err = uslp_mapp_request(basic_payload, sizeof(basic_payload), gmap_id_vc6, SPP_VERSION_NUMBER, 0, USLP_QOS_EXPEDITED);
+    sent_len = sizeof(sent);
+    err = uslp_mapp_request(sent, &sent_len, basic_payload, sizeof(basic_payload), gmap_id_vc6, SPP_VERSION_NUMBER, 0, USLP_QOS_EXPEDITED);
     PVDX_ASSERT_MSG(!err, "mapp request on VC 6 sent\n");
-    last_frame = uslp_test_last_frame(&last_frame_len);
-    memcpy(sent, last_frame, last_frame_len);
-    err = uslp_transfer_frame_parse(&view, sent, last_frame_len);
+    err = uslp_transfer_frame_parse(&view, sent, sent_len);
     PVDX_ASSERT_MSG(!err, "VC 6 frame parses\n");
     PVDX_ASSERT_MSG(view.primary_header.virtual_channel_id == 6, "VC 6 frame virtual_channel_id\n");
     PVDX_ASSERT_MSG(view.primary_header.vc_frame_count == 0, "VC 6 has its own count\n");
-    #endif
 }
 #endif // TEST_USLP
 

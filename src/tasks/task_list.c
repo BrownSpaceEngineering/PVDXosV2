@@ -13,11 +13,11 @@
 #include "display_task.h"
 #include "globals.h"
 #include "heartbeat_task.h"
-#include "radio/radio_task.h"
 #include "shell_task.h"
 #include "task_manager_task.h"
 #include "tasks/adcs/adcs_task.h"
 #include "tasks/cfdp/cfdp_task.h"
+#include "uhf_radio/uhf_radio_task.h"
 
 // Define task structs; tasks are mutable so not constant
 pvdx_task_t watchdog_task = {.name = "Watchdog",
@@ -134,21 +134,21 @@ pvdx_task_t cfdp_task = {.name = "CFDP",
                          .has_registered = false,
                          .task_type = ACTUATOR};
 
-pvdx_task_t radio_task = {.name = "Radio",
-                          .enabled = false,
-                          .handle = NULL,
-                          .command_queue = NULL,
-                          .init = init_radio,
-                          .function = main_radio,
-                          .stack_size = RADIO_TASK_STACK_SIZE,
-                          .stack_buffer = radio_mem.radio_task_stack,
-                          .pvParameters = NULL,
-                          .priority = 2,
-                          .task_tcb = &radio_mem.radio_task_tcb,
-                          .watchdog_timeout_ms = 10000,
-                          .last_checkin_time_ticks = 0xDEADBEEF,
-                          .has_registered = false,
-                          .task_type = ACTUATOR};
+pvdx_task_t uhf_radio_task = {.name = "Radio",
+                              .enabled = false,
+                              .handle = NULL,
+                              .command_queue = NULL,
+                              .init = init_uhf_radio,
+                              .function = main_uhf_radio,
+                              .stack_size = UHF_RADIO_TASK_STACK_SIZE,
+                              .stack_buffer = uhf_radio_mem.uhf_radio_task_stack,
+                              .pvParameters = NULL,
+                              .priority = 2,
+                              .task_tcb = &uhf_radio_mem.uhf_radio_task_tcb,
+                              .watchdog_timeout_ms = 10000,
+                              .last_checkin_time_ticks = 0xDEADBEEF,
+                              .has_registered = false,
+                              .task_type = ACTUATOR};
 
 // and define their constant pointers
 pvdx_task_t *const p_watchdog_task = &watchdog_task;
@@ -158,7 +158,7 @@ pvdx_task_t *const p_shell_task = &shell_task;
 pvdx_task_t *const p_display_task = &display_task;
 pvdx_task_t *const p_heartbeat_task = &heartbeat_task;
 pvdx_task_t *const p_cfdp_task = &cfdp_task;
-pvdx_task_t *const p_radio_task = &radio_task;
+pvdx_task_t *const p_uhf_radio_task = &uhf_radio_task;
 pvdx_task_t *const task_list_null_terminator = NULL;
 
 // Global list of all tasks running on PVDXos (see `pvdx_task_t` definition in globals.h)
@@ -168,8 +168,8 @@ pvdx_task_t *const task_list_null_terminator = NULL;
 // NOTE: Watchdog task must be first in the list, Command Dispatcher second, and Task Manager third.
 // If you change the order of any of these, make sure that main.c reflects the change and update this comment.
 pvdx_task_t *task_list[] = {
-    p_watchdog_task, p_task_manager_task,       p_adcs_task, p_shell_task, p_display_task, p_heartbeat_task, p_cfdp_task,
-    p_radio_task,    task_list_null_terminator,
+    p_watchdog_task,  p_task_manager_task,       p_adcs_task, p_shell_task, p_display_task, p_heartbeat_task, p_cfdp_task,
+    p_uhf_radio_task, task_list_null_terminator,
 };
 
 /**
