@@ -25,6 +25,16 @@
 
 #define MRAM_CMD_WREN 0x06u
 #define MRAM_CMD_RDSR 0x05u
+#define MRAM_CMD_WRSR 0x01u
+#define MRAM_CMD_RDFSR 0x70u
+#define MRAM_CMD_CLFSR 0x50u
+
+#define MRAM_STATUS_WIP 0x01u
+#define MRAM_STATUS_WEL 0x02u
+#define MRAM_STATUS_BP_MASK 0x5Cu // BP[3:0] is SR[6,4:2], not a contiguous field.
+#define MRAM_FLAG_READY 0x80u
+#define MRAM_FLAG_ERRORS 0x3Au
+#define MRAM_READY_TIMEOUT_MS 20u
 #define MRAM_CMD_READ 0x03u
 #define MRAM_CMD_WRITE 0x02u
 #define MRAM_CMD_RDID 0x9Fu
@@ -222,13 +232,91 @@ static bool mram_read_status(uint8_t chip, uint8_t *status) {
     return success;
 }
 
+static bool mram_read_flags(uint8_t chip, uint8_t *flags) {
+    const uint8_t cmd = MRAM_CMD_RDFSR;
+    mram_select(chip);
+    bool success = mram_write(&cmd, 1u) && mram_read(flags, 1u);
+    mram_deselect(chip);
+    return success;
+}
+
+static bool mram_wait_ready(uint8_t chip) {
+    for (unsigned int elapsed = 0; elapsed < MRAM_READY_TIMEOUT_MS; elapsed++) {
+        uint8_t status = 0;
+        if (!mram_read_status(chip, &status)) {
+            return false;
+        }
+        if ((status & MRAM_STATUS_WIP) == 0u) {
+            return true;
+        }
+        delay_ms(1);
+    }
+    warning("MRAM chip %u busy timeout after %u ms\n", chip + 1u, MRAM_READY_TIMEOUT_MS);
+    return false;
+}
+
+static bool mram_clear_flags(uint8_t chip) {
+    const uint8_t cmd = MRAM_CMD_CLFSR;
+    mram_select(chip);
+    bool success = mram_write(&cmd, 1u);
+    mram_deselect(chip);
+    return success;
+}
+
+static bool mram_operation_okay(uint8_t chip) {
+    uint8_t flags = 0;
+    if (!mram_wait_ready(chip) || !mram_read_flags(chip, &flags)) {
+        return false;
+    }
+    if ((flags & (MRAM_FLAG_READY | MRAM_FLAG_ERRORS)) != MRAM_FLAG_READY) {
+        warning("MRAM chip %u operation failed: flags=%02x (protection=%u program=%u erase=%u CRC=%u)\n", chip + 1u, (unsigned int)flags,
+                (unsigned int)((flags >> 1u) & 1u), (unsigned int)((flags >> 4u) & 1u), (unsigned int)((flags >> 5u) & 1u),
+                (unsigned int)((flags >> 3u) & 1u));
+        return false;
+    }
+    return true;
+}
+
 static bool mram_write_enable(uint8_t chip) {
     const uint8_t cmd = MRAM_CMD_WREN;
 
     mram_select(chip);
     bool success = mram_write(&cmd, 1u);
     mram_deselect(chip);
-    return success;
+    uint8_t status = 0;
+    if (!success || !mram_read_status(chip, &status)) {
+        return false;
+    }
+    if ((status & MRAM_STATUS_WEL) == 0u) {
+        warning("MRAM chip %u write-enable latch did not set (status=%02x)\n", chip + 1u, (unsigned int)status);
+        return false;
+    }
+    return true;
+}
+
+static bool mram_unprotect(uint8_t chip, uint8_t status) {
+    if ((status & MRAM_STATUS_BP_MASK) == 0u) {
+        return true;
+    }
+
+    // WRSR changes nonvolatile protection. Preserve SR[7] and TB; do not rewrite it every boot.
+    uint8_t command[2] = {MRAM_CMD_WRSR, (uint8_t)(status & 0xA0u)};
+    info("MRAM chip %u clearing nonvolatile block protection: %02x -> %02x\n", chip + 1u, (unsigned int)status, (unsigned int)command[1]);
+    if (!mram_wait_ready(chip) || !mram_clear_flags(chip) || !mram_write_enable(chip)) {
+        return false;
+    }
+    mram_select(chip);
+    bool success = mram_write(command, sizeof(command));
+    mram_deselect(chip);
+    if (!success || !mram_operation_okay(chip) || !mram_read_status(chip, &status)) {
+        return false;
+    }
+    if ((status & 0xFCu) != command[1]) {
+        warning("MRAM chip %u block-protection clear did not verify (status=%02x)\n", chip + 1u, (unsigned int)status);
+        return false;
+    }
+    info("MRAM chip %u block protection cleared and verified (status=%02x)\n", chip + 1u, (unsigned int)status);
+    return true;
 }
 
 static bool mram_read_bytes(uint8_t chip, uint32_t address, uint8_t *data, size_t length) {
@@ -253,14 +341,14 @@ static bool mram_write_bytes(uint8_t chip, uint32_t address, const uint8_t *data
         (uint8_t)address,
     };
 
-    if (!mram_write_enable(chip)) {
+    if (!mram_wait_ready(chip) || !mram_clear_flags(chip) || !mram_write_enable(chip)) {
         return false;
     }
 
     mram_select(chip);
     bool success = mram_write(header, sizeof(header)) && mram_write(data, length);
     mram_deselect(chip);
-    return success;
+    return success && mram_operation_okay(chip);
 }
 
 static bool mram_id_is_expected(const uint8_t id[3]) {
@@ -306,33 +394,27 @@ static bool check_mram_chip(uint8_t chip) {
         warning("MRAM chip %u status transfer failed\n", chip + 1u);
         return false;
     }
-    info("MRAM chip %u status = %02x (WIP=%u WEL=%u BP/TB=%02x)\n", chip + 1u, (unsigned int)status, (unsigned int)(status & 1u),
-         (unsigned int)((status >> 1u) & 1u), (unsigned int)(status & 0x7Cu));
+    uint8_t flags = 0;
+    if (!mram_read_flags(chip, &flags)) {
+        return false;
+    }
+    info("MRAM chip %u status=%02x flags=%02x (WIP=%u WEL=%u BP=%u TB=%u)\n", chip + 1u, (unsigned int)status, (unsigned int)flags,
+         (unsigned int)(status & 1u), (unsigned int)((status >> 1u) & 1u), (unsigned int)(((status >> 3u) & 8u) | ((status >> 2u) & 7u)),
+         (unsigned int)((status >> 5u) & 1u));
+    if (!mram_unprotect(chip, status)) {
+        warning("MRAM chip %u could not clear block protection; skipping memory writes\n", chip + 1u);
+        return false;
+    }
 
-    if (!mram_read_bytes(chip, MRAM_TEST_ADDRESS, original, MRAM_TEST_SIZE)) {
+    if (!mram_wait_ready(chip) || !mram_read_bytes(chip, MRAM_TEST_ADDRESS, original, MRAM_TEST_SIZE)) {
         warning("MRAM chip %u original-data read failed\n", chip + 1u);
         return false;
     }
 
-    if (!mram_write_bytes(chip, MRAM_TEST_ADDRESS, test_pattern, MRAM_TEST_SIZE)) {
-        warning("MRAM chip %u test-pattern write failed; attempting restoration\n", chip + 1u);
-        if (!mram_write_bytes(chip, MRAM_TEST_ADDRESS, original, MRAM_TEST_SIZE)) {
-            warning("MRAM chip %u restoration write also failed; test region may be modified\n", chip + 1u);
-        } else {
-            warning("MRAM chip %u restoration attempted but not verified; test region may be modified\n", chip + 1u);
-        }
-        return false;
-    }
-
-    if (!mram_read_bytes(chip, MRAM_TEST_ADDRESS, readback, MRAM_TEST_SIZE) ||
-        !mram_buffers_match(readback, test_pattern, MRAM_TEST_SIZE)) {
-        warning("MRAM chip %u test-pattern verification failed; attempting restoration\n", chip + 1u);
-        if (!mram_write_bytes(chip, MRAM_TEST_ADDRESS, original, MRAM_TEST_SIZE)) {
-            warning("MRAM chip %u restoration write failed; test region may be modified\n", chip + 1u);
-        } else {
-            warning("MRAM chip %u restoration attempted but not verified; test region may be modified\n", chip + 1u);
-        }
-        return false;
+    bool pattern_okay = mram_write_bytes(chip, MRAM_TEST_ADDRESS, test_pattern, MRAM_TEST_SIZE) &&
+        mram_read_bytes(chip, MRAM_TEST_ADDRESS, readback, MRAM_TEST_SIZE) && mram_buffers_match(readback, test_pattern, MRAM_TEST_SIZE);
+    if (!pattern_okay) {
+        warning("MRAM chip %u test-pattern write/readback failed; attempting verified restoration\n", chip + 1u);
     }
 
     if (!mram_write_bytes(chip, MRAM_TEST_ADDRESS, original, MRAM_TEST_SIZE)) {
@@ -345,8 +427,8 @@ static bool check_mram_chip(uint8_t chip) {
         return false;
     }
 
-    info("MRAM chip %u read/write and restoration verified\n", chip + 1u);
-    return true;
+    info("MRAM chip %u restoration verified; test pattern %s\n", chip + 1u, pattern_okay ? "PASS" : "FAIL");
+    return pattern_okay;
 }
 
 bool check_mram(void) {
@@ -386,14 +468,18 @@ bool check_mram(void) {
         }
     }
 
+    // Let the nonblocking RTT reader drain each diagnostic batch without requiring a connected probe.
+    delay_ms(200);
     bool all_okay = true;
     for (uint8_t chip = 0; chip < MRAM_CHIP_COUNT; chip++) {
         if (!identified[chip] || !check_mram_chip(chip)) {
             warning("MRAM chip %u failed connectivity/read-write verification\n", chip + 1u);
             all_okay = false;
         }
+        delay_ms(200);
     }
 
+    info("MRAM all-chip read/write/restore result: %s\n", all_okay ? "PASS" : "FAIL");
     return all_okay;
 }
 
