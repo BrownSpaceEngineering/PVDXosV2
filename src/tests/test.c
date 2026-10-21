@@ -12,6 +12,7 @@
 #include "logging.h"
 #include "telemetry/telemetry.h"
 #include "tests/test_pmb.h"
+#include "tests/test_stxg2.h"
 
 int tests_passed = 0;
 int tests_total = 0;
@@ -40,6 +41,9 @@ void tests_run(void) {
 #endif
 #ifdef TEST_PMB
     test_pmb();
+#endif
+#ifdef TEST_STXG2
+    test_stxg2();
 #endif
   #ifdef TEST_FLOAT
     test_float();

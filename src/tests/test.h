@@ -13,11 +13,12 @@
 // does via -DTEST_SPP -DTEST_CFDP. If no test is selected, all of them are compiled.
 // Keep this list in sync with TEST_NAMES in src/Makefile
 #if !defined(TEST_SPP) && !defined(TEST_CFDP) && !defined(TEST_USLP) && !defined(TEST_PMB) &&                     \
-    !defined(TEST_TELEMETRY) && !defined(TEST_FLOAT)
+    !defined(TEST_TELEMETRY) && !defined(TEST_FLOAT) && !defined(TEST_STXG2)
     #define TEST_CFDP
     #define TEST_SPP
     #define TEST_USLP
     #define TEST_PMB
+    #define TEST_STXG2
     #define TEST_TELEMETRY
     #define TEST_FLOAT
 #endif
