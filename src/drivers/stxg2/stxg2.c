@@ -31,7 +31,7 @@ static uint8_t store_carry[4] = {0};  // Partial word
 static size_t store_carry_len = 0;
 
 /**
- * \brief Blocks for ms. Works before and after scheduler start.
+ * \brief Blocks for ms
  */
 static void stxg2_delay_ms(uint32_t ms) {
     if (xTaskGetSchedulerState() == taskSCHEDULER_NOT_STARTED) {
