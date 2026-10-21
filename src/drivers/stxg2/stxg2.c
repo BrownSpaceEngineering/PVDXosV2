@@ -252,7 +252,7 @@ status_t stxg2_set_mode(stxg2_mode_t mode) {
 /**
  * \brief Sets frequency, symbol rate, MODCOD, and PA power
  *
- * \param freq_khz 2150000-2290000, 1 MHz steps (USM 9.2.5.3)
+ * \param freq_khz 2150000-2450000, 1 MHz steps (USM 9.2.5.3)
  * \param sym_rate_ksps 100-5000, 100 ksps steps (USM 9.2.5.2)
  * \param modcod 1-28 (USM table 9-14)
  * \param power_dbm tx power in dbm (USM 9.2.9.2)

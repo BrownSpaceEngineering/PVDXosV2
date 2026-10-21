@@ -242,7 +242,7 @@ typedef enum {
 
 // RF limits (USM 9.1, 9.2.5.2, 9.2.5.3, 9.2.9.2)
 #define STXG2_FREQ_MIN_KHZ 2150000u
-#define STXG2_FREQ_MAX_KHZ 2290000u
+#define STXG2_FREQ_MAX_KHZ 2450000u // Standard unit stops at 2290000. Raised for the amateur band (2400-2450 MHz) unit.
 #define STXG2_SYM_RATE_MIN_KSPS 100u
 #define STXG2_SYM_RATE_MAX_KSPS 5000u
 #define STXG2_SYM_RATE_STEP_KSPS 100u
