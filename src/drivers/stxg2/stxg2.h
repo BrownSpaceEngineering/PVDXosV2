@@ -1,195 +1,279 @@
 /**
  * stxg2.h
  *
- * Driver for the CUBECOM STXG2 S-band transmitter
- * Control path/protocol: I2C
- * Data path/protocol: SPI on the CSK header (routed via internal crossbar).
- *
- * Created for PVDXosV2
+ * CUBECOM STXG2 (VestaLink S25) S-band transmitter driver.
+ * Control: I2C. Data: receive-only SPI on the CSK header, crossbar input 0x4.
+ * The radio framer is off. PVDX frames its own data.
+ * Refs: ICD-01-10022-A6 (ICD), USM-01-10022-A8 (USM).
  */
 
 #ifndef STXG2_H
 #define STXG2_H
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
+
 #include "atmel_start.h"
 #include "globals.h"
 
-#define I2C_ADDR         0x26
+#define STXG2_I2C_ADDR 0x26
+#define STXG2_ID_VALUE 0x53545832u // "STX2" (USM 9.2.1.1)
 
-#define SBAND_CS_LOW() gpio_set_pin_level(SBAND_CS, 0);
-#define SBAND_CS_HIGH() gpio_set_pin_level(SBAND_CS, 1);
+// Pins from the PVDX-SAMD-PinConfig README.
+// WARNING: main's ASF labels PB19 as BURN. Fix upstream.
+#ifndef SBAND_CS
+    #define SBAND_CS GPIO(GPIO_PORTB, 19) // Active low
+#endif
+#ifndef SBAND_EN
+    #define SBAND_EN GPIO(GPIO_PORTC, 25) // High = on (ICD 2.2)
+#endif
+#ifndef SBAND_RST
+    #define SBAND_RST GPIO(GPIO_PORTC, 26) // Low = reset (ICD 2.2)
+#endif
 
-// General registers
-#define REG_ID           0x0001  // Identifier; reads 0x53545832 = "STX2"
-#define REG_SERIAL       0x0002  // Board serial number
-#define REG_SW_VERSION   0x0003  // Software version (Major, Minor, Patch)
-#define REG_FW_VERSION   0x0004  // Firmware version (Major, Minor, Patch)
-#define REG_HW_VERSION   0x0005  // Hardware version (Major, Minor, Patch)
-#define REG_UPTIME       0x0006  // Increments continuously; comms check
-#define REG_SCRATCHPAD   0x0007  // Test register for comms read/write debugging
+#define SBAND_CS_LOW() gpio_set_pin_level(SBAND_CS, false)
+#define SBAND_CS_HIGH() gpio_set_pin_level(SBAND_CS, true)
 
-// Communication registers
-#define REG_I2C_STATUS   0x0010  // I2C status (Busy/Invalid/OoR/Overflow), clear-on-read
-#define REG_I2C_CONFIG   0x0011  // I2C link configuration
-#define REG_CAN_STATUS   0x0012  // CAN status (Busy/Invalid/OoR/Overflow), clear-on-read
-#define REG_CAN_CONFIG   0x0013  // CAN link configuration
-#define REG_UART_STATUS  0x0014  // UART status (Busy/Invalid/OoR/Overflow), clear-on-read
-#define REG_UART_CONFIG  0x0015  // UART link configuration
-#define REG_COMM_UNLOCK  0x001F  // Comms link configuration access control
+/* ---------- Registers (USM 9.1) ---------- */
 
-// Data source registers
-// HS_* high-speed data interface (SpaceWire/LVDS) 0x0020-0x002B omitted; unused.
-#define REG_SPI_CTRL     0x002C  // SPI link and usage status
-#define REG_SPI_STATUS   0x002D  // SPI interface control
-#define REG_SPI_RX_CNT   0x002E  // Count of 32-bit words received/passed via SPI
+// General
+#define REG_ID 0x0001
+#define REG_SERIAL 0x0002
+#define REG_SW_VERSION 0x0003
+#define REG_FW_VERSION 0x0004
+#define REG_HW_VERSION 0x0005
+#define REG_UPTIME 0x0006 // ms
+#define REG_SCRATCHPAD 0x0007
 
-// Telemetry registers
-#define REG_BOARD_STATUS 0x0030  // General device status
-#define REG_RF_STATUS    0x0031  // IF Synth Lock, RF Synth Lock
-#define REG_TEMP_0       0x0032  // PA and PA SMPS temperature (2x 16-bit)
-#define REG_TEMP_1       0x0033  // Board and FPGA temperature (2x 16-bit)
-#define REG_TEMP_2       0x0034  // Board temperature (2x 16-bit)
-#define REG_TEMP_3       0x0035  // Board temperature (1x 16-bit)
-#define REG_CURRENT_ERR  0x003E  // Current sensor out-of-range flags
-#define REG_VOLTAGE_ERR  0x003F  // Voltage sensor out-of-range flags
-#define REG_CURRENTS     0x0040  // 0x0040-0x004F: monitored current values
-#define REG_VOLTAGES     0x0050  // 0x0050-0x005F: monitored voltage values
+// Communication. Status registers are clear-on-read.
+#define REG_I2C_STATUS 0x0010
+#define REG_I2C_CONFIG 0x0011
+#define REG_CAN_STATUS 0x0012
+#define REG_CAN_CONFIG 0x0013
+#define REG_UART_STATUS 0x0014
+#define REG_UART_CONFIG 0x0015
+#define REG_COMM_UNLOCK 0x001F
 
-// Control registers
-#define REG_MODE            0x0060  // Transmitter state: Standby/Flash/Config/Transmit
-#define REG_ENCODING        0x0062  // DVB-S2 encoding settings
-#define REG_SYMBOL_RATE     0x0063  // Symbol rate: 100-5000 ksps, 100 ksps steps
-#define REG_FREQUENCY       0x0064  // Frequency: 2200000-2290000 kHz, 1 MHz steps
-#define REG_ENCODING_STATUS 0x0066  // Dummy-frame count when no data available
+// Data source. HS nodes (0x0020-0x002B) unused.
+#define REG_SPI_CTRL 0x002C   // USM 9.2.3.7
+#define REG_SPI_STATUS 0x002D // USM 9.2.3.8
+#define REG_SPI_RX_CNT 0x002E // Words received (USM 9.2.3.9)
 
-// Thermal protection registers
-#define REG_PROTECTION_LEVEL_1 0x0070  // PA over-temperature protection level 1
-#define REG_PROTECTION_LEVEL_2 0x0071  // PA over-temperature protection level 2
-#define REG_PROTECTION_LEVEL_3 0x0072  // PA over-temperature protection level 3
-#define REG_BOARD_TLIM         0x0073  // Board over-temperature protection
+// Telemetry
+#define REG_BOARD_STATUS 0x0030
+#define REG_RF_STATUS 0x0031
+#define REG_TEMP_0 0x0032 // PA, PA SMPS
+#define REG_TEMP_1 0x0033 // Board, FPGA
+#define REG_TEMP_2 0x0034 // Board x2
+#define REG_TEMP_3 0x0035 // Board
+#define REG_CURRENT_ERR 0x003E
+#define REG_VOLTAGE_ERR 0x003F
+#define REG_CURRENTS 0x0040 // To 0x004F
+#define REG_VOLTAGES 0x0050 // To 0x005F
 
-// Memory registers
-#define REG_MEMORY_STATUS   0x0080  // On-board flash status (state/usage)
-#define REG_MEMORY_SIZE     0x0081  // Size of memory available to write to
-#define REG_MEMORY_HLTH_0   0x0083  // Memory usage information
-#define REG_MEMORY_HLTH_1   0x0084  // Memory usage information
-#define REG_MEM_WR_CTRL     0x0090  // Memory write interface control
-#define REG_MEM_WR_INDEX    0x0091  // Write start address (increments in 16KB clusters)
-#define REG_MEM_WR_LEN_0    0x0092  // Bytes to write (lower 4 bytes)
-#define REG_MEM_WR_LEN_1    0x0093  // Bytes to write (upper 4 bytes)
-#define REG_MEM_WR_STAT     0x0094  // Write interface status
-#define REG_MEM_WR_CNT_0    0x0095  // Bytes written (lower 4 bytes)
-#define REG_MEM_WR_CNT_1    0x0096  // Bytes written (upper 4 bytes)
-#define REG_MEM_WR_PKT_CNT  0x0097  // Packets written into memory
-#define REG_MEM_WR_ERR      0x0098  // Write error information field
-#define REG_MEM_RD_CTRL     0x00A0  // Memory read interface control
-#define REG_MEM_RD_INDEX    0x00A1  // Read start address (increments in 16KB clusters)
-#define REG_MEM_RD_LEN      0x00A2  // Bytes to read from memory
-#define REG_MEM_RD_STAT     0x00A3  // Read interface status (see note in accompanying message)
-#define REG_MEM_RD_CNT      0x00A4  // Bytes read from memory
-#define REG_MEM_RD_ERR      0x00A5  // Read error information field
-#define REG_MEM_RT_CTRL     0x00B0  // Retransmit interface control
-#define REG_MEM_RT_QUEUE    0x00B1  // Retransmit queue (index and length)
-#define REG_MEM_RT_STAT     0x00B2  // Retransmit interface status
-#define REG_MEM_RT_CNT      0x00B4  // Retransmit packets read this session
-#define REG_MEM_RT_ERR      0x00B5  // Retransmit error information field
+// Control
+#define REG_MODE 0x0060
+#define REG_SYMBOL_RATE 0x0061 // ksps
+#define REG_FREQUENCY 0x0062   // kHz
+#define REG_ENCODING_CTRL 0x0065
+#define REG_DVBS2_CONF 0x0066
+#define REG_CCSDS_CONF 0x0067
+#define REG_ENCODING_STATUS 0x0068 // DVB-S2 dummy frame count
 
-// Data routing registers
-#define REG_TF_CTRL           0x0110  // Transfer frame control field
-#define REG_TF_BUF_CNT        0x0111  // Bytes in transfer frame buffer
-#define REG_TF_CONF           0x0112  // SCID, VCID, RT_VCID
-#define REG_TF_DATA_CNT       0x0113  // Transfer frame data count
-#define REG_TF_OID_CNT        0x0114  // Transfer frame idle count
-#define REG_TF_STREAM_CNT     0x0115  // Transfer frame stream count
-#define REG_CROSSBAR          0x0120  // Data flow/routing control
-#define REG_TP_GEN_CTRL       0x0121  // Test pattern generator control
-#define REG_TP_GEN_CNT        0x0122  // Bytes generated by TP generator
-#define REG_TP_GEN_RATE       0x0123  // Generated test pattern data rate
-#define REG_TP_CHK_CTRL       0x0124  // Test pattern checker control
-#define REG_TP_CHK_STAT       0x0125  // Pattern checker status
-#define REG_TP_CHK_SYNC_CNT   0x0126  // Bytes received while synced to pattern
-#define REG_TP_CHK_UNSYNC_CNT 0x0127  // Bytes received while not synced
-#define REG_TP_CHK_RATE       0x0128  // Received data rate
-#define REG_TP_CHK_LST_CNT    0x0129  // Bytes received at EOF signal reception
+// Thermal protection
+#define REG_PROTECTION_LEVEL_1 0x0070
+#define REG_PROTECTION_LEVEL_2 0x0071
+#define REG_PROTECTION_LEVEL_3 0x0072
+#define REG_BOARD_TLIM 0x0073
 
-// PA status and control registers
-#define REG_PA_STATUS_0  0x0190  // Overtemp flags, temperature, measured RF power
-#define REG_PA_STATUS_1  0x0191  // Measured current, measured RF power quanta
-#define REG_PA_CONF_0    0x0192  // Target RF power for this PA
-#define REG_PA_CONF_1    0x0193  // PID mode control
-#define REG_PA_LIM       0x0197  // PA protection limits
-#define REG_PA_TIMEOUT   0x0198  // PA timeout compare and current values
+// Memory. Not writable in Standby.
+#define REG_MEMORY_STATUS 0x0080
+#define REG_MEMORY_SIZE 0x0081 // Packets
+#define REG_MEMORY_HLTH_0 0x0083
+#define REG_MEMORY_HLTH_1 0x0084
+#define REG_MEM_WR_CTRL 0x0090
+#define REG_MEM_WR_INDEX 0x0091 // Packet index
+#define REG_MEM_WR_LEN_0 0x0092 // Bytes, low word. 0 = until stop.
+#define REG_MEM_WR_LEN_1 0x0093 // Bytes, high word
+#define REG_MEM_WR_STAT 0x0094
+#define REG_MEM_WR_CNT_0 0x0095 // Bytes, low word
+#define REG_MEM_WR_CNT_1 0x0096 // Bytes, high word
+#define REG_MEM_WR_PKT_CNT 0x0097
+#define REG_MEM_WR_ERR 0x0098
+#define REG_MEM_RD_CTRL 0x00A0
+#define REG_MEM_RD_INDEX 0x00A1 // Packet index
+#define REG_MEM_RD_LEN 0x00A2   // Packets. 0 = until stop or EOF.
+#define REG_MEM_RD_STAT 0x00A3
+#define REG_MEM_RD_CNT 0x00A4
+#define REG_MEM_RD_ERR 0x00A5
+#define REG_MEM_RT_CTRL 0x00B0
+#define REG_MEM_RT_QUEUE 0x00B1
+#define REG_MEM_RT_STAT 0x00B2
+#define REG_MEM_RT_CNT 0x00B4
+#define REG_MEM_RT_ERR 0x00B5
 
-// Operating Mode enums (listed USM pg 21-22)
+// Data routing
+#define REG_TF_CTRL 0x0110
+#define REG_TF_BUF_CNT 0x0111
+#define REG_TF_CONF 0x0112
+#define REG_TF_DATA_CNT 0x0113
+#define REG_TF_OID_CNT 0x0114
+#define REG_TF_STREAM_CNT 0x0115
+#define REG_CROSSBAR 0x0120
+#define REG_TP_GEN_CTRL 0x0121
+#define REG_TP_GEN_CNT 0x0122
+#define REG_TP_GEN_RATE 0x0123
+#define REG_TP_CHK_CTRL 0x0124
+#define REG_TP_CHK_STAT 0x0125
+#define REG_TP_CHK_SYNC_CNT 0x0126
+#define REG_TP_CHK_UNSYNC_CNT 0x0127
+#define REG_TP_CHK_RATE 0x0128
+#define REG_TP_CHK_LST_CNT 0x0129
+
+// PA
+#define REG_PA_STATUS_0 0x0190
+#define REG_PA_STATUS_1 0x0191
+#define REG_PA_CONF_0 0x0192 // Target power, dBm
+#define REG_PA_CONF_1 0x0193
+#define REG_PA_LIM 0x0197
+#define REG_PA_TIMEOUT 0x0198
+
+/* ---------- Fields ---------- */
+
+// Modes (USM 9.2.5.1, table 9-10)
 typedef enum {
-    STXG2_MODE_STANDBY      = 0x00,
+    STXG2_MODE_STANDBY = 0x00,
     STXG2_MODE_FLASH_ACCESS = 0x01,
-    STXG2_MODE_CONFIG       = 0x02,
-    STXG2_MODE_TRANSMIT     = 0x03,
+    STXG2_MODE_CONFIG = 0x02,
+    STXG2_MODE_TRANSMIT = 0x03,
 } stxg2_mode_t;
 
-// Crossbar input codes (tables 9 to 15)
-#define XBAR_IN_TPGEN 0x1
-#define XBAR_IN_HS0   0x2
-#define XBAR_IN_HS1   0x3
-#define XBAR_IN_SPI   0x4
-#define XBAR_IN_MEMRD 0x5
-// Crossbar output bit offsets (register 0x0120)
-#define XBAR_OUT_TPCHK_SHIFT  0
-#define XBAR_OUT_FRAMER_SHIFT 4
-#define XBAR_OUT_MEMWR_SHIFT  8
-#define XBAR_OUT_HS0_SHIFT    12
-#define XBAR_OUT_HS1_SHIFT    16
+// MODE (USM 9.2.5.1)
+#define MODE_MODE_MSK 0xFFu
+#define MODE_BUSY (1u << 8)
+#define MODE_ERROR (1u << 9)
 
-// Mem_Wr_Ctrl and Mem_Rd_Ctrl bits
+// I2C_STAT (USM 9.2.2.1)
+#define I2C_STATUS_INVALID_ADDR (1u << 0)
+#define I2C_STATUS_OUT_OF_RANGE (1u << 1)
+#define I2C_STATUS_NOT_WRITEABLE (1u << 2)
+#define I2C_STATUS_INTERNAL_ERR (1u << 3)
+#define I2C_STATUS_BUF_OVERFLOW (1u << 4)
+#define I2C_STATUS_MSK 0x1Fu
+
+// SPI_CTRL (USM 9.2.3.7). Mode applies on enable.
+#define SPI_CTRL_ENABLE (1u << 0)
+#define SPI_CTRL_MODE_POS 1u
+#define SPI_CTRL_MODE(m) (((uint32_t)(m) & 0x3u) << SPI_CTRL_MODE_POS)
+#define SPI_CTRL_READY_POLARITY (1u << 3)
+#define STXG2_SPI_MODE 0u // CPOL 0, CPHA 0
+
+// SPI_STAT (USM 9.2.3.8). Ready = below half full. Count = words in buffer.
+#define SPI_STATUS_FULL (1u << 0)
+#define SPI_STATUS_OVERFLOW (1u << 1)
+#define SPI_STATUS_READY (1u << 2)
+#define SPI_STATUS_RX_RECVD (1u << 3)
+#define SPI_STATUS_COUNT_POS 16u
+#define SPI_STATUS_COUNT_MSK (0xFFFFu << SPI_STATUS_COUNT_POS)
+#define SPI_STATUS_COUNT(reg) (((reg) & SPI_STATUS_COUNT_MSK) >> SPI_STATUS_COUNT_POS)
+
+#define STXG2_SPI_BUF_WORDS 1024u      // Radio SPI buffer
+#define STXG2_SPI_CHUNK_BYTES 2048u    // Half the radio buffer
+#define STXG2_PACKET_DATA_BYTES 16380u // Payload per memory packet (USM 9.2.7.5)
+
+// RF_STAT (USM 9.2.4.2)
+#define RF_STATUS_RF_SYNTH_LOCK (1u << 0)
+#define RF_STATUS_IF_SYNTH_LOCK (1u << 1)
+#define RF_STATUS_LOCKED (RF_STATUS_RF_SYNTH_LOCK | RF_STATUS_IF_SYNTH_LOCK)
+
+// MEMORY_STAT (USM 9.2.7.1, table 9-18)
+#define MEMORY_STATUS_STATE(reg) ((reg) & 0xFFu)
+#define MEMORY_STATE_OFF 0u
+#define MEMORY_STATE_IDLE 1u
+#define MEMORY_STATE_WRITE_BUSY 2u
+#define MEMORY_STATE_READ_BUSY 3u
+#define MEMORY_STATE_RT_BUSY 4u
+
+// MEM_WR_CTRL, MEM_RD_CTRL (USM 9.2.7.4, 9.2.7.11)
 #define MEM_CTRL_START (1u << 0)
-#define MEM_CTRL_STOP  (1u << 1)
+#define MEM_CTRL_STOP (1u << 1)
 #define MEM_CTRL_ABORT (1u << 2)
+#define MEM_RD_CTRL_EOF_STOP (1u << 3)
 
-// SPI Impl defns
-#define SBAND_SPI_BUFFER_CAPACITY 4096 // bytes
+// MEM_WR_STAT, MEM_RD_STAT (USM 9.2.7.7, 9.2.7.14)
+#define MEM_STAT_ACTIVE (1u << 0)
+#define MEM_STAT_COMPLETE (1u << 1)
+#define MEM_STAT_ERROR (1u << 2)
+#define MEM_STAT_OOB (1u << 3)
+#define MEM_STAT_INVALID_INDEX (1u << 4)
 
+// MEM_RT_CTRL (USM 9.2.7.17)
+#define MEM_RT_CTRL_START (1u << 0)
+#define MEM_RT_CTRL_STOP (1u << 1)
+#define MEM_RT_CTRL_PRIORITY (1u << 2)
+#define MEM_RT_CTRL_CLEAR_QUEUE (1u << 3)
 
-/*
-    32                      16 15            4      3    2     1
-    +--------------------------------------------------------------+
-    |   Buffer_Count[15:0]  |   Reserved  | RxR | BRy | B0v | BF1 |
-    + ------------------------------------------------------------+
+// MEM_RT_QUEUE (USM 9.2.7.18)
+#define MEM_RT_QUEUE_INDEX_MSK 0x00FFFFFFu
+#define MEM_RT_QUEUE_LEN_POS 24u
 
-    BF1: Buffer Full                 1 = overflow
-    B0v: Buffer overflow             1 = data lost, err
-    BRy Buffer Ready                 1 = ready, 0 = not ready
-    RxR                              data received
-*/
+// DVBS2_CONF (USM 9.2.5.5)
+#define DVBS2_CONF_MODCOD_MSK 0x1Fu
+#define DVBS2_MODCOD_MAX 28u
 
-// Masks and bitfields
-#define SPI_STATUS_BF1_POS 0u
-#define SPI_STATUS_B0v_POS 1u
-#define SPI_STATUS_BRy_POS 2u
-#define SPI_STATUS_RxR_POS 3u
+// TF_CTRL (USM 9.2.8.1). The radio sets Enable on entering Config. The driver clears it.
+#define TF_CTRL_ENABLE (1u << 0)
+#define TF_CTRL_BUF_FLUSH (1u << 4) // Unused. Framer only.
 
-#define SPI_STATUS_BF1 (1u << SPI_STATUS_BF1_POS)
-#define SPI_STATUS_B0v (1u << SPI_STATUS_B0v_POS)
-#define SPI_STATUS_BRy (1u << SPI_STATUS_BRy_POS)
-#define SPI_STATUS_RxR (1u << SPI_STATUS_RxR_POS)
+// Crossbar inputs (USM 9.2.8.7, table 9-22). 0 disconnects.
+#define XBAR_IN_NONE 0x0
+#define XBAR_IN_TPGEN 0x1
+#define XBAR_IN_HS0 0x2
+#define XBAR_IN_HS1 0x3
+#define XBAR_IN_SPI 0x4
+#define XBAR_IN_MEMRD 0x5
+// Crossbar output shifts
+#define XBAR_OUT_TPCHK_SHIFT 0
+#define XBAR_OUT_FRAMER_SHIFT 4
+#define XBAR_OUT_MEMWR_SHIFT 8
+#define XBAR_OUT_HS0_SHIFT 12
+#define XBAR_OUT_HS1_SHIFT 16
 
-#define SPI_STATUS_BUFCOUNT_POS 16u
-#define SPI_STATUS_COUNT_MSK (0xFFFFu << SPI_STATUS_BUFCOUNT_POS)
-#define SPI_STATUS_COUNT(reg)  (((reg) & SPI_STATUS_COUNT_MSK) >> SPI_STATUS_BUFCOUNT_POS)
+// RF limits (USM 9.1, 9.2.5.2, 9.2.5.3, 9.2.9.2)
+#define STXG2_FREQ_MIN_KHZ 2150000u
+#define STXG2_FREQ_MAX_KHZ 2290000u
+#define STXG2_SYM_RATE_MIN_KSPS 100u
+#define STXG2_SYM_RATE_MAX_KSPS 5000u
+#define STXG2_SYM_RATE_STEP_KSPS 100u
+#define STXG2_POWER_MIN_DBM 14u // Flatsat 14-20
+#define STXG2_POWER_MAX_DBM 33u // Flight 27-33
 
-// Driver functions
+/* ---------- Functions ---------- */
+
+// Setup, registers
 status_t stxg2_init(void);
 status_t stxg2_read_reg(uint16_t addr, uint32_t *value);
 status_t stxg2_write_reg(uint16_t addr, uint32_t value);
+status_t stxg2_check_i2c_status(void);
+
+// Control
 status_t stxg2_set_mode(stxg2_mode_t mode);
 status_t stxg2_configure_rf(uint32_t freq_khz, uint32_t sym_rate_ksps, uint8_t modcod, uint8_t power_dbm);
 status_t stxg2_route(uint8_t input_code, uint8_t output_shift);
+
+// Store: begin, store (repeat), end
 status_t stxg2_store_begin(uint32_t start_index);
-status_t stxg2_store_end(void);
+status_t stxg2_store(const uint8_t *data_buf, size_t sz);
+status_t stxg2_store_end(uint32_t *packets_written);
+
+// Downlink
 status_t stxg2_downlink_begin(uint32_t start_index, uint32_t num_packets);
+status_t stxg2_downlink_end(void);
 status_t stxg2_request_retransmit(uint32_t packet_id, uint8_t count);
+
+// Telemetry
 status_t stxg2_get_board_status(uint32_t *status);
+status_t stxg2_get_rf_status(uint32_t *status);
 
 #endif
