@@ -19,8 +19,8 @@
 #include "logging.h"
 #include "tests/test.h"
 
-#define STXG2_TEST_PATTERN_TPGEN 0
-#define STXG2_TEST_PATTERN_CALLSIGN 1
+#define STXG2_TEST_PATTERN_TPGEN 1
+#define STXG2_TEST_PATTERN_CALLSIGN 0
 
 // Pick the data to transmit
 #ifndef STXG2_TEST_PATTERN

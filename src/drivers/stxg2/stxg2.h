@@ -26,10 +26,10 @@
     #define SBAND_CS GPIO(GPIO_PORTB, 19) // Active low
 #endif
 #ifndef SBAND_EN
-    #define SBAND_EN GPIO(GPIO_PORTC, 25) // High = on (ICD 2.2)
+    #define SBAND_EN GPIO(GPIO_PORTC, 23) // High = on (ICD 2.2)
 #endif
 #ifndef SBAND_RST
-    #define SBAND_RST GPIO(GPIO_PORTC, 26) // Low = reset (ICD 2.2)
+    #define SBAND_RST GPIO(GPIO_PORTB, 20) // Low = reset (ICD 2.2)
 #endif
 
 #define SBAND_CS_LOW() gpio_set_pin_level(SBAND_CS, false)

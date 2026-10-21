@@ -837,21 +837,21 @@ void system_init(void)
 
 	// GPIO on PB19
 
-	gpio_set_pin_level(BURN,
+	gpio_set_pin_level(SBAND_CS,
 	                   // <y> Initial level
 	                   // <id> pad_initial_level
 	                   // <false"> Low
 	                   // <true"> High
-	                   false);
+	                   true);
 
 	// Set pin direction to output
-	gpio_set_pin_direction(BURN, GPIO_DIRECTION_OUT);
+	gpio_set_pin_direction(SBAND_CS, GPIO_DIRECTION_OUT);
 
-	gpio_set_pin_function(BURN, GPIO_PIN_FUNCTION_OFF);
+	gpio_set_pin_function(SBAND_CS, GPIO_PIN_FUNCTION_OFF);
 
 	// GPIO on PB20
 
-	gpio_set_pin_level(EPS_RST,
+	gpio_set_pin_level(SBAND_RST,
 	                   // <y> Initial level
 	                   // <id> pad_initial_level
 	                   // <false"> Low
@@ -859,9 +859,9 @@ void system_init(void)
 	                   false);
 
 	// Set pin direction to output
-	gpio_set_pin_direction(EPS_RST, GPIO_DIRECTION_OUT);
+	gpio_set_pin_direction(SBAND_RST, GPIO_DIRECTION_OUT);
 
-	gpio_set_pin_function(EPS_RST, GPIO_PIN_FUNCTION_OFF);
+	gpio_set_pin_function(SBAND_RST, GPIO_PIN_FUNCTION_OFF);
 
 	// GPIO on PB21
 
@@ -919,6 +919,20 @@ void system_init(void)
 	                       GPIO_PULL_OFF);
 
 	gpio_set_pin_function(EPS_IRQ, GPIO_PIN_FUNCTION_OFF);
+
+	// GPIO on PB29
+
+	gpio_set_pin_level(BURN,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   false);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(BURN, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(BURN, GPIO_PIN_FUNCTION_OFF);
 
 	// GPIO on PB30
 
@@ -1117,9 +1131,38 @@ void system_init(void)
 
 	gpio_set_pin_function(GYRO_CS, GPIO_PIN_FUNCTION_OFF);
 
+	// GPIO on PC21
+
+	gpio_set_pin_level(GYRO_RST,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   true);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(GYRO_RST, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(GYRO_RST, GPIO_PIN_FUNCTION_OFF);
+
+	// GPIO on PC22
+
+	// Set pin direction to input
+	gpio_set_pin_direction(GYRO_DRDY, GPIO_DIRECTION_IN);
+
+	gpio_set_pin_pull_mode(GYRO_DRDY,
+	                       // <y> Pull configuration
+	                       // <id> pad_pull_config
+	                       // <GPIO_PULL_OFF"> Off
+	                       // <GPIO_PULL_UP"> Pull-up
+	                       // <GPIO_PULL_DOWN"> Pull-down
+	                       GPIO_PULL_OFF);
+
+	gpio_set_pin_function(GYRO_DRDY, GPIO_PIN_FUNCTION_OFF);
+
 	// GPIO on PC23
 
-	gpio_set_pin_level(HEATER_CTRL_1,
+	gpio_set_pin_level(SBAND_EN,
 	                   // <y> Initial level
 	                   // <id> pad_initial_level
 	                   // <false"> Low
@@ -1127,9 +1170,9 @@ void system_init(void)
 	                   false);
 
 	// Set pin direction to output
-	gpio_set_pin_direction(HEATER_CTRL_1, GPIO_DIRECTION_OUT);
+	gpio_set_pin_direction(SBAND_EN, GPIO_DIRECTION_OUT);
 
-	gpio_set_pin_function(HEATER_CTRL_1, GPIO_PIN_FUNCTION_OFF);
+	gpio_set_pin_function(SBAND_EN, GPIO_PIN_FUNCTION_OFF);
 
 	// GPIO on PC24
 
