@@ -54,7 +54,7 @@ int main(void) {
 #endif
 
 #if FG_MUX_ONLY_TEST
-    info("[+] Mux-only test: TCA9546A addr=0x%02x, SDA=PD09, SCL=PD08\n", FG_MUX_ADDR);
+    info("[+] Mux-only test: TCA9546A addr=0x%02x, %s\n", FG_MUX_ADDR, FG_I2C_DESCRIPTION);
     info("[+] No fuel-gauge reads or H-bridge exercise; downstream switch continuity is not tested\n");
     unsigned passes = 0, failures = 0;
     while (true) {

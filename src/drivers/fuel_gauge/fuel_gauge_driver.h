@@ -24,8 +24,18 @@
 #include "logging.h"
 #include "string.h"
 
+#ifndef FG_SERCOM7_BENCH
+#define FG_SERCOM7_BENCH 0
+#endif
+
+#if FG_SERCOM7_BENCH
+#define FG_I2C_DESCRIPTION "SERCOM7 SDA=PD08 SCL=PD09 (BENCH ONLY; UHF SPI unavailable)"
+#else
+#define FG_I2C_DESCRIPTION "SERCOM6 SDA=PD09 SCL=PD08"
+#endif
+
 // ---- Bus / device addresses (7-bit) ----
-#define FG_I2C          I2C_CAMERA // shared bus; SERCOM6 on this branch
+#define FG_I2C          I2C_CAMERA // Rebound to SERCOM7 only in the explicit bench build.
 #define FG_MUX_ADDR     0x70       // TCA9546A (A2:A0 = 000)
 #define FG_MAX_ADDR_LOW 0x36       // MAX17205 m5 page: regs 0x000-0x0FF
 #define FG_MAX_ADDR_HIGH 0x0B      // MAX17205 SBS/NV page: regs 0x100-0x1FF

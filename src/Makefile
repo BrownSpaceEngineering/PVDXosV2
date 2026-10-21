@@ -116,6 +116,12 @@ CFLAGS += -fsigned-char # Ensure that char is signed as your average c programme
 # Disable warnings for unused parameters due to ASF functions having unused parameters
 CFLAGS += -Wno-unused-parameter #Because some ASF functions have unused parameters, supress this warning
 
+# Explicit, non-production workaround for swapped mux SDA/SCL PCB traces.
+ifeq ($(FG_SERCOM7_BENCH),1)
+CFLAGS += -DFG_SERCOM7_BENCH=1 -DFG_MUX_ONLY_TEST=1
+CFLAGS += -include ../../src/drivers/fuel_gauge/fuel_gauge_bench_config.h
+endif
+
 # Build-specific flags
 CFLAGS_DEV := -DDEVBUILD
 CFLAGS_UNITTEST := -DUNITTEST -DDEVBUILD -Wno-unused-variable 

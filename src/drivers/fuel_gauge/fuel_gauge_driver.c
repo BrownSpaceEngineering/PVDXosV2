@@ -20,6 +20,47 @@
 
 // Largest downstream payload is a 2-byte register, so no large buffers needed.
 
+#if FG_SERCOM7_BENCH
+static status_t fg_prepare_sercom7_bench(void) {
+    static bool prepared = false;
+    if (prepared) {
+        return SUCCESS;
+    }
+
+    // Startup configured SERCOM7 for UHF SPI and enabled its clocks. Relinquish it
+    // before changing mode; disconnect the UHF pads so they cannot mirror I2C.
+    spi_m_sync_deinit(&SPI_UHF);
+    const uint8_t uhf_pins[] = {UHF_MOSI, UHF_SCK, UHF_MISO};
+    for (unsigned i = 0; i < sizeof(uhf_pins) / sizeof(uhf_pins[0]); i++) {
+        gpio_set_pin_direction(uhf_pins[i], GPIO_DIRECTION_OFF);
+        gpio_set_pin_function(uhf_pins[i], GPIO_PIN_FUNCTION_OFF);
+    }
+
+    int32_t rc = i2c_m_sync_deinit(&FG_I2C);
+    if (rc != 0) {
+        warning("mux-only: SERCOM6 deinit failed rc=%ld\n", (long)rc);
+        return ERROR_I2C_FAILED;
+    }
+
+    // The PCB swaps these traces: PD08 is physically mux SDA, PD09 is mux SCL.
+    gpio_set_pin_direction(CAMERA_SCL, GPIO_DIRECTION_OFF);
+    gpio_set_pin_direction(CAMERA_SDA, GPIO_DIRECTION_OFF);
+    gpio_set_pin_pull_mode(CAMERA_SCL, GPIO_PULL_OFF);
+    gpio_set_pin_pull_mode(CAMERA_SDA, GPIO_PULL_OFF);
+    gpio_set_pin_function(CAMERA_SCL, PINMUX_PD08C_SERCOM7_PAD0);
+    gpio_set_pin_function(CAMERA_SDA, PINMUX_PD09C_SERCOM7_PAD1);
+
+    rc = i2c_m_sync_init(&FG_I2C, SERCOM7);
+    if (rc != 0) {
+        warning("mux-only: SERCOM7 I2C init failed rc=%ld\n", (long)rc);
+        return ERROR_I2C_FAILED;
+    }
+    prepared = true;
+    info("mux-only: %s\n", FG_I2C_DESCRIPTION);
+    return SUCCESS;
+}
+#endif
+
 // ---------------------- TCA9546A mux ----------------------
 
 #if FG_USE_MUX || FG_MUX_ONLY_TEST
@@ -144,9 +185,18 @@ static inline float fg_conv_current(uint16_t raw) {
 
 #if FG_MUX_ONLY_TEST
 status_t fg_mux_self_test(void) {
+#if FG_SERCOM7_BENCH
+    if (fg_prepare_sercom7_bench() != SUCCESS) {
+        return ERROR_I2C_FAILED;
+    }
+#endif
     fg_mux_release_reset();
     info("mux-only: /RESET=PB20 (EPS_RST) driven high\n");
-    i2c_m_sync_enable(&FG_I2C);
+    int32_t enable_rc = i2c_m_sync_enable(&FG_I2C);
+    if (enable_rc != 0) {
+        warning("mux-only: I2C enable failed rc=%ld %s\n", (long)enable_rc, fg_i2c_err_str(enable_rc));
+        return ERROR_I2C_FAILED;
+    }
     const uint8_t controls[] = {FG_MUX_CH_NONE, FG_MUX_CH(0), FG_MUX_CH(1), FG_MUX_CH(2), FG_MUX_CH(3)};
     status_t result = SUCCESS;
 
