@@ -15,6 +15,7 @@
 #include "main.h"
 
 #include "magnetorquer_driver.h"
+#include "fuel_gauge_driver.h"
 #include "globals.h"
 #include "logging.h"
 #include "tests/test.h"
@@ -49,6 +50,23 @@ int main(void) {
     tests_run();
     while (true) {
         delay_ms(1000);
+    }
+#endif
+
+#if FG_MUX_ONLY_TEST
+    info("[+] Mux-only test: TCA9546A addr=0x%02x, SDA=PD09, SCL=PD08\n", FG_MUX_ADDR);
+    info("[+] No fuel-gauge reads or H-bridge exercise; downstream switch continuity is not tested\n");
+    unsigned passes = 0, failures = 0;
+    while (true) {
+        status_t result = fg_mux_self_test();
+        if (result == SUCCESS) {
+            passes++;
+            info("mux-only: cycle PASS (passes=%u failures=%u)\n", passes, failures);
+        } else {
+            failures++;
+            warning("mux-only: cycle FAIL status=%d (passes=%u failures=%u)\n", result, passes, failures);
+        }
+        delay_ms(5000);
     }
 #endif
 

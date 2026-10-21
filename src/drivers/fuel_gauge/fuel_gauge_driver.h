@@ -34,6 +34,11 @@
 #define FG_MUX_CH_NONE 0x00
 #define FG_MUX_CH(n)   (1u << (n)) // channel 0..3
 
+// Build with -DFG_MUX_ONLY_TEST=1 to test only the mux control register, without gauge reads.
+#ifndef FG_MUX_ONLY_TEST
+#define FG_MUX_ONLY_TEST 0
+#endif
+
 // Bench default: one directly connected gauge. Set to 1 for the four-channel mux board.
 #ifndef FG_USE_MUX
 #define FG_USE_MUX 0
@@ -77,6 +82,11 @@ typedef struct {
     float temp_c;       // temperature, degC
     bool valid;         // false if any telemetry register could not be read
 } fg_reading_t;
+
+#if FG_MUX_ONLY_TEST
+// Verifies all-off and each single-channel control value, then restores all-off.
+status_t fg_mux_self_test(void);
+#endif
 
 status_t init_fuel_gauges(void);
 status_t fg_read_pack(uint8_t channel, fg_reading_t *out);

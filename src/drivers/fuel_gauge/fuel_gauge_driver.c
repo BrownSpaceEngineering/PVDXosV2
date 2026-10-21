@@ -22,7 +22,15 @@
 
 // ---------------------- TCA9546A mux ----------------------
 
-#if FG_USE_MUX
+#if FG_USE_MUX || FG_MUX_ONLY_TEST
+static void fg_mux_release_reset(void) {
+    // Generated startup drives EPS_RST/PB20 low; the mux cannot ACK until released.
+    gpio_set_pin_level(EPS_RST, true);
+    gpio_set_pin_function(EPS_RST, GPIO_PIN_FUNCTION_OFF);
+    gpio_set_pin_direction(EPS_RST, GPIO_DIRECTION_OUT);
+    delay_ms(1);
+}
+
 // The mux has no internal register: a transaction is just a 1-byte control write (or
 // a 1-byte read of the current control byte). Use a raw transfer rather than
 // cmd_write, which would prepend a register-address byte.
@@ -134,6 +142,69 @@ static inline float fg_conv_current(uint16_t raw) {
 
 // ---------------------- Public API ----------------------
 
+#if FG_MUX_ONLY_TEST
+status_t fg_mux_self_test(void) {
+    fg_mux_release_reset();
+    info("mux-only: /RESET=PB20 (EPS_RST) driven high\n");
+    i2c_m_sync_enable(&FG_I2C);
+    const uint8_t controls[] = {FG_MUX_CH_NONE, FG_MUX_CH(0), FG_MUX_CH(1), FG_MUX_CH(2), FG_MUX_CH(3)};
+    status_t result = SUCCESS;
+
+    for (unsigned i = 0; i < sizeof(controls) / sizeof(controls[0]); i++) {
+        uint8_t want = controls[i];
+        int32_t rc = fg_mux_raw_write(want);
+        if (rc != 0) {
+            warning("mux-only: addr=0x%02x write=0x%02x failed rc=%ld %s\n",
+                    FG_MUX_ADDR, want, (long)rc, fg_i2c_err_str(rc));
+            // Read-only discovery distinguishes an unexpected address strap from no response.
+            unsigned found = 0;
+            for (uint8_t addr = 0x70; addr <= 0x77; addr++) {
+                uint8_t control = 0xFF;
+                struct _i2c_m_msg msg = {.addr = addr, .flags = I2C_M_STOP | I2C_M_RD, .len = 1, .buffer = &control};
+                if (i2c_m_sync_transfer(&FG_I2C, &msg) == 0) {
+                    info("mux-only: discovery ACK addr=0x%02x control=0x%02x\n", addr, control);
+                    found++;
+                }
+            }
+            info("mux-only: read-only discovery 0x70..0x77: %u responding address(es)\n", found);
+            result = ERROR_I2C_FAILED;
+            break;
+        }
+
+        uint8_t got = 0xFF;
+        rc = fg_mux_raw_read(&got);
+        if (rc != 0) {
+            warning("mux-only: addr=0x%02x read failed rc=%ld %s\n", FG_MUX_ADDR, (long)rc, fg_i2c_err_str(rc));
+            result = ERROR_I2C_FAILED;
+            break;
+        }
+        if (got != want) {
+            warning("mux-only: write=0x%02x read=0x%02x MISMATCH\n", want, got);
+            result = ERROR_SANITY_CHECK_FAILED;
+            break;
+        }
+        info("mux-only: addr=0x%02x write=0x%02x read=0x%02x PASS\n", FG_MUX_ADDR, want, got);
+    }
+
+    // Attempt cleanup even after failure; never claim isolation without verifying it.
+    int32_t rc = fg_mux_raw_write(FG_MUX_CH_NONE);
+    uint8_t got = 0xFF;
+    if (rc == 0) {
+        rc = fg_mux_raw_read(&got);
+    }
+    if (rc != 0) {
+        warning("mux-only: restore all-off failed rc=%ld %s\n", (long)rc, fg_i2c_err_str(rc));
+        return ERROR_I2C_FAILED;
+    }
+    if (got != FG_MUX_CH_NONE) {
+        warning("mux-only: restore all-off read=0x%02x MISMATCH\n", got);
+        return ERROR_SANITY_CHECK_FAILED;
+    }
+    info("mux-only: restore write=0x00 read=0x00 PASS (all channels off)\n");
+    return result;
+}
+#endif
+
 /**
  * \brief Brings up the ALRT input and probes the configured gauges.
  *
@@ -144,6 +215,9 @@ static inline float fg_conv_current(uint16_t raw) {
  * the others. No NV is written in this pass.
  */
 status_t init_fuel_gauges(void) {
+#if FG_USE_MUX
+    fg_mux_release_reset();
+#endif
     // Enable the SERCOM6 I2C peripheral. atmel_start_init() only *inits* it (leaves it
     // disabled), so it must be enabled before any transfer (cf. the magnetometer driver's
     // spi_m_sync_enable).
