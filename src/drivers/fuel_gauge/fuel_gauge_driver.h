@@ -13,7 +13,8 @@
  * Bus: the mux + gauges live on the I2C_CAMERA descriptor (SERCOM6 on this branch),
  * shared with the Arducam (0x30), an INA226 (0x40) and an MCP23017 (0x20). The MAX
  * addresses (0x36/0x0B) are only visible while a mux channel is open; this driver
- * closes all channels when done so nothing downstream shadows the bus. See the plan
+ * closes all channels when done so nothing downstream shadows the bus. Every access holds
+ * i2c_camera_bus_mutex (mutexes.h), which the Arducam driver also takes. See the plan
  * (I2C address map) for the full collision analysis.
  */
 
@@ -65,6 +66,7 @@ typedef struct {
     float pack_voltage; // total pack voltage, V
     float current_a;    // current, A (depends on FG_RSENSE_OHMS)
     float temp_c;       // temperature, degC
+    bool valid;         // false if the read failed; the other fields are then zero
 } fg_reading_t;
 
 status_t init_fuel_gauges(void);

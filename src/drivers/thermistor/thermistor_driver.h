@@ -49,6 +49,7 @@
 // ---- Heater control (bang-bang with hysteresis) ----
 #define HEATER_SETPOINT_C 5.0f // target temperature
 #define HEATER_HYST_C     1.0f // ON below (setpoint - hyst), OFF above (setpoint + hyst)
+// TODO: HEATER_SETPOINT_C and HEATER_HYST_C are not used yet; see heater_control_update().
 
 // Temporary threshold control on the ADC node voltage (higher voltage = colder on the
 // as-built divider). Heater turns ON when the controlling thermistor is above this.
@@ -67,10 +68,12 @@
 status_t init_thermistors(void);
 status_t therm_read_raw(uint8_t index, uint16_t *code);
 status_t therm_read_celsius(uint8_t index, float *temp_c);
-status_t therm_read_all(float temps[THERM_COUNT]);
+// Reads all thermistors once. codes[i] is 0 (electrically invalid) and temps[i] is 0 for a
+// thermistor that failed to read or is out of range.
+status_t therm_read_all(uint16_t codes[THERM_COUNT], float temps[THERM_COUNT]);
 
-// Reads all thermistors and updates both heater enable lines (coldest-of-pair, hysteresis).
-void heater_control_update(void);
+// Updates both heater enable lines (coldest-of-pair) from codes produced by therm_read_all().
+void heater_control_update(const uint16_t codes[THERM_COUNT]);
 // Last commanded state of a heater (0 or 1).
 bool heater_is_on(uint8_t heater);
 

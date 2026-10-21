@@ -12,11 +12,15 @@
  *
  * The ASF HAL functions (i2c_m_sync_cmd_read/cmd_write/transfer) return 0 on success
  * and a negative value on failure.
+ *
+ * The bus is shared with the Arducam, so every public function holds i2c_camera_bus_mutex
+ * for its whole mux-select -> read -> close sequence. The static helpers assume it is held.
  */
 
 #include "globals.h"
 
 #include "fuel_gauge_driver.h"
+#include "mutexes.h"
 
 // Largest downstream payload is a 2-byte register, so no large buffers needed.
 
@@ -75,8 +79,8 @@ static void fg_mux_disable(void) {
 // Maps an ASF I2C return code (hal_i2c_m_sync.h) to a short description, so a failed
 // transfer says *why* instead of collapsing to a generic error. The key distinction:
 // NACK = nobody acknowledged the address (chip silent/absent), vs BUS = an electrical
-// fault on the lines.
-static const char *fg_i2c_err_str(int32_t rc) {
+// fault on the lines. Marked unused because warning() compiles out in RELEASE builds.
+__attribute__((unused)) static const char *fg_i2c_err_str(int32_t rc) {
     switch (rc) {
         case I2C_OK: return "OK";
         case I2C_ACK: return "ACK";
@@ -141,6 +145,7 @@ status_t init_fuel_gauges(void) {
     // Enable the SERCOM6 I2C peripheral. atmel_start_init() only *inits* it (leaves it
     // disabled), so it must be enabled before any transfer (cf. the magnetometer driver's
     // spi_m_sync_enable).
+    lock_mutex(i2c_camera_bus_mutex);
     i2c_m_sync_enable(&FG_I2C);
 
     // ALRT is a shared active-low open-drain line: input with a pull-up.
@@ -149,10 +154,10 @@ status_t init_fuel_gauges(void) {
     gpio_set_pin_pull_mode(EPS_IRQ, GPIO_PULL_UP);
 
     for (uint8_t ch = 0; ch < FG_NUM_PACKS; ch++) {
-        // if (fg_mux_select(ch) != SUCCESS) {
-        //     warning("fuel_gauge: gauge %u unreachable (mux select failed)\n", ch + 1);
-        //     continue;
-        // }
+        if (fg_mux_select(ch) != SUCCESS) {
+            warning("fuel_gauge: gauge %u unreachable (mux select failed)\n", ch + 1);
+            continue;
+        }
 
         uint16_t status = 0, packcfg = 0, npackcfg = 0, designcap = 0, ndesigncap = 0;
         status_t rs = SUCCESS, rp = SUCCESS, rn = SUCCESS, rd = SUCCESS, rnd = SUCCESS;
@@ -176,19 +181,14 @@ status_t init_fuel_gauges(void) {
     }
 
     fg_mux_disable();
+    unlock_mutex(i2c_camera_bus_mutex);
     return SUCCESS;
 }
 
-/**
- * \brief Reads SOC / pack voltage / current / temperature from one gauge.
- * \note Leaves the mux channel open; callers that are done should close it (fg_read_all
- *       does). The caller owns `out`.
- */
-status_t fg_read_pack(uint8_t channel, fg_reading_t *out) {
-    if (out == NULL) {
-        return ERROR_BAD_TARGET;
-    }
-
+// Reads one gauge into `out` and sets out->valid. Leaves the mux channel open; the caller
+// must hold the bus mutex and close the mux when done.
+static status_t fg_read_pack_unlocked(uint8_t channel, fg_reading_t *out) {
+    out->valid = false;
     ret_err_status(fg_mux_select(channel), "fuel_gauge: mux select failed in read_pack");
 
     uint16_t soc = 0, batt = 0, current = 0, temp = 0;
@@ -201,27 +201,50 @@ status_t fg_read_pack(uint8_t channel, fg_reading_t *out) {
     out->pack_voltage = fg_conv_batt(batt);
     out->current_a = fg_conv_current(current);
     out->temp_c = fg_conv_temp(temp);
+    out->valid = true;
     return SUCCESS;
 }
 
 /**
- * \brief Reads all four packs. A failed pack is logged and its entry left zeroed.
- *        Closes the mux when done.
+ * \brief Reads SOC / pack voltage / current / temperature from one gauge, then closes the mux.
+ *        The caller owns `out`; out->valid says whether the reading can be used.
+ */
+status_t fg_read_pack(uint8_t channel, fg_reading_t *out) {
+    if (out == NULL) {
+        return ERROR_BAD_TARGET;
+    }
+
+    lock_mutex(i2c_camera_bus_mutex);
+    status_t rc = fg_read_pack_unlocked(channel, out);
+    fg_mux_disable();
+    unlock_mutex(i2c_camera_bus_mutex);
+    return rc;
+}
+
+/**
+ * \brief Reads all four packs. A failed pack is logged and its entry left zeroed with
+ *        valid = false. Closes the mux when done.
+ * \return SUCCESS only if every pack was read; otherwise the error from the last pack that failed.
  */
 status_t fg_read_all(fg_reading_t out[FG_NUM_PACKS]) {
     if (out == NULL) {
         return ERROR_BAD_TARGET;
     }
 
+    status_t worst = SUCCESS;
+    lock_mutex(i2c_camera_bus_mutex);
     for (uint8_t ch = 0; ch < FG_NUM_PACKS; ch++) {
         memset(&out[ch], 0, sizeof(out[ch]));
-        if (fg_read_pack(ch, &out[ch]) != SUCCESS) {
+        status_t rc = fg_read_pack_unlocked(ch, &out[ch]);
+        if (rc != SUCCESS) {
             warning("fuel_gauge: read of pack %u failed\n", ch + 1);
+            worst = rc;
         }
     }
 
     fg_mux_disable();
-    return SUCCESS;
+    unlock_mutex(i2c_camera_bus_mutex);
+    return worst;
 }
 
 /**
@@ -233,19 +256,22 @@ status_t fg_read_raw(uint8_t channel, uint16_t reg, uint16_t *out) {
         return ERROR_BAD_TARGET;
     }
 
+    lock_mutex(i2c_camera_bus_mutex);
     status_t rc = fg_mux_select(channel);
-    if (rc != SUCCESS) {
-        return rc;
+    if (rc == SUCCESS) {
+        rc = fg_read_reg16(reg, out);
     }
-    rc = fg_read_reg16(reg, out);
     fg_mux_disable();
+    unlock_mutex(i2c_camera_bus_mutex);
     return rc;
 }
 
 // ---------------------- Bring-up diagnostic ----------------------
 
 void fg_i2c_scan(void) {
+    lock_mutex(i2c_camera_bus_mutex);
     i2c_m_sync_enable(&FG_I2C);
+    unlock_mutex(i2c_camera_bus_mutex);
     info("fuel_gauge: I2C scan (SERCOM6)...\n");
 
     uint8_t found = 0;
@@ -258,7 +284,10 @@ void fg_i2c_scan(void) {
         // iff the address was ACKed.
         uint8_t reg = 0x00;
         struct _i2c_m_msg msg = {.addr = addr, .flags = I2C_M_STOP, .len = 1, .buffer = &reg};
-        if (i2c_m_sync_transfer(&FG_I2C, &msg) == 0) {
+        lock_mutex(i2c_camera_bus_mutex);
+        int32_t rc = i2c_m_sync_transfer(&FG_I2C, &msg);
+        unlock_mutex(i2c_camera_bus_mutex);
+        if (rc == 0) {
             info("fuel_gauge: ACK at 0x%02x\n", addr);
             found++;
         }
@@ -279,6 +308,7 @@ bool fg_alrt_asserted(void) {
  *        tripped gauge(s) can be identified. Closes the mux when done.
  */
 void fg_scan_alerts(void) {
+    lock_mutex(i2c_camera_bus_mutex);
     for (uint8_t ch = 0; ch < FG_NUM_PACKS; ch++) {
         if (fg_mux_select(ch) != SUCCESS) {
             continue;
@@ -290,4 +320,5 @@ void fg_scan_alerts(void) {
         info("fuel_gauge: ALRT scan gauge %u Status=0x%04x\n", ch + 1, status);
     }
     fg_mux_disable();
+    unlock_mutex(i2c_camera_bus_mutex);
 }

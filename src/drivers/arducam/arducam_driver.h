@@ -41,6 +41,7 @@ struct sensor_reg {
 #define ARDUCAM_SPI_RX_BUF_SIZE 0x1000
 #define ARDUCAM_SPI_TX_BUF_SIZE 0x40
 #define OV2640_MAX_FIFO_SIZE	0x5FFFF
+#define ARDUCAM_CAPTURE_TIMEOUT_MS 2000 // well under the task's watchdog timeout
 
 // SEGGER RTT up-channel used to stream captured images (configured by the arducam task).
 #define CAMERA_RTT_OUTPUT_CHANNEL   2
@@ -61,9 +62,9 @@ uint32_t arducam_i2c_write(uint8_t addr, uint8_t *data, uint16_t size);
 uint32_t arducam_i2c_multi_write(const struct sensor_reg reglist[]);
 uint32_t arducam_i2c_read(uint8_t addr, uint8_t *readBuf, uint16_t size);
 int32_t arducam_spi_write(uint8_t addr, uint8_t data);
-int8_t arducam_spi_read(uint8_t addr);
-void capture(void);
-void capture_rtt(void);
+uint8_t arducam_spi_read(uint8_t addr);
+status_t capture(void);
+status_t capture_rtt(void);
 
 #endif // ARDUCAM_DRIVER_H
 

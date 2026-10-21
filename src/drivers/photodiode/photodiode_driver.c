@@ -68,6 +68,9 @@ status_t photodiode_read(photodiode_data_t *const data) {
 
     debug("photodiode: Reading photodiode values\n");
 
+    // TODO: read_photodiodes() is still a stub that doesn't fill raw_values, so this copies uninitialized stack
+    // data and marks it valid. in_sun()/update_sun_vector() then act on garbage. Until the ADC read is implemented,
+    // the stub should return an error (or this should set valid = false).
     // Read raw ADC values
     uint16_t raw_values[PHOTODIODE_COUNT];
     status_t result = read_photodiodes(raw_values);

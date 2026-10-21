@@ -10,6 +10,7 @@
 #include "arducam_driver.h"
 #include <string.h> // For memcpy
 #include "arducam_registers.h"
+#include "mutexes.h"
 #include "task_list.h"
 #include "watchdog_task.h"
 
@@ -31,10 +32,12 @@ struct io_descriptor *arducam_spi_io;
 status_t init_arducam_hardware(void) {
     // Configure ASF I2C and SPI drivers for this device
     // Baud rates MUST match Atmel-Start config baudrates
+    // I2C_CAMERA is shared with the fuel gauges, so the slave address is set per transaction (see arducam_i2c_write/read)
+    lock_mutex(i2c_camera_bus_mutex);
     i2c_m_sync_set_baudrate(&I2C_CAMERA, 0, 100000);
     i2c_m_sync_get_io_descriptor(&I2C_CAMERA, &arducam_i2c_io);
     i2c_m_sync_enable(&I2C_CAMERA);
-    i2c_m_sync_set_slaveaddr(&I2C_CAMERA, ARDUCAM_ADDR >> 1, I2C_M_SEVEN);
+    unlock_mutex(i2c_camera_bus_mutex);
 
     gpio_set_pin_direction(CAMERA_CS, GPIO_DIRECTION_OUT);
     gpio_set_pin_level(CAMERA_CS, 1);
@@ -61,6 +64,8 @@ status_t init_arducam_hardware(void) {
     uint32_t temp1 = arducam_i2c_read(OV2640_CHIPID_HIGH, &vid, 1);
     uint32_t temp2 = arducam_i2c_read(OV2640_CHIPID_LOW, &pid, 1);
     info("I2C read return values: temp1=%lu temp2=%lu", (unsigned long)temp1, (unsigned long)temp2);
+    (void)temp1; // only used by info(), which compiles out in RELEASE builds
+    (void)temp2;
     
     if (vid != 0x26 || (pid != 0x41 && pid != 0x42)) {
         warning("Unexpected OV2640 ID: vid=0x%02X pid=0x%02X", vid, pid);
@@ -97,7 +102,11 @@ uint32_t arducam_i2c_write(uint8_t addr, uint8_t *data, uint16_t size) {
     writeBuf[0] = addr;
     memcpy(writeBuf + 1, data, size);
     int32_t rv;
-    if ((rv = io_write(arducam_i2c_io, writeBuf, size + 1)) < 0) {
+    lock_mutex(i2c_camera_bus_mutex);
+    i2c_m_sync_set_slaveaddr(&I2C_CAMERA, ARDUCAM_ADDR >> 1, I2C_M_SEVEN);
+    rv = io_write(arducam_i2c_io, writeBuf, size + 1);
+    unlock_mutex(i2c_camera_bus_mutex);
+    if (rv < 0) {
         warning("Error in Arducam Write");
     }
 	return rv;
@@ -119,12 +128,15 @@ uint32_t arducam_i2c_multi_write(const struct sensor_reg reglist[]) {
 uint32_t arducam_i2c_read(uint8_t addr, uint8_t *readBuf, uint16_t size) {
     uint8_t writeBuf[1] = { addr };
     int32_t rv;
+    lock_mutex(i2c_camera_bus_mutex);
+    i2c_m_sync_set_slaveaddr(&I2C_CAMERA, ARDUCAM_ADDR >> 1, I2C_M_SEVEN);
     if ((rv = io_write(arducam_i2c_io, writeBuf, 1)) < 0) {
         warning("Error in Arducam Write");
     }
     if ((rv = io_read(arducam_i2c_io, readBuf, size)) < 0) {
         warning("Error in Arducam Read");
     }
+    unlock_mutex(i2c_camera_bus_mutex);
     return rv;
 }
 
@@ -138,7 +150,7 @@ int32_t arducam_spi_write(uint8_t addr, uint8_t data) {
     return response;
 }
 
-int8_t arducam_spi_read(uint8_t addr) {
+uint8_t arducam_spi_read(uint8_t addr) {
     gpio_set_pin_level(CAMERA_CS, 0);
 
     uint8_t tx_data = addr & 0x7F;  // Set MSB low for read operation
@@ -167,22 +179,41 @@ uint32_t read_fifo_length(void) {
     return length;	
 }
 
-void capture(void) {
+/**
+ * \fn wait_capture_done
+ *
+ * \brief Polls ARDUCHIP_TRIG until the capture-done flag is set, yielding between polls
+ *
+ * \returns `status_t`, ERROR_NOT_READY if the capture did not finish within ARDUCAM_CAPTURE_TIMEOUT_MS
+ */
+static status_t wait_capture_done(void) {
+    const TickType_t start = xTaskGetTickCount();
+    while (!get_bit(ARDUCHIP_TRIG, CAP_DONE_MASK)) {
+        if (xTaskGetTickCount() - start > pdMS_TO_TICKS(ARDUCAM_CAPTURE_TIMEOUT_MS)) {
+            warning("Arducam capture timed out!");
+            return ERROR_NOT_READY;
+        }
+        vTaskDelay(1);
+    }
+    return SUCCESS;
+}
+
+status_t capture(void) {
     // NOTE: In some versions of the official C++ ArduCam OV2640 driver, the FIFO_CLEAR_MASK is written twice,
     // while in others, it is written once. This implementation emprically works, so currently it is written twice.
     arducam_spi_write(ARDUCHIP_FIFO, FIFO_CLEAR_MASK); // Flush the FIFO
     arducam_spi_write(ARDUCHIP_FIFO, FIFO_CLEAR_MASK); // Clear the capture done flag (uses same clear mask)
     arducam_spi_write(ARDUCHIP_FIFO, FIFO_START_MASK); // Start capture
-    while (!get_bit(ARDUCHIP_TRIG, CAP_DONE_MASK));    // Wait for capture to finish
+    ret_err_status(wait_capture_done(), "Arducam capture failed");
 
     // Read how many bytes were captured
     size_t len = read_fifo_length();
     if (len >= OV2640_MAX_FIFO_SIZE) {
         info("Oversized!");
-        return;
+        return ERROR_SANITY_CHECK_FAILED;
     } else if (len == 0 ){
         info("Size is 0!");
-        return;
+        return ERROR_SANITY_CHECK_FAILED;
     }
 
     // Select SPI peripheral device
@@ -210,24 +241,25 @@ void capture(void) {
 
     // Deselect SPI peripheral device
     gpio_set_pin_level(CAMERA_CS, 1);
+    return SUCCESS;
 }
 
-void capture_rtt(void) {
+status_t capture_rtt(void) {
     // NOTE: In some versions of the official C++ ArduCam OV2640 driver, the FIFO_CLEAR_MASK is written twice,
     // while in others, it is written once. This implementation emprically works, so currently it is written twice.
     arducam_spi_write(ARDUCHIP_FIFO, FIFO_CLEAR_MASK); // Flush the FIFO
     arducam_spi_write(ARDUCHIP_FIFO, FIFO_CLEAR_MASK); // Clear the capture done flag (uses same clear mask)
     arducam_spi_write(ARDUCHIP_FIFO, FIFO_START_MASK); // Start capture
-    while (!get_bit(ARDUCHIP_TRIG, CAP_DONE_MASK));    // Wait for capture to finish
+    ret_err_status(wait_capture_done(), "Arducam capture failed");
 
     // Read how many bytes were captured
     size_t len = read_fifo_length();
     if (len >= OV2640_MAX_FIFO_SIZE) {
         info("Oversized!");
-        return;
+        return ERROR_SANITY_CHECK_FAILED;
     } else if (len == 0 ){
         info("Size is 0!");
-        return;
+        return ERROR_SANITY_CHECK_FAILED;
     }
 
     // WARNING: If you edit the info() calls, then you must also update open_rtt_channels_arducam_debug()
@@ -267,4 +299,5 @@ void capture_rtt(void) {
     // WARNING: If you edit the info() calls, then you must also update open_rtt_channels_arducam_debug()
     // within scripts/rtt_logs.py (specifically the regex parsing), otherwise things will break.
     info("IMG_END");
+    return SUCCESS;
 }

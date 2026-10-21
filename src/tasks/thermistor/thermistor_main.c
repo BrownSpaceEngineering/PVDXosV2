@@ -42,8 +42,9 @@ void main_thermistor(void *pvParameters) {
     while (true) {
         debug("\n---------- Thermistor Task Loop ----------\n");
 
+        uint16_t codes[THERM_COUNT];
         float temps[THERM_COUNT];
-        status_t rs = therm_read_all(temps);
+        status_t rs = therm_read_all(codes, temps);
         if (rs != SUCCESS) {
             warning("thermistor: therm_read_all reported a fault (status=%d)\n", rs);
         }
@@ -53,7 +54,7 @@ void main_thermistor(void *pvParameters) {
         }
 
         // Fault-tolerant bang-bang heater control (pair-partner / consensus replacement).
-        heater_control_update();
+        heater_control_update(codes);
         info("thermistor: heater1=%s heater2=%s\n", heater_is_on(0) ? "ON" : "OFF",
              heater_is_on(1) ? "ON" : "OFF");
 
