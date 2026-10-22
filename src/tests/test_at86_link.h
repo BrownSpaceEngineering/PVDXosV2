@@ -23,25 +23,26 @@ typedef enum {
  */
 typedef struct {
     uint32_t magic;
-    uint32_t heartbeats;  // Heartbeat lines printed
-    uint32_t polls;       // Iterations of every wait loop. Grows as long as the test code runs
-    uint32_t uptime_ms;   // Time since the test started (DWT cycle counter)
-    uint32_t phase;       // link_phase_t
-    uint32_t round;       // Current round, starting at 0
-    uint32_t spi_checks;  // Part number reads done by the heartbeat
-    uint32_t spi_errors;  // Part number reads that failed or returned the wrong value
-    uint32_t fe_errors;   // Heartbeats where PADFE is not configuration 1 or AUXS.EXTLNABYP is set
-    uint32_t tx_frames;   // Frames that finished (TXFE)
-    uint32_t tx_errors;   // Frames that timed out or failed on SPI
-    uint32_t rx_listens;  // Times the radio entered RX
-    uint32_t rx_frames;   // RXFE seen
-    uint32_t rx_fcs_bad;  // RXFE with BBC0_PC.FCSOK = 0
-    uint32_t rx_rejected; // Good FCS but not a valid packet for us
-    uint32_t rx_timeouts; // Listen windows that ended with no frame
-    uint32_t acks_rx;     // Valid ACKs for our DATA
-    uint32_t acks_tx;     // ACKs sent (including repeats)
-    uint32_t data_rx;     // New DATA packets from the HackRF
-    uint32_t data_dup_rx; // Repeated DATA packets from the HackRF
+    uint32_t heartbeats;    // Heartbeat lines printed
+    uint32_t polls;         // Iterations of every wait loop. Grows as long as the test code runs
+    uint32_t uptime_ms;     // Time since the test started (DWT cycle counter)
+    uint32_t phase;         // link_phase_t
+    uint32_t round;         // Current round, starting at 0
+    uint32_t spi_checks;    // Part number reads done by the heartbeat
+    uint32_t spi_errors;    // Part number reads that failed or returned the wrong value
+    uint32_t fe_errors;     // Heartbeats where PADFE is not configuration 1 or AUXS.EXTLNABYP is set
+    uint32_t tx_frames;     // Frames that finished (TXFE)
+    uint32_t tx_errors;     // Frames that timed out or failed on SPI
+    uint32_t rx_listens;    // Times the radio entered RX
+    uint32_t rx_frames;     // RXFE seen
+    uint32_t rx_fcs_bad;    // RXFE with BBC0_PC.FCSOK = 0
+    uint32_t rx_rejected;   // Good FCS but not a valid packet for us
+    uint32_t rx_timeouts;   // Listen windows that ended with no frame
+    uint32_t acks_rx;       // Valid ACKs for our DATA
+    uint32_t acks_implicit; // New HackRF DATA in phase A, counted as the lost ACK for our DATA
+    uint32_t acks_tx;       // ACKs sent (including repeats)
+    uint32_t data_rx;       // New DATA packets from the HackRF
+    uint32_t data_dup_rx;   // Repeated DATA packets from the HackRF
     uint32_t rounds_ok;
     uint32_t rounds_fail;
     int32_t last_error;

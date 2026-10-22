@@ -39,7 +39,7 @@ VALID_PN = {0x34: "AT86RF215", 0x35: "AT86RF215IQ", 0x36: "AT86RF215M"}
 RF_STATES = {2: "TRXOFF", 3: "TXPREP", 4: "TX", 5: "RX", 6: "TRANSITION", 7: "RESET"}
 OK_STATES = {3, 4, 5, 6}
 PHASES = {0: "INIT", 1: "A_TX_DATA", 2: "A_WAIT_ACK", 3: "B_WAIT_DATA", 4: "B_TX_ACK", 5: "B_DUP_WINDOW", 6: "DONE", 7: "INIT_FAILED"}
-MAX_IDLE_RADIO_S = 40  # Longest time with no TX and no new RX listen (phase B waits up to 30 s)
+MAX_IDLE_RADIO_S = 130  # Longest time with no TX and no new RX listen (phase B waits up to LINK_DATA_WAIT_MS = 120 s)
 
 ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 KV = re.compile(r"(\w+)=(\S+)")

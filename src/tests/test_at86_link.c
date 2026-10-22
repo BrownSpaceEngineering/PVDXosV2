@@ -8,6 +8,13 @@
  *   Phase B: the AT86 listens for DATA from the HackRF, sends ACK(seq), then listens a little longer and sends the
  *            ACK again for every repeat of the same DATA (the first ACK can be lost).
  *
+ * The AT86 sends an ACK for every HackRF DATA it receives, in any phase. The HackRF sends new DATA only after it
+ * received our DATA, so new DATA during phase A counts as the missing ACK: phase B starts with it. Without this rule,
+ * a lost ACK leaves both sides sending DATA and waiting for an ACK that never comes.
+ *
+ * Timing: one HackRF cannot transmit and receive at the same time. It closes and opens the device over USB for each
+ * switch, which takes about a second. The ACK delay and the listen windows below leave room for that.
+ *
  * Front end: FEA09 enables the GRF5504 PA. PADFE configuration 1 drives FEA09 high only in the TX state. The external
  * LNA is always on, so AUXS.EXTLNABYP stays 0 (in configuration 1 the "RX bypass" mode would drive FEA09 high in RX).
  *
@@ -42,10 +49,10 @@
     #define LINK_ROUNDS 0   // 0 runs forever. Any other value runs that many rounds and then returns
 
     #define LINK_DATA_TRIES 10       // DATA sends per round before phase A gives up
-    #define LINK_ACK_TIMEOUT_MS 3000 // Listen time for an ACK. The HackRF needs time to switch from RX to TX
-    #define LINK_DATA_WAIT_MS 30000  // Listen time for HackRF DATA in phase B
-    #define LINK_DUP_WINDOW_MS 6000  // Listen time for repeated HackRF DATA after our ACK. Longer than the HackRF retry period
-    #define LINK_ACK_DELAY_MS 1000   // Wait before each ACK so the HackRF has time to switch from TX to RX
+    #define LINK_ACK_TIMEOUT_MS 6000 // Listen time for an ACK. Longer than the HackRF RX to TX turnaround (its "turnaround=" log)
+    #define LINK_DATA_WAIT_MS 120000 // Listen time for HackRF DATA in phase B. Longer than the HackRF dup window plus its DATA tries
+    #define LINK_DUP_WINDOW_MS 15000 // Listen time for repeated HackRF DATA after our ACK. Longer than the HackRF retry period (about 8 s)
+    #define LINK_ACK_DELAY_MS 2000   // Wait before each ACK so the HackRF can close TX and open RX (its "rxready=" log)
     #define LINK_TX_TIMEOUT_MS 200   // Time for one frame to finish (a full frame is about 10 ms at 50 kb/s)
     #define LINK_STATE_TIMEOUT_MS 50 // Time for a state change (TXPREP, RX)
     #define LINK_HEARTBEAT_MS 2000   // Heartbeat line period
@@ -153,9 +160,9 @@ static void link_heartbeat(void) {
         ST.fe_errors);
     test_log(
         "at86hb2 n=%lu tx=%lu txerr=%lu rxl=%lu rx=%lu fcsbad=%lu rej=%lu rxto=%lu ackrx=%lu acktx=%lu datarx=%lu "
-        "dup=%lu ok=%lu fail=%lu rssi=%d err=%d\n",
+        "dup=%lu ackimp=%lu ok=%lu fail=%lu rssi=%d err=%d\n",
         ST.heartbeats, ST.tx_frames, ST.tx_errors, ST.rx_listens, ST.rx_frames, ST.rx_fcs_bad, ST.rx_rejected, ST.rx_timeouts, ST.acks_rx,
-        ST.acks_tx, ST.data_rx, ST.data_dup_rx, ST.rounds_ok, ST.rounds_fail, (int)ST.last_rssi, (int)ST.last_error);
+        ST.acks_tx, ST.data_rx, ST.data_dup_rx, ST.acks_implicit, ST.rounds_ok, ST.rounds_fail, (int)ST.last_rssi, (int)ST.last_error);
 }
 
 /**
@@ -384,11 +391,28 @@ static void link_send_ack(uint32_t seq) {
     test_log("at86pkt tx ACK seq=%lu ret=%d\n", seq, ret);
 }
 
+static bool link_is_new_data(const link_packet_t *pkt) {
+    return pkt->type == LINK_TYPE_DATA && !(have_last_data && pkt->seq == last_data_seq);
+}
+
+/**
+ * \fn link_accept_data
+ *
+ * \brief Accepts new HackRF DATA: counts it, remembers its sequence number and sends the ACK
+ */
+static void link_accept_data(const link_packet_t *pkt) {
+    ++ST.data_rx;
+    last_data_seq = pkt->seq;
+    have_last_data = true;
+    ST.phase = LINK_PHASE_B_TX_ACK;
+    link_send_ack(pkt->seq);
+}
+
 /**
  * \fn link_handle_other
  *
  * \brief Handles a valid packet that the current phase does not wait for. A repeat of the last HackRF DATA means the
- *      HackRF missed our ACK, so ACK it again
+ *      HackRF missed our ACK, so ACK it again. New DATA is for the caller (see link_is_new_data)
  */
 static void link_handle_other(const link_packet_t *pkt) {
     if (pkt->type == LINK_TYPE_DATA && have_last_data && pkt->seq == last_data_seq) {
@@ -399,7 +423,18 @@ static void link_handle_other(const link_packet_t *pkt) {
 
 /* ---------- Exchange ---------- */
 
-static bool link_phase_a(void) {
+typedef enum {
+    LINK_A_FAIL = 0,
+    LINK_A_ACKED,    // ACK(seq) received
+    LINK_A_GOT_DATA, // New HackRF DATA received instead: the HackRF has our DATA, and phase B starts with its DATA
+} link_a_result_t;
+
+/**
+ * \fn link_phase_a
+ *
+ * \param data_out Receives the HackRF DATA when the result is LINK_A_GOT_DATA
+ */
+static link_a_result_t link_phase_a(link_packet_t *data_out) {
     link_packet_t data;
     link_packet_t rx;
     char payload[LINK_MAX_PAYLOAD + 1];
@@ -423,53 +458,63 @@ static bool link_phase_a(void) {
             }
             if (rx.type == LINK_TYPE_ACK && rx.seq == our_seq) {
                 ++ST.acks_rx;
-                return true;
+                return LINK_A_ACKED;
+            }
+            if (link_is_new_data(&rx)) {
+                ++ST.acks_implicit;
+                test_log("at86pkt rx DATA seq=%lu in phase A: the HackRF has our DATA seq=%lu, its ACK was lost\n", rx.seq, our_seq);
+                *data_out = rx;
+                return LINK_A_GOT_DATA;
             }
             link_handle_other(&rx);
         }
     }
-    return false;
+    return LINK_A_FAIL;
 }
 
-static bool link_phase_b(void) {
+/**
+ * \fn link_phase_b
+ *
+ * \param first HackRF DATA that already arrived in phase A, or NULL to listen for it
+ */
+static bool link_phase_b(const link_packet_t *first) {
     link_packet_t rx;
 
-    ST.phase = LINK_PHASE_B_WAIT_DATA;
-    uint32_t start = link_ms();
-    bool got_data = false;
-    while (!got_data && link_ms() - start < LINK_DATA_WAIT_MS) {
-        const uint32_t left = LINK_DATA_WAIT_MS - (link_ms() - start);
-        if (link_rx(&rx, left) != LINK_RX_OK) {
-            continue;
+    if (first == NULL) {
+        ST.phase = LINK_PHASE_B_WAIT_DATA;
+        const uint32_t start = link_ms();
+        while (first == NULL && link_ms() - start < LINK_DATA_WAIT_MS) {
+            const uint32_t left = LINK_DATA_WAIT_MS - (link_ms() - start);
+            if (link_rx(&rx, left) != LINK_RX_OK) {
+                continue;
+            }
+            if (link_is_new_data(&rx)) {
+                first = &rx;
+            } else {
+                link_handle_other(&rx); // Old DATA again, or a repeated ACK for phase A
+            }
         }
-        if (rx.type == LINK_TYPE_DATA && !(have_last_data && rx.seq == last_data_seq)) {
-            got_data = true;
-        } else {
-            link_handle_other(&rx); // Old DATA again, or a repeated ACK for phase A
+        if (first == NULL) {
+            return false;
         }
     }
-    if (!got_data) {
-        return false;
-    }
-
-    ++ST.data_rx;
-    last_data_seq = rx.seq;
-    have_last_data = true;
-    ST.phase = LINK_PHASE_B_TX_ACK;
-    link_send_ack(rx.seq);
+    link_accept_data(first);
 
     // Stay in RX a little longer in case the HackRF did not hear the ACK and sends the same DATA again
     ST.phase = LINK_PHASE_B_DUP_WINDOW;
-    start = link_ms();
+    uint32_t start = link_ms();
     while (link_ms() - start < LINK_DUP_WINDOW_MS) {
         const uint32_t left = LINK_DUP_WINDOW_MS - (link_ms() - start);
-        if (link_rx(&rx, left) == LINK_RX_OK) {
-            const bool repeat = rx.type == LINK_TYPE_DATA && rx.seq == last_data_seq;
-            link_handle_other(&rx);
-            if (repeat) {
-                start = link_ms(); // Give the next ACK the same window
-            }
+        if (link_rx(&rx, left) != LINK_RX_OK || rx.type != LINK_TYPE_DATA) {
+            continue;
         }
+        if (link_is_new_data(&rx)) {
+            link_accept_data(&rx); // Not expected here, but every DATA gets an ACK
+            ST.phase = LINK_PHASE_B_DUP_WINDOW;
+        } else {
+            link_handle_other(&rx);
+        }
+        start = link_ms(); // Give the next ACK the same window
     }
     return true;
 }
@@ -636,8 +681,10 @@ void test_at86_link(void) {
     test_log("at86link ready\n");
 
     for (ST.round = 0; link_more_rounds(ST.round); ++ST.round) {
-        const bool a_ok = link_phase_a();
-        const bool b_ok = a_ok && link_phase_b();
+        link_packet_t early_data;
+        const link_a_result_t a = link_phase_a(&early_data);
+        const bool a_ok = a != LINK_A_FAIL;
+        const bool b_ok = a_ok && link_phase_b(a == LINK_A_GOT_DATA ? &early_data : NULL);
         if (a_ok && b_ok) {
             ++ST.rounds_ok;
         } else {

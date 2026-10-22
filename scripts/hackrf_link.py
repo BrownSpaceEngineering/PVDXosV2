@@ -10,8 +10,12 @@ Each round (mirror of the firmware):
   Phase A: listen for AT86 DATA, send ACK after it, then listen for repeats and ACK them again.
   Phase B: send our DATA, listen for the AT86 ACK, send again if none comes.
 
+Every AT86 DATA gets an ACK, in any phase. New AT86 DATA during phase B means that the AT86 gave up waiting for our
+DATA and started its next round, so phase A of our next round starts with that DATA.
+
 One HackRF cannot transmit and receive at the same time, so the script opens the device for RX, closes it, opens it
-for TX, and so on. TX uses GNU Radio's digital.gfsk_mod. RX uses the GNU Radio channel filter and a numpy
+for TX, and so on. Each switch takes about a second over USB. The logs show it: "rxready=" is the time until RX
+streams after an open, and "turnaround=" is the time from a received frame to the end of our ACK. TX uses GNU Radio's digital.gfsk_mod. RX uses the GNU Radio channel filter and a numpy
 demodulator that also handles the 802.15.4g framing. `--selftest` runs the same TX and RX code on generated bursts,
 without hardware.
 
@@ -311,8 +315,12 @@ def channel_taps():
 
 def make_queue_sink(q):
     """Returns (native sink block, stop function). A Python gr.sync_block segfaults on Python 3.14 with GNU Radio 3.10.12,
-    so a native file_descriptor_sink writes into a pipe and a reader thread fills the queue."""
+    so a native file_descriptor_sink writes into a pipe and a reader thread fills the queue.
+
+    The sink owns the write end of the pipe and closes it in its destructor. Do not close it here as well: the second
+    close can hit an unrelated file that got the same descriptor number in the meantime."""
     import os
+    import select
     import threading
 
     from gnuradio import blocks, gr
@@ -324,10 +332,10 @@ def make_queue_sink(q):
     def reader():
         pending = b""
         while not stop.is_set():
-            try:
-                data = os.read(rfd, 1 << 16)
-            except OSError:
-                break
+            ready, _, _ = select.select([rfd], [], [], 0.05)  # The timeout lets the thread see `stop`
+            if not ready:
+                continue
+            data = os.read(rfd, 1 << 16)
             if not data:
                 break
             pending += data
@@ -340,9 +348,9 @@ def make_queue_sink(q):
     t.start()
 
     def close():
+        """Call after tb.stop() and tb.wait(), when the sink writes nothing more."""
         stop.set()
-        os.close(wfd)  # EOF wakes the reader
-        t.join(1.0)
+        t.join()
         os.close(rfd)
 
     return sink, close
@@ -365,6 +373,7 @@ class Radio:
     def __init__(self, args):
         self.args = args
         self.demod = Demod(args.sfd, args.verbose)
+        self.rx_ready_s = None  # Time from the start of the last listen() until the first samples arrived
 
     def _dev_args(self):
         a = "numchan=1 hackrf=0"
@@ -372,10 +381,12 @@ class Radio:
             a = f"numchan=1 hackrf={self.args.serial}"
         return a
 
-    def tx(self, psdu: bytes):
+    def tx(self, psdu: bytes) -> float:
+        """Opens the device for TX, sends one frame and closes it. Returns the time that took, in seconds."""
         import osmosdr
         from gnuradio import blocks, gr
 
+        t0 = time.monotonic()
         samples = modulate(frame_bits(psdu, self.args.sfd), shift=-LO_OFFSET)
         tb = gr.top_block()
         src = blocks.vector_source_c(samples.tolist(), False)
@@ -389,13 +400,16 @@ class Radio:
         tb.connect(src, snk)
         tb.run()
         del tb, snk
+        return time.monotonic() - t0
 
     def listen(self, timeout_s: float, want=None):
         """Receives for up to timeout_s. Calls want(frame) for each decoded frame; stops early when it returns True.
-        Returns the frame that stopped it, or None."""
+        Returns the frame that stopped it, or None. Each frame gets "t_rx", the host time when it was decoded."""
         import osmosdr
         from gnuradio import blocks, filter, gr
 
+        t0 = time.monotonic()
+        self.rx_ready_s = None
         q = queue.Queue()
         tb = gr.top_block()
         src = osmosdr.source(args=self._dev_args())
@@ -422,7 +436,10 @@ class Radio:
                     chunk = q.get(timeout=0.05)
                 except queue.Empty:
                     continue
+                if self.rx_ready_s is None:
+                    self.rx_ready_s = time.monotonic() - t0
                 for fr in self.demod.feed(chunk):
+                    fr["t_rx"] = time.monotonic()
                     if want is None or want(fr):
                         result = fr
                         break
@@ -430,7 +447,7 @@ class Radio:
             tb.stop()
             tb.wait()
             close_sink()
-            del tb, src
+            del tb, src, xlat, qsink  # The sink closes the write end of its pipe here
         return result
 
 
@@ -448,10 +465,14 @@ class Link:
     def log(self, msg):
         print(f"{time.strftime('%H:%M:%S')} {msg}", flush=True)
 
+    def _rx_ready(self):
+        r = self.radio.rx_ready_s
+        return "rxready=?" if r is None else f"rxready={r:.2f}s"
+
     def _check(self, fr):
         """Validates a frame. Returns the parsed packet from the AT86, or None."""
         self.stats["rx"] += 1
-        info = f"len={len(fr['psdu']) + 2} foff={fr['foff']:+.0f}Hz pwr={fr['power_db']:.1f}dBFS"
+        info = f"len={len(fr['psdu']) + 2} foff={fr['foff']:+.0f}Hz pwr={fr['power_db']:.1f}dBFS {self._rx_ready()}"
         if fr["inverted"]:
             info += " INVERTED"
         if not fr["crc_ok"]:
@@ -465,19 +486,35 @@ class Link:
             self.log(f"hrfpkt rx REJECT {why or 'ssid ' + str(pkt['ssid'])} {info}")
             return None
         self.log(f"hrfpkt rx {TYPE_NAMES[pkt['type']]} seq={pkt['seq']} call={pkt['callsign']} {info} payload={pkt['payload']!r}")
+        pkt["t_rx"] = fr["t_rx"]
         return pkt
 
-    def send(self, ptype, seq, payload=b""):
+    def send(self, ptype, seq, payload=b"", t_rx=None):
+        """t_rx: host time of the frame that this packet answers. The log then shows the RX to TX turnaround."""
         psdu = build_packet(self.args.callsign, ptype, seq, payload)
-        self.radio.tx(psdu)
-        self.log(f"hrfpkt tx {TYPE_NAMES[ptype]} seq={seq} len={len(psdu) + 2}")
+        took = self.radio.tx(psdu)
+        extra = f" tx={took:.2f}s"
+        if t_rx is not None:
+            extra += f" turnaround={time.monotonic() - t_rx:.2f}s"
+        self.log(f"hrfpkt tx {TYPE_NAMES[ptype]} seq={seq} len={len(psdu) + 2}{extra}")
 
-    def send_ack(self, seq):
-        self.send(LINK_TYPE_ACK, seq)
+    def send_ack(self, pkt):
+        self.send(LINK_TYPE_ACK, pkt["seq"], t_rx=pkt["t_rx"])
         self.stats["ack_tx"] += 1
 
+    def is_new_data(self, pkt):
+        return pkt["type"] == LINK_TYPE_DATA and pkt["seq"] != self.last_at86_seq
+
+    def accept_data(self, pkt):
+        """New AT86 DATA: count it, remember its sequence number and send the ACK."""
+        self.stats["data_rx"] += 1
+        self.last_at86_seq = pkt["seq"]
+        self.send_ack(pkt)
+
     def listen_for(self, timeout_s, match):
-        """Listens until match(pkt) is true. Repeated AT86 DATA that we already ACKed gets a new ACK on the way."""
+        """Listens until match(pkt) is true or new AT86 DATA arrives, and returns that packet (None after timeout_s).
+        Repeated AT86 DATA that we already ACKed gets a new ACK on the way. New DATA goes back to the caller, which
+        must accept it (accept_data), so that every AT86 DATA gets an ACK."""
         deadline = time.monotonic() + timeout_s
         while True:
             left = deadline - time.monotonic()
@@ -495,42 +532,61 @@ class Link:
             if self.radio.listen(left, want) is None:
                 return None
             pkt = hit["pkt"]
-            if match(pkt):
+            if match(pkt) or self.is_new_data(pkt):
                 return pkt
-            if pkt["type"] == LINK_TYPE_DATA and pkt["seq"] == self.last_at86_seq:
+            if pkt["type"] == LINK_TYPE_DATA:  # The DATA we accepted last: the AT86 did not hear our ACK
                 self.stats["dup"] += 1
-                self.send_ack(pkt["seq"])
+                self.send_ack(pkt)
 
-    def phase_a(self):
-        pkt = self.listen_for(
-            self.args.data_wait, lambda p: p["type"] == LINK_TYPE_DATA and p["seq"] != self.last_at86_seq
-        )
+    def dup_window(self):
+        """Stays in RX after our ACK. listen_for() ACKs repeats of the same AT86 DATA again."""
+        deadline = time.monotonic() + self.args.dup_window
+        while True:
+            left = deadline - time.monotonic()
+            if left <= 0:
+                return
+            pkt = self.listen_for(left, lambda p: False)
+            if pkt is None:
+                return
+            self.accept_data(pkt)  # New AT86 DATA is not expected here, but every DATA gets an ACK
+
+    def phase_a(self, pkt=None):
+        """AT86 DATA, then our ACK. `pkt` is new AT86 DATA that already arrived during phase B of the last round."""
         if pkt is None:
-            return False
-        self.stats["data_rx"] += 1
-        self.last_at86_seq = pkt["seq"]
-        self.send_ack(pkt["seq"])
-        # Stay in RX for repeats: listen_for() ACKs them again. Nothing matches, so it runs for the whole window
-        self.listen_for(self.args.dup_window, lambda p: False)
+            pkt = self.listen_for(self.args.data_wait, lambda p: False)  # Returns on new AT86 DATA
+            if pkt is None:
+                return False
+        self.accept_data(pkt)
+        self.dup_window()
         return True
 
     def phase_b(self):
+        """Our DATA, then the AT86 ACK. Returns (ok, pkt). pkt is new AT86 DATA that came instead of the ACK: the AT86
+        stopped waiting for our DATA and started its next round, so our next round starts with that DATA."""
         payload = f"HACKRF round {self.seq}".encode()
         for attempt in range(1, self.args.tries + 1):
             self.send(LINK_TYPE_DATA, self.seq, payload)
             self.stats["data_tx"] += 1
-            ack = self.listen_for(self.args.ack_timeout, lambda p: p["type"] == LINK_TYPE_ACK and p["seq"] == self.seq)
-            if ack is not None:
+            pkt = self.listen_for(self.args.ack_timeout, lambda p: p["type"] == LINK_TYPE_ACK and p["seq"] == self.seq)
+            if pkt is None:
+                self.log(f"hrfpkt no ACK for seq={self.seq} try={attempt} {self._rx_ready()}")
+                continue
+            if pkt["type"] == LINK_TYPE_ACK:
                 self.stats["ack_rx"] += 1
-                return True
-            self.log(f"hrfpkt no ACK for seq={self.seq} try={attempt}")
-        return False
+                return True, None
+            self.log(f"hrfpkt new AT86 DATA seq={pkt['seq']} in phase B: the AT86 started its next round")
+            return False, pkt
+        return False, None
 
     def run(self, rounds):
         n = 0
+        pending = None  # New AT86 DATA from phase B, for phase A of the next round
         while rounds == 0 or n < rounds:
-            a = self.phase_a()
-            b = a and self.phase_b()
+            a = self.phase_a(pending)
+            pending = None
+            b = False
+            if a:
+                b, pending = self.phase_b()
             self.stats["ok" if a and b else "fail"] += 1
             self.log(f"hrfround n={n} a={'ok' if a else 'FAIL'} b={'ok' if b else 'FAIL'} " + self._stats_str())
             self.seq += 1
@@ -676,9 +732,9 @@ def main() -> int:
     ap.add_argument("--tx-vga", type=int, default=20)
     ap.add_argument("--rounds", type=int, default=0, help="0 = forever")
     ap.add_argument("--tries", type=int, default=10)
-    ap.add_argument("--ack-timeout", type=float, default=3.0)
-    ap.add_argument("--dup-window", type=float, default=6.0)
-    ap.add_argument("--data-wait", type=float, default=60.0)
+    ap.add_argument("--ack-timeout", type=float, default=6.0, help="listen time for the AT86 ACK, s (AT86 waits LINK_ACK_DELAY_MS)")
+    ap.add_argument("--dup-window", type=float, default=15.0, help="RX time after our ACK, s. Longer than the AT86 retry period")
+    ap.add_argument("--data-wait", type=float, default=150.0, help="listen time for AT86 DATA, s. Longer than LINK_DATA_WAIT_MS")
     ap.add_argument("--beacon-period", type=float, default=1.0)
     ap.add_argument("--dump-iq", default="", help="also write the 400 kS/s channel samples (complex64) to this file")
     ap.add_argument("--verbose", action="store_true")
