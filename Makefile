@@ -1,10 +1,6 @@
-PVDXOS_DIR = $(CURDIR)
-
-export PVDXOS_DIR
-
 ifeq ($(OS),Windows_NT)
 	# Pure Windows (e.g. MSYS2/MinGW). Note that in WSL, $(OS) is *not* Windows_NT.
-	GDBCMD = gdb-multiarch
+	GDBCMD = gdb
 else
 	# We are in a Unix-like environment (Linux or macOS or WSL). Here, $(OS) is not defined.
 	UNAME_S := $(shell uname -s)
@@ -17,42 +13,38 @@ else
 		# Linux or WSL. Check if it's WSL by searching "microsoft" in uname -r
 		ifneq (,$(findstring microsoft,$(UNAME_R)))
 			# WSL
-			GDBCMD = gdb-multiarch
+			GDBCMD = gdb
 		else
 			# "Pure" Linux
-			GDBCMD = gdb-multiarch
+			GDBCMD = gdb
 		endif
 	else
 		$(error Unknown or unsupported OS)
 	endif
 endif
 
+.PHONY: all bootloader_target dev release test flash_monkey connect connect_bl clean
+
 all: dev
 
 # can't be called bootloader bc that's the folder name
 bootloader_target:
-	make -C bootloader
+	$(MAKE) -C bootloader/src
 
 dev: bootloader_target
-	make -C src dev \
+	$(MAKE) -C src dev \
 	&& python3 scripts/create_flash_segment.py
 
 release: bootloader_target
-	make -C src release \
+	$(MAKE) -C src release \
 	&& python3 scripts/create_flash_segment.py
 
 test: bootloader_target
-	make -C src test \
+	$(MAKE) -C src test \
 	&& python3 scripts/create_flash_segment.py
 
 flash_monkey:
 	python3 scripts/flip_rand_bit.py
-
-reset_mcu:
-	JLinkExe -CommanderScript reset.jlink
-  
-list_files:
-	make -C src list_files
 
 # this command will start gdb from a breakpoint at main
 # use connect_bl to start from the beginning
@@ -61,8 +53,8 @@ connect:
 	&& $(GDBCMD) \
 		-ex "set confirm off" \
 		-ex "add-symbol-file src/PVDXos.elf" \
-		-ex "add-symbol-file bootloader/bootloader2.elf" \
-		-ex "add-symbol-file bootloader/bootloader3.elf" \
+		-ex "add-symbol-file bootloader/src/bootloader2.elf" \
+		-ex "add-symbol-file bootloader/src/bootloader3.elf" \
 		-ex "set confirm on" \
 		-ex "target remote localhost:2331" \
 		-ex "monitor reset" \
@@ -70,20 +62,7 @@ connect:
 		-ex "continue" \
 		-ex "break main" \
 		-ex "continue" \
-		bootloader/bootloader1.elf
-
-connect_tasks: 
-	JLinkExe -CommanderScript flash.jlink \
-	&& $(GDBCMD) \
-		-ex "set confirm off" \
-		-ex "add-symbol-file src/PVDXos.elf" \
-		-ex "add-symbol-file bootloader/bootloader2.elf" \
-		-ex "add-symbol-file bootloader/bootloader3.elf" \
-		-ex "set confirm on" \
-		-ex "target remote localhost:2331" \
-		-ex "monitor reset" \
-		-ex "break main" \
-		bootloader/bootloader1.elf
+		bootloader/src/bootloader1.elf
 
 # connect for debugging bootloader
 connect_bl:
@@ -91,14 +70,14 @@ connect_bl:
 	&& $(GDBCMD) \
 		-ex "set confirm off" \
 		-ex "add-symbol-file src/PVDXos.elf" \
-		-ex "add-symbol-file bootloader/bootloader2.elf" \
-		-ex "add-symbol-file bootloader/bootloader3.elf" \
+		-ex "add-symbol-file bootloader/src/bootloader2.elf" \
+		-ex "add-symbol-file bootloader/src/bootloader3.elf" \
 		-ex "set confirm on" \
 		-ex "target remote localhost:2331" \
 		-ex "monitor reset" \
-		bootloader/bootloader1.elf
+		bootloader/src/bootloader1.elf
 
 clean:
-	rm -f PVDXos.bin PVDXos.elf \
-	&& make -C bootloader clean \
-	&& make -C src clean
+	rm -f flash.bin \
+	&& $(MAKE) -C bootloader/src clean \
+	&& $(MAKE) -C src clean

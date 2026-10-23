@@ -50,6 +50,7 @@ hpl/trng \
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/portable/GCC/ARM_CM4F \
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/portable/MemMang \
 hpl/mclk \
+hpl/nvmctrl \
 hpl/cmcc \
 hpl/gclk \
 hpl/pm \
@@ -66,6 +67,7 @@ hpl/systick/hpl_systick.o \
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/portable/GCC/ARM_CM4F/port.o \
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/event_groups.o \
 hpl/wdt/hpl_wdt.o \
+hpl/nvmctrl/hpl_nvmctrl.o \
 thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/croutine.o \
 samd51a/gcc/system_samd51.o \
 hpl/core/hpl_core_m4.o \
@@ -83,6 +85,7 @@ hpl/pm/hpl_pm.o \
 hpl/core/hpl_init.o \
 hpl/gclk/hpl_gclk.o \
 hal/src/hal_wdt.o \
+hal/src/hal_flash.o \
 hal/utils/src/utils_assert.o \
 hpl/dmac/hpl_dmac.o \
 hpl/oscctrl/hpl_oscctrl.o \
@@ -121,6 +124,7 @@ OBJS_AS_ARGS +=  \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/portable/GCC/ARM_CM4F/port.o" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/event_groups.o" \
 "hpl/wdt/hpl_wdt.o" \
+"hpl/nvmctrl/hpl_nvmctrl.o" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/croutine.o" \
 "samd51a/gcc/system_samd51.o" \
 "hpl/core/hpl_core_m4.o" \
@@ -138,6 +142,7 @@ OBJS_AS_ARGS +=  \
 "hpl/core/hpl_init.o" \
 "hpl/gclk/hpl_gclk.o" \
 "hal/src/hal_wdt.o" \
+"hal/src/hal_flash.o" \
 "hal/utils/src/utils_assert.o" \
 "hpl/dmac/hpl_dmac.o" \
 "hpl/oscctrl/hpl_oscctrl.o" \
@@ -182,6 +187,7 @@ DIR_INCLUDES +=  \
 -I"../hpl/dmac" \
 -I"../hpl/gclk" \
 -I"../hpl/mclk" \
+-I"../hpl/nvmctrl" \
 -I"../hpl/osc32kctrl" \
 -I"../hpl/oscctrl" \
 -I"../hpl/pm" \
@@ -212,6 +218,7 @@ DEPS_AS_ARGS +=  \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/event_groups.d" \
 "thirdparty/RTOS/freertos/FreeRTOSV10.0.0/Source/croutine.d" \
 "hpl/wdt/hpl_wdt.d" \
+"hpl/nvmctrl/hpl_nvmctrl.d" \
 "hal/utils/src/utils_event.d" \
 "hal/src/hal_io.d" \
 "hpl/ramecc/hpl_ramecc.d" \
@@ -226,6 +233,7 @@ DEPS_AS_ARGS +=  \
 "hal/src/hal_timer.d" \
 "hal/src/hal_spi_m_sync.d" \
 "hal/src/hal_wdt.d" \
+"hal/src/hal_flash.d" \
 "hpl/cmcc/hpl_cmcc.d" \
 "hpl/dmac/hpl_dmac.d" \
 "hal/utils/src/utils_assert.d" \
