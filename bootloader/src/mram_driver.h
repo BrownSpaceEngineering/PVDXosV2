@@ -8,7 +8,7 @@
 #define MRAM_OS_SIZE (0x20000)            // Size of OS in MRAM
 
 #define MRAM_FLASH_BASE_ADDRESS (0x00000000) // Address of complete flash copy in MRAM
-#define MRAM_FLASH_SIZE (0x80000)            // Size of complete flash copy in MRAM
+#define MRAM_FLASH_SIZE (0x81000)            // Size of complete flash copy in MRAM
 
 #include "atmel_start.h"
 #include "hal_delay.h"

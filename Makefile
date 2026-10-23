@@ -1,6 +1,6 @@
 ifeq ($(OS),Windows_NT)
 	# Pure Windows (e.g. MSYS2/MinGW). Note that in WSL, $(OS) is *not* Windows_NT.
-	GDBCMD = gdb-multiarch
+	GDBCMD = gdb
 else
 	# We are in a Unix-like environment (Linux or macOS or WSL). Here, $(OS) is not defined.
 	UNAME_S := $(shell uname -s)
@@ -13,10 +13,10 @@ else
 		# Linux or WSL. Check if it's WSL by searching "microsoft" in uname -r
 		ifneq (,$(findstring microsoft,$(UNAME_R)))
 			# WSL
-			GDBCMD = gdb-multiarch
+			GDBCMD = gdb
 		else
 			# "Pure" Linux
-			GDBCMD = gdb-multiarch
+			GDBCMD = gdb
 		endif
 	else
 		$(error Unknown or unsupported OS)

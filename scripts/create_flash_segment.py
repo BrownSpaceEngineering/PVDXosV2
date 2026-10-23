@@ -1,5 +1,10 @@
+import math
+
 BOOTLOADER_COUNT = 8
 BOOTLOADER_SIZE = 0x2000
+FLASH_BIN_SIZE = 0x80000
+REFLASH_BLOCK_SIZE = 512 # bytes
+REFLASH_BLOCK_COUNT = math.floor(FLASH_BIN_SIZE / REFLASH_BLOCK_SIZE)
 
 def crc32(data: bytearray) -> int:
     table = []
@@ -37,15 +42,23 @@ def write_normal_segment(flash: bytearray, offset: int, path: str, size: int):
     
     flash[offset:offset + len(segment)] = segment
 
-flash = bytearray([0xFF] * 0x80000)
+def write_bytes(flash: bytearray, offset: int, segment: int, size: int):
+    if len(segment) >= size:
+        raise Exception("Segment too larger")
+    
+    flash[offset:offset + len(segment)] = segment
 
-for i in range(BOOTLOADER_COUNT):
-    write_checksummed_segment(flash, (i + 1) * BOOTLOADER_SIZE, f"bootloader/src/bootloader{i + 1}.bin", BOOTLOADER_SIZE)
+flash = bytearray([0xFF] * FLASH_BIN_SIZE)
 
 write_normal_segment(flash, 0, "bootloader/src/preboot.bin", BOOTLOADER_SIZE)
+for i in range(BOOTLOADER_COUNT):
+    write_checksummed_segment(flash, (i + 1) * BOOTLOADER_SIZE, f"bootloader/src/bootloader{i + 1}.bin", BOOTLOADER_SIZE)
 write_checksummed_segment(flash, 0x20000, "src/PVDXos.bin", 0x20000)
 write_checksummed_segment(flash, 0x40000, "src/PVDXos.bin", 0x20000)
 write_checksummed_segment(flash, 0x60000, "src/PVDXos.bin", 0x20000)
+for i in range(REFLASH_BLOCK_COUNT):
+    write_bytes(flash, FLASH_BIN_SIZE + i * REFLASH_BLOCK_SIZE,
+        crc32(flash[(i * REFLASH_BLOCK_SIZE):((i + 1) * REFLASH_BLOCK_SIZE)]), REFLASH_BLOCK_SIZE)
 
 with open("flash.bin", "wb") as f:
     f.write(flash)
