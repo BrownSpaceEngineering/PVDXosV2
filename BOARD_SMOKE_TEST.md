@@ -48,7 +48,27 @@ Clean before switching build flags: existing object files do not automatically
 rebuild just because `BOARD_SMOKE_TEST` changes. **The default application on this
 branch exercises the Y-axis H-bridge**; do not flash it as a harmless idle build.
 
-## Latest verification after authorized MRAM initialization
+## Second reworked board — smoke verification
+
+Capture: `logs/board2-post-rework-smoke-initial.log`.
+
+```text
+SUMMARY /5 MRAM1=5 MRAM2=5 MRAM3=5 RM3100=5 GYRO=5 MUX=5
+```
+
+Clean-built with `make -C src -j8 dev BOARD_SMOKE_TEST=1`, flashed, and captured
+five complete cycles. All three MRAMs returned `6B BB 14`, status `00` (WIP/WEL
+clear), and matching repeated reads at `0x000980`. RM3100 configuration/data-ready
+and live XYZ passed; SCH16T initialization, diagnostic status and live readings
+passed (temperature about 21.9 °C at the last sample). The mux passed all control
+register patterns on normal SERCOM6 wiring and was restored to all channels off.
+
+No MRAM writes or factory initialization were performed on this second board;
+this verifies identity and sampled read consistency, not write/retention behavior.
+Firmware reached the idle loop without actuator exercise. The first board's
+initialization and stronger MRAM write-test results below do not apply to this board.
+
+## First board — verification after authorized MRAM initialization
 
 Capture: `logs/post-rework-board-check-after-mram-init.log`.
 
