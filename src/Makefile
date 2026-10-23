@@ -116,6 +116,29 @@ CFLAGS += -fsigned-char # Ensure that char is signed as your average c programme
 # Disable warnings for unused parameters due to ASF functions having unused parameters
 CFLAGS += -Wno-unused-parameter #Because some ASF functions have unused parameters, supress this warning
 
+ifeq ($(BOARD_SMOKE_TEST),1)
+ifeq ($(FG_SERCOM7_BENCH),1)
+$(error BOARD_SMOKE_TEST requires the normal SERCOM6 mapping, not FG_SERCOM7_BENCH)
+endif
+OBJS += ../src/tests/hardware_smoke_check.o ../src/tests/hardware_gyro_check.o
+CFLAGS += -DBOARD_SMOKE_TEST=1 -DFG_MUX_ONLY_TEST=1
+endif
+
+ifeq ($(BOARD_MRAM_TEST),1)
+ifneq ($(BOARD_SMOKE_TEST),1)
+$(error BOARD_MRAM_TEST requires BOARD_SMOKE_TEST=1 for the actuator-safe harness)
+endif
+OBJS += ../src/tests/hardware_mram_check.o
+CFLAGS += -DBOARD_MRAM_TEST=1
+endif
+ifeq ($(BOARD_MRAM_FACTORY_INIT),1)
+ifneq ($(BOARD_MRAM_TEST),1)
+$(error BOARD_MRAM_FACTORY_INIT requires BOARD_MRAM_TEST=1)
+endif
+OBJS += ../src/tests/hardware_mram_factory.o
+CFLAGS += -DBOARD_MRAM_FACTORY_INIT=1
+endif
+
 # Explicit, non-production workaround for swapped mux SDA/SCL PCB traces.
 ifeq ($(FG_SERCOM7_BENCH),1)
 CFLAGS += -DFG_SERCOM7_BENCH=1

@@ -19,6 +19,12 @@
 #include "globals.h"
 #include "logging.h"
 #include "tests/test.h"
+#if BOARD_SMOKE_TEST
+#include "tests/hardware_smoke_check.h"
+#endif
+#if BOARD_MRAM_TEST
+#include "tests/hardware_mram_check.h"
+#endif
 
 static void PVDX_init(void) {
     // WARNING: Segger RTT channel 0 is pre-configured at compile time according to Segger documentation
@@ -45,8 +51,22 @@ int main(void) {
     info("[+] Built from branch: %s\n", GIT_BRANCH_NAME);
     info("[+] Built from commit: %s\n", GIT_COMMIT_HASH);
 
+#if BOARD_MRAM_TEST
+    hardware_mram_check();
+    while (true) {
+        delay_ms(1000);
+    }
+#endif
+
+#if BOARD_SMOKE_TEST
+    hardware_smoke_check();
+    while (true) {
+        delay_ms(1000);
+    }
+#endif
+
 #ifdef UNITTEST
-    // Hardware-in-the-loop tests; then idle (skip the H-bridge bench loop).
+    // Explicit board diagnostics take precedence over actuator-capable unit tests.
     tests_run();
     while (true) {
         delay_ms(1000);
