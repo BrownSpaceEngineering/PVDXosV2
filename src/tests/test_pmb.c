@@ -35,7 +35,7 @@
         }                                                                                                                                  \
     } while (0)
 
-#if defined(UNITTEST)
+#if defined(UNITTEST) && defined(TEST_PMB)
 static void test_pmb_sweep_pixel(uint8_t pixel) {
     PVDX_ASSERT_MSG(adg734_select_pixel(pixel) == SUCCESS, "pmb select pixel\n");
     uint8_t selected = PMB_PIXEL_NONE;

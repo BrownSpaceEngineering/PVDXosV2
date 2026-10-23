@@ -112,10 +112,10 @@ CFLAGS += -Wno-unused-parameter #Because some ASF functions have unused paramete
 
 # Tests that `make test` can build individually. Each NAME is guarded by #ifdef TEST_NAME in src/tests
 # Keep this list in sync with src/tests/test.h
-TEST_NAMES := SPP LINALG CFDP USLP PMB TELEMETRY FLOAT
+TEST_NAMES := SPP LINALG CFDP USLP PMB TELEMETRY FLOAT MRAM
 
 # `make test TESTS="spp cfdp"` builds only those tests by passing -DTEST_SPP -DTEST_CFDP.
-# Leaving TESTS empty builds every test
+# Leaving TESTS empty builds the default tests; destructive hardware MRAM tests are opt-in only.
 SELECTED_TESTS := $(patsubst TEST_%,%,$(shell echo '$(TESTS)' | tr 'a-z,' 'A-Z '))
 UNKNOWN_TESTS := $(filter-out $(TEST_NAMES),$(SELECTED_TESTS))
 ifneq ($(UNKNOWN_TESTS),)

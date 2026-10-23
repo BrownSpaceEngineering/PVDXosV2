@@ -55,13 +55,14 @@ int main(void) {
         if (mram_checksum_matches((uint8_t *)os_dst)) {
             go_to_app();
         }
-    } else {
-        char *os_flash_src = (char *)FLASH_OS_BASE_ADDRESS;
-        for (uint32_t i = 0; i < MRAM_OS_SIZE; i++) {
-            os_dst[i] = (os_flash_src[i + 0 * MRAM_OS_SIZE] & os_flash_src[i + 1 * MRAM_OS_SIZE]) |
-                        (os_flash_src[i + 1 * MRAM_OS_SIZE] & os_flash_src[i + 2 * MRAM_OS_SIZE]) |
-                        (os_flash_src[i + 0 * MRAM_OS_SIZE] & os_flash_src[i + 2 * MRAM_OS_SIZE]);
-        }
+    }
+
+    // Also use flash when MRAM initialized but none of its images passed the checksum.
+    char *os_flash_src = (char *)FLASH_OS_BASE_ADDRESS;
+    for (uint32_t i = 0; i < MRAM_OS_SIZE; i++) {
+        os_dst[i] = (os_flash_src[i + 0 * MRAM_OS_SIZE] & os_flash_src[i + 1 * MRAM_OS_SIZE]) |
+                    (os_flash_src[i + 1 * MRAM_OS_SIZE] & os_flash_src[i + 2 * MRAM_OS_SIZE]) |
+                    (os_flash_src[i + 0 * MRAM_OS_SIZE] & os_flash_src[i + 2 * MRAM_OS_SIZE]);
     }
 
     go_to_app();
