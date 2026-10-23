@@ -118,7 +118,12 @@ CFLAGS += -Wno-unused-parameter #Because some ASF functions have unused paramete
 
 # Explicit, non-production workaround for swapped mux SDA/SCL PCB traces.
 ifeq ($(FG_SERCOM7_BENCH),1)
-CFLAGS += -DFG_SERCOM7_BENCH=1 -DFG_MUX_ONLY_TEST=1
+CFLAGS += -DFG_SERCOM7_BENCH=1
+ifneq ($(FG_GAUGE_BENCH_CHANNEL),)
+CFLAGS += -DFG_MUX_GAUGE_TEST=1 -DFG_USE_MUX=1 -DFG_TEST_MUX_CHANNEL=$(FG_GAUGE_BENCH_CHANNEL)
+else
+CFLAGS += -DFG_MUX_ONLY_TEST=1
+endif
 CFLAGS += -include ../../src/drivers/fuel_gauge/fuel_gauge_bench_config.h
 endif
 

@@ -26,6 +26,25 @@ Always clean when switching build modes; the makefiles do not track flag changes
 channels disconnected between cycles. Results go to RTT channel 1 every five
 seconds. No fuel-gauge reads or H-bridge exercise are performed.
 
+## Gauge on a single downstream channel
+
+To read a gauge on the **second** mux pair, SC1/SD1 (zero-based channel 1):
+
+```sh
+make clean all FG_SERCOM7_BENCH=1 FG_GAUGE_BENCH_CHANNEL=1
+JLinkExe -CommanderScript flash.jlink
+python3 tools/rtt_probe.py --seconds 20 --output logs/fuel-gauge-mux-channel-1.log
+```
+
+`FG_GAUGE_BENCH_CHANNEL` accepts 0..3 and replaces the mux-only loop with a
+single-channel gauge test. Each cycle verifies channel selection, reads DevName,
+Status, SOC, pack voltage, current and temperature, then attempts and verifies
+all-off cleanup even when a gauge read fails. No gauge configuration/NV is written.
+Cleanup failures are reported separately; isolation is not guaranteed after a bus
+failure. The test runs once per second, with UHF SPI still unavailable.
+
+## Peripheral ownership and limitations
+
 The bench path deinitializes the startup-configured UHF SPI peripheral,
 disconnects its pads, disables SERCOM6 I2C, and reinitializes the I2C_CAMERA
 descriptor on SERCOM7 with the swapped pin mapping. Existing generated clock

@@ -49,6 +49,10 @@
 #define FG_MUX_ONLY_TEST 0
 #endif
 
+#ifndef FG_MUX_GAUGE_TEST
+#define FG_MUX_GAUGE_TEST 0
+#endif
+
 // Bench default: one directly connected gauge. Set to 1 for the four-channel mux board.
 #ifndef FG_USE_MUX
 #define FG_USE_MUX 0
@@ -96,6 +100,11 @@ typedef struct {
 #if FG_MUX_ONLY_TEST
 // Verifies all-off and each single-channel control value, then restores all-off.
 status_t fg_mux_self_test(void);
+#endif
+
+#if FG_MUX_GAUGE_TEST
+// Reads only the selected downstream gauge, then verifies all mux channels are off.
+status_t fg_mux_gauge_test(uint8_t channel, fg_reading_t *out, uint16_t *devname, uint16_t *status);
 #endif
 
 status_t init_fuel_gauges(void);

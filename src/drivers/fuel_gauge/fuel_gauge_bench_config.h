@@ -5,8 +5,11 @@
 #if !defined(DEVBUILD) || defined(RELEASE) || defined(UNITTEST)
 #error "SERCOM7 mux workaround is only supported in the development bench build"
 #endif
-#if !FG_SERCOM7_BENCH || !FG_MUX_ONLY_TEST
-#error "SERCOM7 mux workaround requires FG_SERCOM7_BENCH and FG_MUX_ONLY_TEST"
+#if !FG_SERCOM7_BENCH || (!FG_MUX_ONLY_TEST && !FG_MUX_GAUGE_TEST)
+#error "SERCOM7 mux workaround requires an explicit mux bench test"
+#endif
+#if FG_MUX_GAUGE_TEST && (!FG_USE_MUX || FG_TEST_MUX_CHANNEL < 0 || FG_TEST_MUX_CHANNEL > 3)
+#error "Gauge bench test requires mux support and a channel from 0 to 3"
 #endif
 
 #include <peripheral_clk_config.h>

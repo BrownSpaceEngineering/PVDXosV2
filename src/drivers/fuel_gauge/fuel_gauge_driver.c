@@ -183,6 +183,54 @@ static inline float fg_conv_current(uint16_t raw) {
 
 // ---------------------- Public API ----------------------
 
+#if FG_MUX_GAUGE_TEST
+status_t fg_mux_gauge_test(uint8_t channel, fg_reading_t *out, uint16_t *devname, uint16_t *status) {
+    if (out == NULL || devname == NULL || status == NULL || channel >= FG_NUM_PACKS) {
+        return ERROR_BAD_TARGET;
+    }
+    memset(out, 0, sizeof(*out));
+    *devname = 0;
+    *status = 0;
+
+    status_t result = fg_prepare_sercom7_bench();
+    if (result != SUCCESS) {
+        return result;
+    }
+    fg_mux_release_reset();
+    int32_t rc = i2c_m_sync_enable(&FG_I2C);
+    if (rc != 0) {
+        warning("mux-gauge: I2C enable failed rc=%ld %s\n", (long)rc, fg_i2c_err_str(rc));
+        return ERROR_I2C_FAILED;
+    }
+
+    result = fg_mux_select(channel);
+    if (result == SUCCESS) {
+        info("mux-gauge: channel=%u control=0x%02x selected/readback OK\n", channel, FG_MUX_CH(channel));
+        result = fg_read_reg16(MAX17205_REG_DEVNAME, devname);
+    }
+    if (result == SUCCESS) {
+        result = fg_read_reg16(MAX17205_REG_STATUS, status);
+    }
+    if (result == SUCCESS) {
+        result = fg_read_pack(channel, out);
+    }
+
+    // Isolate the downstream bus even when any of the gauge reads failed.
+    rc = fg_mux_raw_write(FG_MUX_CH_NONE);
+    uint8_t control = 0xFF;
+    if (rc == 0) {
+        rc = fg_mux_raw_read(&control);
+    }
+    if (rc != 0 || control != FG_MUX_CH_NONE) {
+        warning("mux-gauge: all-off cleanup failed rc=%ld read=0x%02x\n", (long)rc, control);
+        out->valid = false;
+        return rc != 0 ? ERROR_I2C_FAILED : ERROR_SANITY_CHECK_FAILED;
+    }
+    info("mux-gauge: all channels off/readback OK\n");
+    return result;
+}
+#endif
+
 #if FG_MUX_ONLY_TEST
 status_t fg_mux_self_test(void) {
 #if FG_SERCOM7_BENCH

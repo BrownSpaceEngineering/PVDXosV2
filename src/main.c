@@ -53,6 +53,30 @@ int main(void) {
     }
 #endif
 
+#if FG_MUX_GAUGE_TEST
+    info("[+] Mux gauge test: channel=%u (SC%u/SD%u, zero-based), %s\n",
+         FG_TEST_MUX_CHANNEL, FG_TEST_MUX_CHANNEL, FG_TEST_MUX_CHANNEL, FG_I2C_DESCRIPTION);
+    info("[+] Gauge reads only; no NV writes, H-bridge exercise, or UHF SPI\n");
+    unsigned gauge_passes = 0, gauge_failures = 0;
+    while (true) {
+        fg_reading_t reading;
+        uint16_t devname = 0, status = 0;
+        status_t result = fg_mux_gauge_test(FG_TEST_MUX_CHANNEL, &reading, &devname, &status);
+        if (result == SUCCESS && reading.valid) {
+            gauge_passes++;
+            info("mux-gauge: ch=%u DevName=0x%04x Status=0x%04x SOC=%ld m%% Vpack=%ld mV I=%ld mA T=%ld mC\n",
+                 FG_TEST_MUX_CHANNEL, devname, status, (long)(reading.soc_pct * 1000.0f),
+                 (long)(reading.pack_voltage * 1000.0f), (long)(reading.current_a * 1000.0f),
+                 (long)(reading.temp_c * 1000.0f));
+            info("mux-gauge: cycle PASS (passes=%u failures=%u)\n", gauge_passes, gauge_failures);
+        } else {
+            gauge_failures++;
+            warning("mux-gauge: cycle FAIL status=%d (passes=%u failures=%u)\n", result, gauge_passes, gauge_failures);
+        }
+        delay_ms(1000);
+    }
+#endif
+
 #if FG_MUX_ONLY_TEST
     info("[+] Mux-only test: TCA9546A addr=0x%02x, %s\n", FG_MUX_ADDR, FG_I2C_DESCRIPTION);
     info("[+] No fuel-gauge reads or H-bridge exercise; downstream switch continuity is not tested\n");
