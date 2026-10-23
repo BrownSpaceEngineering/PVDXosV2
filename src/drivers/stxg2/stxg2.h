@@ -4,7 +4,7 @@
  * CUBECOM STXG2 (VestaLink S25) S-band transmitter driver.
  * Control: I2C. Data: receive-only SPI on the CSK header, crossbar input 0x4.
  * The radio framer is off. PVDX frames its own data.
- * Refs: ICD-01-10022-A6 (ICD), USM-01-10022-A8 (USM).
+ * Refs: ICD-01-10022-A6 (ICD), USM-01-10022-A8 (USM), OPT-01-10025-A0 (option sheet).
  */
 
 #ifndef STXG2_H
@@ -23,7 +23,7 @@
 // Pins from the PVDX-SAMD-PinConfig README.
 // WARNING: main's ASF labels PB19 as BURN. Fix upstream.
 #ifndef SBAND_CS
-    #define SBAND_CS GPIO(GPIO_PORTB, 19) // Active low
+    #define SBAND_CS GPIO(GPIO_PORTB, 19) // Active low. Radio pin H1.32 (option sheet), not H1.9.
 #endif
 #ifndef SBAND_EN
     #define SBAND_EN GPIO(GPIO_PORTC, 23) // High = on (ICD 2.2)
@@ -156,7 +156,7 @@ typedef enum {
 
 // I2C_STAT (USM 9.2.2.1)
 #define I2C_STATUS_INVALID_ADDR (1u << 0)
-#define I2C_STATUS_OUT_OF_RANGE (1u << 1)
+#define I2C_STATUS_BAD_SIZE (1u << 1)
 #define I2C_STATUS_NOT_WRITEABLE (1u << 2)
 #define I2C_STATUS_INTERNAL_ERR (1u << 3)
 #define I2C_STATUS_BUF_OVERFLOW (1u << 4)
@@ -240,14 +240,15 @@ typedef enum {
 #define XBAR_OUT_HS0_SHIFT 12
 #define XBAR_OUT_HS1_SHIFT 16
 
-// RF limits (USM 9.1, 9.2.5.2, 9.2.5.3, 9.2.9.2)
-#define STXG2_FREQ_MIN_KHZ 2150000u
-#define STXG2_FREQ_MAX_KHZ 2450000u // Standard unit stops at 2290000. Raised for the amateur band (2400-2450 MHz) unit.
-#define STXG2_SYM_RATE_MIN_KSPS 100u
-#define STXG2_SYM_RATE_MAX_KSPS 5000u
-#define STXG2_SYM_RATE_STEP_KSPS 100u
-#define STXG2_POWER_MIN_DBM 14u // Flatsat 14-20
-#define STXG2_POWER_MAX_DBM 33u // Flight 27-33
+// RF limits for the STXG2.4 (option sheet). The USM limits are for the standard unit.
+#define STXG2_FREQ_MIN_KHZ 2400000u
+#define STXG2_FREQ_MAX_KHZ 2480000u
+#define STXG2_FREQ_STEP_KHZ 100u
+#define STXG2_SYM_RATE_MIN_KSPS 5000u
+#define STXG2_SYM_RATE_MAX_KSPS 50000u
+#define STXG2_SYM_RATE_STEP_KSPS 1000u
+#define STXG2_POWER_MIN_DBM 27u // Flight model 27-33, flatsat 14-20 (USM 9.2.9.2)
+#define STXG2_POWER_MAX_DBM 33u
 
 /* ---------- Functions ---------- */
 

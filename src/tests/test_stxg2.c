@@ -33,8 +33,8 @@
     #error "Define STXG2_TEST_CALLSIGN as a string literal (your amateur callsign) to use STXG2_TEST_PATTERN_CALLSIGN"
 #endif
 
-#define STXG2_TEST_FREQ_KHZ 2418000U   // Amateur band unit; within STXG2_FREQ_MIN_KHZ..STXG2_FREQ_MAX_KHZ
-#define STXG2_TEST_SYM_RATE_KSPS 1000U // Multiple of STXG2_SYM_RATE_STEP_KSPS
+#define STXG2_TEST_FREQ_KHZ 2418000U
+#define STXG2_TEST_SYM_RATE_KSPS STXG2_SYM_RATE_MIN_KSPS
 #define STXG2_TEST_MODCOD 1U           // Lowest MODCOD the radio accepts (USM 9.2.5.5)
 #define STXG2_TEST_LOCK_TIMEOUT_MS 2000U
 #define STXG2_TEST_REPORT_PERIOD_MS 1000U

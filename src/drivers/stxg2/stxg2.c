@@ -16,7 +16,8 @@
 
 // NOTE: these are all estimates
 #define STXG2_POLL_MS 10u
-#define STXG2_BOOT_TIMEOUT_MS 2000u
+#define STXG2_POWER_SETTLE_MS 100u // From EN high to RST high
+#define STXG2_BOOT_TIMEOUT_MS 5000u
 #define STXG2_MODE_TIMEOUT_MS 2000u
 #define STXG2_MEM_TIMEOUT_MS 2000u
 #define STXG2_SPI_WAIT_LIMIT 1000u // 1 ms polls with no buffer room
@@ -24,6 +25,9 @@
 
 static uint8_t stxg2_spi_tx_buffer[STXG2_SPI_CHUNK_BYTES] = {0x00};
 static struct spi_xfer stxg2_xfer = {.rxbuf = NULL, .txbuf = stxg2_spi_tx_buffer, .size = 0};
+
+static int32_t last_i2c_error = 0;          // ASF return code of the last failed transfer
+static bool i2c_status_needs_clear = false; // A failed transfer can set flags in I2C_STAT
 
 static bool store_active = false;
 static uint32_t store_words_sent = 0; // Since SPI enable
@@ -45,20 +49,31 @@ static void stxg2_delay_ms(uint32_t ms) {
 /**
  * \brief Polls addr until (value & mask) == expected
  *
+ * A failed read counts as not ready. The radio does not answer I2C while it changes mode.
+ *
  * \param last_value Last value read or NULL.
- * \returns ERROR_NOT_READY on timeout
+ * \returns ERROR_NOT_READY on timeout, or the read error if all reads failed
  */
 static status_t stxg2_poll_reg(uint16_t addr, uint32_t mask, uint32_t expected, uint32_t timeout_ms, uint32_t *last_value) {
     uint32_t value = 0;
+    status_t read_result = ERROR_NOT_READY;
+    bool read_succeeded = false;
     for (uint32_t waited = 0; waited <= timeout_ms; waited += STXG2_POLL_MS) {
-        ret_err_status(stxg2_read_reg(addr, &value), "stxg2: poll read failed\n");
-        if (last_value != NULL) {
-            *last_value = value;
-        }
-        if ((value & mask) == expected) {
-            return SUCCESS;
+        read_result = stxg2_read_reg(addr, &value);
+        if (read_result == SUCCESS) {
+            read_succeeded = true;
+            if (last_value != NULL) {
+                *last_value = value;
+            }
+            if ((value & mask) == expected) {
+                return SUCCESS;
+            }
         }
         stxg2_delay_ms(STXG2_POLL_MS);
+    }
+    if (!read_succeeded) {
+        warning("stxg2: all reads of 0x%04x failed (i2c error %ld)\n", addr, (long)last_i2c_error);
+        return read_result;
     }
     return ERROR_NOT_READY;
 }
@@ -89,6 +104,34 @@ static status_t stxg2_wait_memory_idle(void) {
 }
 
 /**
+ * \brief Sends one I2C message. On failure, sends a STOP to release the bus.
+ *
+ * \returns ERROR_I2C_FAILED on failure. last_i2c_error keeps the ASF code (-2 = NACK, -5 = bus error).
+ */
+static status_t stxg2_i2c_transfer(struct _i2c_m_msg *msg) {
+    int32_t rc = _i2c_m_sync_transfer(&I2C_SBAND.device, msg);
+    if (rc != 0) {
+        last_i2c_error = rc;
+        i2c_status_needs_clear = true;
+        i2c_m_sync_send_stop(&I2C_SBAND);
+        return ERROR_I2C_FAILED;
+    }
+    return SUCCESS;
+}
+
+/**
+ * \brief Reads I2C_STAT to clear its flags without checking them
+ */
+static status_t stxg2_clear_i2c_status(void) {
+    uint32_t ignored = 0;
+    status_t result = stxg2_read_reg(REG_I2C_STATUS, &ignored);
+    if (result == SUCCESS) {
+        i2c_status_needs_clear = false;
+    }
+    return result;
+}
+
+/**
  * \brief Reads and clears I2C_STAT (USM 9.2.2.1)
  *
  * \returns ERROR_WRITE_FAILED if a flag is set
@@ -96,8 +139,9 @@ static status_t stxg2_wait_memory_idle(void) {
 status_t stxg2_check_i2c_status(void) {
     uint32_t i2c_status = 0;
     ret_err_status(stxg2_read_reg(REG_I2C_STATUS, &i2c_status), "stxg2: I2C status read failed\n");
+    i2c_status_needs_clear = false;
     if (i2c_status & I2C_STATUS_MSK) {
-        warning("stxg2: I2C status flags 0x%02lx (invalid addr|range|read-only|internal|overflow)\n",
+        warning("stxg2: I2C status flags 0x%02lx (invalid addr|bad size|read-only|internal|overflow)\n",
                 (unsigned long)(i2c_status & I2C_STATUS_MSK));
         return ERROR_WRITE_FAILED;
     }
@@ -112,6 +156,10 @@ status_t stxg2_check_i2c_status(void) {
  * \note I2C_STAT read after write_reg() ensures successful write
 */
 status_t stxg2_write_reg(uint16_t addr, uint32_t value) {
+    if (i2c_status_needs_clear) {
+        stxg2_clear_i2c_status();
+    }
+
     uint8_t buf[6];
     buf[0] = (uint8_t)(addr & 0xFF);
     buf[1] = (uint8_t)((addr >> 8) & 0xFF);
@@ -126,21 +174,25 @@ status_t stxg2_write_reg(uint16_t addr, uint32_t value) {
         .buffer = buf,
         .flags = I2C_M_SEVEN | I2C_M_STOP, // No I2C_M_RD = write
     };
-    if (_i2c_m_sync_transfer(&I2C_SBAND.device, &msg) != 0) {
+    if (stxg2_i2c_transfer(&msg) != SUCCESS) {
+        warning("stxg2: write of 0x%04x failed (i2c error %ld)\n", addr, (long)last_i2c_error);
         return ERROR_I2C_FAILED;
     }
     return stxg2_check_i2c_status();
 }
 
 /**
- * \brief Reads a register as a 2-byte addr echo, then value, LSB first (ICD 3.1.2).
+ * \brief Reads a 4-byte register value, LSB first.
+ *
+ * \note ICD 3.1.2 shows a 2-byte address echo before the value. The radio does not send it: a 6-byte read of
+ * REG_ID returned 32 58 54 53 00 00.
  */
 status_t stxg2_read_reg(uint16_t addr, uint32_t *value) {
     if (value == NULL) {
         return ERROR_BAD_ARGS;
     }
     uint8_t addr_buf[2] = {(uint8_t)(addr & 0xFF), (uint8_t)((addr >> 8) & 0xFF)};
-    uint8_t data_buf[6] = {0};
+    uint8_t data_buf[4] = {0};
 
     struct _i2c_m_msg wr = {
         .addr = STXG2_I2C_ADDR,
@@ -154,18 +206,11 @@ status_t stxg2_read_reg(uint16_t addr, uint32_t *value) {
         .buffer = data_buf,
         .flags = I2C_M_SEVEN | I2C_M_RD | I2C_M_STOP,
     };
-    if (_i2c_m_sync_transfer(&I2C_SBAND.device, &wr) != 0) {
+    // No warning here because init polls this while the radio boots
+    if (stxg2_i2c_transfer(&wr) != SUCCESS || stxg2_i2c_transfer(&rd) != SUCCESS) {
         return ERROR_I2C_FAILED;
     }
-    if (_i2c_m_sync_transfer(&I2C_SBAND.device, &rd) != 0) {
-        return ERROR_I2C_FAILED;
-    }
-    if (data_buf[0] != addr_buf[0] || data_buf[1] != addr_buf[1]) {
-        warning("stxg2: read of 0x%04x echoed address 0x%02x%02x\n", addr, data_buf[1], data_buf[0]);
-        return ERROR_READ_FAILED;
-    }
-
-    *value = (uint32_t)data_buf[5] << 24 | (uint32_t)data_buf[4] << 16 | (uint32_t)data_buf[3] << 8 | (uint32_t)data_buf[2];
+    *value = (uint32_t)data_buf[3] << 24 | (uint32_t)data_buf[2] << 16 | (uint32_t)data_buf[1] << 8 | (uint32_t)data_buf[0];
     return SUCCESS;
 }
 
@@ -177,13 +222,20 @@ status_t stxg2_init(void) {
     gpio_set_pin_direction(SBAND_CS, GPIO_DIRECTION_OUT);
     gpio_set_pin_function(SBAND_CS, GPIO_PIN_FUNCTION_OFF);
 
-    gpio_set_pin_level(SBAND_RST, true);
+    // Hold reset while power comes on (ICD 2.2)
+    gpio_set_pin_level(SBAND_RST, false);
     gpio_set_pin_direction(SBAND_RST, GPIO_DIRECTION_OUT);
     gpio_set_pin_function(SBAND_RST, GPIO_PIN_FUNCTION_OFF);
 
     gpio_set_pin_level(SBAND_EN, true);
     gpio_set_pin_direction(SBAND_EN, GPIO_DIRECTION_OUT);
     gpio_set_pin_function(SBAND_EN, GPIO_PIN_FUNCTION_OFF);
+
+    stxg2_delay_ms(STXG2_POWER_SETTLE_MS);
+    gpio_set_pin_level(SBAND_RST, true);
+
+    gpio_set_pin_pull_mode(SBAND_SDA, GPIO_PULL_UP);
+    gpio_set_pin_pull_mode(SBAND_SCL, GPIO_PULL_UP);
 
     if (i2c_m_sync_enable(&I2C_SBAND) != 0) {
         warning("stxg2: failed to enable I2C bus\n");
@@ -201,8 +253,12 @@ status_t stxg2_init(void) {
         }
         stxg2_delay_ms(STXG2_POLL_MS);
     }
+    if (result == ERROR_I2C_FAILED) {
+        warning("stxg2: no answer on I2C after %u ms (i2c error %ld)\n", STXG2_BOOT_TIMEOUT_MS, (long)last_i2c_error);
+        return result;
+    }
     if (result != SUCCESS) {
-        warning("stxg2: no answer on I2C after %u ms\n", STXG2_BOOT_TIMEOUT_MS);
+        warning("stxg2: ID read failed after %u ms (status %d)\n", STXG2_BOOT_TIMEOUT_MS, result);
         return result;
     }
     if (id != STXG2_ID_VALUE) {
@@ -211,8 +267,7 @@ status_t stxg2_init(void) {
     }
 
     // Clear boot flags, then test a write and read
-    uint32_t ignored = 0;
-    ret_err_status(stxg2_read_reg(REG_I2C_STATUS, &ignored), "stxg2: I2C status read failed\n");
+    ret_err_status(stxg2_clear_i2c_status(), "stxg2: I2C status read failed\n");
     ret_err_status(stxg2_write_reg(REG_SCRATCHPAD, STXG2_SCRATCH_PATTERN), "stxg2: scratchpad write failed\n");
     uint32_t scratch = 0;
     ret_err_status(stxg2_read_reg(REG_SCRATCHPAD, &scratch), "stxg2: scratchpad read failed\n");
@@ -235,7 +290,11 @@ status_t stxg2_set_mode(stxg2_mode_t mode) {
 
     uint32_t value = 0;
     for (uint32_t waited = 0; waited <= STXG2_MODE_TIMEOUT_MS; waited += STXG2_POLL_MS) {
-        ret_err_status(stxg2_read_reg(REG_MODE, &value), "stxg2: mode poll failed\n");
+        // The radio does not answer I2C during the switch
+        if (stxg2_read_reg(REG_MODE, &value) != SUCCESS) {
+            stxg2_delay_ms(STXG2_POLL_MS);
+            continue;
+        }
         if (value & MODE_ERROR) {
             warning("stxg2: error changing to mode %u\n", (unsigned)mode);
             return ERROR_PROCESSING_FAILED;
@@ -252,14 +311,14 @@ status_t stxg2_set_mode(stxg2_mode_t mode) {
 /**
  * \brief Sets frequency, symbol rate, MODCOD, and PA power
  *
- * \param freq_khz 2150000-2450000, 1 MHz steps (USM 9.2.5.3)
- * \param sym_rate_ksps 100-5000, 100 ksps steps (USM 9.2.5.2)
+ * \param freq_khz 2400000-2480000, 100 kHz steps (option sheet, USM 9.2.5.3)
+ * \param sym_rate_ksps 5000-50000, 1000 ksps steps (option sheet, USM 9.2.5.2)
  * \param modcod 1-28 (USM table 9-14)
  * \param power_dbm tx power in dbm (USM 9.2.9.2)
  * \returns ERROR_BAD_ARGS if out of range
  */
 status_t stxg2_configure_rf(uint32_t freq_khz, uint32_t sym_rate_ksps, uint8_t modcod, uint8_t power_dbm) {
-    if (freq_khz < STXG2_FREQ_MIN_KHZ || freq_khz > STXG2_FREQ_MAX_KHZ || (freq_khz % 1000u) != 0) {
+    if (freq_khz < STXG2_FREQ_MIN_KHZ || freq_khz > STXG2_FREQ_MAX_KHZ || (freq_khz % STXG2_FREQ_STEP_KHZ) != 0) {
         warning("stxg2: bad frequency %lu kHz\n", (unsigned long)freq_khz);
         return ERROR_BAD_ARGS;
     }
