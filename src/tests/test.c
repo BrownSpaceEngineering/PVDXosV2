@@ -20,6 +20,11 @@
 #include "photodiode_driver.h"
 #include "thermistor_driver.h"
 
+// Build with -DFG_TESTS_ONLY=1 to run only the fuel-gauge tests (no thermistor/photodiode/MTQ hardware).
+#ifndef FG_TESTS_ONLY
+#define FG_TESTS_ONLY 0
+#endif
+
 int tests_passed = 0;
 int tests_total = 0;
 
@@ -190,8 +195,11 @@ static void test_magnetorquer(void) {
 
 void tests_run(void) {
     test_fuel_gauge_hw();
-    test_thermistor_hw();
-    test_photodiode_hw();
-    test_magnetorquer();
+    // Plain `if` (not #if) keeps the other tests referenced, so -Werror=unused-function stays quiet.
+    if (!FG_TESTS_ONLY) {
+        test_thermistor_hw();
+        test_photodiode_hw();
+        test_magnetorquer();
+    }
     test_log("test results: %d/%d passed\n", tests_passed, tests_total);
 }
