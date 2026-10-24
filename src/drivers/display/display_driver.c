@@ -11,6 +11,10 @@
 
 #include "globals.h"
 
+#ifdef DISPLAY_SHOW_PVDX_LOGO
+#include "image_buffer_PVDX.h"
+#endif
+
 // Buffer for SPI transactions
 uint8_t spi_rx_buffer[DISPLAY_SPI_BUFFER_CAPACITY] = {0x00};
 uint8_t spi_tx_buffer[DISPLAY_SPI_BUFFER_CAPACITY] = {0x00};
@@ -281,10 +285,15 @@ status_t init_display_hardware(void) {
     spi_tx_buffer[0] = SSD1362_CMD_1B_DISPLAYON;
     ret_err_status(spi_transfer(false), "display hardware init: could not turn display on");
 
+#ifdef DISPLAY_SHOW_PVDX_LOGO
+    // Show the PVDX logo straight away, so a working display is visible at init (-DDISPLAY_SHOW_PVDX_LOGO)
+    display_set_buffer((const color_t *)IMAGE_BUFFER_PVDX);
+#else
     // Clear the display buffer
     display_clear_buffer();
+#endif
 
-    // Trigger an update so the empty buffer is actually displayed
+    // Trigger an update so the buffer is actually displayed
     ret_err_status(display_update(), "display: Update failed");
 
     return SUCCESS;

@@ -75,11 +75,17 @@ status_t init_arducam_hardware(void) {
     // resetting, so the resolution never takes and the sensor stays near its
     // power-up default (~176x144) regardless of the size table below.
     //
-    // NOTE: Use vTaskDelay, NOT the ASF delay_ms(). delay_ms() busy-waits on
+    // NOTE: From a task, use vTaskDelay, NOT the ASF delay_ms(). delay_ms() busy-waits on
     // SysTick and overwrites SysTick->LOAD/VAL, which is the same timer FreeRTOS
     // uses for its scheduler tick -- calling it from a task corrupts the tick
     // rate and breaks every RTOS timeout. vTaskDelay yields without touching it.
-    vTaskDelay(pdMS_TO_TICKS(100));
+    // Before the scheduler starts (the startup device check runs this from main()),
+    // vTaskDelay cannot be used, so fall back to delay_ms() there.
+    if (xTaskGetSchedulerState() == taskSCHEDULER_NOT_STARTED) {
+        delay_ms(100);
+    } else {
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
 
     // fmt to jpeg config
     arducam_i2c_multi_write(OV2640_JPEG_INIT);

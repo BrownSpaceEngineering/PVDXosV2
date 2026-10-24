@@ -516,6 +516,16 @@ at86rf215_set_seln(struct at86rf215 *h, uint8_t enable)
 __attribute__((weak)) void
 at86rf215_delay_us(struct at86rf215 *h, uint32_t us)
 {
+  /* Before the scheduler starts (e.g. the startup device check) vTaskDelay is
+   * not usable, so busy-wait instead (ASF delay_us takes a uint16_t) */
+  if (xTaskGetSchedulerState() == taskSCHEDULER_NOT_STARTED) {
+    while (us > UINT16_MAX) {
+      delay_us(UINT16_MAX);
+      us -= UINT16_MAX;
+    }
+    delay_us((uint16_t)us);
+    return;
+  }
   TickType_t ticks = pdMS_TO_TICKS((us + 999u) / 1000u);
   vTaskDelay(ticks ? ticks : 1);
 }

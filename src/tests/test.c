@@ -27,6 +27,9 @@ void test_uslp(void);
 void test_telemetry_downlink(void);
 void test_telemetry_uplink(void);
 void test_float(void);
+#ifdef TEST_MRAM
+void test_mram(void);
+#endif
 
 void tests_run(void) {
 #ifdef TEST_SPP
@@ -47,6 +50,9 @@ void tests_run(void) {
 #ifdef TEST_TELEMETRY
     test_telemetry_downlink();
     test_telemetry_uplink();
+#endif
+#ifdef TEST_MRAM
+    test_mram();
 #endif
     test_log("test results: %d/%d passed", tests_passed, tests_total);
 }
@@ -1011,9 +1017,9 @@ void test_telemetry_uplink(void) {
                           0x1E, 0x00, 0x01, 0x01, 0x02, 0x03, 0x04, 0x00, 0x03, 0x00, 0x00, 0x00, 0x02, 0x0E, 0x10};
     PVDX_ASSERT_MSG(telemetry_uplink_parse(&uplink, bad_size, sizeof(bad_size)), "wrong command data size rejected\n");
 
-    // Set device broken on device 10, which is NUM_DEVICES
+    // Set device broken on device 11, which is NUM_DEVICES
     uint8_t bad_device[] = {0x10, 0xAB, 0xC0, 0x05, 0x00, 0x17, 0x4E, 0x30, 0x43, 0x41, 0x4C, 0x4C, 0x00, 0x00, 0x00,
-                            0x1E, 0x00, 0x01, 0x01, 0x02, 0x03, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x0A};
+                            0x1E, 0x00, 0x01, 0x01, 0x02, 0x03, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x0B};
     PVDX_ASSERT_MSG(telemetry_uplink_parse(&uplink, bad_device, sizeof(bad_device)), "unknown device rejected\n");
 }
 #endif // TEST_TELEMETRY
