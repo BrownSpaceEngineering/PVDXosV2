@@ -36,6 +36,7 @@ typedef struct { // preliminary contents; still under discussion
 	bool detumbling; // i think
 	float battery_level; // not sure yet how this will be stored/fetched
 	bool image_ready_to_display;
+	bool display_active;
 	bool photo_taken_for_downlink;
 	bool perovskite_data_ready_for_downlink;
 	// Filled in by the task manager itself; never sent as an input update
@@ -51,6 +52,7 @@ typedef enum { // preliminary contents; still under discussion
 	DETUMBLING_UPDATE,
 	BATTERY_LEVEL_UPDATE,
 	IMAGE_READY_DISPLAY_UPDATE,
+	DISPLAY_ACTIVE_UPDATE,
 	PHOTO_READY_DOWNLINK_UPDATE,
 	PEROVSKITE_READY_DOWNLINK_UPDATE,
 	SBAND_READY_TRANSMIT_UPDATE,
