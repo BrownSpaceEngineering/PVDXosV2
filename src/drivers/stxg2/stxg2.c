@@ -312,7 +312,7 @@ status_t stxg2_set_mode(stxg2_mode_t mode) {
  * \brief Sets frequency, symbol rate, MODCOD, and PA power
  *
  * \param freq_khz 2400000-2480000, 100 kHz steps (option sheet, USM 9.2.5.3)
- * \param sym_rate_ksps 5000-50000, 1000 ksps steps (option sheet, USM 9.2.5.2)
+ * \param sym_rate_ksps 100-50000, 1000 ksps steps (option sheet, USM 9.2.5.2)
  * \param modcod 1-28 (USM table 9-14)
  * \param power_dbm tx power in dbm (USM 9.2.9.2)
  * \returns ERROR_BAD_ARGS if out of range
