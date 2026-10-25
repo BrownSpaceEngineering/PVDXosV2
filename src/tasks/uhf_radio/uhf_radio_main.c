@@ -11,6 +11,8 @@
 #include "ccsds/uslp.h"
 #include "libraries/cmd_dispatcher/cmd_dispatcher.h"
 #include "logging.h"
+#include "portmacro.h"
+#include "rtos_start.h"
 #include "string.h"
 #include "uhf_radio_task.h"
 #include "watchdog_task.h"
@@ -47,14 +49,6 @@ static struct at86rf215 at86_dev;
  * \see `init_task_pointer()` for usage of functions of the type `init_<TASK>()`
  */
 QueueHandle_t init_uhf_radio(void) {
-    QueueHandle_t uhf_radio_command_queue_handle =
-        xQueueCreateStatic(COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE, uhf_radio_mem.uhf_radio_command_queue_buffer,
-                           &uhf_radio_mem.uhf_radio_task_queue);
-
-    if (uhf_radio_command_queue_handle == NULL) {
-        fatal("Failed to create radio command queue!\n");
-    }
-
     downlink_queue = xQueueCreateStatic(RADIO_DOWNLINK_QUEUE_LENGTH, sizeof(radio_queue_item_t), uhf_radio_mem.downlink_queue_buffer,
                                         &uhf_radio_mem.downlink_queue_mem);
 
@@ -68,7 +62,7 @@ QueueHandle_t init_uhf_radio(void) {
         fatal("Failed to create radio uplink queue!\n");
     }
 
-    return uhf_radio_command_queue_handle;
+    return NULL;
 }
 
 /**
@@ -85,46 +79,68 @@ void main_uhf_radio(void *pvParameters) {
     pvdx_task_t *const current_task = get_current_task();
     // Cache the watchdog checkin command to avoid creating it every iteration
     command_t cmd_checkin = get_watchdog_checkin_command(current_task);
-    // Variable to hold commands popped off the queue
-    command_t cmd;
+
+    // event flags
+    uint32_t events;
+
+    // local uplink/downlink_queue item
     radio_queue_item_t item;
 
+    bool needs_downlink = false;
+
     while (true) {
-        // Commands aren't acted on yet. Drain them without blocking, so that the wait below is the only one per loop
-        while (xQueueReceive(p_uhf_radio_task->command_queue, &cmd, 0) == pdPASS) {
-            info("Radio: performing command\n");
+        xTaskNotifyWait(0, UINT32_MAX, &events, portMAX_DELAY);
+
+        if (events & UHF_EVENT_RXFE) {
+            at86_pop_frame(at86_buffer, sizeof(at86_buffer));
+            if (needs_downlink) {
+                uhf_downlink_frames();
+                needs_downlink = false;
+            } else {
+                uhf_go_rx();
+            }
         }
 
-        // Wait only briefly for a packet to send, so received frames are still polled for promptly
-        if (xQueueReceive(downlink_queue, &item, pdMS_TO_TICKS(UHF_RADIO_POLL_MS)) == pdPASS) {
+        if (events & UHF_EVENT_TXFE || events & UHF_EVENT_TXRDY) {
+            if (needs_downlink) {
+                uhf_downlink_frames();
+                needs_downlink = false;
+            } else {
+                uhf_go_rx();
+            }
+        }
+
+        if (events & UHF_EVENT_DOWNLINK) {
+            needs_downlink = true;
+            uhf_go_txprep();
+        }
+
+        // Check in with the watchdog task
+        if (should_checkin(current_task)) {
+            enqueue_command(&cmd_checkin);
+            debug("Radio: Enqueued watchdog checkin command\n");
+        }
+
+        if (events & UHF_EVENT_DOWNLINK) {
             int ret = set_at86_tx_prep_mode(&at86_dev, AT86_STATE_CHANGE_TIMEOUT_MS);
             if (ret) {
                 warning("Radio: failed to enter TXPREP (%d), dropping packet\n", ret);
-            } else {
-                // Send every queued packet, one USLP frame per packet
-                do {
-                    size_t frame_sz = AT86RF215_MAX_PDU;
-                    if (uslp_mapp_request(at86_buffer, &frame_sz, item.data, item.len, RADIO_GMAP_ID(item.vcid), SPP_VERSION_NUMBER,
-                                          RADIO_SDU_ID, USLP_QOS_EXPEDITED)) {
-                        warning("USLP: failed to prepare frame\n");
-                        continue;
-                    }
-
-                    ret = at86_send_frame(&at86_dev, at86_buffer, frame_sz, AT86_TX_TIMEOUT_MS);
-                    if (ret) {
-                        warning("Radio: failed to send frame (%d)\n", ret);
-                    }
-
-                    // A full frame at the lowest data rate takes seconds, so a long burst could outlast the watchdog
-                    if (should_checkin(current_task)) {
-                        enqueue_command(&cmd_checkin);
-                    }
-                } while (xQueueReceive(downlink_queue, &item, 0) == pdPASS);
+                continue;
             }
 
-            ret = set_at86_rx_mode(&at86_dev, AT86_STATE_CHANGE_TIMEOUT_MS);
-            if (ret) {
-                warning("Radio: failed to return to RX (%d)\n", ret);
+            while (xQueueReceive(downlink_queue, &item, 0) == pdPASS) {
+                size_t frame_sz = AT86RF215_MAX_PDU;
+                if (uslp_mapp_request(at86_buffer, &frame_sz, item.data, item.len, RADIO_GMAP_ID(item.vcid), SPP_VERSION_NUMBER,
+                                      RADIO_SDU_ID, USLP_QOS_EXPEDITED)) {
+                    warning("USLP: failed to prepare frame\n");
+                    continue;
+                }
+
+                ret = at86_send_frame(&at86_dev, at86_buffer, frame_sz, AT86_TX_TIMEOUT_MS);
+                if (ret) {
+                    warning("Radio: failed to send frame (%d)\n", ret);
+                    continue;
+                }
             }
         }
 
@@ -162,16 +178,9 @@ void main_uhf_radio(void *pvParameters) {
             item.vcid = tframe_view.primary_header.virtual_channel_id;
             memcpy(item.data, tframe_view.datafield, tframe_view.datafield_len);
 
-            // Don't block here: more frames may be waiting and the watchdog still needs a checkin
             if (xQueueSend(uplink_queue, &item, 0) != pdPASS) {
                 warning("Radio: uplink queue full, dropping packet\n");
             }
-        }
-
-        // Check in with the watchdog task
-        if (should_checkin(current_task)) {
-            enqueue_command(&cmd_checkin);
-            debug("Radio: Enqueued watchdog checkin command\n");
         }
     }
 }

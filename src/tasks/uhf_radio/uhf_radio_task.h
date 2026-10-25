@@ -21,6 +21,11 @@
 #define RADIO_SCID CCSDS_SCID // Spacecraft id
 #define RADIO_SDU_ID 0
 
+#define UHF_EVENT_DOWNLINK (1u << 0)
+#define UHF_EVENT_RXFE (1u << 1)
+#define UHF_EVENT_TXFE (1u << 2)
+#define UHF_EVENT_TXRDY (1u << 3)
+
 typedef struct {
     uint16_t len;
     uint8_t vcid;                          // USLP virtual channel the packet is sent or was received on, see radio_routing.h
@@ -51,6 +56,12 @@ extern uhf_radio_task_memory_t uhf_radio_mem;
 #define AT86_STATE_CHANGE_TIMEOUT_MS 10
 // How long one frame may take to transmit. A full AT86RF215_MAX_PDU frame takes about 2.6 s at 6.25 kb/s
 #define AT86_TX_TIMEOUT_MS 3000
+
+void uhf_downlink_frames();
+
+void uhf_go_rx();
+
+void uhf_go_txprep();
 
 /**
  * Valid PHY configs
