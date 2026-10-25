@@ -28,17 +28,6 @@ _Static_assert(RADIO_DOWNLINK_MAX_SIZE <=
                "a space packet must fit in one USLP frame");
 _Static_assert(USLP_MAX_FRAME_SIZE <= AT86RF215_MAX_PDU, "a USLP frame must fit in one radio frame");
 
-uint8_t at86_buffer[AT86RF215_MAX_PDU];
-
-// TODO(chip setup): this handle is never initialised. Before the task touches the radio it needs, in order:
-//   1. spi_m_sync_enable(&SPI_UHF) (currently only done inside at86_check_health)
-//   2. at86_init_pvdx(&at86_dev)
-//   3. at86rf215_radio_conf(&at86_dev, AT86RF215_RF09, ...) for carrier frequency/channel, set while in TRXOFF
-//   4. TX power (at86rf215_set_pac), also in TRXOFF so the PA calibrates against it
-//   5. change_at86_config(...) to pick the PHY
-//   6. set_at86_rx_mode(&at86_dev, ...) so the radio starts out listening
-static struct at86rf215 at86_dev;
-
 /**
  * \fn init_uhf_radio
  *
@@ -83,19 +72,20 @@ void main_uhf_radio(void *pvParameters) {
     // event flags
     uint32_t events;
 
-    // local uplink/downlink_queue item
-    radio_queue_item_t item;
-
     bool needs_downlink = false;
 
     while (true) {
         xTaskNotifyWait(0, UINT32_MAX, &events, portMAX_DELAY);
 
+        if (events & UHF_EVENT_DOWNLINK) {
+            needs_downlink = true;
+            uhf_go_txprep();
+        }
+
         if (events & UHF_EVENT_RXFE) {
-            at86_pop_frame(at86_buffer, sizeof(at86_buffer));
+            uhf_rx_process();
             if (needs_downlink) {
-                uhf_downlink_frames();
-                needs_downlink = false;
+                needs_downlink = uhf_tx_process();
             } else {
                 uhf_go_rx();
             }
@@ -103,16 +93,10 @@ void main_uhf_radio(void *pvParameters) {
 
         if (events & UHF_EVENT_TXFE || events & UHF_EVENT_TXRDY) {
             if (needs_downlink) {
-                uhf_downlink_frames();
-                needs_downlink = false;
+                needs_downlink = uhf_tx_process();
             } else {
                 uhf_go_rx();
             }
-        }
-
-        if (events & UHF_EVENT_DOWNLINK) {
-            needs_downlink = true;
-            uhf_go_txprep();
         }
 
         // Check in with the watchdog task

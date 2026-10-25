@@ -57,10 +57,10 @@ extern uhf_radio_task_memory_t uhf_radio_mem;
 // How long one frame may take to transmit. A full AT86RF215_MAX_PDU frame takes about 2.6 s at 6.25 kb/s
 #define AT86_TX_TIMEOUT_MS 3000
 
-void uhf_downlink_frames();
+void uhf_rx_process();
+bool uhf_tx_process();
 
 void uhf_go_rx();
-
 void uhf_go_txprep();
 
 /**
@@ -76,7 +76,7 @@ typedef enum {
     AT86_O_QPSK_LEG = 0,              // Used for testing, 250 kb/s
     AT86_MR_O_QPSK_100CH_6_2_5KB = 1, // 6.25 KChip/s, 6.25 kb/s
     AT86_MR_O_QPSK_100CH_12_5KB = 2,  // 100 KChip/s, 12.5 kb/s
-    AT86_MR_FSK = 3 // 2-GFSK, BT = 0.5, h = 0.5, 50 ksymbol/s (50 kb/s uncoded), RSC FEC
+    AT86_MR_FSK = 3                   // 2-GFSK, BT = 0.5, h = 0.5, 50 ksymbol/s (50 kb/s uncoded), RSC FEC
 } at86_config_t;
 
 QueueHandle_t init_uhf_radio(void);

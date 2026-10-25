@@ -6,6 +6,104 @@
 #include "logging.h"
 #include "regs.h"
 
+uint8_t at86_buffer[AT86RF215_MAX_PDU];
+
+// TODO(chip setup): this handle is never initialised. Before the task touches the radio it needs, in order:
+//   1. spi_m_sync_enable(&SPI_UHF) (currently only done inside at86_check_health)
+//   2. at86_init_pvdx(&at86_dev)
+//   3. at86rf215_radio_conf(&at86_dev, AT86RF215_RF09, ...) for carrier frequency/channel, set while in TRXOFF
+//   4. TX power (at86rf215_set_pac), also in TRXOFF so the PA calibrates against it
+//   5. change_at86_config(...) to pick the PHY
+//   6. set_at86_rx_mode(&at86_dev, ...) so the radio starts out listening
+static struct at86rf215 at86_dev;
+
+// local uplink/downlink_queue item
+radio_queue_item_t item;
+
+void uhf_rx_process() {}
+
+bool uhf_tx_process() {
+    if (xQueueReceive(downlink_queue, &item, 0) == pdPASS) {
+        size_t frame_sz = AT86RF215_MAX_PDU;
+        if (uslp_mapp_request(at86_buffer, &frame_sz, item.data, item.len, RADIO_GMAP_ID(item.vcid), SPP_VERSION_NUMBER, RADIO_SDU_ID,
+                              USLP_QOS_EXPEDITED)) {
+            warning("USLP: failed to prepare frame\n");
+        }
+
+        int ret = at86rf215_tx_frame_irq(&at86_dev, AT86RF215_RF09, at86_buffer, frame_sz);
+        if (ret) {
+            warning("Radio: failed to send frame (%d)\n", ret);
+        }
+    }
+
+    if (uxQueueMessagesWaiting(downlink_queue) == 0) {
+        return false;
+    }
+    return true;
+}
+
+void uhf_go_rx() {
+    size_t deadline = at86rf215_get_time_ms(h) + timeout_ms;
+    int ret = supports_rf(h, radio);
+    if (ret) {
+        return ret;
+    }
+
+    /*
+     * In order to transmit the frame, the corresponding baseband core should
+     * be enabled
+     */
+    if (h->priv.chpm == AT86RF215_RF_MODE_RF) {
+        return -AT86RF215_INVAL_CHPM;
+    }
+    if (radio == AT86RF215_RF09) {
+        if (h->priv.chpm == AT86RF215_RF_MODE_BBRF09) {
+            return -AT86RF215_INVAL_CHPM;
+        }
+    } else {
+        if (h->priv.chpm == AT86RF215_RF_MODE_BBRF24) {
+            return -AT86RF215_INVAL_CHPM;
+        }
+    }
+
+    at86rf215_rf_state_t state;
+    ret = at86rf215_get_state(h, &state, radio);
+    if (ret) {
+        return ret;
+    }
+
+    while (state != AT86RF215_STATE_RF_TRXOFF && state != AT86RF215_STATE_RF_TXPREP) {
+        at86rf215_delay_us(h, 100);
+        if (at86rf215_get_time_ms(h) > deadline) {
+            return -AT86RF215_TIMEOUT;
+        }
+
+        /*
+         * If the radio was in the TRXOFF state request again the TXPREP state
+         */
+        if (state == AT86RF215_STATE_RF_TRXOFF) {
+            at86rf215_set_cmd(h, AT86RF215_CMD_RF_TXPREP, radio);
+            at86rf215_delay_us(h, 100);
+        }
+        at86rf215_get_state(h, &state, radio);
+    }
+
+    at86rf215_delay_us(h, 100);
+
+    /* Go to RX state*/
+    while (state != AT86RF215_STATE_RF_RX) {
+        if (at86rf215_get_time_ms(h) > deadline) {
+            return -AT86RF215_TIMEOUT;
+        }
+        at86rf215_set_cmd(h, AT86RF215_CMD_RF_RX, radio);
+        at86rf215_delay_us(h, 100);
+        at86rf215_get_state(h, &state, radio);
+    }
+    return AT86RF215_OK;
+}
+
+void uhf_go_txprep() {}
+
 int at86_check_health(struct at86rf215 *h, at86_health_t *health) {
     if (h == NULL || health == NULL) {
         return -AT86RF215_INVAL_PARAM;

@@ -1516,7 +1516,7 @@ at86rf215_set_agc(struct at86rf215 *h, at86rf215_radio_t radio,
 
   uint8_t val = (cnf->input << 6) | (cnf->avgs << 4) | (cnf->reset << 3) |
                 (cnf->freeze << 1) | cnf->enable;
-  ret = at86rf215_reg_write_8(h, val, reg);
+  ret         = at86rf215_reg_write_8(h, val, reg);
   if (ret) {
     return ret;
   }
@@ -1723,7 +1723,7 @@ at86rf215_set_aux_settings(struct at86rf215 *h, at86rf215_radio_t radio,
 
   uint8_t val = (cnf->extlnabyp << 7) | (cnf->agcmap << 5) | (cnf->avext << 4) |
                 (cnf->aven << 3) | cnf->pavc;
-  ret = at86rf215_reg_write_8(h, val, reg);
+  ret         = at86rf215_reg_write_8(h, val, reg);
   if (ret) {
     return ret;
   }
@@ -2519,8 +2519,8 @@ at86rf215_bb_enable(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t en)
     return ret;
   }
   const struct at86rf215_bb_conf *conf = &h->priv.bbc[radio];
-  uint8_t val = conf->pt | ((en & 0x1) << 2) | (conf->fcst << 3) |
-                (conf->txafcs << 4) | (conf->fcsfe << 6) | (conf->ctx << 3);
+  uint8_t  val = conf->pt | ((en & 0x1) << 2) | (conf->fcst << 3) |
+                 (conf->txafcs << 4) | (conf->fcsfe << 6) | (conf->ctx << 3);
   uint16_t reg = 0;
   if (radio == AT86RF215_RF09) {
     reg = REG_BBC0_PC;
@@ -2844,7 +2844,7 @@ at86rf215_iq_conf(struct at86rf215 *h, at86rf215_radio_t radio,
   }
   uint8_t val = conf->eec | (conf->cmv1v2 << 1) | (conf->cmv << 2) |
                 (conf->drv << 4) | (conf->extlb << 7);
-  ret = at86rf215_reg_write_8(h, val, REG_RF_IQIFC0);
+  ret         = at86rf215_reg_write_8(h, val, REG_RF_IQIFC0);
   if (ret) {
     return ret;
   }
