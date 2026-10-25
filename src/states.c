@@ -69,25 +69,25 @@ static state_id_t low_power_idle_next_state(const input_t *const input) {
 }
 
 // STATES
-// OS tasks are always on and never listed
+// OS tasks are always on and never listed. ADCS runs in every state except STATE_LOW_POWER_IDLE
 
 state_t mission_states[NUM_STATES];
 
 // The table is filled in at startup rather than at build time so that it can use the p_..._task pointers
 void init_states(void) {
     // TODO: remove once every state has its own line below. Until then, a state that is not set up
-    // runs no tasks and goes straight back to idle.
+    // runs only ADCS and goes straight back to idle.
     for (state_id_t state = 0; state < NUM_STATES; state++) {
-        mission_states[state] = (state_t){.enabled_tasks = {}, .fetch_next_state = unimplemented_next_state};
+        mission_states[state] = (state_t){.enabled_tasks = {p_adcs_task}, .fetch_next_state = unimplemented_next_state};
     }
 
-    mission_states[STATE_INITIAL]                 = (state_t){.enabled_tasks = {},                                 .fetch_next_state = initial_next_state};
-    mission_states[STATE_BURN_WIRE]               = (state_t){.enabled_tasks = {},                                 .fetch_next_state = burn_wire_next_state};
-    mission_states[STATE_IDLE]                    = (state_t){.enabled_tasks = {},                                 .fetch_next_state = idle_next_state};
+    mission_states[STATE_INITIAL]                 = (state_t){.enabled_tasks = {p_adcs_task},                      .fetch_next_state = initial_next_state};
+    mission_states[STATE_BURN_WIRE]               = (state_t){.enabled_tasks = {p_adcs_task},                      .fetch_next_state = burn_wire_next_state};
+    mission_states[STATE_IDLE]                    = (state_t){.enabled_tasks = {p_adcs_task},                      .fetch_next_state = idle_next_state};
     mission_states[STATE_STUDENT_PICTURE_CAPTURE] = (state_t){.enabled_tasks = {p_adcs_task, p_display_task},      .fetch_next_state = student_picture_capture_next_state};
     mission_states[STATE_SBAND_TRANS]             = (state_t){.enabled_tasks = {p_adcs_task, p_cfdp_task},         .fetch_next_state = sband_trans_next_state};
     mission_states[STATE_LOW_POWER_IDLE]          = (state_t){.enabled_tasks = {},                                 .fetch_next_state = low_power_idle_next_state};
-    mission_states[STATE_FAKE_HEARTBEAT]          = (state_t){.enabled_tasks = {p_heartbeat_task},                 .fetch_next_state = fake_heartbeat_next_state};
+    mission_states[STATE_FAKE_HEARTBEAT]          = (state_t){.enabled_tasks = {p_adcs_task, p_heartbeat_task},    .fetch_next_state = fake_heartbeat_next_state};
     // ... one line per state in state_id_t
 }
 

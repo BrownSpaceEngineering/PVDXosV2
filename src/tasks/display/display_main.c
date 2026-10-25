@@ -8,7 +8,7 @@
  */
 
 #include "display_task.h"
-#include "cmd_dispatcher.h"
+#include "libraries/cmd_dispatcher/cmd_dispatcher.h"
 
 // Display Task memory structures
 display_task_memory_t display_mem;

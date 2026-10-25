@@ -44,7 +44,7 @@ typedef enum {
     // Error Responses
     ERROR_READ_FAILED,
     ERROR_WRITE_FAILED,
-    ERROR_BAD_ARGS, 
+    ERROR_BAD_ARGS,
     ERROR_SPI_TRANSFER_FAILED,
     ERROR_I2C_FAILED,
     ERROR_TASK_DISABLED,
@@ -72,10 +72,6 @@ typedef enum {
     // Display operations
     OPERATION_DISPLAY_IMAGE, // p_data: color_t *p_buffer
     OPERATION_CLEAR_IMAGE,   // p_data: NULL
-
-    // Magnetometer & Photodiode operations
-    OPERATION_READ,    // p_data: photomag_read_args_t *readings
-    OPERATION_PROCESS, // p_data: TBD
 
     // CFDP Operations
     OPERATION_CFDP_PUT,    // p_data: cfdp_request_t* req
@@ -164,13 +160,11 @@ typedef struct {
     const task_type_t task_type;        // Whether the task is OS-integrity, a sensor, or an actuator
 } pvdx_task_t;
 
-typedef struct adcs_data adcs_data_t;
 typedef union cfdp_request_data cfdp_request_data_t;
 typedef struct cfdp_transaction cfdp_transaction_t;
 typedef struct input_update_data input_update_data_t;
 
 typedef union command_data {
-    adcs_data_t *adcs_data;
     const uint8_t *display_data;
     TaskHandle_t *task_handle;
     pvdx_task_t *pvdx_task;
@@ -181,7 +175,6 @@ typedef union command_data {
 
 typedef enum {
     CMD_DATA_NONE = 0,
-    CMD_DATA_ADCS,
     CMD_DATA_DISPLAY,
     CMD_DATA_TASK_HANDLE,
     CMD_DATA_PVDX_TASK,
@@ -192,11 +185,11 @@ typedef enum {
 
 // A struct to represent a command that OS tasks can execute
 typedef struct {
-    pvdx_task_t *const target;           // The target task for the command
-    const command_data_t data;           // Union containing a pointer to the data needed for the operation
-    const command_data_type_t data_type; // Tag indicating the type of data help
-    const operation_t operation;         // The operation to perform
-    status_t result;                     // Ttatus indicating result of the operation
+    pvdx_task_t *target;           // The target task for the command
+    command_data_t data;           // Union containing a pointer to the data needed for the operation
+    command_data_type_t data_type; // Tag indicating the type of data help
+    operation_t operation;         // The operation to perform
+    status_t result;               // Ttatus indicating result of the operation
 } command_t;
 
 /* ---------- BUILD CONSTANTS ---------- */
