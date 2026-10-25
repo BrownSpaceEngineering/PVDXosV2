@@ -17,6 +17,9 @@
 #include "task_manager_task.h"
 #include "tasks/adcs/adcs_task.h"
 #include "tasks/cfdp/cfdp_task.h"
+#include "tasks/fuel_gauge/fuel_gauge_task.h"
+#include "tasks/thermistor/thermistor_task.h"
+#include "tasks/arducam/arducam_task.h"
 
 // Define task structs; tasks are mutable so not constant
 pvdx_task_t watchdog_task = {.name = "Watchdog",
@@ -133,6 +136,54 @@ pvdx_task_t cfdp_task = {.name = "CFDP",
                          .has_registered = false,
                          .task_type = ACTUATOR};
 
+pvdx_task_t fuel_gauge_task = {.name = "FuelGauge",
+                               .enabled = true,
+                               .handle = NULL,
+                               .command_queue = NULL,
+                               .init = NULL,
+                               .function = main_fuel_gauge,
+                               .stack_size = FUEL_GAUGE_TASK_STACK_SIZE,
+                               .stack_buffer = fuel_gauge_mem.fuel_gauge_task_stack,
+                               .pvParameters = NULL,
+                               .priority = 2,
+                               .task_tcb = &fuel_gauge_mem.fuel_gauge_task_tcb,
+                               .watchdog_timeout_ms = 10000,
+                               .last_checkin_time_ticks = 0xDEADBEEF,
+                               .has_registered = false,
+                               .task_type = SENSOR};
+
+pvdx_task_t thermistor_task = {.name = "Thermistor",
+                               .enabled = true,
+                               .handle = NULL,
+                               .command_queue = NULL,
+                               .init = NULL,
+                               .function = main_thermistor,
+                               .stack_size = THERMISTOR_TASK_STACK_SIZE,
+                               .stack_buffer = thermistor_mem.thermistor_task_stack,
+                               .pvParameters = NULL,
+                               .priority = 2,
+                               .task_tcb = &thermistor_mem.thermistor_task_tcb,
+                               .watchdog_timeout_ms = 10000,
+                               .last_checkin_time_ticks = 0xDEADBEEF,
+                               .has_registered = false,
+                               .task_type = SENSOR};
+
+pvdx_task_t arducam_task = {.name = "Arducam",
+                            .enabled = true,
+                            .handle = NULL,
+                            .command_queue = NULL,
+                            .init = NULL,
+                            .function = main_arducam,
+                            .stack_size = ARDUCAM_TASK_STACK_SIZE,
+                            .stack_buffer = arducam_mem.arducam_task_stack,
+                            .pvParameters = NULL,
+                            .priority = 2,
+                            .task_tcb = &arducam_mem.arducam_task_tcb,
+                            .watchdog_timeout_ms = 10000,
+                            .last_checkin_time_ticks = 0xDEADBEEF,
+                            .has_registered = false,
+                            .task_type = SENSOR};
+
 // and define their constant pointers
 pvdx_task_t *const p_watchdog_task = &watchdog_task;
 pvdx_task_t *const p_task_manager_task = &task_manager_task;
@@ -141,6 +192,9 @@ pvdx_task_t *const p_shell_task = &shell_task;
 pvdx_task_t *const p_display_task = &display_task;
 pvdx_task_t *const p_heartbeat_task = &heartbeat_task;
 pvdx_task_t *const p_cfdp_task = &cfdp_task;
+pvdx_task_t *const p_fuel_gauge_task = &fuel_gauge_task;
+pvdx_task_t *const p_thermistor_task = &thermistor_task;
+pvdx_task_t *const p_arducam_task = &arducam_task;
 pvdx_task_t *const task_list_null_terminator = NULL;
 
 // Global list of all tasks running on PVDXos (see `pvdx_task_t` definition in globals.h)
@@ -150,8 +204,8 @@ pvdx_task_t *const task_list_null_terminator = NULL;
 // NOTE: Watchdog task must be first in the list, Command Dispatcher second, and Task Manager third.
 // If you change the order of any of these, make sure that main.c reflects the change and update this comment.
 pvdx_task_t *task_list[] = {
-    p_watchdog_task, p_task_manager_task, p_adcs_task, p_shell_task,
-    p_display_task,  p_heartbeat_task,    p_cfdp_task, task_list_null_terminator,
+    p_watchdog_task, p_task_manager_task, p_adcs_task, p_shell_task, p_display_task, p_heartbeat_task,
+    p_cfdp_task,     p_fuel_gauge_task, p_thermistor_task, p_arducam_task, task_list_null_terminator,
 };
 
 /**

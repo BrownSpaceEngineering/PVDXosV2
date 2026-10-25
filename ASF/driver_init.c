@@ -837,17 +837,17 @@ void system_init(void)
 
 	// GPIO on PB19
 
-	gpio_set_pin_level(BURN,
+	gpio_set_pin_level(SBAND_CS,
 	                   // <y> Initial level
 	                   // <id> pad_initial_level
 	                   // <false"> Low
 	                   // <true"> High
-	                   false);
+	                   true);
 
 	// Set pin direction to output
-	gpio_set_pin_direction(BURN, GPIO_DIRECTION_OUT);
+	gpio_set_pin_direction(SBAND_CS, GPIO_DIRECTION_OUT);
 
-	gpio_set_pin_function(BURN, GPIO_PIN_FUNCTION_OFF);
+	gpio_set_pin_function(SBAND_CS, GPIO_PIN_FUNCTION_OFF);
 
 	// GPIO on PB20
 
@@ -919,6 +919,20 @@ void system_init(void)
 	                       GPIO_PULL_OFF);
 
 	gpio_set_pin_function(EPS_IRQ, GPIO_PIN_FUNCTION_OFF);
+
+	// GPIO on PB29
+
+	gpio_set_pin_level(BURN,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   false);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(BURN, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(BURN, GPIO_PIN_FUNCTION_OFF);
 
 	// GPIO on PB30
 
@@ -1144,6 +1158,34 @@ void system_init(void)
 	gpio_set_pin_direction(HEATER_CTRL_2, GPIO_DIRECTION_OUT);
 
 	gpio_set_pin_function(HEATER_CTRL_2, GPIO_PIN_FUNCTION_OFF);
+
+	// GPIO on PC25
+
+	gpio_set_pin_level(SBAND_EN,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   false);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(SBAND_EN, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(SBAND_EN, GPIO_PIN_FUNCTION_OFF);
+
+	// GPIO on PC26
+
+	gpio_set_pin_level(SBAND_RST,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   false);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(SBAND_RST, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(SBAND_RST, GPIO_PIN_FUNCTION_OFF);
 
 	// GPIO on PC27
 

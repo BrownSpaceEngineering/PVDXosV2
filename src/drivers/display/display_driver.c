@@ -11,6 +11,8 @@
 
 #include "globals.h"
 
+#include "image_buffer_PVDX.h"
+
 // Buffer for SPI transactions
 uint8_t spi_rx_buffer[DISPLAY_SPI_BUFFER_CAPACITY] = {0x00};
 uint8_t spi_tx_buffer[DISPLAY_SPI_BUFFER_CAPACITY] = {0x00};
@@ -154,6 +156,17 @@ status_t display_update(void) {
     return SUCCESS;
 }
 
+// Waits `ms` milliseconds. Before the scheduler starts (the startup device check runs init from main()),
+// vTaskDelay dereferences a NULL current task and hard faults, so busy-wait with delay_ms() there instead;
+// once the scheduler is running, delay_ms() would disturb SysTick, so yield with vTaskDelay.
+static void display_delay_ms(uint16_t ms) {
+    if (xTaskGetSchedulerState() == taskSCHEDULER_NOT_STARTED) {
+        delay_ms(ms);
+    } else {
+        vTaskDelay(pdMS_TO_TICKS(ms));
+    }
+}
+
 /**
  * \fn init_display_hardware
  *
@@ -167,11 +180,11 @@ status_t init_display_hardware(void) {
     // Reset the display by setting RST to low (it should be high during normal operation)
     // SSD1362 requires: >=1ms before asserting reset, >=100us reset pulse, >=50ms before first command
     RST_HIGH();
-    vTaskDelay(pdMS_TO_TICKS(1));
+    display_delay_ms(1);
     RST_LOW();
-    vTaskDelay(pdMS_TO_TICKS(1)); // >=100us reset pulse
+    display_delay_ms(1); // >=100us reset pulse
     RST_HIGH();
-    vTaskDelay(pdMS_TO_TICKS(RESET_WAIT_INTERVAL)); // >=50ms before first command
+    display_delay_ms(RESET_WAIT_INTERVAL); // >=50ms before first command
 
     // Unlock command lock (just in case)
     xfer.size = 2;
@@ -281,10 +294,10 @@ status_t init_display_hardware(void) {
     spi_tx_buffer[0] = SSD1362_CMD_1B_DISPLAYON;
     ret_err_status(spi_transfer(false), "display hardware init: could not turn display on");
 
-    // Clear the display buffer
-    display_clear_buffer();
+    // Show the PVDX logo straight away, so a working display is visible at init
+    display_set_buffer((const color_t *)IMAGE_BUFFER_PVDX);
 
-    // Trigger an update so the empty buffer is actually displayed
+    // Trigger an update so the buffer is actually displayed
     ret_err_status(display_update(), "display: Update failed");
 
     return SUCCESS;
