@@ -76,6 +76,7 @@ typedef enum {
     AT86_O_QPSK_LEG = 0,              // Used for testing, 250 kb/s
     AT86_MR_O_QPSK_100CH_6_2_5KB = 1, // 6.25 KChip/s, 6.25 kb/s
     AT86_MR_O_QPSK_100CH_12_5KB = 2,  // 100 KChip/s, 12.5 kb/s
+    AT86_MR_FSK = 3 // 2-GFSK, BT = 0.5, h = 0.5, 50 ksymbol/s (50 kb/s uncoded), RSC FEC
 } at86_config_t;
 
 QueueHandle_t init_uhf_radio(void);
