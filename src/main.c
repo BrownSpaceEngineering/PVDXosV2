@@ -1,9 +1,9 @@
 /**
  * main.c
  *
- * The main entry point for PVDXos. This file initializes the hardware, verifies that the bootloader executed
- * successfully, creates the high-level OS integrity tasks along with the Cosmic Monkey task, and finally starts
- * the FreeRTOS scheduler.
+ * The main entry point for PVDXos. This build initializes the hardware, verifies that the bootloader executed
+ * successfully and runs every startup device check. It then waits 30 minutes, turns on the burn pin and idles
+ * forever. The FreeRTOS scheduler is never started, so no tasks run.
  *
  * Created: November 20, 2023
  * Modified: November 9, 2025
@@ -14,17 +14,12 @@
 #include "main.h"
 
 #include "SEGGER_RTT.h"
-#include "ccsds/ccsds.h"
 #include "checks/device_checks.h"
-#include "cosmic_monkey_task.h"
 #include "globals.h"
 #include "logging.h"
-#include "rtos_start.h"
-#include "task_list.h"
-#include "tasks/task_manager/task_manager_task.h"
-#include "tests/test.h"
+#include "watchdog_driver.h"
 
-cosmic_monkey_task_arguments_t cm_args = {0};
+#define BURN_WAIT_MINUTES 30
 
 static status_t PVDX_init(void) {
     // Segger Buffer 0 is pre-configured at compile time according to segger documentation
@@ -36,13 +31,22 @@ static status_t PVDX_init(void) {
     return SUCCESS;
 }
 
+// Busy-waits one second at a time (delay_ms is fine here: the scheduler never runs, so nothing else owns SysTick).
+// The watchdog task never runs either, so the hardware watchdog is normally off. It is fed every second anyway in
+// case it is still running from an earlier boot.
+static void wait_seconds_feeding_watchdog(uint32_t seconds) {
+    for (uint32_t s = 0; s < seconds; s++) {
+        watchdog_feed(WDT);
+        delay_ms(1000);
+    }
+}
+
 int main(void) {
     /* ---------- HARDWARE & LOGGING INITIALIZATION + BOOTLOADER CHECK ---------- */
 
     /* Initializes MCU, drivers and middleware */
     atmel_start_init();
     PVDX_init();
-    // info_impl(RTT_CTRL_RESET RTT_CTRL_CLEAR); // Reset the terminal
     info("--- Atmel & Hardware Initialization Complete ---\n");
     info("[+] Build Type: %s\n", BUILD_TYPE);
     info("[+] Build Date: %s\n", BUILD_DATE);
@@ -60,68 +64,27 @@ int main(void) {
         warning_impl("[!] Abnormal bootloader behavior (Magic Number: %x)\n", magic_number);
     }
 
-    /* ---------- INIT WATCHDOG, COMMAND_DISPATCHER, TASK_MANAGER TASKS (in that order) ---------- */
+    /* ---------- DEVICE CHECKS ---------- */
 
-    info("AT_LEAST_ONE_DEVICE_FAILED: %d\n", check_all_devices_on_startup());
+    // Called outside info(): in RELEASE builds info() compiles out, which would skip the checks entirely
+    bool at_least_one_failed = check_all_devices_on_startup();
+    info("AT_LEAST_ONE_DEVICE_FAILED: %d\n", at_least_one_failed);
+    (void)at_least_one_failed; // unused when info() compiles out
 
-    ccsds_init();
+    /* ---------- WAIT, THEN BURN ---------- */
 
-/* -------------------------------------- TESTS ---------------------------------------------- */
-#ifdef UNITTEST
-    tests_run();
-#endif
-
-    // Initialize a mutex wrapping the shared PVDX task list struct
-    task_list_mutex = xSemaphoreCreateMutexStatic(&task_list_mutex_buffer);
-
-    if (task_list_mutex == NULL) {
-        fatal("Failed to create PVDX task list mutex");
+    info("Waiting %d minutes before turning on the burn pin\n", BURN_WAIT_MINUTES);
+    for (uint32_t minute = 0; minute < BURN_WAIT_MINUTES; minute++) {
+        wait_seconds_feeding_watchdog(60);
+        info("%lu/%d minutes elapsed\n", (unsigned long)(minute + 1), BURN_WAIT_MINUTES);
     }
 
-    if (task_list[0] != p_watchdog_task) {
-        fatal("Watchdog is not first in task_list!");
+    gpio_set_pin_level(BURN, true);
+    info("Burn pin (PB29) on\n");
+
+    /* ---------- IDLE FOREVER (scheduler is never started) ---------- */
+
+    while (true) {
+        wait_seconds_feeding_watchdog(1);
     }
-
-    // Initialize all OS integrity tasks
-    for (pvdx_task_t **curr_task = task_list; *curr_task != NULL; curr_task++) {
-        if ((*curr_task)->task_type == OS) {
-            init_task_pointer(*curr_task);
-            info("%s initialized\n", (*curr_task)->name);
-        }
-    }
-
-    // COMMENTED OUT because this is now controlled by the task manager
-    // Initialize all sensor integrity tasks
-    // for (pvdx_task_t **curr_task = task_list; *curr_task != NULL; curr_task++) {
-    //     if ((*curr_task)->task_type == SENSOR) {
-    //         init_task_pointer(*curr_task);
-    //         info("%s initialized\n", (*curr_task)->name);
-    //     }
-    // }
-
-    /* ---------- COSMIC MONKEY TASK ---------- */
-
-#if defined(UNITTEST) || defined(DEVBUILD)
-    #if defined(UNITTEST)
-    cm_args.frequency = 1;
-    #endif
-    #if defined(DEVBUILD) // set to 0 for now for ease of debugging
-    cm_args.frequency = 0; // Bitflips per second
-    #endif
-
-    TaskHandle_t cosmic_monkey_task_handle =
-        xTaskCreateStatic(main_cosmic_monkey, "CosmicMonkey", COSMIC_MONKEY_TASK_STACK_SIZE, (void *)&cm_args, 1,
-                          cosmic_monkey_mem.cosmic_monkey_task_stack, &cosmic_monkey_mem.cosmic_monkey_task_tcb);
-    if (cosmic_monkey_task_handle == NULL) {
-        warning("Cosmic Monkey Task Creation Failed!\n");
-    } else {
-        info("Cosmic Monkey Task initialized\n");
-    }
-#endif // Cosmic Monkey
-
-    /* ---------- START FREERTOS SCHEDULER ---------- */
-
-    // Start the scheduler
-    vTaskStartScheduler();
-    fatal("vTaskStartScheduler Returned! -- Should never happen!\n");
 }
