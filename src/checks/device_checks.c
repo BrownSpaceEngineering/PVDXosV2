@@ -58,7 +58,7 @@ static bool (*device_check_functions[NUM_DEVICES])(void) = {
     &check_sband,        // SBAND_ID
     &check_uhf,          // UHF_ID
     &check_fuel_gauges,  // EPS_ID — the four battery fuel gauges
-    NULL,                // DISPLAY_ID — init done inside the display task post-scheduler
+    &check_display,                // DISPLAY_ID — init done inside the display task post-scheduler
     &check_camera,       // CAMERA_ID
     &check_perovskite,   // PEROVSKITE_ID
 };
