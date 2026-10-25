@@ -61,6 +61,13 @@ int main(void) {
         warning_impl("[!] Abnormal bootloader behavior (Magic Number: %x)\n", magic_number);
     }
 
+    // Initialize the mutex for the I2C bus shared by Arducam, fuel gauges, and PMB before startup checks/tests
+    i2c_camera_bus_mutex = xSemaphoreCreateMutexStatic(&i2c_camera_bus_mutex_buffer);
+
+    if (i2c_camera_bus_mutex == NULL) {
+        fatal("Failed to create I2C_CAMERA bus mutex");
+    }
+
     /* ---------- INIT WATCHDOG, COMMAND_DISPATCHER, TASK_MANAGER TASKS (in that order) ---------- */
 
     info("AT_LEAST_ONE_DEVICE_FAILED: %d\n", check_all_devices_on_startup());
@@ -77,13 +84,6 @@ int main(void) {
 
     if (task_list_mutex == NULL) {
         fatal("Failed to create PVDX task list mutex");
-    }
-
-    // Initialize the mutex for the I2C bus shared by the Arducam and fuel gauge tasks
-    i2c_camera_bus_mutex = xSemaphoreCreateMutexStatic(&i2c_camera_bus_mutex_buffer);
-
-    if (i2c_camera_bus_mutex == NULL) {
-        fatal("Failed to create I2C_CAMERA bus mutex");
     }
 
     if (task_list[0] != p_watchdog_task) {

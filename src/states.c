@@ -81,9 +81,9 @@ void init_states(void) {
         mission_states[state] = (state_t){.enabled_tasks = {}, .fetch_next_state = unimplemented_next_state};
     }
 
-    // TODO: the fuel gauge, thermistor and arducam tasks are SENSOR tasks but no state lists them yet, so the state
+    // TODO: the fuel gauge, thermistor and camera tasks are SENSOR tasks but no state lists them yet, so the state
     // machine suspends them on entering STATE_INITIAL and they never run (no battery telemetry, no heater control, no
-    // images). Add p_fuel_gauge_task / p_thermistor_task / p_arducam_task to the states that need them.
+    // images). Add p_fuel_gauge_task / p_thermistor_task / p_camera_task to the states that need them.
     mission_states[STATE_INITIAL]                 = (state_t){.enabled_tasks = {},                                 .fetch_next_state = initial_next_state};
     mission_states[STATE_BURN_WIRE]               = (state_t){.enabled_tasks = {},                                 .fetch_next_state = burn_wire_next_state};
     mission_states[STATE_IDLE]                    = (state_t){.enabled_tasks = {},                                 .fetch_next_state = idle_next_state};
