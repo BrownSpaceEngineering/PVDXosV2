@@ -1,232 +1,131 @@
 /**
  * adcs_task.c
  *
- * RTOS task for ADCS functionality
+ * Sensor, timing and actuator glue between PVDXos and the adcs-c `body()` step
  *
  * Created: September 20, 2025
- * Modified: November 24, 2025
+ * Modified: October 25, 2026
  * Authors: Avinash Patel, Yi Lyo, Alexander Thaep, Zach Mahan, Siddharta Laloux
  */
 
 #include "tasks/adcs/adcs_task.h"
 
-#include "bdot.h"
+#include <math.h>
+#include <string.h>
+
 #include "checks/device_checks.h"
+#include "drivers/gyro/gyro_driver.h"
+#include "drivers/rtc/rtc_driver.h"
 #include "globals.h"
+#include "libraries/adcs/include/body.h"
+#include "libraries/adcs/include/photodiode_determination.h"
 #include "logging.h"
-#include "rtc_driver.h"
-#include "task_list.h"
 
-float K_VALUE = 1.0e9; // B-dot gain constant
-float DT_VALUE = 1.0;  // Time step for B-dot control
+#define DEG_TO_RAD (3.14159265358979f / 180.0f)
+#define SECONDS_PER_DAY 86400
+#define UNIX_EPOCH_JD_SCALAR 2440587 // The Unix epoch is JD 2440587.5
+#define UNIX_EPOCH_JD_FRAC 0.5f
 
-/* ---------- DATA MANAGEMENT ------------------------ */
+// TODO: remove once the RTC is synced to UTC; arbitrary placeholder (2026-01-01T00:00:00Z)
+#define ADCS_PLACEHOLDER_UNIX_EPOCH 1767225600
 
-#define READING_BUFFER_COUNT 2
+/* ---------- SENSORS ---------- */
 
-photodiode_data_t photodiode_data_buffer[READING_BUFFER_COUNT]; // Buffer to hold the last 2 photodiode readings
-mag_data_t mag_data_buffer[READING_BUFFER_COUNT];               // Buffer to hold the last 2 magnetometer readings
-SCH1_result_t gyro_data_buffer[READING_BUFFER_COUNT];           // Buffer to hold the last 2 gyro readings
-sun_vector_t sun_vector_buffer[READING_BUFFER_COUNT];           // Buffer to hold the last 2 photodiode readings
-mag_torque_input_t mag_torque_buffer[READING_BUFFER_COUNT];     // Buffer to hold the last 2 magnetorquer torque inputs
-rtc_data_t rtc_data_buffer[READING_BUFFER_COUNT];
-
-static adcs_data_t latest_adcs_data_reading = {.mag_buffer = mag_data_buffer,
-                                               .mag_buffer_len = READING_BUFFER_COUNT,
-                                               .photodiode_buffer = photodiode_data_buffer,
-                                               .photodiode_data_len = READING_BUFFER_COUNT,
-                                               .rtc_buffer = rtc_data_buffer,
-                                               .rtc_buffer_len = READING_BUFFER_COUNT};
-
-status_t update_photodiode_data(photodiode_data_t *persistent_photo_data, size_t count) {
-    // first move previous photodiode data backwards in the array
-    for (size_t i = count - 1; i > 0; i--) {
-        persistent_photo_data[i] = persistent_photo_data[i - 1];
+status_t adcs_read_magnetometer(float *const mag_tesla) {
+    // TODO: use RM3100 driver -> call magnetometer_read(), convert its gain-adjusted output (uT) to Tesla, and rotate it from the sensor
+    // frame into the body frame
+    for (size_t i = 0; i < 3; i++) {
+        mag_tesla[i] = NAN;
     }
-
-    status_t result = photodiode_read(&persistent_photo_data[0]);
-
-    if (result != SUCCESS) {
-        warning("adcs task: photodiode read failed\n");
-        // at this point we should check the device, as we've potentially run into a fault
-        // uncheck device to force check function to run
-        uncheck_device(PHOTODIODE_ID);
-        bool photo_status = check_device(PHOTODIODE_ID);
-
-        if (!photo_status) {
-            warning("adcs task: photodiode device check failed after read failure\n");
-            // TODO: queue sth to task manage to update state variable.
-        }
-    }
-
-    return SUCCESS;
+    return ERROR_NOT_READY;
 }
 
-status_t update_magnetometer_data(mag_data_t *persistent_readings, size_t n_reads) {
-    mag_raw_reading_t raw_readings;
-
-    // Push previous readings one step forwards
-    for (size_t i = n_reads - 1; i > 0; i--) {
-        persistent_readings[i] = persistent_readings[i - 1];
-    }
-
-    status_t data_read = magnetometer_read(&raw_readings, &persistent_readings[0]);
-    if (data_read != SUCCESS) {
-        // First we uncheck the magnetometer
-        uncheck_device(MAGNETOMETER_ID);
-        bool mag_status = check_device(MAGNETOMETER_ID);
-
-        if (!mag_status) {
-            warning("adcs task: magnetometer device check failed after read failure\n");
-            // TODO: Update status with magnetometer failure
-        }
-    }
-
-    return SUCCESS;
-}
-
-status_t update_gyro_data(SCH1_result_t *persistent_gyro_data, size_t count) {
-    // first move previous gyro data backwards in the array
-    for (size_t i = count - 1; i > 0; i--) {
-        persistent_gyro_data[i] = persistent_gyro_data[i - 1];
-    }
-
-    status_t result = gyro_read(&persistent_gyro_data[0]);
+status_t adcs_read_gyro(float *const gyro_rad_s) {
+    SCH1_result_t reading;
+    status_t result = gyro_read(&reading);
 
     if (result != SUCCESS) {
-        warning("adcs task: gyro read failed\n");
-        // at this point we should check the device, as we've potentially run into a fault
+        warning("adcs: gyro read failed\n");
+        // uncheck device to force the check function to run again
         uncheck_device(GYROSCOPE_ID);
-        bool gyro_status = check_device(GYROSCOPE_ID);
-
-        if (!gyro_status) {
-            warning("adcs task: gyro device check failed after read failure\n");
-            // TODO: queue sth to task manage to update state variable.
+        if (!check_device(GYROSCOPE_ID)) {
+            warning("adcs: gyro device check failed after read failure\n");
+            // TODO: queue something to the task manager to update the state machine inputs
         }
-    }
-
-    return SUCCESS;
-}
-
-status_t update_sun_vector(photodiode_data_t *current_reading, sun_vector_t *persistent_sun_vector, size_t count) {
-    // first move previous photodiode data backwards in the array
-    for (size_t i = count - 1; i > 0; i--) {
-        persistent_sun_vector[i] = persistent_sun_vector[i - 1];
-    }
-
-    sun_vector_t sun_vector = compute_sun_vector(current_reading);
-    persistent_sun_vector[0] = sun_vector;
-
-    return SUCCESS;
-}
-/* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
-
-/**
- * \fn adcs_orientation_loop
- *
- * \brief Main loop for ADCS orientation processing; should be called periodically by the main ADCS task loop
- *
- * \return status_t SUCCESS if the function executed successfully, or negative status otherwise
- */
-status_t adcs_orientation_loop() {
-    // first read all sensor data and update buffers
-    status_t photo_status = update_photodiode_data(photodiode_data_buffer, 2);
-    status_t mag_status = update_magnetometer_data(mag_data_buffer, 2);
-    status_t gyro_status = update_gyro_data(gyro_data_buffer, 2);
-
-    if (photo_status != SUCCESS || mag_status != SUCCESS || gyro_status != SUCCESS) {
-        return ERROR_PROCESSING_FAILED;
-    }
-
-    if (tumbling(&gyro_data_buffer[0])) {
-        bdot(mag_data_buffer, mag_torque_buffer, K_VALUE, DT_VALUE);
-
-    } else {
-        if (in_sun(&photodiode_data_buffer[0])) {
-            info("adcs task: sun detected; orienting\n");
-
-            update_sun_vector(&photodiode_data_buffer[0], sun_vector_buffer, 2);
-
-            ukf_orient(/* TODO some inputs */);
-        } else {
-            info("adcs task: sun not detected; going into bdot\n");
-            bdot(mag_data_buffer, mag_torque_buffer, K_VALUE, DT_VALUE);
+        for (size_t i = 0; i < 3; i++) {
+            gyro_rad_s[i] = NAN;
         }
+        return result;
+    }
+
+    // TODO: the SCH16T reports rates about its own package axes, but body() expects the satellite body axes (the
+    // PHOTODIODES / magnetorquer frame). Apply the fixed rotation R (omega_body = R * omega_sensor, usually a signed
+    // permutation) from the PCB/CAD mounting and the datasheet axis diagram; if the chip is aligned, R is the identity.
+    for (size_t i = 0; i < 3; i++) {
+        gyro_rad_s[i] = reading.Rate1[i] * DEG_TO_RAD;
     }
     return SUCCESS;
 }
 
-/**
- * \fn get_adcs_process_command
- *
- * \brief Creates a command to do adcs stuff
- *
- * \param data pointer to data structure to fill
- *
- * \returns command_t command structure
- */
-command_t get_adcs_process_command(adcs_data_t *const data) {
-    return (command_t){
-        .target = p_adcs_task,
-        .operation = OPERATION_PROCESS,
-        .data.adcs_data = data,
-        .data_type = CMD_DATA_ADCS,
-        .result = PROCESSING,
-    };
+status_t adcs_read_photodiodes(float *const photodiodes) {
+    // TODO: the photodiode driver is commented out. Once it is restored, call photodiode_read() and map
+    // its PHOTODIODE_COUNT raw ADC channels onto the NUM_DIODES entries of PHOTODIODES (same order and
+    // scaling as MIN_READING / MAX_READING in adcs-c).
+    memset(photodiodes, 0, NUM_DIODES * sizeof(float));
+    return ERROR_NOT_READY;
 }
 
-/**
- * \fn get_photomagrtc_read_command
- *
- * \brief Creates a command to read magnetometer, photodiode, rtc data
- *
- * \param data pointer to data structure to fill
- *
- * \returns command_t command structure
- */
-command_t get_photomagrtc_read_command() {
-    return (command_t){
-        .target = p_adcs_task,
-        .operation = OPERATION_READ,
-        .data.adcs_data = &latest_adcs_data_reading,
-        .data_type = CMD_DATA_ADCS,
-        .result = PROCESSING,
-    };
+/* ---------- ORBIT AND TIME ---------- */
+
+const float *adcs_get_tle_update(void) {
+    // TODO: return a TLE uplinked from the ground (TEL_CMD_ADCS_UPDATE_PARAMETERS), consumed once, and call
+    // body_set_tle_metadata() with its B* and epoch first. Until the first TLE arrives body() has no orbit
+    // to propagate and returns zero currents every step, including while detumbling.
+    // TODO: the uplink must carry the elements, B* and the TLE's real epoch together; reject it if any are missing,
+    // since body() otherwise treats the elements as valid "now" (and B* as 0). Send the epoch as a double or an
+    // integer JD + fraction, never a float (a float JD only resolves to ~0.25 day).
+    return NULL;
 }
 
-/* ---------- NON-DISPATCHABLE FUNCTIONS (do not go through the command dispatcher) ---------- */
-
-/**
- * \fn exec_command_adcs_process
- *
- * \brief Executes function corresponding to the command
- *
- * \param p_cmd a pointer to a command containing information for processing
- */
-void exec_command_adcs_process(command_t *const p_cmd) {
-    if (p_cmd->target != p_adcs_task) {
-        fatal("adcs processing: command target is not adcs! target: %d operation: %d\n", p_cmd->target, p_cmd->operation);
+status_t adcs_get_time(int *const unix_time, int *const jd_scalar, float *const jd_frac) {
+    rtc_data_t rtc;
+    status_t result = get_rtc_values(&rtc);
+    if (result != SUCCESS) {
+        warning("adcs: failed to read RTC\n");
+        return result;
     }
 
-    rtc_data_t temp;
-    const adcs_data_t *data = p_cmd->data.adcs_data;
-    status_t rtc_status = get_rtc_values(&temp);
+    // TODO: the RTC only counts time since boot
+    // Replace the placeholder epoch with a UTC time synced from the ground (or the radio) once possible
+    // TODO: UTC must also survive a reboot (e.g. saved to MRAM and restored), otherwise a restored TLE is
+    // propagated to the wrong time.
 
-    if (data == NULL) {
-        info("adcs: stuff happens here\n");
+    *unix_time = ADCS_PLACEHOLDER_UNIX_EPOCH + (int)rtc.seconds_count;
+
+    int days = *unix_time / SECONDS_PER_DAY;
+    int seconds_into_day = *unix_time % SECONDS_PER_DAY;
+    *jd_scalar = UNIX_EPOCH_JD_SCALAR + days;
+    *jd_frac = UNIX_EPOCH_JD_FRAC + (float)seconds_into_day / SECONDS_PER_DAY;
+    if (*jd_frac >= 1.0f) {
+        *jd_scalar += 1;
+        *jd_frac -= 1.0f;
     }
-
-    // Do stuff with readings here
-
-    info("ADCS microsecond count: %lu\n", temp.microseconds_count);
-    info("ADCS seconds count: %lu\n", temp.seconds_count);
-    info("ADCS mag reading [x,y,z]: [%f,%f,%f]\n", mag_data_buffer[0].x, mag_data_buffer[0].y, mag_data_buffer[0].z);
-
-    if (rtc_status == SUCCESS)
-        p_cmd->result = SUCCESS;
-    p_cmd->result = ERROR_PROCESSING_FAILED;
+    return SUCCESS;
 }
 
-float_3d_t compute_sun_vector(photodiode_data_t *input) {
-    return (float_3d_t){.x = 0, .y = 0, .z = 0}; // TODO actually implement
+void adcs_drive_magnetorquers(const float *const currents) {
+    // TODO: hand these currents to magtorq driver once possible, and check MAGNETORQUERS_ID on failure like the sensors do.
+    debug("adcs: magnetorquer currents [x,y,z]: [%f,%f,%f] A\n", currents[0], currents[1], currents[2]);
+}
+
+void adcs_publish_telemetry(void) {
+    float q_body_to_eci[4];
+    bool attitude_valid = body_get_attitude(q_body_to_eci);
+
+    debug("adcs: pointing: %d, attitude valid: %d, filter resets: %d\n", body_is_pointing(), attitude_valid, body_get_filter_resets());
+
+    // TODO: fill tel_adcs_data_t (attitude, gyro bias from body_get_gyro_bias(), position) and send the
+    // pointing state to the task manager as a state machine input.
+    // TODO: adcs-c has no position getter; r_eci is a local inside body(). Add one (e.g. body_get_position()).
+    (void)attitude_valid;
 }
