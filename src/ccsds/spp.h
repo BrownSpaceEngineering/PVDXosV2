@@ -4,13 +4,14 @@
  * header file for the PVDX implementation of the CCSDS Space Pactket Protocol (SPP)
  *
  * Created: 20251026 SUN
- * Updated: 20251030 THU
- * Authors: Zach Mahan
+ * Updated: 20261007 WED
+ * Authors: Zach Mahan, Ilan Goldfein
  */
 
 #ifndef RADIO_SPP_H
 #define RADIO_SPP_H
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 // constants:
@@ -29,6 +30,11 @@
 #define SPP_SEQ_FLAG_FIRST_SEGMENT_OF_DATA 0b01
 #define SPP_SEQ_FLAG_LAST_SEGMENT_OF_DATA 0b10
 #define SPP_SEQ_FLAG_UNSEGMENTED_DATA 0b11
+// Sizes, in bytes, of the packet headers as they are sent
+// Reference: SPP Blue Book pg. 4-2 (primary), pg. 4-7 (secondary, whose contents are mission-defined)
+#define SPP_PRIMARY_HEADER_SIZE 6
+#define SPP_SECONDARY_HEADER_CALLSIGN_SIZE 6
+#define SPP_SECONDARY_HEADER_SIZE (8 + SPP_SECONDARY_HEADER_CALLSIGN_SIZE) // timestamp (4) + boot_timestamp (4) + callsign
 
 /*
  * TODO:
@@ -63,12 +69,14 @@ typedef struct spp_primary_packet_header {
  * contents. The bluebook states that there is an option for an ancillary data field for
  * "time, internal data field format, spacecraft position/attitude, etc."
  * See SPP Blue Book pg. 4-7
- * TODO: not included in our header, add in if we want additional, GSW currently is not using this either
  *
+ * It is present only when the primary header's secondary_header_flag is set, and is sent as
+ * SPP_SECONDARY_HEADER_SIZE octets, in field order, with each integer most significant octet first
  */
 typedef struct spp_secondary_packet_header {
-    uint32_t time;
-    // any more info to include?
+    uint32_t timestamp;
+    uint32_t boot_timestamp;
+    uint8_t callsign[SPP_SECONDARY_HEADER_CALLSIGN_SIZE]; // sent as-is, in order
 } spp_secondary_packet_header_t;
 
 /*
@@ -76,6 +84,7 @@ typedef struct spp_secondary_packet_header {
  */
 typedef struct spp_packet {
     spp_primary_packet_header_t header;
+    spp_secondary_packet_header_t secondary_header; // only meaningful when header.secondary_header_flag is set
     uint8_t data[SPP_STANDARD_PACKET_SIZE];
 } spp_packet_t;
 
@@ -84,8 +93,11 @@ typedef struct spp_packet {
  */
 typedef struct spp_packet_view {
     spp_primary_packet_header_t header;
+    spp_secondary_packet_header_t secondary_header; // only meaningful when header.secondary_header_flag is set
     void *data;
-    // ^ use header.data_length for bounds, but remember data_length = <number_of_bytes> - 1
+    // ^ the user data field, after the secondary header (if any). use header.data_length for bounds, but remember
+    //   data_length = <number_of_bytes> - 1, and that it also counts the SPP_SECONDARY_HEADER_SIZE octets of the
+    //   secondary header when one is present
 } spp_packet_view_t;
 
 /*
@@ -123,5 +135,23 @@ spp_packet_view_t spp_packet_view_from(spp_packet_t *packet);
  * help to clear/zero a packet_views's data
  */
 void spp_packet_view_clear_data(spp_packet_view_t view);
+
+/**
+ * Parsing for SPP Space Packets
+ *
+ * - No copy (on success, view->data points into data, so data must outlive the view)
+ * - Bytes in data past the end given by the packet data length field are ignored
+ * - If the secondary header flag is set, the secondary header is parsed into view->secondary_header
+ *   and view->data points just past it; otherwise view->secondary_header is zeroed
+ *
+ * \param view - packet view to fill in; left unspecified on failure
+ * \param data - pointer to start of raw byte-stream data
+ * \param len - length, in bytes, of the byte stream
+ *
+ * \return true on failure (malformed or unsupported), else false
+ *
+ * Reference: SPP Blue Book pg. 4-2 (primary header), pg. 4-7 (secondary header)
+ */
+bool spp_packet_parse(spp_packet_view_t *view, uint8_t *data, uint32_t len);
 
 #endif // !RADIO_SPP_H

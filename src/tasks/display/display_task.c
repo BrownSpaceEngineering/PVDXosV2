@@ -74,6 +74,19 @@ inline command_t get_display_image_command(const color_t *const p_buffer) {
 }
 
 /**
+ * \brief Get a command to put the display to sleep, preserving its image memory.
+ */
+command_t get_display_off_command(void) {
+    return (command_t){
+        .target = p_display_task,
+        .operation = OPERATION_POWER_OFF,
+        .data = {0},
+        .data_type = CMD_DATA_NONE,
+        .result = PROCESSING,
+    };
+}
+
+/**
  * \fn exec_command_display
  *
  * \brief Calls the correct function for the command
@@ -87,6 +100,9 @@ void exec_command_display(command_t *const p_cmd) {
     }
 
     switch (p_cmd->operation) {
+        case OPERATION_POWER_OFF:
+            p_cmd->result = display_off();
+            break;
         case OPERATION_DISPLAY_IMAGE:
             p_cmd->result = display_image((const color_t *)p_cmd->data.display_data);
             break;
