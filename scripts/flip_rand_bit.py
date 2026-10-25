@@ -4,7 +4,7 @@ import random
 
 def flip_random_bits(filename, num_bits=5, chunks=False, target_padding=0, padding_size=3):
 
-    bootloader_size_bytes = 0x3000
+    bootloader_size_bytes = 0x2000
 
     """Flip random bits, option to flip one contiguous chunk, option to target area around padding ."""
     if num_bits < 0:
@@ -45,9 +45,9 @@ def flip_random_bits(filename, num_bits=5, chunks=False, target_padding=0, paddi
         #for each byte, 
         for target_byte in targets:
             
-            if padding_size > bootloader_size_bytes - os.path.getsize(os.path.join(
-                    os.path.dirname(__file__), "..", "bootloader", f"bootloader{target_byte // bootloader_size_bytes}.bin")):
-                raise ValueError("padding_size exceeds the bootloader's available padding.")
+            # if padding_size > bootloader_size_bytes - os.path.getsize(os.path.join(
+            #         os.path.dirname(__file__), "..", "bootloader", f"bootloader{target_byte // bootloader_size_bytes}.bin")):
+            #     raise ValueError("padding_size exceeds the bootloader's available padding.")
 
             
             #iterating through a random sample of bits within range

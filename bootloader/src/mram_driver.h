@@ -54,8 +54,25 @@ static inline uint8_t get_mram_state(mram_status_t status, uint8_t mram) {
 }
 
 mram_status_t mram_init(void);
-void mram_read_bytes(uint32_t address, uint8_t *data, uint32_t size);
-void mram_write_bytes(uint32_t address, const uint8_t *data, uint32_t size);
+
+/**
+ * @brief Reads majority-vote data from MRAM modules.
+ * @param address Address to read from.
+ * @param data Pointer to output.
+ * @param size Size of data to be read, in bytes.
+ * @return `false` if read succeeded; `true` otherwise.
+ * @warning `size` must be divisible by 256.
+ */
+bool mram_read_bytes(uint32_t address, uint8_t *data, uint32_t size);
+
+/**
+ * @brief Writes data to all MRAM modules.
+ * @param address Destination address.
+ * @param data Data to be written.
+ * @param size Size of data to be written, in bytes.
+ * @return `false` if write succeeded; `true` otherwise.
+ */
+bool mram_write_bytes(uint32_t address, const uint8_t *data, uint32_t size);
 uint32_t crc32(const uint8_t *block, uint32_t size);
 
 #endif

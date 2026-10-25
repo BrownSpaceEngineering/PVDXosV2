@@ -343,26 +343,24 @@ mram_init_status_t set_persistent_mode(uint8_t mram) {
     }
 }
 
-/**
- * @brief Writes data to all MRAM modules.
- * @param address Destination address.
- * @param data Data to be written.
- * @param size Size of data to be written, in bytes.
- */
-void mram_write_bytes(uint32_t address, const uint8_t *data, uint32_t size) {
+bool mram_write_bytes(uint32_t address, const uint8_t *data, uint32_t size) {
     /** TODO: Only write bytes to known-good modules. */
     for (uint8_t mram = 1; mram <= 3; mram++) {
-        write_bytes(mram, address, data, size);
+        bool succeeded = write_bytes(mram, address, data, size);
+        if (!succeeded) {
+            return true; // Write failed.
+        }
     }
+    return false; // Write succeeded.
 }
 
 #define PAGE_SIZE 256
 
-void mram_read_bytes(uint32_t address, uint8_t *data, uint32_t size) {
+bool mram_read_bytes(uint32_t address, uint8_t *data, uint32_t size) {
     /** TODO: Only read bytes from known-good modules (no majority vote). */
 
     if (size % PAGE_SIZE != 0) {
-        mram_recoverable_fatal();
+        return true; // Read failed.
     }
     uint32_t npages = size / PAGE_SIZE;
 
@@ -372,7 +370,7 @@ void mram_read_bytes(uint32_t address, uint8_t *data, uint32_t size) {
             if (!read_bytes(mram_idx, address + PAGE_SIZE * page, read_data[mram_idx - 1], PAGE_SIZE)) {
                 // Never majority-vote or repair from incomplete read buffers.
                 // The void API cannot report failure; a caller's checksum may still match stale RAM.
-                return;
+                return true; // Read failed.
             }
         }
 
@@ -391,6 +389,7 @@ void mram_read_bytes(uint32_t address, uint8_t *data, uint32_t size) {
             mram_write_bytes(address + PAGE_SIZE * page, data + PAGE_SIZE * page, PAGE_SIZE);
         }
     }
+    return false; // Read succeeded.
 }
 
 // ---------------------- Test ----------------------
