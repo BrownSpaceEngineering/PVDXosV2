@@ -21,12 +21,10 @@ typedef enum { // preliminary contents; still under discussion
 	STATE_BURN_WIRE,
 	STATE_POST,
 	STATE_LOW_POWER_IDLE,
-	STATE_LOW_POWER_UHF_TRANS,
 	STATE_IDLE,
 	STATE_PEROVSKITE_CAPTURE,
 	STATE_STUDENT_PICTURE_CAPTURE,
 	STATE_SBAND_TRANS,
-	STATE_UHF_TRANS,
 	STATE_FLASH_RECOVERY_CHECK,
 	STATE_FAKE_HEARTBEAT, // EXAMPLE ONLY: not a real PVDX state
 	NUM_STATES
@@ -35,21 +33,28 @@ typedef enum { // preliminary contents; still under discussion
 typedef struct { // preliminary contents; still under discussion
 	bool burn_wire_burned;
 	bool in_sunlight;
+	bool detumbling; // i think
 	float battery_level; // not sure yet how this will be stored/fetched
 	bool image_ready_to_display;
 	bool photo_taken_for_downlink;
+	bool perovskite_data_ready_for_downlink;
 	// Filled in by the task manager itself; never sent as an input update
 	TickType_t current_tick;
 	TickType_t last_transition_tick; // when the current state was entered
-	// etc
+	bool sband_wants_to_transmit; // this does not guarantee a transition to STATE_SBAND_TRANS
+    bool safe_to_disable_radio; // any time this is set to true, the radio should assume it might be disabled
 } input_t;
 
 typedef enum { // preliminary contents; still under discussion
 	BURN_WIRE_STATUS_UPDATE,
 	SUNLIGHT_STATUS_UPDATE,
+	DETUMBLING_UPDATE,
 	BATTERY_LEVEL_UPDATE,
 	IMAGE_READY_DISPLAY_UPDATE,
 	PHOTO_READY_DOWNLINK_UPDATE,
+	PEROVSKITE_READY_DOWNLINK_UPDATE,
+	SBAND_READY_TRANSMIT_UPDATE,
+	SAFE_DISABLE_RADIO_UPDATE,
 	NUM_INPUT_UPDATE_OPTIONS
 } input_update_t;
 
