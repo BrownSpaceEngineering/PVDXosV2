@@ -93,6 +93,7 @@ extern color_t display_buffer[DISPLAY_BUFFER_SIZE]; // pixels are 4 bits, so 2 c
 void display_set_buffer(const color_t *const p_buffer)                                                            ;
 void display_clear_buffer(void)                                                                                   ;
 status_t display_update(void)                                                                                     ;
+status_t display_off(void);
 status_t init_display_hardware(void)                                                                              ;
 
 #endif // DISPLAY_DRIVER_H

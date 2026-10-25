@@ -10,6 +10,7 @@
 #include "shell_commands.h"
 
 #include <atmel_start.h>
+#include <string.h>
 #include "display_task.h"
 #include "image_buffers/image_buffer_BrownLogo.h"
 #include "image_buffers/image_buffer_PVDX.h"
@@ -245,13 +246,18 @@ void shell_display(char **args, int arg_count) {
         return;
     }
 
-    const uint8_t *image_buffers[] = {IMAGE_BUFFER_BROWNLOGO, IMAGE_BUFFER_PVDX};
-    command_t display_image_command = get_display_image_command(image_buffers[args[1][0] - '0']);
-    
-    while (enqueue_command(&display_image_command) != SUCCESS) {
-        warning("shell: Failed to enqueue display image command\n");
+    const bool turn_off = strcmp(args[1], "off") == 0;
+    if (!turn_off && strcmp(args[1], "0") != 0 && strcmp(args[1], "1") != 0) {
+        terminal_printf("Invalid usage. Try 'help display'\n");
+        return;
     }
-    terminal_printf("fr\n");
+
+    const uint8_t *image_buffers[] = {IMAGE_BUFFER_BROWNLOGO, IMAGE_BUFFER_PVDX};
+    command_t display_command = turn_off ? get_display_off_command() : get_display_image_command(image_buffers[args[1][0] - '0']);
+    while (enqueue_command(&display_command) != SUCCESS) {
+        warning("shell: Failed to enqueue display command\n");
+    }
+    terminal_printf("Display command queued\n");
 }
 
 /**
@@ -261,6 +267,7 @@ void shell_display(char **args, int arg_count) {
  *
  */
 void help_display() {
-    terminal_printf("Usage: display\n");
-    terminal_printf("\tgjnerergjkn\n");
+    terminal_printf("Usage: display <0|1|off>\n");
+    terminal_printf("\t0: Brown logo, 1: PVDX logo\n");
+    terminal_printf("\toff: Put the display to sleep until reinitialized\n");
 }

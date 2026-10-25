@@ -155,6 +155,19 @@ status_t display_update(void) {
 }
 
 /**
+ * \brief Put the display to sleep without clearing its image memory.
+ *
+ * The display remains off until it is reinitialized.
+ */
+status_t display_off(void) {
+    xfer.size = 1;
+    spi_tx_buffer[0] = SSD1362_CMD_1B_DISPLAYOFF;
+    ret_err_status(spi_transfer(false), "display: could not turn display off");
+
+    return SUCCESS;
+}
+
+/**
  * \fn init_display_hardware
  *
  * \brief Initializes the display hardware
@@ -181,9 +194,7 @@ status_t init_display_hardware(void) {
     ret_err_status(spi_transfer(false), "display hardware init: could not unlock command lock");
 
     // Put display to sleep
-    xfer.size = 1;
-    spi_tx_buffer[0] = SSD1362_CMD_1B_DISPLAYOFF;
-    ret_err_status(spi_transfer(false), "display hardware init: could not put display to sleep");
+    ret_err_status(display_off(), "display hardware init: could not put display to sleep");
 
     // Set active display window to the entire display
     ret_err_status(display_set_window(), "display hardware init: could not set active window to whole display");
