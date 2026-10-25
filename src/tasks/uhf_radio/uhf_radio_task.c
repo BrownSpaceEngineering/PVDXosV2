@@ -110,6 +110,7 @@ int set_at86_rx_mode(struct at86rf215 *h, size_t timeout_ms) {
 }
 
 #define AT86_BBC_IRQ_TXFE (1u << 4) // BBCn_IRQS/IRQM bit 4: transmitter frame end
+#define AT86_FCS_LEN 2              // PC.FCST = AT86RF215_FCS_16 in every config
 
 /**
  * Writes the PSDU to the BBC0 TX frame buffer as one SPI block write. The two COMMAND bytes and the data must be sent
@@ -117,6 +118,7 @@ int set_at86_rx_mode(struct at86rf215 *h, size_t timeout_ms) {
  * SELN on every call.
  */
 static int at86_write_tx_buffer(struct at86rf215 *h, const uint8_t *buf, size_t sz) {
+    static const uint8_t fcs_pad[AT86_FCS_LEN] = {0};
     uint8_t cmd[2] = {(REG_BBC0_FBTXS >> 8) | 0x80, REG_BBC0_FBTXS & 0xFF};
     struct spi_xfer xfer = {.txbuf = cmd, .rxbuf = NULL, .size = sizeof(cmd)};
 
@@ -126,6 +128,11 @@ static int at86_write_tx_buffer(struct at86rf215 *h, const uint8_t *buf, size_t 
     if (sent == (int32_t)xfer.size) {
         xfer.txbuf = (uint8_t *)buf;
         xfer.size = sz;
+        sent = spi_m_sync_transfer(&SPI_UHF, &xfer);
+    }
+    if (sent == (int32_t)xfer.size) {
+        xfer.txbuf = (uint8_t *)fcs_pad; // Add padding for fcs, gets replaced by chip on send
+        xfer.size = sizeof(fcs_pad);
         sent = spi_m_sync_transfer(&SPI_UHF, &xfer);
     }
     at86rf215_set_seln(h, 1);
@@ -147,7 +154,7 @@ int at86_send_frame(struct at86rf215 *h, const uint8_t *buf, size_t sz, size_t t
         return -AT86RF215_INVAL_PARAM;
     }
 
-    if (sz > AT86RF215_MAX_PDU) {
+    if (sz + AT86_FCS_LEN > AT86RF215_MAX_PDU) {
         return -AT86RF215_INVAL_PARAM;
     }
 
@@ -168,12 +175,12 @@ int at86_send_frame(struct at86rf215 *h, const uint8_t *buf, size_t sz, size_t t
         return -AT86RF215_INVAL_CONF;
     }
 
-    /* Declare the size of the PSDU */
-    ret = at86rf215_reg_write_8(h, sz & 0xFF, REG_BBC0_TXFLL);
+    size_t psdu_len = sz + AT86_FCS_LEN; // PSDU len includes FCS
+    ret = at86rf215_reg_write_8(h, psdu_len & 0xFF, REG_BBC0_TXFLL);
     if (ret) {
         return ret;
     }
-    ret = at86rf215_reg_write_8(h, (sz >> 8) & 0xFF, REG_BBC0_TXFLH);
+    ret = at86rf215_reg_write_8(h, (psdu_len >> 8) & 0xFF, REG_BBC0_TXFLH);
     if (ret) {
         return ret;
     }
@@ -183,25 +190,25 @@ int at86_send_frame(struct at86rf215 *h, const uint8_t *buf, size_t sz, size_t t
         return ret;
     }
 
-    /* IRQS is cleared on read: discard any stale TXFE so it can't end the wait below early */
+    // IRQS is cleared on read: discard any stale TXFE so it can't end the wait below early
     uint8_t irqs = 0;
     ret = at86rf215_reg_read_8(h, &irqs, REG_BBC0_IRQS);
     if (ret) {
         return ret;
     }
 
-    /* Data are in the buffer. Issue the TX cmd to send them */
+    // Data are in the buffer. Issue the TX cmd to send them
     ret = at86rf215_set_cmd(h, AT86RF215_CMD_RF_TX, radio);
     if (ret) {
         return ret;
     }
 
-    /* TXFE is set once the frame (incl. FCS and PA ramp-down) is sent; the radio then returns to TXPREP by itself */
+    // TXFE is set once the frame (incl. FCS and PA ramp-down) is sent; the radio then returns to TXPREP by itself
     size_t start = at86rf215_get_time_ms(h);
     irqs = 0;
     while (!(irqs & AT86_BBC_IRQ_TXFE)) {
         if (at86rf215_get_time_ms(h) - start > timeout_ms) {
-            /* Writing TXPREP while in TX aborts the transmission, leaving the radio ready for the next frame */
+            // Writing TXPREP while in TX aborts the transmission, leaving the radio ready for the next frame
             at86rf215_set_cmd(h, AT86RF215_CMD_RF_TXPREP, radio);
             return -AT86RF215_TIMEOUT;
         }
@@ -217,12 +224,24 @@ int at86_send_frame(struct at86rf215 *h, const uint8_t *buf, size_t sz, size_t t
 
 // TODO: receive is not implemented yet. These stubs report that no frame is ever waiting, so the uplink path in
 // main_uhf_radio never runs
-bool at86_peek_frame(void) {
+int at86_peek_frame(struct at86rf215 *radio) {
+    int ret = ready(radio);
+    if (ret) {
+        return ret;
+    }
+
     return false;
 }
 
-int at86_pop_frame(uint8_t *buf, size_t sz) {
-    return -AT86RF215_NOT_IMPL;
+int at86_check_irqs(void) {
+    uint8_t irqs[4] = {0x0, 0x0, 0x0, 0x0};
+}
+
+/**
+ * Wrapper for at86rf215_rx_frame
+ */
+int at86_pop_frame(struct at86rf215 *h, uint8_t *buf, size_t sz) {
+    return at86rf215_rx_frame(h, buf, sz);
 }
 
 /**
@@ -254,11 +273,6 @@ int change_at86_config(struct at86rf215 *h, at86_config_t config) {
     memset(&bb_conf, 0, sizeof(bb_conf));
 
     switch (config) {
-        // TODO: legacy O-QPSK has a 7-bit frame length (datasheet Figure 6-27), so frames are at most 127 bytes:
-        // too small for one RADIO_DOWNLINK_MAX_SIZE packet, let alone a USLP_MAX_FRAME_SIZE frame. Either drop this
-        // mode or cap the size passed to uslp_mapp_request while it is selected
-        // TODO: 2000 kchip/s is the 2450 MHz legacy PHY; the 780/915 MHz one is 1000 kchip/s (datasheet Table 6-101).
-        // Confirm 2000 is intended on RF09 and that its ~2 MHz bandwidth is allowed in our band
         case AT86_O_QPSK_LEG:
             bb_conf.pt = AT86RF215_BB_MROQPSK;
             bb_conf.fcst = AT86RF215_FCS_16;
@@ -296,6 +310,30 @@ int change_at86_config(struct at86rf215 *h, at86_config_t config) {
             bb_conf.qpsk.fcstleg = 0;
             bb_conf.qpsk.rxm = AT86RF215_MROQPSK_RXM_MROQPSK_ONLY;
             bb_conf.qpsk.nsfd = AT86RF215_MROQPSK_NSFD_SFD1;
+            break;
+        case AT86_MR_FSK:
+            bb_conf.pt = AT86RF215_BB_MRFSK;
+            bb_conf.fcst = AT86RF215_FCS_16;
+            bb_conf.txafcs = 1;
+            bb_conf.fsk.mord = AT86RF215_2FSK;
+            bb_conf.fsk.midx = AT86RF215_MIDX_1;
+            bb_conf.fsk.midxs = AT86RF215_MIDXS_88;
+            bb_conf.fsk.bt = AT86RF215_FSK_BT_05;
+            bb_conf.fsk.srate = AT86RF215_FSK_SRATE_50;
+            bb_conf.fsk.preamble_length = 8;
+            bb_conf.fsk.pdtm = 1;
+            bb_conf.fsk.fecs = AT86RF215_FSK_FEC_RSC;
+            bb_conf.fsk.fecie = 0;
+            bb_conf.fsk.rxo = AT86RF215_FSK_RXO_DISABLED;
+            bb_conf.fsk.sfd32 = 0; // Two 16-bit SFDs, sfd0 (uncoded) and sfd1 (coded)
+            bb_conf.fsk.sfdq = 1;
+            bb_conf.fsk.sfd = 1;
+            bb_conf.fsk.csfd0 = AT86RF215_SFD_UNCODED_IEEE;
+            bb_conf.fsk.csfd1 = AT86RF215_SFD_CODED_IEEE;
+            bb_conf.fsk.sfd0 = 0x7209;
+            bb_conf.fsk.sfd1 = 0x72F6;
+            bb_conf.fsk.sfd_threshold = 8;
+            bb_conf.fsk.preamble_threshold = 5;
             break;
         default:
             return -AT86RF215_INVAL_PARAM;
