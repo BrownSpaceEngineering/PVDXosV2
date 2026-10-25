@@ -24,11 +24,14 @@
 #include "magnetometer_driver.h"
 #include "mcp23017.h"
 #include "mram_driver.h"
+#include "photodiode_driver.h"
 #include "pmb_i2c.h"
 #include "stxg2.h"
+#include "thermistor_driver.h"
 
 // forward declarations of check functions
 bool check_magnetometer(void);
+bool check_photodiodes(void);
 bool check_gyro(void);
 bool check_mram(void);
 bool check_camera(void);
@@ -37,6 +40,7 @@ bool check_uhf(void);
 bool check_perovskite(void);
 bool check_fuel_gauges(void);
 bool check_display(void);
+bool check_thermistors(void);
 // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 // ~~~ for safety, these structures should be local to this source file ~~~
@@ -51,16 +55,17 @@ static bool (*device_check_functions[NUM_DEVICES])(void) = {
     //    func ptr      |  device_id_t
     // -------------------------------
     &check_magnetometer, // MAGNETOMETER_ID
-    NULL,                // PHOTODIODE_ID
+    &check_photodiodes,  // PHOTODIODE_ID
     &check_gyro,         // GYROSCOPE_ID
     &check_mram,         // MRAM_ID
     NULL,                // MAGNETORQUERS_ID
     &check_sband,        // SBAND_ID
     &check_uhf,          // UHF_ID
     &check_fuel_gauges,  // EPS_ID — the four battery fuel gauges
-    &check_display,                // DISPLAY_ID — init done inside the display task post-scheduler
+    &check_display,      // DISPLAY_ID — init done inside the display task post-scheduler
     &check_camera,       // CAMERA_ID
     &check_perovskite,   // PEROVSKITE_ID
+    &check_thermistors,  // THERMISTOR_ID
 };
 
 // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -112,7 +117,7 @@ const char *device_name_of(device_id_t device_id) {
     static const char *names[NUM_DEVICES] = {
         "MAGNETOMETER_ID", "PHOTODIODE_ID", "GYROSCOPE_ID", "MRAM_ID",    "MAGNETORQUERS_ID",
         "SBAND_ID",        "UHF_ID",        "EPS_ID",       "DISPLAY_ID", "CAMERA_ID",
-        "PEROVSKITE_ID",
+        "PEROVSKITE_ID",   "THERMISTOR_ID",
     };
     return names[device_id];
 }
@@ -222,50 +227,101 @@ bool check_perovskite(void) {
     return true;
 }
 
-// Fuel gauges (EPS): first checks that the TCA9546A mux ACKs and reads back its control byte. Then, for each
-// of the four packs, opens its mux channel (with control-byte readback), reads the MAX17205 DevName register
-// and closes the mux. Passes only if the mux and all four gauges respond. Read-only.
-#define MAX17205_DEVNAME_PART_MASK 0x000FU
-#define MAX17205_DEVNAME_PART      0x0005U // DevName[3:0]: 0x5 = MAX17205 (0x1 = MAX17201)
-
+// Fuel gauges (EPS): runs the driver init, which releases the mux reset, then selects each of the four
+// mux channels and reads that gauge's DevName and config. Passes only if the mux and all four gauges respond.
+// Read-only (no NV writes), so the fuel gauge task can run it again later.
 bool check_fuel_gauges(void) {
-    i2c_m_sync_enable(&FG_I2C);
-
-    // TCA9546A mux: write "all channels closed" and read the control byte back
-    uint8_t mux_ctrl = FG_MUX_CH_NONE;
-    struct _i2c_m_msg mux_msg = {.addr = FG_MUX_ADDR, .flags = I2C_M_STOP, .len = 1, .buffer = &mux_ctrl};
-    if (i2c_m_sync_transfer(&FG_I2C, &mux_msg) != 0) {
-        warning("fuel gauge check: mux did not ACK at 0x%02x\n", FG_MUX_ADDR);
-        return false;
-    }
-    mux_ctrl = 0xFF;
-    mux_msg.flags = I2C_M_STOP | I2C_M_RD;
-    if (i2c_m_sync_transfer(&FG_I2C, &mux_msg) != 0 || mux_ctrl != FG_MUX_CH_NONE) {
-        warning("fuel gauge check: mux control readback 0x%02x != 0x%02x\n", mux_ctrl, FG_MUX_CH_NONE);
-        return false;
-    }
-    info("fuel gauge check: mux responded at 0x%02x\n", FG_MUX_ADDR);
-
-    bool all_okay = true;
-    uint8_t responding = 0;
-    for (uint8_t ch = 0; ch < FG_NUM_PACKS; ch++) {
-        uint16_t devname = 0;
-        if (fg_read_raw(ch, MAX17205_REG_DEVNAME, &devname) != SUCCESS) {
-            warning("fuel gauge check: gauge %u unreachable\n", ch + 1);
-            all_okay = false;
-            continue;
-        }
-        responding++;
-        info("fuel gauge check: gauge %u responded, DevName=0x%04x\n", ch + 1, devname);
-        if ((devname & MAX17205_DEVNAME_PART_MASK) != MAX17205_DEVNAME_PART) {
-            warning("fuel gauge check: gauge %u is not a MAX17205\n", ch + 1);
-            all_okay = false;
-        }
-    }
-    info("fuel gauge check: %u/%u gauges responding\n", responding, FG_NUM_PACKS);
-    return all_okay;
+    return init_fuel_gauges() == SUCCESS;
 }
 
 bool check_display(void) {
     return init_display_hardware() == SUCCESS;
+}
+
+// Photodiodes: reads all 18 channels and logs each code. Fails if any ADC read fails, or if every channel reads the
+// same value above the light floor (e.g. all pinned at full scale), which a working array never does. A fully dark
+// array only warns, since startup can happen in eclipse, where every channel legitimately reads near zero.
+#define PHD_CHECK_LIGHT_FLOOR 50 // ADC code a lit channel should exceed
+
+bool check_photodiodes(void) {
+    if (init_photodiodes() != SUCCESS) {
+        warning("photodiode check: init failed\n");
+        return false;
+    }
+
+    uint16_t codes[PHD_COUNT];
+    if (phd_read_all(codes) != SUCCESS) {
+        warning("photodiode check: ADC read failed\n");
+        return false;
+    }
+
+    uint16_t lo = 0xFFFF, hi = 0;
+    uint8_t lit = 0;
+    for (uint8_t i = 0; i < PHD_COUNT; i++) {
+        info("photodiode check: PHD_%u code %u\n", i, codes[i]);
+        if (codes[i] > PHD_CHECK_LIGHT_FLOOR) {
+            lit++;
+        }
+        if (codes[i] < lo) {
+            lo = codes[i];
+        }
+        if (codes[i] > hi) {
+            hi = codes[i];
+        }
+    }
+    info("photodiode check: %u/%u channels above %u, range %u..%u\n", lit, PHD_COUNT, PHD_CHECK_LIGHT_FLOOR, lo, hi);
+
+    if (lit == 0) {
+        warning("photodiode check: no channel above the light floor (dark/eclipse, or array disconnected)\n");
+        return true;
+    }
+    if (hi == lo) {
+        warning("photodiode check: all channels read %u (array not responding?)\n", lo);
+        return false;
+    }
+    return true;
+}
+
+// Thermistors + heaters: runs the driver init (ADC1 setup, both heater enables driven off), then reads each
+// thermistor and requires a non-railed ADC code (a railed code means an open or shorted divider) and a plausible
+// temperature. The heaters are left off: they have no feedback the MCU can read, and switching them on is
+// actuation, so the check only confirms their enables were driven off.
+#define THERM_CHECK_MIN_C -40.0f
+#define THERM_CHECK_MAX_C 85.0f
+
+bool check_thermistors(void) {
+    if (init_thermistors() != SUCCESS) {
+        warning("thermistor check: init failed\n");
+        return false;
+    }
+
+    bool all_okay = true;
+    for (uint8_t i = 0; i < THERM_COUNT; i++) {
+        uint16_t code = 0;
+        if (therm_read_raw(i, &code) != SUCCESS) {
+            warning("thermistor check: T%u ADC read failed\n", i);
+            all_okay = false;
+            continue;
+        }
+        if (code == 0 || (float)code / THERM_ADC_FS >= THERM_K_OPEN) {
+            warning("thermistor check: T%u code %u railed (open or shorted divider)\n", i, code);
+            all_okay = false;
+            continue;
+        }
+        float temp_c = 0.0f;
+        if (therm_read_celsius(i, &temp_c) != SUCCESS || temp_c < THERM_CHECK_MIN_C || temp_c > THERM_CHECK_MAX_C) {
+            warning("thermistor check: T%u code %u -> %ld mC out of range\n", i, code, (long)(temp_c * 1000.0f));
+            all_okay = false;
+            continue;
+        }
+        info("thermistor check: T%u code %u -> %ld mC\n", i, code, (long)(temp_c * 1000.0f));
+    }
+
+    for (uint8_t h = 0; h < THERM_HEATER_COUNT; h++) {
+        if (heater_is_on(h)) {
+            warning("thermistor check: heater %u not off after init\n", h + 1);
+            all_okay = false;
+        }
+    }
+    return all_okay;
 }

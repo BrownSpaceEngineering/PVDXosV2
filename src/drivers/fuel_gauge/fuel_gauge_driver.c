@@ -6,8 +6,8 @@
  *
  * Access pattern for a gauge: select its mux channel, then talk to the MAX17205.
  * The MAX17205 has two 7-bit I2C addresses depending on the register page:
- *   reg < 0x100 -> 0x36 (m5 page; also 0x180-0x1FF NV block, reg byte = reg & 0xFF)
- *   reg >= 0x100 -> 0x0B (SBS page; reg byte = reg & 0xFF)
+ *   reg < 0x100 -> 0x36 (ModelGauge m5 page)
+ *   reg >= 0x100 -> 0x0B (SBS/NV page; reg byte = reg & 0xFF)
  * 16-bit registers are little-endian (LSB first).
  *
  * The ASF HAL functions (i2c_m_sync_cmd_read/cmd_write/transfer) return 0 on success
@@ -21,6 +21,14 @@
 // Largest downstream payload is a 2-byte register, so no large buffers needed.
 
 // ---------------------- TCA9546A mux ----------------------
+
+static void fg_mux_release_reset(void) {
+    // Generated startup drives EPS_RST/PB20 low; the mux cannot ACK until released.
+    gpio_set_pin_level(EPS_RST, true);
+    gpio_set_pin_function(EPS_RST, GPIO_PIN_FUNCTION_OFF);
+    gpio_set_pin_direction(EPS_RST, GPIO_DIRECTION_OUT);
+    delay_ms(1);
+}
 
 // The mux has no internal register: a transaction is just a 1-byte control write (or
 // a 1-byte read of the current control byte). Use a raw transfer rather than
@@ -128,8 +136,119 @@ static inline float fg_conv_current(uint16_t raw) {
 
 // ---------------------- Public API ----------------------
 
+#if FG_MUX_GAUGE_TEST
+status_t fg_mux_gauge_test(uint8_t channel, fg_reading_t *out, uint16_t *devname, uint16_t *status) {
+    if (out == NULL || devname == NULL || status == NULL || channel >= FG_NUM_PACKS) {
+        return ERROR_BAD_TARGET;
+    }
+    memset(out, 0, sizeof(*out));
+    *devname = 0;
+    *status = 0;
+
+    fg_mux_release_reset();
+    int32_t rc = i2c_m_sync_enable(&FG_I2C);
+    if (rc != 0) {
+        warning("mux-gauge: I2C enable failed rc=%ld %s\n", (long)rc, fg_i2c_err_str(rc));
+        return ERROR_I2C_FAILED;
+    }
+
+    status_t result = fg_mux_select(channel);
+    if (result == SUCCESS) {
+        info("mux-gauge: channel=%u control=0x%02x selected/readback OK\n", channel, FG_MUX_CH(channel));
+        result = fg_read_reg16(MAX17205_REG_DEVNAME, devname);
+    }
+    if (result == SUCCESS) {
+        result = fg_read_reg16(MAX17205_REG_STATUS, status);
+    }
+    if (result == SUCCESS) {
+        result = fg_read_pack(channel, out);
+    }
+
+    // Isolate the downstream bus even when any of the gauge reads failed.
+    rc = fg_mux_raw_write(FG_MUX_CH_NONE);
+    uint8_t control = 0xFF;
+    if (rc == 0) {
+        rc = fg_mux_raw_read(&control);
+    }
+    if (rc != 0 || control != FG_MUX_CH_NONE) {
+        warning("mux-gauge: all-off cleanup failed rc=%ld read=0x%02x\n", (long)rc, control);
+        out->valid = false;
+        return rc != 0 ? ERROR_I2C_FAILED : ERROR_SANITY_CHECK_FAILED;
+    }
+    info("mux-gauge: all channels off/readback OK\n");
+    return result;
+}
+#endif
+
+#if FG_MUX_ONLY_TEST
+status_t fg_mux_self_test(void) {
+    fg_mux_release_reset();
+    info("mux-only: /RESET=PB20 (EPS_RST) driven high\n");
+    int32_t enable_rc = i2c_m_sync_enable(&FG_I2C);
+    if (enable_rc != 0) {
+        warning("mux-only: I2C enable failed rc=%ld %s\n", (long)enable_rc, fg_i2c_err_str(enable_rc));
+        return ERROR_I2C_FAILED;
+    }
+    const uint8_t controls[] = {FG_MUX_CH_NONE, FG_MUX_CH(0), FG_MUX_CH(1), FG_MUX_CH(2), FG_MUX_CH(3)};
+    status_t result = SUCCESS;
+
+    for (unsigned i = 0; i < sizeof(controls) / sizeof(controls[0]); i++) {
+        uint8_t want = controls[i];
+        int32_t rc = fg_mux_raw_write(want);
+        if (rc != 0) {
+            warning("mux-only: addr=0x%02x write=0x%02x failed rc=%ld %s\n",
+                    FG_MUX_ADDR, want, (long)rc, fg_i2c_err_str(rc));
+            // Read-only discovery distinguishes an unexpected address strap from no response.
+            unsigned found = 0;
+            for (uint8_t addr = 0x70; addr <= 0x77; addr++) {
+                uint8_t control = 0xFF;
+                struct _i2c_m_msg msg = {.addr = addr, .flags = I2C_M_STOP | I2C_M_RD, .len = 1, .buffer = &control};
+                if (i2c_m_sync_transfer(&FG_I2C, &msg) == 0) {
+                    info("mux-only: discovery ACK addr=0x%02x control=0x%02x\n", addr, control);
+                    found++;
+                }
+            }
+            info("mux-only: read-only discovery 0x70..0x77: %u responding address(es)\n", found);
+            result = ERROR_I2C_FAILED;
+            break;
+        }
+
+        uint8_t got = 0xFF;
+        rc = fg_mux_raw_read(&got);
+        if (rc != 0) {
+            warning("mux-only: addr=0x%02x read failed rc=%ld %s\n", FG_MUX_ADDR, (long)rc, fg_i2c_err_str(rc));
+            result = ERROR_I2C_FAILED;
+            break;
+        }
+        if (got != want) {
+            warning("mux-only: write=0x%02x read=0x%02x MISMATCH\n", want, got);
+            result = ERROR_SANITY_CHECK_FAILED;
+            break;
+        }
+        info("mux-only: addr=0x%02x write=0x%02x read=0x%02x PASS\n", FG_MUX_ADDR, want, got);
+    }
+
+    // Attempt cleanup even after failure; never claim isolation without verifying it.
+    int32_t rc = fg_mux_raw_write(FG_MUX_CH_NONE);
+    uint8_t got = 0xFF;
+    if (rc == 0) {
+        rc = fg_mux_raw_read(&got);
+    }
+    if (rc != 0) {
+        warning("mux-only: restore all-off failed rc=%ld %s\n", (long)rc, fg_i2c_err_str(rc));
+        return ERROR_I2C_FAILED;
+    }
+    if (got != FG_MUX_CH_NONE) {
+        warning("mux-only: restore all-off read=0x%02x MISMATCH\n", got);
+        return ERROR_SANITY_CHECK_FAILED;
+    }
+    info("mux-only: restore write=0x00 read=0x00 PASS (all channels off)\n");
+    return result;
+}
+#endif
+
 /**
- * \brief Brings up the ALRT input and probes all four gauges' configuration.
+ * \brief Brings up the ALRT input and probes the configured gauges.
  *
  * For each channel this logs Status + the volatile/NV cell-config and capacity
  * registers. The PackCfg/nPackCfg NCELLS field reveals whether the part is set up
@@ -138,6 +257,7 @@ static inline float fg_conv_current(uint16_t raw) {
  * the others. No NV is written in this pass.
  */
 status_t init_fuel_gauges(void) {
+    fg_mux_release_reset();
     // Enable the SERCOM6 I2C peripheral. atmel_start_init() only *inits* it (leaves it
     // disabled), so it must be enabled before any transfer (cf. the magnetometer driver's
     // spi_m_sync_enable).
@@ -148,11 +268,21 @@ status_t init_fuel_gauges(void) {
     gpio_set_pin_direction(EPS_IRQ, GPIO_DIRECTION_IN);
     gpio_set_pin_pull_mode(EPS_IRQ, GPIO_PULL_UP);
 
+    info("fuel_gauge: TCA9546A mux, %u packs (SERCOM6 SDA=PD09 SCL=PD08)\n", FG_NUM_PACKS);
+    status_t result = SUCCESS;
     for (uint8_t ch = 0; ch < FG_NUM_PACKS; ch++) {
-        // if (fg_mux_select(ch) != SUCCESS) {
-        //     warning("fuel_gauge: gauge %u unreachable (mux select failed)\n", ch + 1);
-        //     continue;
-        // }
+        if (fg_mux_select(ch) != SUCCESS) {
+            warning("fuel_gauge: gauge %u unreachable (channel select failed)\n", ch + 1);
+            result = ERROR_I2C_FAILED;
+            continue;
+        }
+
+        uint16_t devname = 0;
+        if (fg_read_reg16(MAX17205_REG_DEVNAME, &devname) != SUCCESS) {
+            result = ERROR_I2C_FAILED;
+            continue;
+        }
+        info("fuel_gauge: gauge %u DevName=0x%04x (I2C register read OK)\n", ch + 1, devname);
 
         uint16_t status = 0, packcfg = 0, npackcfg = 0, designcap = 0, ndesigncap = 0;
         status_t rs = SUCCESS, rp = SUCCESS, rn = SUCCESS, rd = SUCCESS, rnd = SUCCESS;
@@ -165,6 +295,7 @@ status_t init_fuel_gauges(void) {
 
         if (rs != SUCCESS || rp != SUCCESS || rn != SUCCESS || rd != SUCCESS || rnd != SUCCESS) {
             warning("fuel_gauge: gauge %u config read error(s)\n", ch + 1);
+            result = ERROR_I2C_FAILED;
             continue;
         }
 
@@ -176,7 +307,7 @@ status_t init_fuel_gauges(void) {
     }
 
     fg_mux_disable();
-    return SUCCESS;
+    return result;
 }
 
 /**
@@ -189,7 +320,8 @@ status_t fg_read_pack(uint8_t channel, fg_reading_t *out) {
         return ERROR_BAD_TARGET;
     }
 
-    ret_err_status(fg_mux_select(channel), "fuel_gauge: mux select failed in read_pack");
+    memset(out, 0, sizeof(*out));
+    ret_err_status(fg_mux_select(channel), "fuel_gauge: channel select failed in read_pack");
 
     uint16_t soc = 0, batt = 0, current = 0, temp = 0;
     ret_err_status(fg_read_reg16(MAX17205_REG_REPSOC, &soc), "fuel_gauge: RepSOC read failed");
@@ -201,11 +333,12 @@ status_t fg_read_pack(uint8_t channel, fg_reading_t *out) {
     out->pack_voltage = fg_conv_batt(batt);
     out->current_a = fg_conv_current(current);
     out->temp_c = fg_conv_temp(temp);
+    out->valid = true;
     return SUCCESS;
 }
 
 /**
- * \brief Reads all four packs. A failed pack is logged and its entry left zeroed.
+ * \brief Reads the configured packs. Failed entries are zeroed and marked invalid.
  *        Closes the mux when done.
  */
 status_t fg_read_all(fg_reading_t out[FG_NUM_PACKS]) {
@@ -213,15 +346,17 @@ status_t fg_read_all(fg_reading_t out[FG_NUM_PACKS]) {
         return ERROR_BAD_TARGET;
     }
 
+    status_t result = SUCCESS;
     for (uint8_t ch = 0; ch < FG_NUM_PACKS; ch++) {
         memset(&out[ch], 0, sizeof(out[ch]));
         if (fg_read_pack(ch, &out[ch]) != SUCCESS) {
             warning("fuel_gauge: read of pack %u failed\n", ch + 1);
+            result = ERROR_I2C_FAILED;
         }
     }
 
     fg_mux_disable();
-    return SUCCESS;
+    return result;
 }
 
 /**
@@ -249,8 +384,10 @@ void fg_i2c_scan(void) {
     info("fuel_gauge: I2C scan (SERCOM6)...\n");
 
     uint8_t found = 0;
-    // Full 7-bit space 0x00-0x7F (includes the normally-reserved 0x00-0x07 / 0x78-0x7F).
-    for (uint8_t addr = 0x00; addr <= 0x7F; addr++) {
+    // Avoid general-call/reserved addresses and unrelated devices on the shared bus.
+    const uint8_t addresses[] = {FG_MAX_ADDR_LOW, FG_MAX_ADDR_HIGH, FG_MUX_ADDR};
+    for (unsigned i = 0; i < sizeof(addresses) / sizeof(addresses[0]); i++) {
+        uint8_t addr = addresses[i];
         // Presence probe via a WRITE: START, addr+W, one memory-address byte, STOP. The
         // MAX17205 read protocol requires a memory-address write before any read, so a bare
         // read is not a valid transaction for it and can false-negative; a write needs only

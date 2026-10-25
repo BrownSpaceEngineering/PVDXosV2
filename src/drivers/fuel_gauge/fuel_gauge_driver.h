@@ -24,14 +24,23 @@
 #include "string.h"
 
 // ---- Bus / device addresses (7-bit) ----
-#define FG_I2C          I2C_CAMERA // shared bus; SERCOM6 on this branch
+#define FG_I2C          I2C_CAMERA // shared bus; SERCOM6
 #define FG_MUX_ADDR     0x70       // TCA9546A (A2:A0 = 000)
-#define FG_MAX_ADDR_LOW 0x36       // MAX17205 m5 page: regs 0x000-0x0FF and 0x180-0x1FF
-#define FG_MAX_ADDR_HIGH 0x0B      // MAX17205 SBS page: regs 0x100-0x17F
+#define FG_MAX_ADDR_LOW 0x36       // MAX17205 m5 page: regs 0x000-0x0FF
+#define FG_MAX_ADDR_HIGH 0x0B      // MAX17205 SBS/NV page: regs 0x100-0x1FF
 
 // ---- TCA9546A channel-select control byte (bits [3:0] enable channels 0-3) ----
 #define FG_MUX_CH_NONE 0x00
 #define FG_MUX_CH(n)   (1u << (n)) // channel 0..3
+
+// Build with -DFG_MUX_ONLY_TEST=1 to test only the mux control register, without gauge reads.
+#ifndef FG_MUX_ONLY_TEST
+#define FG_MUX_ONLY_TEST 0
+#endif
+
+#ifndef FG_MUX_GAUGE_TEST
+#define FG_MUX_GAUGE_TEST 0
+#endif
 
 #define FG_NUM_PACKS 4
 
@@ -65,7 +74,18 @@ typedef struct {
     float pack_voltage; // total pack voltage, V
     float current_a;    // current, A (depends on FG_RSENSE_OHMS)
     float temp_c;       // temperature, degC
+    bool valid;         // false if any telemetry register could not be read
 } fg_reading_t;
+
+#if FG_MUX_ONLY_TEST
+// Verifies all-off and each single-channel control value, then restores all-off.
+status_t fg_mux_self_test(void);
+#endif
+
+#if FG_MUX_GAUGE_TEST
+// Reads only the selected downstream gauge, then verifies all mux channels are off.
+status_t fg_mux_gauge_test(uint8_t channel, fg_reading_t *out, uint16_t *devname, uint16_t *status);
+#endif
 
 status_t init_fuel_gauges(void);
 status_t fg_read_pack(uint8_t channel, fg_reading_t *out);
@@ -77,8 +97,8 @@ void fg_scan_alerts(void);
 // Useful for probing arbitrary registers (DevName, per-cell voltages) and bring-up debug.
 status_t fg_read_raw(uint8_t channel, uint16_t reg, uint16_t *out);
 
-// Bring-up diagnostic: enables the bus and probes every 7-bit address (0x08-0x77),
-// logging which ones ACK. A directly-wired MAX17205 should ACK at 0x36 (and 0x0B).
+// Bring-up diagnostic: probes the mux and the gauge addresses. A gauge only ACKs at
+// 0x36/0x0B while its mux channel is open.
 void fg_i2c_scan(void);
 
 #endif // FUEL_GAUGE_DRIVER_H

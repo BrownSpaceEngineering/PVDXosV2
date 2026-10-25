@@ -111,7 +111,7 @@ typedef enum {
  * An enum to represent the ID/tag for each hardware device
  */
 
-#define NUM_DEVICES 11 // This **must** be updated to reflect the number of enums
+#define NUM_DEVICES 12 // This **must** be updated to reflect the number of enums
 typedef enum {
     MAGNETOMETER_ID = 0,
     PHOTODIODE_ID = 1,
@@ -124,6 +124,7 @@ typedef enum {
     DISPLAY_ID = 8,
     CAMERA_ID = 9,
     PEROVSKITE_ID = 10, // perovskite measurement board (PMB)
+    THERMISTOR_ID = 11, // four NTC thermistors + two heater enables
 } device_id_t;
 
 /* ---------- MISCELLANEOUS TASK TYPES ---------- */
