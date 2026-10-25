@@ -42,6 +42,9 @@ void tests_run(void) {
 #ifdef TEST_PMB
     test_pmb();
 #endif
+#ifdef TEST_STXG2_SWEEP
+    test_stxg2_sweep();
+#endif
 #ifdef TEST_STXG2
     test_stxg2();
 #endif

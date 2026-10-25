@@ -7,6 +7,10 @@
  *  - STXG2_TEST_PATTERN_CALLSIGN: Repeats "DE <callsign> PVDX TEST " followed by a PRBS7 sequence. The packet is
  *    stored in the radio's flash over SPI and then sent again and again.
  * Requires the STXG2 hardware with an antenna or a 50 ohm load on the RF port. Results can be obtained over RTT.
+ *
+ * test_stxg2_sweep transmits the test pattern at each frequency from STXG2_SWEEP_START_KHZ to STXG2_SWEEP_STOP_KHZ for
+ * STXG2_SWEEP_DWELL_MS, then goes to Standby. Use it with a spectrum analyzer in max hold to measure an antenna. The
+ * signal has no callsign ID, so radiate it only in a shielded room or an anechoic chamber.
  */
 
 #include "tests/test_stxg2.h"
@@ -33,14 +37,55 @@
     #error "Define STXG2_TEST_CALLSIGN as a string literal (your amateur callsign) to use STXG2_TEST_PATTERN_CALLSIGN"
 #endif
 
-#define STXG2_TEST_FREQ_KHZ 2418000U
-#define STXG2_TEST_SYM_RATE_KSPS STXG2_SYM_RATE_MIN_KSPS
-#define STXG2_TEST_MODCOD 1U           // Lowest MODCOD the radio accepts (USM 9.2.5.5)
-#define STXG2_TEST_LOCK_TIMEOUT_MS 2000U
+#ifndef STXG2_TEST_FREQ_KHZ
+    #define STXG2_TEST_FREQ_KHZ 2418000U
+#endif
+#if STXG2_TEST_FREQ_KHZ < STXG2_FREQ_MIN_KHZ || STXG2_TEST_FREQ_KHZ > STXG2_FREQ_MAX_KHZ || STXG2_TEST_FREQ_KHZ % STXG2_FREQ_STEP_KHZ != 0
+    #error "STXG2_TEST_FREQ_KHZ must be in STXG2_FREQ_MIN_KHZ..STXG2_FREQ_MAX_KHZ, in STXG2_FREQ_STEP_KHZ steps"
+#endif
+#ifndef STXG2_TEST_SYM_RATE_KSPS
+    #define STXG2_TEST_SYM_RATE_KSPS STXG2_SYM_RATE_MIN_KSPS
+#endif
+#ifndef STXG2_TEST_MODCOD
+    #define STXG2_TEST_MODCOD 1U // QPSK 1/4 (USM table 9-14)
+#endif
+#ifndef STXG2_TEST_POWER_DBM
+    #define STXG2_TEST_POWER_DBM STXG2_POWER_MIN_DBM
+#endif
+#if STXG2_TEST_MODCOD < 1 || STXG2_TEST_MODCOD > DVBS2_MODCOD_MAX
+    #error "STXG2_TEST_MODCOD must be 1..DVBS2_MODCOD_MAX"
+#endif
+#if STXG2_TEST_POWER_DBM < STXG2_POWER_MIN_DBM || STXG2_TEST_POWER_DBM > STXG2_POWER_MAX_DBM
+    #error "STXG2_TEST_POWER_DBM must be STXG2_POWER_MIN_DBM..STXG2_POWER_MAX_DBM"
+#endif
+#define STXG2_TEST_LOCK_TIMEOUT_MS 5000U
 #define STXG2_TEST_REPORT_PERIOD_MS 1000U
 #define STXG2_TEST_MEM_INDEX 0U             // Flash packet that holds the callsign pattern
 #define STXG2_TEST_PRBS_BYTES 64U           // PRBS7 bytes after each ID text
 #define STXG2_TEST_PACKET_TIMEOUT_MS 10000U // Generous: one packet takes well under a second at 1 Msps
+
+// Override these and STXG2_TEST_MODCOD/STXG2_TEST_POWER_DBM with `make test TESTS=stxg2_sweep <SETTING>=<value>`
+#ifndef STXG2_SWEEP_START_KHZ
+    #define STXG2_SWEEP_START_KHZ 2412000U
+#endif
+#ifndef STXG2_SWEEP_STOP_KHZ
+    #define STXG2_SWEEP_STOP_KHZ 2430000U
+#endif
+#ifndef STXG2_SWEEP_STEP_KHZ
+    #define STXG2_SWEEP_STEP_KHZ 1000U
+#endif
+#ifndef STXG2_SWEEP_DWELL_MS
+    #define STXG2_SWEEP_DWELL_MS 10000U
+#endif
+#if STXG2_SWEEP_START_KHZ < STXG2_FREQ_MIN_KHZ || STXG2_SWEEP_STOP_KHZ > STXG2_FREQ_MAX_KHZ || STXG2_SWEEP_START_KHZ > STXG2_SWEEP_STOP_KHZ
+    #error "The sweep must stay inside STXG2_FREQ_MIN_KHZ..STXG2_FREQ_MAX_KHZ"
+#endif
+#if STXG2_SWEEP_STEP_KHZ == 0 || STXG2_SWEEP_STEP_KHZ % STXG2_FREQ_STEP_KHZ != 0
+    #error "STXG2_SWEEP_STEP_KHZ must be a nonzero multiple of STXG2_FREQ_STEP_KHZ"
+#endif
+#if STXG2_SWEEP_DWELL_MS == 0
+    #error "STXG2_SWEEP_DWELL_MS must be more than 0"
+#endif
 
 // BOARD_STAT flags (USM 9.2.4.1) that mean a fault. The I2C and RF lock flags are checked separately.
 #define BOARD_STATUS_MEM (1u << 3)
@@ -120,18 +165,40 @@ static int test_stxg2_sanity(void) {
     return failures;
 }
 
-// Puts the radio in Config mode and sets the frequency, symbol rate, MODCOD and power for either pattern
-static status_t test_stxg2_configure_radio(void) {
+// Puts the radio in Config mode and sets the frequency, symbol rate, MODCOD and power
+static status_t test_stxg2_configure_radio(uint32_t freq_khz) {
     ret_err_status(stxg2_set_mode(STXG2_MODE_CONFIG), "stxg2 test: config mode failed\n");
-    ret_err_status(stxg2_configure_rf(STXG2_TEST_FREQ_KHZ, STXG2_TEST_SYM_RATE_KSPS, STXG2_TEST_MODCOD, STXG2_POWER_MIN_DBM),
+#if STXG2_TEST_SYM_RATE_KSPS < STXG2_SYM_RATE_MIN_KSPS
+    // stxg2_configure_rf rejects rates below the option sheet limit, so write the register directly and read back what
+    // the radio kept
+    ret_err_status(stxg2_configure_rf(freq_khz, STXG2_SYM_RATE_MIN_KSPS, STXG2_TEST_MODCOD, STXG2_TEST_POWER_DBM),
                    "stxg2 test: RF configuration failed\n");
-
-    // The default 18 minute PA timeout would drop the radio back to Standby
-    ret_err_status(stxg2_write_reg(REG_PA_TIMEOUT, PA_TIMEOUT_NO_LIMIT << 16), "stxg2 test: PA timeout write failed\n");
-    return SUCCESS;
+    ret_err_status(stxg2_write_reg(REG_SYMBOL_RATE, STXG2_TEST_SYM_RATE_KSPS), "stxg2 test: symbol rate write failed\n");
+    uint32_t sym_rate_ksps = 0;
+    return test_stxg2_read_log("SYMBOL_RATE", REG_SYMBOL_RATE, &sym_rate_ksps);
+#else
+    return stxg2_configure_rf(freq_khz, STXG2_TEST_SYM_RATE_KSPS, STXG2_TEST_MODCOD, STXG2_TEST_POWER_DBM);
+#endif
 }
 
-    #if STXG2_TEST_PATTERN == STXG2_TEST_PATTERN_TPGEN
+// Turns off the default 18 minute PA timeout, which would drop the radio back to Standby
+static status_t test_stxg2_disable_pa_timeout(void) {
+    return stxg2_write_reg(REG_PA_TIMEOUT, PA_TIMEOUT_NO_LIMIT << 16);
+}
+
+// Logs the registers that can explain why the RF synthesizers did not lock
+static void test_stxg2_log_lock_failure(void) {
+    uint32_t v = 0;
+    (void)test_stxg2_read_log("MODE", REG_MODE, &v);
+    (void)test_stxg2_read_log("RF_STATUS", REG_RF_STATUS, &v);
+    (void)test_stxg2_read_log("BOARD_STATUS", REG_BOARD_STATUS, &v);
+    (void)test_stxg2_read_log("CURRENT_ERR", REG_CURRENT_ERR, &v);
+    (void)test_stxg2_read_log("VOLTAGE_ERR", REG_VOLTAGE_ERR, &v);
+    for (uint16_t i = 0; i < 4; i++) {
+        (void)test_stxg2_read_log("TEMP", REG_TEMP_0 + i, &v);
+    }
+}
+
 // Starts transmitting the radio's own test pattern. Returns SUCCESS once the radio is in Transmit mode.
 static status_t test_stxg2_start_tpgen(void) {
     // The test pattern goes to the encoder input, with the radio framer off, as in stxg2_downlink_begin
@@ -141,7 +208,9 @@ static status_t test_stxg2_start_tpgen(void) {
     uint32_t rf_status = 0;
     for (uint32_t waited_ms = 0; (rf_status & RF_STATUS_LOCKED) != RF_STATUS_LOCKED; waited_ms += 10) {
         if (waited_ms >= STXG2_TEST_LOCK_TIMEOUT_MS) {
-            warning("stxg2 test: RF synthesizers not locked (RF_STAT = 0x%lx)\n", (unsigned long)rf_status);
+            warning("stxg2 test: RF synthesizers not locked after %u ms (RF_STAT = 0x%lx)\n", STXG2_TEST_LOCK_TIMEOUT_MS,
+                    (unsigned long)rf_status);
+            test_stxg2_log_lock_failure();
             return ERROR_NOT_READY;
         }
         watchdog_feed(WDT);
@@ -159,7 +228,6 @@ static status_t test_stxg2_start_tpgen(void) {
     ret_err_status(stxg2_write_reg(REG_TP_GEN_CTRL, TP_GEN_CTRL_ENABLE), "stxg2 test: test pattern start failed\n");
     return SUCCESS;
 }
-    #endif // STXG2_TEST_PATTERN_TPGEN
 
     #if STXG2_TEST_PATTERN == STXG2_TEST_PATTERN_CALLSIGN
         #define STXG2_TEST_ID_TEXT "DE " STXG2_TEST_CALLSIGN " PVDX TEST "
@@ -245,6 +313,67 @@ static void test_stxg2_report(uint32_t counter) {
     }
 }
 
+// Waits ms milliseconds and feeds the watchdog, which is not running yet
+static void test_stxg2_wait_ms(uint32_t ms) {
+    while (ms > 0) {
+        uint32_t chunk_ms = ms < STXG2_TEST_REPORT_PERIOD_MS ? ms : STXG2_TEST_REPORT_PERIOD_MS;
+        watchdog_feed(WDT);
+        delay_ms((uint16_t)chunk_ms);
+        ms -= chunk_ms;
+    }
+}
+
+// Tunes to freq_khz and starts the test pattern. If the RF synthesizers do not lock after a retune, goes through
+// Standby so that Config mode powers the RF section up again, and tries once more.
+static status_t test_stxg2_tune_and_transmit(uint32_t freq_khz) {
+    ret_err_status(test_stxg2_configure_radio(freq_khz), "stxg2 sweep: configure failed\n");
+    if (test_stxg2_start_tpgen() == SUCCESS) {
+        return SUCCESS;
+    }
+
+    test_log("sweep: %lu kHz did not start, restarting RF from Standby\n", (unsigned long)freq_khz);
+    ret_err_status(stxg2_set_mode(STXG2_MODE_STANDBY), "stxg2 sweep: standby failed\n");
+    ret_err_status(test_stxg2_configure_radio(freq_khz), "stxg2 sweep: configure failed\n");
+    ret_err_status(test_stxg2_start_tpgen(), "stxg2 sweep: transmit failed after RF restart\n");
+    test_log("sweep: %lu kHz started after RF restart\n", (unsigned long)freq_khz);
+    return SUCCESS;
+}
+
+// Transmits the test pattern at freq_khz for STXG2_SWEEP_DWELL_MS
+static status_t test_stxg2_sweep_step(uint32_t freq_khz) {
+    ret_err_status(test_stxg2_tune_and_transmit(freq_khz), "stxg2 sweep: step failed\n");
+    test_log("sweep: %lu kHz for %lu ms\n", (unsigned long)freq_khz, (unsigned long)STXG2_SWEEP_DWELL_MS);
+    test_stxg2_wait_ms(STXG2_SWEEP_DWELL_MS);
+
+    uint32_t tp_count = 0;
+    (void)stxg2_read_reg(REG_TP_GEN_CNT, &tp_count);
+    test_stxg2_report(tp_count);
+    return stxg2_write_reg(REG_TP_GEN_CTRL, 0);
+}
+
+void test_stxg2_sweep(void) {
+    test_log("----- stxg2 frequency sweep -----\n");
+
+    if (test_stxg2_sanity() != 0) {
+        test_log("stxg2: sanity checks failed, skipping sweep\n");
+        return;
+    }
+
+    test_log("sweep: %lu-%lu kHz, %lu kHz steps, %u dBm, MODCOD %u\n", (unsigned long)STXG2_SWEEP_START_KHZ,
+             (unsigned long)STXG2_SWEEP_STOP_KHZ, (unsigned long)STXG2_SWEEP_STEP_KHZ, (unsigned)STXG2_TEST_POWER_DBM,
+             (unsigned)STXG2_TEST_MODCOD);
+    status_t status = SUCCESS;
+    for (uint32_t freq_khz = STXG2_SWEEP_START_KHZ; freq_khz <= STXG2_SWEEP_STOP_KHZ && status == SUCCESS;
+         freq_khz += STXG2_SWEEP_STEP_KHZ) {
+        status = test_stxg2_sweep_step(freq_khz);
+        PVDX_ASSERT_MSG(status == SUCCESS, "stxg2 sweep step\n");
+    }
+
+    status_t standby_status = stxg2_set_mode(STXG2_MODE_STANDBY);
+    PVDX_ASSERT_MSG(standby_status == SUCCESS, "stxg2 standby after sweep\n");
+    test_log("sweep: %s, radio in Standby (status %d)\n", status == SUCCESS ? "done" : "stopped early", standby_status);
+}
+
 void test_stxg2(void) {
     test_log("----- testing stxg2 hw -----\n");
 
@@ -258,13 +387,19 @@ void test_stxg2(void) {
     status_t status = test_stxg2_store_callsign_packet();
     PVDX_ASSERT_MSG(status == SUCCESS, "stxg2 store callsign packet\n");
     if (status == SUCCESS) {
-        status = test_stxg2_configure_radio();
+        status = test_stxg2_configure_radio(STXG2_TEST_FREQ_KHZ);
+    }
+    if (status == SUCCESS) {
+        status = test_stxg2_disable_pa_timeout();
     }
     if (status == SUCCESS) {
         status = stxg2_downlink_begin(STXG2_TEST_MEM_INDEX, 1);
     }
     #else
-    status_t status = test_stxg2_configure_radio();
+    status_t status = test_stxg2_configure_radio(STXG2_TEST_FREQ_KHZ);
+    if (status == SUCCESS) {
+        status = test_stxg2_disable_pa_timeout();
+    }
     if (status == SUCCESS) {
         status = test_stxg2_start_tpgen();
     }
@@ -277,7 +412,8 @@ void test_stxg2(void) {
     }
 
     // Transmit until the board is reset. The watchdog task is not running yet, so feed it here.
-    test_log("stxg2: transmitting at %u dBm, MODCOD %u, %s\n", (unsigned)STXG2_POWER_MIN_DBM, (unsigned)STXG2_TEST_MODCOD,
+    test_log("stxg2: transmitting at %lu kHz, %lu ksps, %u dBm, MODCOD %u, %s\n", (unsigned long)STXG2_TEST_FREQ_KHZ,
+             (unsigned long)STXG2_TEST_SYM_RATE_KSPS, (unsigned)STXG2_TEST_POWER_DBM, (unsigned)STXG2_TEST_MODCOD,
              STXG2_TEST_PATTERN == STXG2_TEST_PATTERN_CALLSIGN ? "callsign pattern" : "test pattern");
     #if STXG2_TEST_PATTERN == STXG2_TEST_PATTERN_CALLSIGN
     // The radio sends one packet per downlink. The carrier drops for a moment between packets while the radio re-enters Config.
