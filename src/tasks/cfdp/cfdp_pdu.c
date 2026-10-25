@@ -355,7 +355,9 @@ int cfdp_send_metadata(cfdp_transaction_t *transaction) {
         metadata_buff[8 + i + source_filename_length] = (transaction->dest_filename.value)[i];
     }
 
-    cfdp_send(buff, pdu_data_length + 16);
+    if (cfdp_send(buff, pdu_data_length + 16, transaction->stream)) {
+        return -1;
+    }
     info("cfdp: sending metadata\n");
     return 0;
 }
@@ -373,7 +375,9 @@ int cfdp_send_filedata(cfdp_transaction_t *transaction, uint32_t offset, uint32_
 
     memcpy(filedata_buff + 4, transaction->file_data + offset, size);
 
-    cfdp_send(buff, 20 + size);
+    if (cfdp_send(buff, 20 + size, transaction->stream)) {
+        return -1;
+    }
     info("cfdp: sending filedata\n");
 
     return size;
@@ -408,7 +412,7 @@ int cfdp_send_nak(cfdp_transaction_t *transaction) {
 
     // Iterate the ring buffer without popping — read segments in tail→head order
     for (uint32_t i = 0; i < n; i++) {
-        cfdp_pdu_segment_request_t seg = transaction->nak_buf.segments[(transaction->nak_buf.tail + i) % CFDP_MAX_SEGMENTS];
+        cfdp_pdu_segment_request_t seg = transaction->nak_buf.segments[(transaction->nak_buf.tail + i) % CFDP_MAX_SEGMENT_REQUESTS];
         uint32_to_big_endian(seg.start_offset, nak_buff + 9 + (i * 8));
         uint32_to_big_endian(seg.end_offset, nak_buff + 13 + (i * 8));
         if (seg.start_offset < start_scope) {
@@ -422,7 +426,9 @@ int cfdp_send_nak(cfdp_transaction_t *transaction) {
     uint32_to_big_endian(start_scope, nak_buff + 1); // start_of_scope: beginning of file
     uint32_to_big_endian(end_scope, nak_buff + 5);   // end_of_scope: full file extent
 
-    cfdp_send(buff, 16 + nak_data_size);
+    if (cfdp_send(buff, 16 + nak_data_size, RADIO_STREAM_CFDP_REPLY)) {
+        return -1;
+    }
     info("cfdp: sending nak\n");
     return nak_data_size;
 }
@@ -454,7 +460,9 @@ int cfdp_send_metadata_nak(cfdp_pdu_header_t *header) {
 
     // Entire NAK PDU is 0
 
-    cfdp_send(buff, 33);
+    if (cfdp_send(buff, 33, RADIO_STREAM_CFDP_REPLY)) {
+        return -1;
+    }
     info("cfdp: sending metadata nak\n");
 
     return 33;
@@ -505,7 +513,9 @@ int cfdp_send_fin(cfdp_transaction_t *transaction) {
         uint32_to_big_endian(ENTITY_ID_SPACECRAFT, fin_buff + 6);
     }
 
-    cfdp_send(buff, buff_sz);
+    if (cfdp_send(buff, buff_sz, RADIO_STREAM_CFDP_REPLY)) {
+        return -1;
+    }
     info("cfdp: sending fin\n");
     return 0;
 }
@@ -611,7 +621,9 @@ int cfdp_send_reject_fin(const cfdp_pdu_header_t *header, const cfdp_pdu_metadat
 
     uint16_to_big_endian(fin_size + 1, buff + 1);
 
-    cfdp_send(buff, 17 + fin_size);
+    if (cfdp_send(buff, 17 + fin_size, RADIO_STREAM_CFDP_REPLY)) {
+        return -1;
+    }
     info("cfdp: sending reject fin\n");
 
     return 0;
@@ -631,7 +643,9 @@ int cfdp_send_ack(cfdp_transaction_t *transaction, uint8_t acked_directive_code,
     ack_buff[1] = ((acked_directive_code & 0x0F) << 4) | (directive_subtype_code & 0x0F);
     ack_buff[2] = ((condition_code & 0x0F) << 4) | (transaction_status & 0x03);
 
-    cfdp_send(buff, 19);
+    if (cfdp_send(buff, 19, RADIO_STREAM_CFDP_REPLY)) {
+        return -1;
+    }
     info("cfdp: sending ack\n");
     return 0;
 }
@@ -662,7 +676,9 @@ int cfdp_send_stale_ack(const cfdp_pdu_header_t *header, uint8_t condition_code)
     buff[18] = ((condition_code & 0xF) << 4) | 0b10;
     // Condition Code : 4, Spare : 2, Transaction Status (terminated): 2
 
-    cfdp_send(buff, 19);
+    if (cfdp_send(buff, 19, RADIO_STREAM_CFDP_REPLY)) {
+        return -1;
+    }
 
     return 0;
 }
@@ -692,25 +708,38 @@ int cfdp_send_eof(cfdp_transaction_t *transaction) {
         eof_buff[11] = 0x04;
         uint32_to_big_endian(transaction->transaction_id.entity_id, eof_buff + 12);
     }
-    cfdp_send(buff, 16 + pdu_data_length);
+    if (cfdp_send(buff, 16 + pdu_data_length, transaction->stream)) {
+        return -1;
+    }
     info("cfdp: sending eof\n");
     return 0;
 }
 
+/**
+ * cfdp_resend
+ *
+ * Resends every segment in the transaction's nak_buf. A segment is only trimmed once its file data is queued, so if the
+ * downlink queue fills up nothing is lost: this returns -1 and the rest is resent on the next call.
+ */
 int cfdp_resend(cfdp_transaction_t *transaction) {
-    while (transaction->nak_buf.size > 0) {
-        cfdp_pdu_segment_request_t seg = cfdp_nak_buf_pop(&transaction->nak_buf);
+    cfdp_nak_buf_t *nak_buf = &transaction->nak_buf;
 
-        uint32_t nak_size = seg.end_offset - seg.start_offset;
-        uint32_t resend_count = nak_size / SEGMENT_SIZE;
+    while (nak_buf->size > 0) {
+        cfdp_pdu_segment_request_t *seg = &nak_buf->segments[nak_buf->tail];
 
-        for (uint32_t i = 0; i < resend_count; ++i) {
-            cfdp_send_filedata(transaction, seg.start_offset + i * SEGMENT_SIZE, SEGMENT_SIZE);
+        if (seg->end_offset <= seg->start_offset) {
+            cfdp_nak_buf_pop(nak_buf);
+            continue;
         }
 
-        if (nak_size % SEGMENT_SIZE > 0) {
-            cfdp_send_filedata(transaction, seg.start_offset + resend_count * SEGMENT_SIZE, nak_size % SEGMENT_SIZE);
+        uint32_t remaining = seg->end_offset - seg->start_offset;
+        uint32_t chunk_size = (remaining > SEGMENT_SIZE) ? SEGMENT_SIZE : remaining;
+
+        if (cfdp_send_filedata(transaction, seg->start_offset, chunk_size) < 0) {
+            return -1;
         }
+
+        seg->start_offset += chunk_size;
     }
     return 0;
 }

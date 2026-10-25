@@ -94,8 +94,9 @@ typedef enum {
     OPERATION_ADCS_UPDATE_PARAMS,
 
     // CFDP Operations
-    OPERATION_CFDP_PUT,    // p_data: cfdp_request_t* req
-    OPERATION_CFDP_CANCEL, // p_data: cfdp_request_t* req
+    OPERATION_CFDP_PUT,           // p_data: cfdp_request_t* req
+    OPERATION_CFDP_CANCEL,        // p_data: cfdp_request_t* req
+    OPERATION_CFDP_PUT_TELEMETRY, // p_data: NULL; collects telemetry and downlinks it
 
     OPERATION_CFDP_TIMEOUT_INACTIVITY, // p_data: cfdp_transaction_t* txn
     OPERATION_CFDP_TIMEOUT_RETRANSMIT, // p_data: cfdp_transaction_t* txn

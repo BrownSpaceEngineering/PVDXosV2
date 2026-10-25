@@ -6,6 +6,7 @@
 #include <driver_init.h>
 #include <semphr.h>
 
+#include "ccsds/radio_routing.h"
 #include "cfdp_pdu.h"
 #include "drivers/at86rf215/at86rf215.h"
 #include "globals.h"
@@ -39,6 +40,9 @@
 #define CFDP_SMALL_BUFF_COUNT 4
 
 #define CFDP_MAX_PDU_SIZE 1024 // double what we expect so hmm.
+
+// How long the main loop waits for a command before servicing received PDUs and transactions
+#define CFDP_POLL_MS 10
 // Placed in a struct to ensure that the TCB is placed higher than the stack in
 // memory
 //^ This ensures that stack overflows do not corrupt the TCB (since the stack
@@ -83,11 +87,6 @@ typedef enum cfdp_state {
     CFDP_RECV_STATE_ERR
 } cfdp_state_t;
 
-typedef enum cfdp_txn_type {
-    IMAGE = 0,
-    TELEMETRY = 1
-} cfdp_txn_type_t;
-
 typedef enum cfdp_direction {
     CFDP_SEND = 0,
     CFDP_RECV
@@ -101,6 +100,7 @@ typedef enum cfdp_pdu_type {
 typedef enum cfdp_result {
     CFDP_RESULT_IN_PROGRESS = 0,
     CFDP_RESULT_BLOCKED,
+    CFDP_RESULT_DOWNLINK_FULL, // a PDU couldn't be queued for downlink; retried next pass without waiting for a received PDU
     CFDP_RESULT_COMPLETE,
     CFDP_RESULT_ERROR,
     CFDP_RESULT_INVALID_ARG
@@ -139,7 +139,9 @@ typedef struct cfdp_transaction {
     // after transfer completes.
     uint32_t expected_checksum;
 
-    cfdp_txn_type_t type;
+    // Stream the file belongs to, which picks the radio and VC its file PDUs are sent on. Replies always go on
+    // RADIO_STREAM_CFDP_REPLY
+    radio_stream_t stream;
 
     StaticTimer_t inactivity_timer_mem;
     StaticTimer_t retransmit_timer_mem;
@@ -182,7 +184,7 @@ typedef struct {
 typedef struct {
     void *memory;
     size_t file_size;
-    cfdp_txn_type_t txn_type;
+    radio_stream_t stream;
 } cfdp_put_data_t;
 
 typedef union cfdp_request_data {
@@ -206,6 +208,7 @@ cfdp_result_t cfdp_transact(cfdp_transaction_t *txn, uint32_t elapsed_ms);
 
 void cfdp_put_request(cfdp_put_data_t *put_data);
 void cfdp_cancel_request(uint32_t txn_id);
+void cfdp_put_telemetry(void);
 
 int cfdp_prepare_pdu_header(uint8_t *buff, cfdp_transaction_t *transaction, uint16_t pdu_len, cfdp_pdu_type_t pdu_type);
 int cfdp_send_metadata(cfdp_transaction_t *transaction);
@@ -222,7 +225,7 @@ int cfdp_send_metadata_nak(cfdp_pdu_header_t *header);
 int cfdp_resend(cfdp_transaction_t *transaction);
 
 void exec_command_cfdp_request(command_t *const p_cmd);
-void cfdp_process_pdu(uint8_t *raw, size_t sz);
+void cfdp_process_pdu(uint8_t *raw, size_t sz, uint8_t vcid);
 
 /* Defined elsewhere for simulation purposes, but not used in the sim.
 

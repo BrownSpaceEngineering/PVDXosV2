@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "cfdp_task.h"
+#include "ccsds/radio_routing.h"
 #include "mutexes.h"
 #include "uhf_radio/uhf_radio_task.h"
 #include "rtos_start.h"
@@ -13,9 +14,12 @@ uint32_t next_seq_num(void) {
     return ++counter;
 }
 
-int cfdp_send(void *buff, size_t sz) {
+int cfdp_send(void *buff, size_t sz, radio_stream_t stream) {
 #if defined(UNITTEST)
+    // Tests run before the scheduler starts and without the radio's queues, so they just capture the PDU
     memcpy(test_mem, buff, sz);
+    (void)stream;
+    return 0;
 #endif
     if (sz == 0 || sz > RADIO_DOWNLINK_MAX_SIZE - SPP_PRIMARY_HEADER_SIZE - SPP_SECONDARY_HEADER_SIZE) {
         return -1; // PDU doesn't fit
@@ -46,7 +50,8 @@ int cfdp_send(void *buff, size_t sz) {
     }
     item.len = packet_len;
 
-    if (xQueueSend(downlink_queue, &item, 0) != pdPASS) {
+    TickType_t wait = (stream == RADIO_STREAM_CFDP_REPLY) ? CFDP_SEND_REPLY_WAIT : CFDP_SEND_NO_WAIT;
+    if (radio_route_send(stream, &item, wait)) {
         return -1; // queue full, caller retries later
     }
 
@@ -55,8 +60,8 @@ int cfdp_send(void *buff, size_t sz) {
     return 0;
 }
 
-int cfdp_recv(void *buff, size_t sz) {
-    if (sz < RADIO_DOWNLINK_MAX_SIZE + 2) {
+int cfdp_recv(void *buff, size_t sz, uint8_t *vcid) {
+    if (sz < sizeof(radio_queue_item_t)) {
         return -1; // buff is too small to recieve radio_queue_item_t
     }
 
@@ -65,15 +70,27 @@ int cfdp_recv(void *buff, size_t sz) {
     }
 
     radio_queue_item_t *item = (radio_queue_item_t *)buff;
+    *vcid = item->vcid;
 
     spp_packet_view_t packet_view;
     if (spp_packet_parse(&packet_view, item->data, item->len)) {
         return -1; // spp parse failed
     }
 
-    // TODO: SPP Checks
+    if (packet_view.header.application_process_id != CFDP_APID || packet_view.header.packet_type != SPP_PACKET_TYPE_REQUESTING) {
+        return -1; // not a CFDP telecommand
+    }
 
-    size_t len = packet_view.header.data_length + 1;
+    // data_length also counts the secondary header, which spp_packet_parse has already checked fits in the packet
+    size_t len = (size_t)packet_view.header.data_length + 1;
+    if (packet_view.header.secondary_header_flag) {
+        len -= SPP_SECONDARY_HEADER_SIZE;
+    }
+
+    if (len == 0) {
+        return -1; // no PDU, and 0 is reserved for an empty queue
+    }
+
     memmove(buff, packet_view.data, len);
 
     return (int)len;
@@ -212,10 +229,8 @@ cfdp_buff_header_t *cfdp_alloc_small_buff() {
         if (!cfdp_small_buffs[i].header.ref_count) {
             cfdp_small_buffs[i].header.ref_count = 1;
             cfdp_small_buffs[i].header.is_large = false;
-            if (!cfdp_small_buffs[i].header.ref_count) {
-                unlock_mutex(cfdp_small_buffs[i].header.semaphore);
-                return (cfdp_buff_header_t *)&cfdp_small_buffs[i];
-            }
+            unlock_mutex(cfdp_small_buffs[i].header.semaphore);
+            return &cfdp_small_buffs[i].header;
         }
         unlock_mutex(cfdp_small_buffs[i].header.semaphore);
     }
@@ -227,7 +242,7 @@ cfdp_buff_header_t *cfdp_alloc_large_buff() {
     cfdp_buff_header_t *ret = NULL;
     if (cfdp_large_buff.header.ref_count == 0) {
         cfdp_large_buff.header.ref_count = 1;
-        ret = (cfdp_buff_header_t *)&cfdp_large_buff.buff;
+        ret = &cfdp_large_buff.header;
     }
     unlock_mutex(cfdp_large_buff.header.semaphore);
     return ret;

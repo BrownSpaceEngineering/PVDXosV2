@@ -355,7 +355,7 @@ void test_cfdp(void) {
                               .direction = CFDP_SEND,
                               .file_offset = 0,
                               .reliable_mode = true,
-                              .type = IMAGE,
+                              .stream = RADIO_STREAM_IMAGE,
                               .state = CFDP_SEND_STATE_METADATA_SEND};
 
     uint8_t buff[16];

@@ -20,6 +20,7 @@
 #include "logging.h"
 #include "rtc_driver.h"
 #include "task_list.h"
+#include "telemetry/telemetry.h"
 
 /* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command
  * dispatcher task) ---------- */
@@ -42,7 +43,7 @@ void cfdp_put_request(cfdp_put_data_t *put_data) {
         }
     }
 
-    // size_t file_size = (put_data.txn_type == IMAGE) ? IMAGE_FILE_SZ :
+    // size_t file_size = (put_data.stream == RADIO_STREAM_IMAGE) ? IMAGE_FILE_SZ :
     // TELEMETRY_FILE_SZ;
 
     uint32_t seq_num = next_seq_num();
@@ -52,8 +53,8 @@ void cfdp_put_request(cfdp_put_data_t *put_data) {
     memset(txn, 0, sizeof(*txn));
     txn->transaction_id.entity_id = ENTITY_ID_SPACECRAFT;
     txn->transaction_id.seq_num = seq_num;
-    txn->type = put_data->txn_type;
-    txn->dest_entity_id = ENTITY_ID_SPACECRAFT;
+    txn->stream = put_data->stream;
+    txn->dest_entity_id = ENTITY_ID_GROUND;
     txn->file_size = put_data->file_size;
     txn->file_offset = 0;
     txn->state = CFDP_SEND_STATE_METADATA_SEND;
@@ -69,9 +70,10 @@ void cfdp_put_request(cfdp_put_data_t *put_data) {
     txn->nak_retransmit_counter = 0;
     txn->condition_code = CFDP_COND_NOERROR;
     txn->eof_acked = false;
-    // TODO : Link handles -> Txn Struct
-    txn->inactivity_timer_handle = cfdp_mem.inactivity_timer_handles[0];
-    txn->retransmit_timer_handle = cfdp_mem.retransmit_timer_handles[0];
+    // The memset above cleared the timer handles cfdp_alloc_transaction attached, so attach this slot's own timers again
+    size_t slot = (size_t)(txn - cfdp_txn_store.transactions);
+    txn->inactivity_timer_handle = cfdp_mem.inactivity_timer_handles[slot];
+    txn->retransmit_timer_handle = cfdp_mem.retransmit_timer_handles[slot];
 
     // Timer handles were pre-created in init_cfdp() and wired into txn by
     // cfdp_alloc_transaction(). Reset the timer IDs to point to this
@@ -87,6 +89,29 @@ void cfdp_put_request(cfdp_put_data_t *put_data) {
     info("cfdp put: complete\n");
 
     return;
+}
+
+// The serialized telemetry downlink being sent. Static, since it has to outlive the transaction that sends it
+static tel_downlink_t cfdp_telemetry;
+static uint8_t cfdp_telemetry_file[TELEMETRY_DOWNLINK_SIZE];
+
+void cfdp_put_telemetry(void) {
+    // Only one telemetry file is kept, so a cycle is skipped while the last one is still being sent
+    for (size_t i = 0; i < MAX_TRANSACTIONS; i++) {
+        if (cfdp_txn_store.active[i] && cfdp_txn_store.transactions[i].file_data == cfdp_telemetry_file) {
+            warning("cfdp telemetry: previous telemetry still being sent, skipping\n");
+            return;
+        }
+    }
+
+    telemetry_collect(&cfdp_telemetry);
+    if (telemetry_downlink_serialize(&cfdp_telemetry, cfdp_telemetry_file, sizeof(cfdp_telemetry_file))) {
+        warning("cfdp telemetry: failed to serialize telemetry\n");
+        return;
+    }
+
+    cfdp_put_data_t put_data = {.memory = cfdp_telemetry_file, .file_size = sizeof(cfdp_telemetry_file), .stream = RADIO_STREAM_TELEMETRY};
+    cfdp_put_request(&put_data);
 }
 
 void cfdp_cancel_request(uint32_t txn_id) {
@@ -148,6 +173,9 @@ void exec_command_cfdp_request(command_t *const p_cmd) {
             break;
         case OPERATION_CFDP_CANCEL:
             cfdp_cancel_request(p_cmd->data.cfdp_request->txn_id);
+            break;
+        case OPERATION_CFDP_PUT_TELEMETRY:
+            cfdp_put_telemetry();
             break;
         case OPERATION_CFDP_TIMEOUT_RETRANSMIT:
             retransmit_timer_timeout(p_cmd->data.cfdp_timeout_data);
@@ -397,25 +425,22 @@ static void handle_metadata_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data
             return;
         }
 
-        uint8_t *data = NULL;
-
         if (meta.file_length <= CFDP_SMALL_BUFF_SZ) {
             info("cfdp: allocating small buffer for incoming txn of size %u\n", meta.file_length);
             txn->buff_header = cfdp_alloc_small_buff();
-            data = txn->buff_header->buff;
         } else if (meta.file_length <= CFDP_LARGE_BUFF_SZ) {
             info("cfdp: allocating large buffer for incoming txn of size %u\n", meta.file_length);
             txn->buff_header = cfdp_alloc_large_buff();
-            data = txn->buff_header->buff;
         } else {
             warning("cfdp: incoming file larger than supported size\n");
             return;
         }
 
-        if (data == NULL) {
+        if (txn->buff_header == NULL) {
             warning("cfdp: no free buffer to allocate\n");
             return;
         }
+        uint8_t *data = txn->buff_header->buff;
         stop_timer(txn->retransmit_timer_handle);
         txn->state = CFDP_RECV_STATE_WAIT_EOF;
         txn->file_size = meta.file_length;
@@ -456,6 +481,10 @@ static void handle_nak_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data, siz
         cfdp_pdu_segment_request_parse(s, 8, &seg);
         if (seg.start_offset == 0 && seg.end_offset == 0) {
             txn->state = CFDP_SEND_STATE_METADATA_SEND;
+        } else if (seg.start_offset >= seg.end_offset || seg.end_offset > txn->file_size) {
+            // cfdp_resend copies these offsets straight out of file_data, so they must lie within the file
+            warning("cfdp: dropping out of range nak segment (start=%lu end=%lu size=%lu)\n", seg.start_offset, seg.end_offset,
+                    txn->file_size);
         } else {
             cfdp_nak_buf_push(&txn->nak_buf, seg);
         }
@@ -476,8 +505,9 @@ static void handle_nak_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data, siz
  *
  * \param raw a pointer to the incoming data
  * \param sz the size in octets of the data
+ * \param vcid the USLP virtual channel the PDU was received on
  */
-void cfdp_process_pdu(uint8_t *raw, size_t sz) {
+void cfdp_process_pdu(uint8_t *raw, size_t sz, uint8_t vcid) {
     cfdp_pdu_header_t header;
     size_t header_size;
     const uint8_t *pdu_data;
@@ -514,6 +544,9 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz) {
             break;
         }
     }
+    // The ground only starts file transfers to us on the uplink command VC; its replies to our files arrive on another VC
+    bool on_uplink_cmd_vc = (vcid == radio_routes[RADIO_STREAM_UPLINK_CMD].vcid);
+
     if (txn == NULL) {
         if (dir_code == CFDP_DIR_FINISHED) {
             for (size_t i = 0; i < CFDP_SAVED_TXNS; ++i) {
@@ -536,6 +569,11 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz) {
             // entities will NAK each other forever.
             bool is_receiver_pdu = (header.pdu_type == CFDP_PDU_TYPE_FILEDATA) || (dir_code == CFDP_DIR_EOF);
             if (is_receiver_pdu && header.transmission_mode == 0) {
+                if (!on_uplink_cmd_vc) {
+                    warning("cfdp: dropping pdu for a new incoming transaction on VC %u\n", vcid);
+                    return;
+                }
+
                 cfdp_transaction_t *new_txn = cfdp_alloc_transaction(&cfdp_txn_store);
                 if (new_txn == NULL) {
                     warning("cfdp: alloc failed for new recv txn w/o metadata\n");
@@ -544,6 +582,7 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz) {
                 new_txn->transaction_id.entity_id = header.source_entity_id;
                 new_txn->transaction_id.seq_num = header.transaction_seq;
                 new_txn->dest_entity_id = header.dest_entity_id;
+                new_txn->stream = RADIO_STREAM_UPLINK_CMD;
                 new_txn->state = CFDP_RECV_STATE_MISSING_MD;
                 new_txn->direction = CFDP_RECV;
                 new_txn->reliable_mode = (header.transmission_mode == 0);
@@ -577,6 +616,11 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz) {
         }
 
         // create new receive-side transaction from incoming Metadata PDU
+        if (!on_uplink_cmd_vc) {
+            warning("cfdp: dropping metadata for a new incoming transaction on VC %u\n", vcid);
+            return;
+        }
+
         if (pdu_data_sz < 2) {
             warning("cfdp: metadata pdu too short to parse\n");
             return;
@@ -601,9 +645,31 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz) {
             cfdp_send_reject_fin(&header, &meta, CFDP_COND_BAD_CHECKSUM);
         }
 
+        // Get the buffer before the transaction slot, so that a failure leaves neither an active slot nor a running timer
+        cfdp_buff_header_t *buff_header = NULL;
+
+        if (meta.file_length <= CFDP_SMALL_BUFF_SZ) {
+            info("cfdp: allocating small buffer for incoming txn of size %u\n", meta.file_length);
+            buff_header = cfdp_alloc_small_buff();
+        } else if (meta.file_length <= CFDP_LARGE_BUFF_SZ) {
+            info("cfdp: allocating large buffer for incoming txn of size %u\n", meta.file_length);
+            buff_header = cfdp_alloc_large_buff();
+        } else {
+            warning("cfdp: incoming file larger than supported size\n");
+            cfdp_send_reject_fin(&header, &meta, CFDP_COND_FILE_SIZEERROR);
+            return;
+        }
+
+        if (buff_header == NULL) {
+            warning("cfdp: no free buffer to allocate\n");
+            cfdp_send_reject_fin(&header, &meta, CFDP_COND_INVALID_TRANSMISSION);
+            return;
+        }
+
         cfdp_transaction_t *new_txn = cfdp_alloc_transaction(&cfdp_txn_store);
         if (new_txn == NULL) {
             warning("cfdp: alloc failed for new recv txn\n");
+            cfdp_free_buff(buff_header);
             cfdp_send_reject_fin(&header, &meta, CFDP_COND_CANCEL_REQ);
             return;
         }
@@ -611,6 +677,7 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz) {
         new_txn->transaction_id.entity_id = header.source_entity_id;
         new_txn->transaction_id.seq_num = header.transaction_seq;
         new_txn->dest_entity_id = header.dest_entity_id;
+        new_txn->stream = RADIO_STREAM_UPLINK_CMD;
         new_txn->file_size = meta.file_length;
         new_txn->file_offset = 0;
         new_txn->state = CFDP_RECV_STATE_WAIT_EOF;
@@ -626,6 +693,8 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz) {
         new_txn->checksum_type = meta.checksum_type;
         new_txn->condition_code = CFDP_COND_NOERROR;
         new_txn->eof_acked = false;
+        new_txn->buff_header = buff_header;
+        new_txn->file_data = buff_header->buff;
 
         // Timer handles were pre-created in init_cfdp() and wired into new_txn
         // by cfdp_alloc_transaction(). Set IDs now that the struct is fully
@@ -633,30 +702,6 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz) {
         vTimerSetTimerID(new_txn->inactivity_timer_handle, (void *)new_txn);
         vTimerSetTimerID(new_txn->retransmit_timer_handle, (void *)new_txn);
         start_timer(new_txn->inactivity_timer_handle);
-
-        uint8_t *data = NULL;
-
-        if (meta.file_length <= CFDP_SMALL_BUFF_SZ) {
-            info("cfdp: allocating small buffer for incoming txn of size %u\n", meta.file_length);
-            new_txn->buff_header = cfdp_alloc_small_buff();
-            data = new_txn->buff_header->buff;
-        } else if (meta.file_length <= CFDP_LARGE_BUFF_SZ) {
-            info("cfdp: allocating large buffer for incoming txn of size %u\n", meta.file_length);
-            new_txn->buff_header = cfdp_alloc_large_buff();
-            data = new_txn->buff_header->buff;
-        } else {
-            warning("cfdp: incoming file larger than supported size\n");
-            cfdp_send_reject_fin(&header, &meta, CFDP_COND_FILE_SIZEERROR);
-            return;
-        }
-
-        if (data == NULL) {
-            warning("cfdp: no free buffer to allocate\n");
-            cfdp_send_reject_fin(&header, &meta, CFDP_COND_INVALID_TRANSMISSION);
-            return;
-        }
-
-        new_txn->file_data = data;
 
         txn = new_txn;
         info("recved: metadata pdu\n");
@@ -698,21 +743,30 @@ cfdp_result_t cfdp_handle_send_state(cfdp_transaction_t *transaction, uint32_t e
     switch (transaction->state) {
         case CFDP_SEND_STATE_METADATA_SEND:
             wait_ack_start = 0;
-            cfdp_send_metadata(transaction);
+            if (cfdp_send_metadata(transaction) < 0) {
+                return CFDP_RESULT_DOWNLINK_FULL;
+            }
             transaction->state = CFDP_SEND_STATE_FILE_SEND;
             return CFDP_RESULT_IN_PROGRESS;
         case CFDP_SEND_STATE_FILE_SEND:
             wait_ack_start = 0;
+            // Only move forward once a PDU is queued, so a full downlink queue just retries it on the next pass
             if (transaction->reliable_mode && transaction->nak_buf.size > 0) {
-                cfdp_resend(transaction);
+                if (cfdp_resend(transaction) < 0) {
+                    return CFDP_RESULT_DOWNLINK_FULL;
+                }
             } else if (transaction->file_offset < transaction->file_size) {
                 uint32_t remaining = transaction->file_size - transaction->file_offset;
                 uint32_t chunk_size = (remaining > SEGMENT_SIZE) ? SEGMENT_SIZE : remaining;
                 info("file pdu size: %u\n", chunk_size);
-                cfdp_send_filedata(transaction, transaction->file_offset, chunk_size);
+                if (cfdp_send_filedata(transaction, transaction->file_offset, chunk_size) < 0) {
+                    return CFDP_RESULT_DOWNLINK_FULL;
+                }
                 transaction->file_offset += chunk_size;
             } else {
-                cfdp_send_eof(transaction);
+                if (cfdp_send_eof(transaction) < 0) {
+                    return CFDP_RESULT_DOWNLINK_FULL;
+                }
                 if (transaction->reliable_mode) {
                     transaction->state = CFDP_SEND_STATE_WAIT_ACK;
                     start_timer(transaction->retransmit_timer_handle);
@@ -730,8 +784,8 @@ cfdp_result_t cfdp_handle_send_state(cfdp_transaction_t *transaction, uint32_t e
             return CFDP_RESULT_BLOCKED;
         case CFDP_SEND_STATE_WAIT_FIN:
             wait_ack_start = 0;
-            if (transaction->reliable_mode && transaction->nak_buf.size > 0) {
-                cfdp_resend(transaction);
+            if (transaction->reliable_mode && transaction->nak_buf.size > 0 && cfdp_resend(transaction) < 0) {
+                return CFDP_RESULT_DOWNLINK_FULL;
             }
             return CFDP_RESULT_BLOCKED;
         case CFDP_SEND_STATE_DONE:
@@ -755,7 +809,10 @@ cfdp_result_t cfdp_handle_recv_state(cfdp_transaction_t *transaction, uint32_t e
         case CFDP_RECV_STATE_WAIT_EOF:
             return CFDP_RESULT_BLOCKED;
         case CFDP_RECV_STATE_SEND_NAK:
-            cfdp_send_nak(transaction);
+            // An empty nak_buf has nothing to NAK; WAIT_RETRANSMIT then moves on to SEND_FIN
+            if (transaction->nak_buf.size > 0 && cfdp_send_nak(transaction) < 0) {
+                return CFDP_RESULT_DOWNLINK_FULL;
+            }
             // if (transaction->nak_buf.size == 0) {
             transaction->state = CFDP_RECV_STATE_WAIT_RETRANSMIT;
             //}
@@ -776,9 +833,11 @@ cfdp_result_t cfdp_handle_recv_state(cfdp_transaction_t *transaction, uint32_t e
                         computed, transaction->checksum);
                     transaction->condition_code = CFDP_COND_FILE_CHECKSUM_FAIL;
                 }
+                if (cfdp_send_fin(transaction) < 0) {
+                    return CFDP_RESULT_DOWNLINK_FULL;
+                }
                 transaction->state = CFDP_RECV_STATE_WAIT_FIN_ACK;
                 start_timer(transaction->retransmit_timer_handle);
-                cfdp_send_fin(transaction);
                 transaction->ack_retransmit_counter = 0;
 
                 return CFDP_RESULT_BLOCKED;

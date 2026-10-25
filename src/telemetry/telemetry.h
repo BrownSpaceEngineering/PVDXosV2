@@ -128,6 +128,15 @@ typedef struct {
  */
 bool telemetry_downlink_serialize(const tel_downlink_t *downlink, uint8_t *buf, size_t buf_size);
 
+/**
+ * Fills in downlink with the current telemetry
+ *
+ * TODO: not implemented yet; every field is zeroed
+ *
+ * \param downlink - telemetry to fill in
+ */
+void telemetry_collect(tel_downlink_t *downlink);
+
 /* ---------- UPLINK ---------- */
 
 #define TELEMETRY_UPLINK_MAX_COMMANDS 16

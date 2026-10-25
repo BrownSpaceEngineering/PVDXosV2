@@ -14,6 +14,8 @@
 #include "globals.h"
 #include "libraries/cmd_dispatcher/cmd_dispatcher.h"
 #include "logging.h"
+#include "telemetry/telemetry_timer.h"
+#include "uhf_radio/uhf_radio_task.h"
 #include "watchdog_task.h"
 
 // CFDP Memory Stores. PDUs go to and from the radio through its uplink_queue/downlink_queue (see cfdp_utils.c)
@@ -22,6 +24,20 @@ cfdp_transaction_store_t cfdp_txn_store;
 cfdp_large_buff_t cfdp_large_buff;
 cfdp_small_buff_t cfdp_small_buffs[CFDP_SMALL_BUFF_COUNT];
 fin_txn_buf_t cfdp_fin_txn;
+
+// cfdp_recv receives a whole radio_queue_item_t into the buffer it's given
+_Static_assert(CFDP_MAX_PDU_SIZE >= sizeof(radio_queue_item_t), "CFDP receive buffer must hold a radio_queue_item_t");
+
+static void init_cfdp_buff(cfdp_buff_header_t *header, uint8_t *buff, bool is_large) {
+    header->ref_count = 0;
+    header->is_large = is_large;
+    header->buff = buff;
+    header->semaphore = xSemaphoreCreateMutexStatic(&header->_semaphore_mem);
+
+    if (header->semaphore == NULL) {
+        fatal("Failed to create cfdp buffer mutex!\n");
+    }
+}
 
 /**
  * \fn init_cfdp
@@ -42,6 +58,12 @@ QueueHandle_t init_cfdp(void) {
     }
 
     init_cfdp_timers(&cfdp_mem);
+    init_telemetry_timer();
+
+    for (size_t i = 0; i < CFDP_SMALL_BUFF_COUNT; i++) {
+        init_cfdp_buff(&cfdp_small_buffs[i].header, cfdp_small_buffs[i].buff, false);
+    }
+    init_cfdp_buff(&cfdp_large_buff.header, cfdp_large_buff.buff, true);
 
     cfdp_fin_txn = (fin_txn_buf_t){0};
 
@@ -66,9 +88,6 @@ void main_cfdp(void *pvParameters) {
 
     command_t cmd_checkin = get_watchdog_checkin_command(current_task);
 
-    // Calculate the maximum time this task should block (and thus be unable to
-    // check in with the watchdog)
-    const TickType_t queue_block_time_ticks = get_command_queue_block_time_ticks(current_task);
     // Variable to hold commands popped off the queue
     command_t cmd;
     uint8_t recv_buff[CFDP_MAX_PDU_SIZE];
@@ -78,17 +97,29 @@ void main_cfdp(void *pvParameters) {
         cfdp_txn_store.active[i] = false;
     }
 
+    start_telemetry_timer();
+
     while (true) {
-        while (cfdp_txn_store.slot_free && xQueueReceive(current_task->command_queue, &cmd, queue_block_time_ticks) == pdPASS) {
+        // Wait briefly for the first command, then drain the rest. Timer timeouts arrive as commands too, so the queue is
+        // drained even when every transaction slot is taken; a put with no free slot is dropped by cfdp_put_request
+        TickType_t command_wait = pdMS_TO_TICKS(CFDP_POLL_MS);
+        while (xQueueReceive(current_task->command_queue, &cmd, command_wait) == pdPASS) {
             info("cfdp: performing command\n");
             exec_command_cfdp_request(&cmd);
             info("cfdp: finished command\n");
+            command_wait = 0;
         }
 
-        // handle CFDP State
-        if (cfdp_recv(recv_buff, TXN_FRAME) == 0 /* Whatever success status code is*/) {
+        // handle every PDU the radio has received
+        int pdu_len;
+        uint8_t vcid;
+        while ((pdu_len = cfdp_recv(recv_buff, sizeof(recv_buff), &vcid)) != 0) {
+            if (pdu_len < 0) {
+                warning("cfdp: dropping malformed uplink packet\n");
+                continue;
+            }
             info("cfdp: recieved PDU\n");
-            cfdp_process_pdu(recv_buff, TXN_FRAME);
+            cfdp_process_pdu(recv_buff, (size_t)pdu_len, vcid);
         }
         uint32_t elapsed_ms = 10; // how do i use RTC? / calculate this
 
@@ -98,6 +129,7 @@ void main_cfdp(void *pvParameters) {
             }
 
             // probably need to update elapsed_ms for each transaction
+            // Runs until the transaction is waiting on a received PDU, the downlink queue is full, or it has finished
             cfdp_result_t result;
             do {
                 result = cfdp_transact(&cfdp_txn_store.transactions[i], elapsed_ms);

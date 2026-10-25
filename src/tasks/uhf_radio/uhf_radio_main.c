@@ -7,6 +7,7 @@
  * Authors: Noah Shepard
  */
 #include "at86rf215.h"
+#include "ccsds/radio_routing.h"
 #include "ccsds/uslp.h"
 #include "libraries/cmd_dispatcher/cmd_dispatcher.h"
 #include "logging.h"
@@ -84,21 +85,18 @@ void main_uhf_radio(void *pvParameters) {
     pvdx_task_t *const current_task = get_current_task();
     // Cache the watchdog checkin command to avoid creating it every iteration
     command_t cmd_checkin = get_watchdog_checkin_command(current_task);
-    // Calculate the maximum time this task should block (and thus be unable to check in with the watchdog)
-    const TickType_t queue_block_time_ticks = get_command_queue_block_time_ticks(current_task);
     // Variable to hold commands popped off the queue
     command_t cmd;
     radio_queue_item_t item;
 
     while (true) {
-        // Block waiting for at least one command to appear in the command queue
-        if (xQueueReceive(p_uhf_radio_task->command_queue, &cmd, queue_block_time_ticks) == pdPASS) {
-            // Once there is at least one command in the queue, empty the entire queue
+        // Commands aren't acted on yet. Drain them without blocking, so that the wait below is the only one per loop
+        while (xQueueReceive(p_uhf_radio_task->command_queue, &cmd, 0) == pdPASS) {
             info("Radio: performing command\n");
         }
-        debug("Radio: No more commands queued.\n");
 
-        if (xQueueReceive(downlink_queue, &item, queue_block_time_ticks) == pdPASS) {
+        // Wait only briefly for a packet to send, so received frames are still polled for promptly
+        if (xQueueReceive(downlink_queue, &item, pdMS_TO_TICKS(UHF_RADIO_POLL_MS)) == pdPASS) {
             int ret = set_at86_tx_prep_mode(&at86_dev, AT86_STATE_CHANGE_TIMEOUT_MS);
             if (ret) {
                 warning("Radio: failed to enter TXPREP (%d), dropping packet\n", ret);
@@ -106,8 +104,8 @@ void main_uhf_radio(void *pvParameters) {
                 // Send every queued packet, one USLP frame per packet
                 do {
                     size_t frame_sz = AT86RF215_MAX_PDU;
-                    if (uslp_mapp_request(at86_buffer, &frame_sz, item.data, item.len, RADIO_GMAP_ID, SPP_VERSION_NUMBER, RADIO_SDU_ID,
-                                          USLP_QOS_EXPEDITED)) {
+                    if (uslp_mapp_request(at86_buffer, &frame_sz, item.data, item.len, RADIO_GMAP_ID(item.vcid), SPP_VERSION_NUMBER,
+                                          RADIO_SDU_ID, USLP_QOS_EXPEDITED)) {
                         warning("USLP: failed to prepare frame\n");
                         continue;
                     }
@@ -144,6 +142,11 @@ void main_uhf_radio(void *pvParameters) {
                 continue;
             }
 
+            if (!radio_route_accepts_uplink(RADIO_UHF, tframe_view.primary_header.virtual_channel_id)) {
+                warning("Radio: dropping USLP frame on unexpected VC %u\n", tframe_view.primary_header.virtual_channel_id);
+                continue;
+            }
+
             if (tframe_view.data_field_header.tfdz_construction_rules != USLP_TFDZ_NO_SEGMENT ||
                 tframe_view.data_field_header.protocol_identifier != USLP_UPID_SPACE_PACKETS) {
                 warning("Radio: dropping USLP frame that doesn't carry one whole space packet\n");
@@ -156,6 +159,7 @@ void main_uhf_radio(void *pvParameters) {
             }
 
             item.len = tframe_view.datafield_len;
+            item.vcid = tframe_view.primary_header.virtual_channel_id;
             memcpy(item.data, tframe_view.datafield, tframe_view.datafield_len);
 
             // Don't block here: more frames may be waiting and the watchdog still needs a checkin

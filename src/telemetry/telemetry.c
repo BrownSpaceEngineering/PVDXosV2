@@ -231,6 +231,11 @@ static void serialize_os_errors(tel_writer_t *w, const tel_os_error_data_t *os) 
     put_uint32s(w, os->error_timestamps, TEL_ARRAY_LEN(os->error_timestamps));
 }
 
+void telemetry_collect(tel_downlink_t *downlink) {
+    // TODO: gather telemetry from each subsystem
+    memset(downlink, 0, sizeof(*downlink));
+}
+
 bool telemetry_downlink_serialize(const tel_downlink_t *downlink, uint8_t *buf, size_t buf_size) {
     if (downlink == NULL || buf == NULL || buf_size < TELEMETRY_DOWNLINK_SIZE) {
         return true;

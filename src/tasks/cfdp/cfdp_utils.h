@@ -40,8 +40,13 @@ extern fin_txn_buf_t cfdp_fin_txn;
 
 uint32_t next_seq_num(void);
 
-int cfdp_send(void *buff, size_t sz);
-int cfdp_recv(void *buff, size_t sz);
+// How long cfdp_send waits for room in the downlink queue. File PDUs don't wait, since the state machine retries them
+// on the next pass; replies (ACK/NAK/FIN) are usually sent once from a PDU handler, so they wait briefly
+#define CFDP_SEND_NO_WAIT 0
+#define CFDP_SEND_REPLY_WAIT pdMS_TO_TICKS(100)
+
+int cfdp_send(void *buff, size_t sz, radio_stream_t stream);
+int cfdp_recv(void *buff, size_t sz, uint8_t *vcid);
 
 void cfdp_nak_buf_push(cfdp_nak_buf_t *buf, cfdp_pdu_segment_request_t segment);
 cfdp_pdu_segment_request_t cfdp_nak_buf_pop(cfdp_nak_buf_t *buf);

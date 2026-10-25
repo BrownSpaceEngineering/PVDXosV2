@@ -13,16 +13,17 @@
 #define UHF_RADIO_TASK_STACK_SIZE 1024 // Size of the stack in words (multiply by 4 to get bytes)
 #define RADIO_DOWNLINK_MAX_SIZE (SPP_PRIMARY_HEADER_SIZE + SPP_SECONDARY_HEADER_SIZE + 512)
 
+// How long each loop waits for a packet to send before polling the radio for received frames
+#define UHF_RADIO_POLL_MS 10
+
 #define RADIO_DOWNLINK_QUEUE_LENGTH 4 // TODO: How long should queue be?
 #define RADIO_UPLINK_QUEUE_LENGTH 4
-#define RADIO_SCID CCSDS_SCID   // Spacecraft id
-#define RADIO_DOWNLINK_VCID 0   // Virtual Channel
-#define RADIO_DOWNLINK_MAP_ID 0 // Map ID
-#define RADIO_GMAP_ID (((uint32_t)USLP_TFVN << 26) | ((uint32_t)RADIO_SCID << 10) | (RADIO_DOWNLINK_VCID << 4) | RADIO_DOWNLINK_MAP_ID)
+#define RADIO_SCID CCSDS_SCID // Spacecraft id
 #define RADIO_SDU_ID 0
 
 typedef struct {
     uint16_t len;
+    uint8_t vcid;                          // USLP virtual channel the packet is sent or was received on, see radio_routing.h
     uint8_t data[RADIO_DOWNLINK_MAX_SIZE]; // SPP header followed by the CFDP PDU
 } radio_queue_item_t;
 
