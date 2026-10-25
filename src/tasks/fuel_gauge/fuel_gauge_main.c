@@ -45,15 +45,18 @@ void main_fuel_gauge(void *pvParameters) {
         fg_reading_t packs[FG_NUM_PACKS];
         status_t rs = fg_read_all(packs);
         if (rs != SUCCESS) {
-            warning("fuel_gauge: fg_read_all failed (status=%d)\n", rs);
-        } else {
-            // Floats printed as integer milli-units to avoid relying on %f in printf.
-            for (uint8_t ch = 0; ch < FG_NUM_PACKS; ch++) {
-                fg_reading_t *p = &packs[ch];
-                info("fuel_gauge: pack %u SOC=%ld m%%  Vpack=%ld mV  I=%ld mA  T=%ld mC\n", ch,
-                     (long)(p->soc_pct * 1000.0f), (long)(p->pack_voltage * 1000.0f),
-                     (long)(p->current_a * 1000.0f), (long)(p->temp_c * 1000.0f));
+            warning("fuel_gauge: fg_read_all failed for at least one pack (status=%d)\n", rs);
+        }
+        // Floats printed as integer milli-units to avoid relying on %f in printf.
+        for (uint8_t ch = 0; ch < FG_NUM_PACKS; ch++) {
+            fg_reading_t *p = &packs[ch];
+            if (!p->valid) {
+                warning("fuel_gauge: pack %u no data\n", ch);
+                continue;
             }
+            info("fuel_gauge: pack %u SOC=%ld m%%  Vpack=%ld mV  I=%ld mA  T=%ld mC\n", ch,
+                 (long)(p->soc_pct * 1000.0f), (long)(p->pack_voltage * 1000.0f),
+                 (long)(p->current_a * 1000.0f), (long)(p->temp_c * 1000.0f));
         }
 
         if (fg_alrt_asserted()) {

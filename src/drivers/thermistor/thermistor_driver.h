@@ -5,8 +5,8 @@
  * thermistor_driver.h
  *
  * Bare-metal driver for four NTC thermistors (ADC1) plus two heater enable lines.
- * The heaters are held in closed-loop bang-bang control to maintain the monitored
- * zones at HEATER_SETPOINT_C.
+ * The heaters are held in closed-loop bang-bang control: on at or below HEATER_ON_C,
+ * off at or above HEATER_OFF_C.
  *
  * Thermistor pins are already ADC1-pinmuxed by the ASF (ADC_1_PORT_init):
  *   THERM_0 = PB04 -> AIN6, THERM_1 = PB05 -> AIN7,
@@ -27,6 +27,7 @@
 
 // ---- ADC ----
 #define THERM_ADC_FS          4095.0f // 12-bit full scale
+#define THERM_VREF_V          3.3f    // VDDANA (for code -> voltage)
 #define THERM_ADC_AVG_SAMPLES 4       // samples averaged per reading (after a settling discard)
 
 // ---- Divider (as-built, see thermistor_diagram.png) ----
@@ -47,12 +48,11 @@
 #define THERM_BETA    3905.65f // ln(R0/R60) / (1/T0 - 1/T60)
 
 // ---- Heater control (bang-bang with hysteresis) ----
-#define HEATER_SETPOINT_C 5.0f // target temperature
-#define HEATER_HYST_C     1.0f // ON below (setpoint - hyst), OFF above (setpoint + hyst)
-
-// Temporary threshold control on the ADC node voltage (higher voltage = colder on the
-// as-built divider). Heater turns ON when the controlling thermistor is above this.
-#define HEATER_ON_VOLTAGE 2.3f // volts
+// Control runs on the ADC node voltage (higher voltage = colder on the as-built divider). These
+// temperatures are converted to node-voltage thresholds through the divider and Beta model above
+// (4 C -> ~2.222 V, 6 C -> ~2.161 V); between the two the heater keeps its current state.
+#define HEATER_ON_C  4.0f // heater turns ON at or below this
+#define HEATER_OFF_C 6.0f // heater turns OFF at or above this
 
 // ---- Single-fault tolerance (see THERMISTOR_FAULT_PLAN.md) ----
 // Electrical guard: k = code/FS at/above this means the divider has railed (open NTC or
@@ -67,10 +67,12 @@
 status_t init_thermistors(void);
 status_t therm_read_raw(uint8_t index, uint16_t *code);
 status_t therm_read_celsius(uint8_t index, float *temp_c);
-status_t therm_read_all(float temps[THERM_COUNT]);
+// Reads all thermistors once. codes[i] is 0 (electrically invalid) and temps[i] is 0 for a
+// thermistor that failed to read or is out of range.
+status_t therm_read_all(uint16_t codes[THERM_COUNT], float temps[THERM_COUNT]);
 
-// Reads all thermistors and updates both heater enable lines (coldest-of-pair, hysteresis).
-void heater_control_update(void);
+// Updates both heater enable lines (coldest-of-pair) from codes produced by therm_read_all().
+void heater_control_update(const uint16_t codes[THERM_COUNT]);
 // Last commanded state of a heater (0 or 1).
 bool heater_is_on(uint8_t heater);
 

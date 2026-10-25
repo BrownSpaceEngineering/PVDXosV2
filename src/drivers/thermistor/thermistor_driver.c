@@ -1,7 +1,7 @@
 /**
  * thermistor_driver.c
  *
- * Four NTC thermistors on ADC1 + two heater enable lines held at HEATER_SETPOINT_C.
+ * Four NTC thermistors on ADC1 + two heater enable lines held between HEATER_ON_C and HEATER_OFF_C.
  * See thermistor_driver.h for the wiring and model overview.
  */
 
@@ -25,6 +25,11 @@ static const uint8_t HEATER_THERMS[THERM_HEATER_COUNT][2] = {{0, 1}, {2, 3}};
 // Persisted heater state (needed for hysteresis across the dead band).
 static bool heater_on[THERM_HEATER_COUNT] = {false, false};
 
+// Node-voltage thresholds for HEATER_ON_C / HEATER_OFF_C, computed in init_thermistors(). Until then they sit
+// above any possible reading, so heater_control_update() can only turn heaters off.
+static float heater_on_v = 2.0f * THERM_VREF_V;
+static float heater_off_v = 2.0f * THERM_VREF_V;
+
 // ---------------------- Pure math helpers ----------------------
 
 // Converts a ratiometric ADC code to thermistor resistance (ohms) for the as-built
@@ -42,6 +47,36 @@ static float therm_celsius_from_resistance(float r_ohms) {
     return 1.0f / inv_t - 273.15f;
 }
 
+// Electrical validity guard: a railed/short divider yields a k = code/FS that drives the
+// Rth model to a divide-by-zero or a non-physical (<= 0) resistance. Reject those before
+// they can poison the consensus median (open NTC -> k -> 1; tap short -> Rth <= 0).
+static bool therm_electrically_valid(uint16_t code) {
+    if (code == 0) {
+        return false;
+    }
+    if ((float)code / THERM_ADC_FS >= THERM_K_OPEN) {
+        return false;
+    }
+    return therm_resistance_from_code(code) > 0.0f;
+}
+
+// Converts an ADC code to degrees C, rejecting codes the divider model cannot handle.
+static status_t therm_celsius_from_code(uint8_t index, uint16_t code, float *temp_c) {
+    if (!therm_electrically_valid(code)) {
+        warning("thermistor: idx=%u code %u out of range - open/short?\n", index, code);
+        return ERROR_SANITY_CHECK_FAILED;
+    }
+    *temp_c = therm_celsius_from_resistance(therm_resistance_from_code(code));
+    return SUCCESS;
+}
+
+// Inverse of the two helpers above: the ADC node voltage the divider produces at `temp_c`.
+//   Rth = R0 * exp(B * (1/T - 1/T0)),  Vtap = Vref * (R_T2 + Rth) / (R_T1 + R_T2 + Rth)
+static float therm_volts_from_celsius(float temp_c) {
+    float r_ohms = THERM_R0_OHMS * expf(THERM_BETA * (1.0f / (temp_c + 273.15f) - 1.0f / THERM_T0_K));
+    return THERM_VREF_V * (THERM_R_T2_OHMS + r_ohms) / (THERM_R_T1_OHMS + THERM_R_T2_OHMS + r_ohms);
+}
+
 // ---------------------- ADC ----------------------
 
 status_t init_thermistors(void) {
@@ -49,6 +84,12 @@ status_t init_thermistors(void) {
     adc_sync_set_reference(&ADC_1, ADC_REFCTRL_REFSEL_INTVCC1_Val);
     adc_sync_set_resolution(&ADC_1, ADC_CTRLB_RESSEL_12BIT_Val);
     adc_sync_enable_channel(&ADC_1, 0); // HAL has no global enable; enable the channel
+
+    // Heater thresholds: colder = higher voltage, so ON is the higher of the two.
+    heater_on_v = therm_volts_from_celsius(HEATER_ON_C);
+    heater_off_v = therm_volts_from_celsius(HEATER_OFF_C);
+    info("thermistor: heater ON at >= %ld mV (%ld mC), OFF at <= %ld mV (%ld mC)\n", (long)(heater_on_v * 1000.0f),
+         (long)(HEATER_ON_C * 1000.0f), (long)(heater_off_v * 1000.0f), (long)(HEATER_OFF_C * 1000.0f));
 
     // Heater enable lines: outputs, driven off.
     for (uint8_t h = 0; h < THERM_HEATER_COUNT; h++) {
@@ -104,26 +145,23 @@ status_t therm_read_celsius(uint8_t index, float *temp_c) {
 
     uint16_t code = 0;
     ret_err_status(therm_read_raw(index, &code), "thermistor: raw read failed");
-
-    // Guard the divider math against a railed ADC (open/short thermistor).
-    if (code == 0 || (float)code >= THERM_ADC_FS) {
-        warning("thermistor: idx=%u code railed (%u) - open/short?\n", index, code);
-        return ERROR_SANITY_CHECK_FAILED;
-    }
-
-    *temp_c = therm_celsius_from_resistance(therm_resistance_from_code(code));
-    return SUCCESS;
+    return therm_celsius_from_code(index, code, temp_c);
 }
 
-status_t therm_read_all(float temps[THERM_COUNT]) {
-    if (temps == NULL) {
+status_t therm_read_all(uint16_t codes[THERM_COUNT], float temps[THERM_COUNT]) {
+    if (codes == NULL || temps == NULL) {
         return ERROR_BAD_TARGET;
     }
     status_t worst = SUCCESS;
     for (uint8_t i = 0; i < THERM_COUNT; i++) {
+        codes[i] = 0; // code 0 is electrically invalid, so a failed read is rejected downstream
         temps[i] = 0.0f;
-        status_t rc = therm_read_celsius(i, &temps[i]);
+        status_t rc = therm_read_raw(i, &codes[i]);
+        if (rc == SUCCESS) {
+            rc = therm_celsius_from_code(i, codes[i], &temps[i]);
+        }
         if (rc != SUCCESS) {
+            codes[i] = 0;
             worst = rc;
         }
     }
@@ -158,23 +196,10 @@ static float therm_median(const float *v, uint8_t n) {
     return 0.5f * (s[n / 2 - 1] + s[n / 2]);
 }
 
-// Electrical validity guard: a railed/short divider yields a k = code/FS that drives the
-// Rth model to a divide-by-zero or a non-physical (<= 0) resistance. Reject those before
-// they can poison the consensus median (open NTC -> k -> 1; tap short -> Rth <= 0).
-static bool therm_electrically_valid(uint16_t code) {
-    if (code == 0) {
-        return false;
-    }
-    if ((float)code / THERM_ADC_FS >= THERM_K_OPEN) {
-        return false;
-    }
-    return therm_resistance_from_code(code) > 0.0f;
-}
-
 // ---------------------- Heater control ----------------------
 
-void heater_control_update(void) {
-    // Per THERMISTOR_FAULT_PLAN.md: (1) read all four, apply the electrical guard, then flag
+void heater_control_update(const uint16_t codes[THERM_COUNT]) {
+    // Per THERMISTOR_FAULT_PLAN.md: (1) take all four readings, apply the electrical guard, then flag
     // consensus outliers; (2) replace a broken sensor with its pair partner, or - when both
     // of a pair are broken - with the four-way consensus of the remaining good sensors.
     // Control still runs on the ADC node voltage (higher voltage = colder on this divider).
@@ -183,11 +208,10 @@ void heater_control_update(void) {
     float valid_v[THERM_COUNT];
     uint8_t n_valid = 0;
 
-    // ---- (1a) Read + electrical guard ----
+    // ---- (1a) Electrical guard (a failed read arrives as code 0, which is invalid) ----
     for (uint8_t i = 0; i < THERM_COUNT; i++) {
-        uint16_t code = 0;
-        bool elec_ok = (therm_read_raw(i, &code) == SUCCESS) && therm_electrically_valid(code);
-        volts[i] = (float)code / THERM_ADC_FS * 3.3f; // ratiometric, VREF = VDDANA
+        bool elec_ok = therm_electrically_valid(codes[i]);
+        volts[i] = (float)codes[i] / THERM_ADC_FS * THERM_VREF_V; // ratiometric, VREF = VDDANA
         good[i] = elec_ok; // provisional; the consensus test below may clear it
         if (elec_ok) {
             valid_v[n_valid++] = volts[i];
@@ -240,7 +264,12 @@ void heater_control_update(void) {
         }
 
         if (have) {
-            heater_on[h] = (ctrl > HEATER_ON_VOLTAGE);
+            // Hysteresis: switch only on crossing a threshold, hold the current state in between.
+            if (ctrl >= heater_on_v) {
+                heater_on[h] = true; // at or below HEATER_ON_C
+            } else if (ctrl <= heater_off_v) {
+                heater_on[h] = false; // at or above HEATER_OFF_C
+            }
         } else {
             // All four sensors invalid: no consensus available. Hold the last-good state.
             warning("heater %u: no valid thermistors - holding last state (%s)\n", h + 1,
