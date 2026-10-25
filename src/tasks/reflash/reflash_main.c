@@ -1,0 +1,99 @@
+#include "reflash_task.h"
+#include "hal_flash.h"
+#include "logging.h"
+#include "mram_driver.h"
+#include "watchdog_driver.h"
+#include "hri_mclk_d51.h"
+
+#include "FreeRTOS.h"
+
+static struct flash_descriptor reflash_flash;
+static bool reflash_flash_initialized;
+
+#define FLASH_BLOCK_SIZE 512
+#define FLASK_BLOCK_COUNT (MRAM_FLASH_SIZE / FLASH_BLOCK_SIZE)
+
+reflash_task_memory_t reflash_mem;
+
+uint8_t stored_checksums[FLASK_BLOCK_COUNT];
+bool stored_checksums_initialized = false;
+
+void reflash_bootloaders(bool sched_running) {
+#ifndef MRAM_OS_READ
+    // return;
+#endif
+
+    if (!reflash_flash_initialized) {
+        hri_mclk_set_AHBMASK_NVMCTRL_bit(MCLK);
+        if (flash_init(&reflash_flash, NVMCTRL) != ERR_NONE) {
+            fatal("Failed to initialize flash for bootloader reflash\n");
+        }
+        reflash_flash_initialized = true;
+    }
+
+    uint8_t mram_block[FLASH_BLOCK_SIZE];
+
+    for (uint32_t i = 0; i < FLASK_BLOCK_COUNT; i++) {
+        uint8_t* flash_block = (uint8_t*)(i * FLASH_BLOCK_SIZE);
+
+        if (stored_checksums_initialized) {
+            if (crc32(flash_block, FLASH_BLOCK_SIZE) == stored_checksums[i]) {
+                // continue;
+            }
+        }
+
+        // mram_read_bytes(MRAM_FLASH_BASE_ADDRESS + i * FLASH_BLOCK_SIZE, mram_block, FLASH_BLOCK_SIZE);
+        // MOCK MRAM READ BY COPYING
+        for (uint32_t j = 0; j < FLASH_BLOCK_SIZE; j++) {
+            mram_block[j] = flash_block[j];
+        }
+
+        stored_checksums[i] = crc32(mram_block, FLASH_BLOCK_SIZE);
+
+        bool any_error = true; // MOCK AN ERROR 
+        for (uint32_t j = 0; j < FLASH_BLOCK_SIZE; j++) {
+            if (mram_block[j] != flash_block[j]) {
+                any_error = true;
+                break;
+            }
+        }
+
+        if (any_error) {
+            watchdog_pet();
+
+            volatile TickType_t start_ticks = xTaskGetTickCount();
+
+            if (sched_running) {
+                // taskENTER_CRITICAL();
+                vTaskSuspendAll();
+            } else {
+                __disable_irq();
+            }
+
+            flash_erase(&reflash_flash, i * FLASH_BLOCK_SIZE, 1);
+            flash_write(&reflash_flash, i * FLASH_BLOCK_SIZE, mram_block, FLASH_BLOCK_SIZE);
+
+            if (sched_running) {
+                //taskEXIT_CRITICAL();
+                xTaskResumeAll();
+            } else {
+                __enable_irq();
+            }
+
+            volatile TickType_t end_ticks = xTaskGetTickCount();
+            volatile uint32_t ms = (end_ticks - start_ticks) * 1000 / configTICK_RATE_HZ;
+            (void)ms;
+
+            watchdog_pet();
+        }
+    }
+
+    stored_checksums_initialized = true;
+}
+
+void main_reflash_task(void *pvParameters) {
+    while (true) {
+        vTaskDelay(pdMS_TO_TICKS(1000 * 10)); // 1000 * 60 * 60 * 6
+        reflash_bootloaders(true);
+    }
+}

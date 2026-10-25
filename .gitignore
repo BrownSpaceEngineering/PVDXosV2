@@ -55,3 +55,9 @@ compile_commands.json
 
 # scratch
 scratch/
+
+# bootloader files
+bootloader_flash*.ld
+preboot_flash.ld
+*.eep
+*.lss
