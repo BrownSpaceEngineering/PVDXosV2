@@ -56,7 +56,7 @@ pvdx_task_t task_manager_task = {.name = "TaskManager",
                                  .task_type = OS};
 
 pvdx_task_t adcs_task = {.name = "ADCS",
-                         .enabled = false,
+                         .enabled = true,
                          .handle = NULL,
                          .command_queue = NULL,
                          .init = init_adcs,

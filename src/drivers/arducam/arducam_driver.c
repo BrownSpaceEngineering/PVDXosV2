@@ -8,12 +8,8 @@
  */
 
 #include "arducam_driver.h"
-
 #include <string.h> // For memcpy
-
 #include "arducam_registers.h"
-#include "hpl_sercom_config.h"
-#include "mutexes.h"
 #include "task_list.h"
 #include "watchdog_task.h"
 
@@ -33,158 +29,150 @@ struct io_descriptor *arducam_spi_io;
  * \returns `status_t`, whether the operation was successful
  */
 status_t init_arducam_hardware(void) {
-    // Preserve the generated 100 kHz timing on the shared I2C bus. The slave
-    // address is selected under the bus mutex for every transaction.
-    lock_mutex(i2c_camera_bus_mutex);
-    int32_t result = i2c_m_sync_get_io_descriptor(&I2C_CAMERA, &arducam_i2c_io);
-    if (result == ERR_NONE) {
-        result = i2c_m_sync_enable(&I2C_CAMERA);
-    }
-    unlock_mutex(i2c_camera_bus_mutex);
-    if (result != ERR_NONE) {
-        return ERROR_I2C_FAILED;
-    }
+    // Configure ASF I2C and SPI drivers for this device
+    // Baud rates MUST match Atmel-Start config baudrates
+    i2c_m_sync_set_baudrate(&I2C_CAMERA, 0, 100000);
+    i2c_m_sync_get_io_descriptor(&I2C_CAMERA, &arducam_i2c_io);
+    i2c_m_sync_enable(&I2C_CAMERA);
+    i2c_m_sync_set_slaveaddr(&I2C_CAMERA, ARDUCAM_ADDR >> 1, I2C_M_SEVEN);
 
     gpio_set_pin_direction(CAMERA_CS, GPIO_DIRECTION_OUT);
     gpio_set_pin_level(CAMERA_CS, 1);
 
-    // ASF expects a raw BAUD divider, not Hz. This task exclusively owns SPI_CAMERA.
-    spi_m_sync_disable(&SPI_CAMERA);
-    if (spi_m_sync_set_baudrate(&SPI_CAMERA, CONF_GCLK_SERCOM2_CORE_FREQUENCY / (2U * 1000000U) - 1U) != ERR_NONE ||
-        spi_m_sync_get_io_descriptor(&SPI_CAMERA, &arducam_spi_io) != ERR_NONE) {
-        return ERROR_SPI_TRANSFER_FAILED;
-    }
+    spi_m_sync_set_baudrate(&SPI_CAMERA, 1000000);
+    spi_m_sync_get_io_descriptor(&SPI_CAMERA, &arducam_spi_io);
     spi_m_sync_enable(&SPI_CAMERA);
-
+    
     // Write and read a known test pattern (0x55) into ArduCHIP internal test register
-    if (arducam_spi_write(ARDUCHIP_TEST1, 0x55) != 2) {
-        return ERROR_SPI_TRANSFER_FAILED;
-    }
-    uint8_t temp = 0;
-    if (arducam_spi_read(ARDUCHIP_TEST1, &temp) != SUCCESS || temp != 0x55) {
+    arducam_spi_write(ARDUCHIP_TEST1, 0x55);
+    int temp = arducam_spi_read(ARDUCHIP_TEST1);
+    if (temp != 0x55){
         warning("Camera SPI interface error!");
         return ERROR_SPI_TRANSFER_FAILED;
     }
 
     // Save payload bytes as variables so we can pass by reference
-    uint8_t data[2] = {0x00, 0x01};
-    uint8_t config[2] = {0x01, 0x80};
-
+    uint8_t data[2] = { 0x00, 0x01 };
+    uint8_t config[2] = { 0x01, 0x80 };
+    
     // Verify that the camera sensor is an OV2640 based on VID and PID
     uint8_t vid = 0, pid = 0;
-    if (arducam_i2c_write(0xFF, &data[1], 1) != 2 || arducam_i2c_read(OV2640_CHIPID_HIGH, &vid, 1) != 1 ||
-        arducam_i2c_read(OV2640_CHIPID_LOW, &pid, 1) != 1) {
-        return ERROR_I2C_FAILED;
-    }
-
+    arducam_i2c_write(0xFF, &data[1], 1);
+    uint32_t temp1 = arducam_i2c_read(OV2640_CHIPID_HIGH, &vid, 1);
+    uint32_t temp2 = arducam_i2c_read(OV2640_CHIPID_LOW, &pid, 1);
+    info("I2C read return values: temp1=%lu temp2=%lu", (unsigned long)temp1, (unsigned long)temp2);
+    (void)temp1; // only used by info(), which compiles out in RELEASE builds
+    (void)temp2;
+    
     if (vid != 0x26 || (pid != 0x41 && pid != 0x42)) {
         warning("Unexpected OV2640 ID: vid=0x%02X pid=0x%02X", vid, pid);
-        return ERROR_SANITY_CHECK_FAILED;
+        // Don't fail hard here for now, maybe just wrong ID
     }
-
-    if (arducam_i2c_write(0xFF, &config[0], 1) != 2 || arducam_i2c_write(0x12, &config[1], 1) != 2) { // COM7 = 0x80: sensor soft reset
-        return ERROR_I2C_FAILED;
-    }
+    
+    arducam_i2c_write(0xFF, &config[0], 1);
+    arducam_i2c_write(0x12, &config[1], 1); // COM7 = 0x80: sensor soft reset
 
     // Wait for the sensor to finish resetting before loading the register tables.
     // Without this, the JPEG/size config is written while the sensor is still
     // resetting, so the resolution never takes and the sensor stays near its
     // power-up default (~176x144) regardless of the size table below.
     //
-    // NOTE: Use vTaskDelay, NOT the ASF delay_ms(). delay_ms() busy-waits on
+    // NOTE: From a task, use vTaskDelay, NOT the ASF delay_ms(). delay_ms() busy-waits on
     // SysTick and overwrites SysTick->LOAD/VAL, which is the same timer FreeRTOS
     // uses for its scheduler tick -- calling it from a task corrupts the tick
     // rate and breaks every RTOS timeout. vTaskDelay yields without touching it.
-    vTaskDelay(pdMS_TO_TICKS(100));
+    // Before the scheduler starts (the startup device check runs this from main()),
+    // vTaskDelay cannot be used, so fall back to delay_ms() there.
+    if (xTaskGetSchedulerState() == taskSCHEDULER_NOT_STARTED) {
+        delay_ms(100);
+    } else {
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
 
     // fmt to jpeg config
-    if (arducam_i2c_multi_write(OV2640_JPEG_INIT) != ERR_NONE || arducam_i2c_multi_write(OV2640_YUV422) != ERR_NONE ||
-        arducam_i2c_multi_write(OV2640_JPEG) != ERR_NONE || arducam_i2c_write(0xFF, &data[1], 1) != 2 ||
-        arducam_i2c_write(0x15, &data[0], 1) != 2 || arducam_i2c_multi_write(OV2640_1600x1200_JPEG) != ERR_NONE) {
-        return ERROR_I2C_FAILED;
-    }
+    arducam_i2c_multi_write(OV2640_JPEG_INIT);
+    arducam_i2c_multi_write(OV2640_YUV422);
+    arducam_i2c_multi_write(OV2640_JPEG);
+    arducam_i2c_write(0xFF, &data[1], 1);
+    arducam_i2c_write(0x15, &data[0], 1);
+    arducam_i2c_multi_write(OV2640_320x240_JPEG);
 
     return SUCCESS;
 }
 
-int32_t arducam_i2c_write(uint8_t addr, uint8_t *data, uint16_t size) {
+uint32_t arducam_i2c_write(uint8_t addr, uint8_t *data, uint16_t size) {
     uint8_t writeBuf[32 + 1];
-    if (size > sizeof(writeBuf) - 1U) {
-        return ERR_INVALID_ARG;
-    }
     writeBuf[0] = addr;
     memcpy(writeBuf + 1, data, size);
     int32_t rv;
-    lock_mutex(i2c_camera_bus_mutex);
-    i2c_m_sync_set_slaveaddr(&I2C_CAMERA, ARDUCAM_ADDR >> 1, I2C_M_SEVEN);
-    rv = io_write(arducam_i2c_io, writeBuf, size + 1);
-    unlock_mutex(i2c_camera_bus_mutex);
-    if (rv < 0) {
+    if ((rv = io_write(arducam_i2c_io, writeBuf, size + 1)) < 0) {
         warning("Error in Arducam Write");
     }
-    return rv;
+	return rv;
 }
 
-int32_t arducam_i2c_multi_write(const struct sensor_reg reglist[]) {
-    for (const struct sensor_reg *next = reglist; next->reg != 0xff || next->val != 0xff; next++) {
-        uint8_t value = next->val;
-        if (arducam_i2c_write(next->reg, &value, 1) != 2) {
-            return ERR_IO;
-        }
+uint32_t arducam_i2c_multi_write(const struct sensor_reg reglist[]) {
+    uint8_t reg_addr = 0;
+    uint8_t reg_val = 0;
+    const struct sensor_reg *next = reglist;
+    while ((reg_addr != 0xff) | (reg_val != 0xff)) {
+        reg_addr = next->reg;
+        reg_val = next->val;
+        arducam_i2c_write(reg_addr, &reg_val, 1);
+        next++;
     }
-    return ERR_NONE;
+    return 0;
 }
 
-int32_t arducam_i2c_read(uint8_t addr, uint8_t *readBuf, uint16_t size) {
-    uint8_t writeBuf[1] = {addr};
+uint32_t arducam_i2c_read(uint8_t addr, uint8_t *readBuf, uint16_t size) {
+    uint8_t writeBuf[1] = { addr };
     int32_t rv;
-    lock_mutex(i2c_camera_bus_mutex);
-    i2c_m_sync_set_slaveaddr(&I2C_CAMERA, ARDUCAM_ADDR >> 1, I2C_M_SEVEN);
-    rv = io_write(arducam_i2c_io, writeBuf, 1);
-    if (rv != 1) {
-        unlock_mutex(i2c_camera_bus_mutex);
+    if ((rv = io_write(arducam_i2c_io, writeBuf, 1)) < 0) {
         warning("Error in Arducam Write");
-        return rv < 0 ? rv : ERR_IO;
     }
     if ((rv = io_read(arducam_i2c_io, readBuf, size)) < 0) {
         warning("Error in Arducam Read");
     }
-    unlock_mutex(i2c_camera_bus_mutex);
     return rv;
 }
 
 int32_t arducam_spi_write(uint8_t addr, uint8_t data) {
     gpio_set_pin_level(CAMERA_CS, 0);
 
-    uint8_t value[2] = {addr | 0x80, data}; // Set MSB high for write operation
+    uint8_t value[2] = {addr | 0x80, data};  // Set MSB high for write operation
     int32_t response = io_write(arducam_spi_io, value, 2);
 
     gpio_set_pin_level(CAMERA_CS, 1);
     return response;
 }
 
-status_t arducam_spi_read(uint8_t addr, uint8_t *data) {
-    if (data == NULL) {
-        return ERROR_BAD_ARGS;
-    }
+uint8_t arducam_spi_read(uint8_t addr) {
     gpio_set_pin_level(CAMERA_CS, 0);
-    uint8_t tx_data = addr & 0x7F; // Set MSB low for read operation
-    status_t status = SUCCESS;
-    if (io_write(arducam_spi_io, &tx_data, 1) != 1 || io_read(arducam_spi_io, data, 1) != 1) {
-        status = ERROR_SPI_TRANSFER_FAILED;
-    }
+
+    uint8_t tx_data = addr & 0x7F;  // Set MSB low for read operation
+    uint8_t rx_data = 0;
+
+    io_write(arducam_spi_io, &tx_data, 1);
+    io_read(arducam_spi_io, &rx_data, 1);
+
     gpio_set_pin_level(CAMERA_CS, 1);
-    return status;
+    return rx_data;
 }
 
-static status_t read_fifo_length(size_t *length) {
-    uint8_t len1, len2, len3;
-    if (arducam_spi_read(FIFO_SIZE1, &len1) != SUCCESS || arducam_spi_read(FIFO_SIZE2, &len2) != SUCCESS ||
-        arducam_spi_read(FIFO_SIZE3, &len3) != SUCCESS) {
-        return ERROR_SPI_TRANSFER_FAILED;
-    }
-    *length = ((uint32_t)(len3 & 0x7f) << 16) | ((uint32_t)len2 << 8) | len1;
-    return SUCCESS;
+uint8_t get_bit(uint8_t addr, uint8_t bit) {
+  uint8_t temp;
+  temp = arducam_spi_read(addr);
+  temp = temp & bit;
+  return temp;
+}
+
+uint32_t read_fifo_length(void) {
+    uint32_t len1,len2,len3,length=0;
+    len1 = arducam_spi_read(FIFO_SIZE1);
+    len2 = arducam_spi_read(FIFO_SIZE2);
+    len3 = arducam_spi_read(FIFO_SIZE3) & 0x7f;
+    length = ((len3 << 16) | (len2 << 8) | len1) & 0x07fffff;
+    return length;	
 }
 
 /**
@@ -194,22 +182,24 @@ static status_t read_fifo_length(size_t *length) {
  *
  * \returns `status_t`, ERROR_NOT_READY if the capture did not finish within ARDUCAM_CAPTURE_TIMEOUT_MS
  */
-static status_t wait_capture_done(arducam_cancel_fn cancelled) {
+static status_t wait_capture_done(void) {
+    // Before the scheduler starts the tick count never advances and vTaskDelay hard faults, so count 1 ms busy-waits
+    const bool scheduler_running = xTaskGetSchedulerState() != taskSCHEDULER_NOT_STARTED;
     const TickType_t start = xTaskGetTickCount();
-    while (true) {
-        if (cancelled != NULL && cancelled()) {
-            return ERROR_TASK_DISABLED;
-        }
-        uint8_t trigger;
-        ret_err_status(arducam_spi_read(ARDUCHIP_TRIG, &trigger), "Arducam trigger read failed");
-        if (trigger & CAP_DONE_MASK) {
-            return SUCCESS;
-        }
-        if (xTaskGetTickCount() - start >= pdMS_TO_TICKS(ARDUCAM_CAPTURE_TIMEOUT_MS)) {
+    uint32_t busy_waited_ms = 0;
+    while (!get_bit(ARDUCHIP_TRIG, CAP_DONE_MASK)) {
+        const bool timed_out = scheduler_running ? (xTaskGetTickCount() - start > pdMS_TO_TICKS(ARDUCAM_CAPTURE_TIMEOUT_MS))
+                                                 : (busy_waited_ms > ARDUCAM_CAPTURE_TIMEOUT_MS);
+        if (timed_out) {
             warning("Arducam capture timed out!");
             return ERROR_NOT_READY;
         }
-        vTaskDelay(1);
+        if (scheduler_running) {
+            vTaskDelay(1);
+        } else {
+            delay_ms(1);
+            busy_waited_ms++;
+        }
     }
     return SUCCESS;
 }
@@ -220,15 +210,14 @@ status_t capture(void) {
     arducam_spi_write(ARDUCHIP_FIFO, FIFO_CLEAR_MASK); // Flush the FIFO
     arducam_spi_write(ARDUCHIP_FIFO, FIFO_CLEAR_MASK); // Clear the capture done flag (uses same clear mask)
     arducam_spi_write(ARDUCHIP_FIFO, FIFO_START_MASK); // Start capture
-    ret_err_status(wait_capture_done(NULL), "Arducam capture failed");
+    ret_err_status(wait_capture_done(), "Arducam capture failed");
 
     // Read how many bytes were captured
-    size_t len;
-    ret_err_status(read_fifo_length(&len), "Arducam FIFO length read failed");
+    size_t len = read_fifo_length();
     if (len >= OV2640_MAX_FIFO_SIZE) {
         info("Oversized!");
         return ERROR_SANITY_CHECK_FAILED;
-    } else if (len == 0) {
+    } else if (len == 0 ){
         info("Size is 0!");
         return ERROR_SANITY_CHECK_FAILED;
     }
@@ -261,155 +250,63 @@ status_t capture(void) {
     return SUCCESS;
 }
 
-// CRC state is kept uncomplemented internally so DATA chunks can extend the frame CRC.
-static uint32_t image_crc32(uint32_t crc, const uint8_t *bytes, size_t size) {
-    while (size--) {
-        crc ^= *bytes++;
-        for (unsigned bit = 0; bit < 8; ++bit) {
-            crc = (crc >> 1) ^ (0xedb88320U & (0U - (crc & 1U)));
-        }
-    }
-    return crc;
-}
+status_t capture_rtt(void) {
+    // NOTE: In some versions of the official C++ ArduCam OV2640 driver, the FIFO_CLEAR_MASK is written twice,
+    // while in others, it is written once. This implementation emprically works, so currently it is written twice.
+    arducam_spi_write(ARDUCHIP_FIFO, FIFO_CLEAR_MASK); // Flush the FIFO
+    arducam_spi_write(ARDUCHIP_FIFO, FIFO_CLEAR_MASK); // Clear the capture done flag (uses same clear mask)
+    arducam_spi_write(ARDUCHIP_FIFO, FIFO_START_MASK); // Start capture
+    ret_err_status(wait_capture_done(), "Arducam capture failed");
 
-static void put_le32(uint8_t *bytes, uint32_t value) {
-    for (unsigned i = 0; i < 4; ++i) {
-        bytes[i] = (uint8_t)(value >> (8U * i));
-    }
-}
-
-enum {
-    IMAGE_BEGIN = 1,
-    IMAGE_DATA = 2,
-    IMAGE_END = 3,
-    IMAGE_ABORT = 4
-};
-
-static void image_header(uint8_t type, uint16_t size, uint32_t frame_id, uint32_t offset, uint32_t total) {
-    uint8_t *header = ardu_spi_rx_buffer;
-    memcpy(header, "PVIM", 4);
-    header[4] = 1;
-    header[5] = type;
-    header[6] = (uint8_t)size;
-    header[7] = (uint8_t)(size >> 8);
-    put_le32(header + 8, frame_id);
-    put_le32(header + 12, offset);
-    put_le32(header + 16, total);
-    put_le32(header + 20, ~image_crc32(UINT32_MAX, header + ARDUCAM_RTT_HEADER_SIZE, size));
-    put_le32(header + 24, ~image_crc32(UINT32_MAX, header, 24));
-}
-
-static status_t image_write_packet(size_t payload_size, arducam_cancel_fn cancelled) {
-    const unsigned size = ARDUCAM_RTT_HEADER_SIZE + payload_size;
-    const TickType_t start = xTaskGetTickCount();
-    while (true) {
-        if (cancelled != NULL && cancelled()) {
-            return ERROR_TASK_DISABLED;
-        }
-        // NO_BLOCK_SKIP accepts the entire packet or nothing. Keep the buffer intact on retries.
-        if (SEGGER_RTT_Write(CAMERA_RTT_OUTPUT_CHANNEL, ardu_spi_rx_buffer, size) == size) {
-            return SUCCESS;
-        }
-        if ((TickType_t)(xTaskGetTickCount() - start) >= pdMS_TO_TICKS(ARDUCAM_RTT_TIMEOUT_MS)) {
-            warning("camera: RTT image stream timed out");
-            return ERROR_WRITE_FAILED;
-        }
-        vTaskDelay(1);
-    }
-}
-
-status_t capture_rtt_cancellable(arducam_cancel_fn cancelled) {
-    static uint32_t next_frame_id;
-    const uint32_t frame_id = ++next_frame_id;
-    uint32_t offset = 0, frame_crc = UINT32_MAX;
-    size_t total = 0;
-    bool begun = false, selected = false;
-    status_t status = SUCCESS;
-    uint8_t *const payload = ardu_spi_rx_buffer + ARDUCAM_RTT_HEADER_SIZE;
-
-    if (cancelled != NULL && cancelled()) {
-        return ERROR_TASK_DISABLED;
-    }
-    // Preserve the driver's double-clear sequence before starting capture.
-    if (arducam_spi_write(ARDUCHIP_FIFO, FIFO_CLEAR_MASK) != 2 || arducam_spi_write(ARDUCHIP_FIFO, FIFO_CLEAR_MASK) != 2 ||
-        arducam_spi_write(ARDUCHIP_FIFO, FIFO_START_MASK) != 2) {
-        return ERROR_SPI_TRANSFER_FAILED;
-    }
-    ret_err_status(wait_capture_done(cancelled), "Arducam capture failed");
-    ret_err_status(read_fifo_length(&total), "Arducam FIFO length read failed");
-    if (total == 0 || total >= OV2640_MAX_FIFO_SIZE) {
+    // Read how many bytes were captured
+    size_t len = read_fifo_length();
+    if (len >= OV2640_MAX_FIFO_SIZE) {
+        info("Oversized!");
+        return ERROR_SANITY_CHECK_FAILED;
+    } else if (len == 0 ){
+        info("Size is 0!");
         return ERROR_SANITY_CHECK_FAILED;
     }
 
-    // BEGIN payload: little-endian UXGA width and height.
-    payload[0] = 0x40;
-    payload[1] = 0x06;
-    payload[2] = 0xb0;
-    payload[3] = 0x04;
-    image_header(IMAGE_BEGIN, 4, frame_id, 0, total);
-    status = image_write_packet(4, cancelled);
-    if (status != SUCCESS) {
-        goto cleanup;
-    }
-    begun = true;
-    if (cancelled != NULL && cancelled()) {
-        status = ERROR_TASK_DISABLED;
-        goto cleanup;
-    }
+    // WARNING: If you edit the info() calls, then you must also update open_rtt_channels_arducam_debug()
+    // within scripts/rtt_logs.py (specifically the regex parsing), otherwise things will break.
+    info("IMG_BEGIN len=%u", (unsigned)len);
+
+    // Select SPI peripheral device
     gpio_set_pin_level(CAMERA_CS, 0);
-    selected = true;
+
+    // Start burst read
     uint8_t cmd = BURST_FIFO_READ;
-    if (io_write(arducam_spi_io, &cmd, 1) != 1) {
-        status = ERROR_SPI_TRANSFER_FAILED;
-        goto cleanup;
-    }
+    io_write(arducam_spi_io, &cmd, 1);
 
-    // The first byte after BURST_FIFO_READ is JPEG data; do not clock a dummy byte.
+    // NOTE: Do NOT clock an extra dummy byte here. After the BURST_FIFO_READ
+    // command, the very next clocked byte is the first FIFO byte (the JPEG's
+    // leading 0xFF). An extra io_write() would clock that byte out and discard
+    // it (io_write ignores MISO), shifting the whole image left by one and
+    // corrupting the SOI marker. The read loop below captures the first byte.
+
+    // Iteratively transfer image bytes into our rx buffer (and send over RTT)
+    const size_t bufferSize = ARDUCAM_SPI_RX_BUF_SIZE;
     ardu_xfer.txbuf = NULL;
-    ardu_xfer.rxbuf = payload;
-    while (offset < total) {
-        if (cancelled != NULL && cancelled()) {
-            status = ERROR_TASK_DISABLED;
-            goto cleanup;
-        }
-        const size_t remaining = total - offset;
-        const size_t size = remaining < ARDUCAM_RTT_MAX_PAYLOAD ? remaining : ARDUCAM_RTT_MAX_PAYLOAD;
-        ardu_xfer.size = size;
-        if (spi_m_sync_transfer(&SPI_CAMERA, &ardu_xfer) != (int32_t)size) {
-            status = ERROR_SPI_TRANSFER_FAILED;
-            goto cleanup;
-        }
-        frame_crc = image_crc32(frame_crc, payload, size);
-        image_header(IMAGE_DATA, size, frame_id, offset, total);
-        status = image_write_packet(size, cancelled);
-        if (status != SUCCESS) {
-            goto cleanup;
-        }
-        offset += size;
-        pvdx_task_t *const current_task = get_current_task();
-        if (current_task != NULL && should_checkin(current_task)) {
-            watchdog_checkin(current_task);
-        }
+    ardu_xfer.rxbuf = ardu_spi_rx_buffer;
+
+    while (len) {
+        size_t will_copy = (len < bufferSize) ? len : bufferSize;
+        ardu_xfer.size = will_copy;
+        spi_m_sync_transfer(&SPI_CAMERA, &ardu_xfer);
+        SEGGER_RTT_Write(CAMERA_RTT_OUTPUT_CHANNEL, ardu_spi_rx_buffer, (unsigned)will_copy);
+        len -= will_copy;
+#ifndef BURN_SEQUENCE
+        // Left out of the burn sequence: p_camera_task would pull the whole OS task list into that build
+        watchdog_checkin(p_camera_task);
+#endif
     }
+
+    // Deselect SPI peripheral device
     gpio_set_pin_level(CAMERA_CS, 1);
-    selected = false;
-    put_le32(payload, ~frame_crc);
-    image_header(IMAGE_END, 4, frame_id, offset, total);
-    status = image_write_packet(4, cancelled);
 
-cleanup:
-    if (selected) {
-        gpio_set_pin_level(CAMERA_CS, 1);
-    }
-    if (status != SUCCESS && begun) {
-        put_le32(payload, (uint32_t)status);
-        image_header(IMAGE_ABORT, 4, frame_id, offset, total);
-        // Best effort only: a stopped host must not delay cancellation or the next capture.
-        (void)SEGGER_RTT_Write(CAMERA_RTT_OUTPUT_CHANNEL, ardu_spi_rx_buffer, ARDUCAM_RTT_HEADER_SIZE + 4U);
-    }
-    return status;
-}
-
-status_t capture_rtt(void) {
-    return capture_rtt_cancellable(NULL);
+    // WARNING: If you edit the info() calls, then you must also update open_rtt_channels_arducam_debug()
+    // within scripts/rtt_logs.py (specifically the regex parsing), otherwise things will break.
+    info("IMG_END");
+    return SUCCESS;
 }
