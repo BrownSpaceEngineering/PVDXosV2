@@ -13,8 +13,8 @@
 #define UHF_RADIO_TASK_STACK_SIZE 1024 // Size of the stack in words (multiply by 4 to get bytes)
 #define RADIO_DOWNLINK_MAX_SIZE (SPP_PRIMARY_HEADER_SIZE + SPP_SECONDARY_HEADER_SIZE + 512)
 
-// How long each loop waits for a packet to send before polling the radio for received frames
-#define UHF_RADIO_POLL_MS 10
+// Maximum wait for an event response
+#define UHF_RADIO_WAIT_MS 1000
 
 #define RADIO_DOWNLINK_QUEUE_LENGTH 4 // TODO: How long should queue be?
 #define RADIO_UPLINK_QUEUE_LENGTH 4
@@ -22,9 +22,17 @@
 #define RADIO_SDU_ID 0
 
 #define UHF_EVENT_DOWNLINK (1u << 0)
-#define UHF_EVENT_RXFE (1u << 1)
-#define UHF_EVENT_TXFE (1u << 2)
-#define UHF_EVENT_TXRDY (1u << 3)
+#define UHF_EVENT_IRQ (1u << 1) // Set by uhf_radio_irq_handler(), the task then calls uhf_read_irqs()
+// Set by uhf_irqs_to_events(). After RXFE or TXFE the radio is in TXPREP
+#define UHF_EVENT_RXFE (1u << 2)  // A frame was received
+#define UHF_EVENT_TXFE (1u << 3)  // A frame was sent
+#define UHF_EVENT_TXRDY (1u << 4) // The radio reached TXPREP after uhf_go_txprep()
+
+// IRQ status of the sub-1 GHz radio and baseband core
+typedef struct {
+    uint8_t rf;  // RF09_IRQS
+    uint8_t bbc; // BBC0_IRQS
+} uhf_irqs_t;
 
 typedef struct {
     uint16_t len;
@@ -52,10 +60,9 @@ extern QueueHandle_t downlink_queue;
 // Global memory and configuration
 extern uhf_radio_task_memory_t uhf_radio_mem;
 
-// How long a radio state change may take before it is treated as failed
-#define AT86_STATE_CHANGE_TIMEOUT_MS 10
-// How long one frame may take to transmit. A full AT86RF215_MAX_PDU frame takes about 2.6 s at 6.25 kb/s
-#define AT86_TX_TIMEOUT_MS 3000
+void uhf_radio_irq_handler(void);
+uhf_irqs_t uhf_read_irqs(void);
+uint32_t uhf_irqs_to_events(uhf_irqs_t irqs);
 
 void uhf_rx_process();
 bool uhf_tx_process();
@@ -88,17 +95,9 @@ typedef struct {
     uint8_t rf09_state;  // RF09_STATE (0x0102): sub-1GHz state, e.g. 0x2 = TRXOFF, 0x6 = TRANSITION
 } at86_health_t;
 
-int set_at86_rx_mode(struct at86rf215 *h, size_t timeout_ms);
-
-int set_at86_tx_prep_mode(struct at86rf215 *h, size_t timeout_ms);
-
 int change_at86_config(struct at86rf215 *h, at86_config_t config);
 
-int at86_send_frame(struct at86rf215 *h, const uint8_t *buf, size_t sz, size_t timeout_ms);
-
-bool at86_peek_frame(void);
-
-int at86_pop_frame(uint8_t *buf, size_t sz);
+int at86_send_frame(struct at86rf215 *h, const uint8_t *buf, size_t sz);
 
 int at86_check_health(struct at86rf215 *h, at86_health_t *health);
 
