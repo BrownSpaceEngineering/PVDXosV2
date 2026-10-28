@@ -245,8 +245,18 @@ void shell_display(char **args, int arg_count) {
         return;
     }
 
+    // Index 0 stays the Brown logo even when it is not built in, so image numbers don't depend on DISPLAY_BROWNLOGO
+#ifdef DISPLAY_BROWNLOGO
     const uint8_t *image_buffers[] = {IMAGE_BUFFER_BROWNLOGO, IMAGE_BUFFER_PVDX};
-    command_t display_image_command = get_display_image_command(image_buffers[args[1][0] - '0']);
+#else
+    const uint8_t *image_buffers[] = {NULL, IMAGE_BUFFER_PVDX};
+#endif
+    const int image_index = args[1][0] - '0';
+    if (image_index < 0 || image_index >= (int)(sizeof(image_buffers) / sizeof(image_buffers[0])) || image_buffers[image_index] == NULL) {
+        terminal_printf("Image %c is not available. Try 'help display'\n", args[1][0]);
+        return;
+    }
+    command_t display_image_command = get_display_image_command(image_buffers[image_index]);
     
     while (enqueue_command(&display_image_command) != SUCCESS) {
         warning("shell: Failed to enqueue display image command\n");

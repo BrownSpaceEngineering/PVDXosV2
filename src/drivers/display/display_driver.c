@@ -13,10 +13,10 @@
 
 #include "image_buffer_PVDX.h"
 
-// Buffer for SPI transactions
-uint8_t spi_rx_buffer[DISPLAY_SPI_BUFFER_CAPACITY] = {0x00};
-uint8_t spi_tx_buffer[DISPLAY_SPI_BUFFER_CAPACITY] = {0x00};
-struct spi_xfer xfer = {.rxbuf = spi_rx_buffer, .txbuf = spi_tx_buffer, .size = 0};
+// Buffer for SPI command transactions. The display is write-only, so nothing is received (the HAL discards
+// MISO when rxbuf is NULL), and display_update() sends display_buffer directly instead of copying it here.
+uint8_t spi_tx_buffer[DISPLAY_SPI_CMD_BUFFER_SIZE] = {0x00};
+struct spi_xfer xfer = {.rxbuf = NULL, .txbuf = spi_tx_buffer, .size = 0};
 
 // Buffer for the display
 color_t display_buffer[DISPLAY_BUFFER_SIZE] = {0x00};
@@ -144,14 +144,13 @@ status_t display_update(void) {
     // set the display window to the entire display
     ret_err_status(display_set_window(), "display: set_window failed");
 
-    // write the display buffer to the display
-    xfer.size = (SSD1362_WIDTH / 2) * SSD1362_HEIGHT;
+    // write the display buffer to the display, pointing the transfer at it directly to avoid an 8 KB copy
+    xfer.txbuf = display_buffer;
+    xfer.size = DISPLAY_BUFFER_SIZE;
+    status_t status = spi_transfer(true);
+    xfer.txbuf = spi_tx_buffer; // restore before returning, since every command transfer writes into spi_tx_buffer
 
-    for (uint16_t i = 0; i < xfer.size; i++) {
-        spi_tx_buffer[i] = display_buffer[i];
-    }
-
-    ret_err_status(spi_transfer(true), "display: spi_transer(true) failed");
+    ret_err_status(status, "display: spi_transer(true) failed");
 
     return SUCCESS;
 }

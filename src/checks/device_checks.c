@@ -14,20 +14,20 @@
 
 #include "arducam_driver.h"
 #include "display_driver.h"
-#include "fuel_gauge_driver.h"
 #include "drivers/at86rf215/at86rf215.h"
 #include "drivers/at86rf215/regs.h"
+#include "drivers/fuel_gauge/fuel_gauge_driver.h"
+#include "drivers/gyro/gyro_driver.h"
+#include "drivers/mram/mram_driver.h"
+#include "drivers/pmb/ina226.h"
+#include "drivers/pmb/mcp23017.h"
+#include "drivers/pmb/pmb_i2c.h"
+#include "drivers/stxg2/stxg2.h"
+#include "drivers/thermistor/thermistor_driver.h"
 #include "globals.h"
-#include "gyro_driver.h"
-#include "ina226.h"
 #include "logging.h"
 #include "magnetometer_driver.h"
-#include "mcp23017.h"
-#include "mram_driver.h"
 #include "photodiode_driver.h"
-#include "pmb_i2c.h"
-#include "stxg2.h"
-#include "thermistor_driver.h"
 
 // forward declarations of check functions
 bool check_magnetometer(void);
@@ -115,9 +115,8 @@ bool check_and_uncheck_device(device_id_t device_id) {
 
 const char *device_name_of(device_id_t device_id) {
     static const char *names[NUM_DEVICES] = {
-        "MAGNETOMETER_ID", "PHOTODIODE_ID", "GYROSCOPE_ID", "MRAM_ID",    "MAGNETORQUERS_ID",
-        "SBAND_ID",        "UHF_ID",        "EPS_ID",       "DISPLAY_ID", "CAMERA_ID",
-        "PEROVSKITE_ID",   "THERMISTOR_ID",
+        "MAGNETOMETER_ID", "PHOTODIODE_ID", "GYROSCOPE_ID", "MRAM_ID",   "MAGNETORQUERS_ID", "SBAND_ID",
+        "UHF_ID",          "EPS_ID",        "DISPLAY_ID",   "CAMERA_ID", "PEROVSKITE_ID",    "THERMISTOR_ID",
     };
     return names[device_id];
 }
@@ -167,7 +166,7 @@ static bool check_uhf_cs_write(const char *name, uint16_t reg) {
     }
     const uint8_t expected = (uint8_t)~original;
     bool okay = at86rf215_reg_write_8(&uhf_check_dev, expected, reg) == AT86RF215_OK &&
-                at86rf215_reg_read_8(&uhf_check_dev, &readback, reg) == AT86RF215_OK && readback == expected;
+        at86rf215_reg_read_8(&uhf_check_dev, &readback, reg) == AT86RF215_OK && readback == expected;
     if (!okay) {
         warning("uhf check: %s_CS wrote 0x%02x, read back 0x%02x\n", name, expected, readback);
     }
@@ -195,8 +194,7 @@ bool check_uhf(void) {
         return false;
     }
     ret = at86rf215_conn_check(&uhf_check_dev);
-    info("uhf check: family 0x%02x version 0x%02x (conn_check %d)\n", uhf_check_dev.priv.family,
-         uhf_check_dev.priv.version, ret);
+    info("uhf check: family 0x%02x version 0x%02x (conn_check %d)\n", uhf_check_dev.priv.family, uhf_check_dev.priv.version, ret);
     if (ret != AT86RF215_OK) {
         return false;
     }

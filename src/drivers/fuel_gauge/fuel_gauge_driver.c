@@ -14,9 +14,9 @@
  * and a negative value on failure.
  */
 
-#include "globals.h"
-
 #include "fuel_gauge_driver.h"
+
+#include "globals.h"
 
 // Largest downstream payload is a 2-byte register, so no large buffers needed.
 
@@ -84,17 +84,26 @@ static void fg_mux_disable(void) {
 // transfer says *why* instead of collapsing to a generic error. The key distinction:
 // NACK = nobody acknowledged the address (chip silent/absent), vs BUS = an electrical
 // fault on the lines.
-static const char *fg_i2c_err_str(int32_t rc) {
+const char *fg_i2c_err_str(int32_t rc) {
     switch (rc) {
-        case I2C_OK: return "OK";
-        case I2C_ACK: return "ACK";
-        case I2C_NACK: return "NACK (no device ACKed this address)";
-        case I2C_ERR_ARBLOST: return "ARBLOST (arbitration lost)";
-        case I2C_ERR_BAD_ADDRESS: return "BAD_ADDRESS";
-        case I2C_ERR_BUS: return "BUS ERROR (SDA/SCL electrical fault)";
-        case I2C_ERR_BUSY: return "BUSY";
-        case I2c_ERR_PACKAGE_COLLISION: return "PACKAGE_COLLISION";
-        default: return "unknown";
+        case I2C_OK:
+            return "OK";
+        case I2C_ACK:
+            return "ACK";
+        case I2C_NACK:
+            return "NACK (no device ACKed this address)";
+        case I2C_ERR_ARBLOST:
+            return "ARBLOST (arbitration lost)";
+        case I2C_ERR_BAD_ADDRESS:
+            return "BAD_ADDRESS";
+        case I2C_ERR_BUS:
+            return "BUS ERROR (SDA/SCL electrical fault)";
+        case I2C_ERR_BUSY:
+            return "BUSY";
+        case I2c_ERR_PACKAGE_COLLISION:
+            return "PACKAGE_COLLISION";
+        default:
+            return "unknown";
     }
 }
 
@@ -107,8 +116,7 @@ static status_t fg_read_reg16(uint16_t reg, uint16_t *out) {
     i2c_m_sync_set_slaveaddr(&FG_I2C, slave, I2C_M_SEVEN);
     int32_t rc = i2c_m_sync_cmd_read(&FG_I2C, reg_byte, buf, 2);
     if (rc != 0) {
-        warning("fuel_gauge: read reg 0x%03x (slave 0x%02x) failed rc=%ld %s\n", reg, slave, (long)rc,
-                fg_i2c_err_str(rc));
+        warning("fuel_gauge: read reg 0x%03x (slave 0x%02x) failed rc=%ld %s\n", reg, slave, (long)rc, fg_i2c_err_str(rc));
         return ERROR_I2C_FAILED;
     }
     *out = (uint16_t)buf[0] | ((uint16_t)buf[1] << 8);
@@ -196,8 +204,7 @@ status_t fg_mux_self_test(void) {
         uint8_t want = controls[i];
         int32_t rc = fg_mux_raw_write(want);
         if (rc != 0) {
-            warning("mux-only: addr=0x%02x write=0x%02x failed rc=%ld %s\n",
-                    FG_MUX_ADDR, want, (long)rc, fg_i2c_err_str(rc));
+            warning("mux-only: addr=0x%02x write=0x%02x failed rc=%ld %s\n", FG_MUX_ADDR, want, (long)rc, fg_i2c_err_str(rc));
             // Read-only discovery distinguishes an unexpected address strap from no response.
             unsigned found = 0;
             for (uint8_t addr = 0x70; addr <= 0x77; addr++) {
@@ -300,10 +307,10 @@ status_t init_fuel_gauges(void) {
         }
 
         // NCELLS occupies the low 4 bits of PackCfg/nPackCfg (Fig 37). Log raw + NCELLS.
-        info("fuel_gauge: gauge %u: Status=0x%04x PackCfg=0x%04x (NCELLS=%u) "
-             "nPackCfg=0x%04x (NCELLS=%u) DesignCap=0x%04x nDesignCap=0x%04x\n",
-             ch + 1, status, packcfg, (unsigned)(packcfg & 0x000F), npackcfg,
-             (unsigned)(npackcfg & 0x000F), designcap, ndesigncap);
+        info(
+            "fuel_gauge: gauge %u: Status=0x%04x PackCfg=0x%04x (NCELLS=%u) "
+            "nPackCfg=0x%04x (NCELLS=%u) DesignCap=0x%04x nDesignCap=0x%04x\n",
+            ch + 1, status, packcfg, (unsigned)(packcfg & 0x000F), npackcfg, (unsigned)(npackcfg & 0x000F), designcap, ndesigncap);
     }
 
     fg_mux_disable();

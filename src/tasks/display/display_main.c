@@ -57,10 +57,12 @@ void main_display(void *pvParameters) {
             command_t display_image_command = get_display_image_command(IMAGE_BUFFER_PVDX);
             enqueue_command(&display_image_command);
         }
+#ifdef DISPLAY_BROWNLOGO
         {
             command_t display_image_command = get_display_image_command(IMAGE_BUFFER_BROWNLOGO);
             enqueue_command(&display_image_command);
         }
+#endif
 
         // Check in with the watchdog task
         if (should_checkin(current_task)) {
