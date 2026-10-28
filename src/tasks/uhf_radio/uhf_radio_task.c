@@ -41,7 +41,6 @@ void uhf_radio_irq_handler(void) {
     portYIELD_FROM_ISR(woken);
 }
 
-
 uhf_irqs_t uhf_read_irqs(void) {
     uhf_irqs_t irqs = {0};
     if (at86rf215_reg_read_8(&at86_dev, &irqs.rf, REG_RF09_IRQS) || at86rf215_reg_read_8(&at86_dev, &irqs.bbc, REG_BBC0_IRQS)) {
@@ -82,7 +81,9 @@ void uhf_rx_process() {
         warning("Radio: dropping frame with bad FCS\n");
         return;
     }
+
     // TODO: Raise radio task priority
+    // Question: do we need to, or can it just always be highest priority that is otherwise blocked.
 
     uint8_t len_lo = 0;
     uint8_t len_hi = 0;
@@ -103,8 +104,35 @@ void uhf_rx_process() {
         return;
     }
 
-    // TODO: rest of this
+    uslp_transfer_frame_view_t tframe_view;
+    if (uslp_transfer_frame_parse(&tframe_view, at86_buffer, (uint32_t)sz)) {
+        warning("Radio: dropping malformed USLP frame\n");
+        return;
+    }
 
+    if (!radio_route_accepts_uplink(RADIO_UHF, tframe_view.primary_header.virtual_channel_id)) {
+        warning("Radio: dropping USLP frame on unexpected VC %u\n", tframe_view.primary_header.virtual_channel_id);
+        return;
+    }
+
+    if (tframe_view.data_field_header.tfdz_construction_rules != USLP_TFDZ_NO_SEGMENT ||
+        tframe_view.data_field_header.protocol_identifier != USLP_UPID_SPACE_PACKETS) {
+        warning("Radio: dropping USLP frame that doesn't carry one whole space packet\n");
+        return;
+    }
+
+    if (tframe_view.datafield_len == 0 || tframe_view.datafield_len > sizeof(item.data)) {
+        warning("Radio: dropping USLP frame with a %u byte data field\n", tframe_view.datafield_len);
+        return;
+    }
+
+    item.len = tframe_view.datafield_len;
+    item.vcid = tframe_view.primary_header.virtual_channel_id;
+    memcpy(item.data, tframe_view.datafield, tframe_view.datafield_len);
+
+    if (xQueueSend(uplink_queue, &item, 0) != pdPASS) {
+        warning("Radio: uplink queue full, dropping packet\n");
+    }
 }
 
 /**
@@ -130,7 +158,7 @@ bool uhf_tx_process() {
 
 /**
  * Sends cmd=RX and checks for either state transition to RX or TRANSITION
- * states. 
+ * states.
  */
 void uhf_go_rx() {
     int ret = at86rf215_set_cmd(&at86_dev, AT86RF215_CMD_RF_RX, AT86RF215_RF09);
@@ -147,8 +175,8 @@ void uhf_go_rx() {
 }
 
 /**
-* Sends cmd=TXPREP, successful fires TXRDY IRQ
-*/
+ * Sends cmd=TXPREP, successful fires TXRDY IRQ
+ */
 void uhf_go_txprep() {
     int ret = at86rf215_set_cmd(&at86_dev, AT86RF215_CMD_RF_TXPREP, AT86RF215_RF09);
     if (ret) {
