@@ -130,7 +130,6 @@ bool spp_packet_parse(spp_packet_view_t *view, uint8_t *data, uint32_t len) {
     return false;
 }
 
-// TODO: have telemetry's serialize_spp_headers use this instead of packing the headers itself
 bool spp_packet_serialize(const spp_primary_packet_header_t *primary, const spp_secondary_packet_header_t *secondary, const uint8_t *data,
                           size_t data_len, uint8_t *buf, size_t buf_size, size_t *packet_len) {
     if (primary == NULL || buf == NULL || packet_len == NULL || (data == NULL && data_len > 0)) {

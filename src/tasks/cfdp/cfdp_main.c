@@ -16,6 +16,7 @@
 #include "logging.h"
 #include "telemetry/telemetry_timer.h"
 #include "uhf_radio/uhf_radio_task.h"
+#include "uplink_commands.h"
 #include "watchdog_task.h"
 
 // CFDP Memory Stores. PDUs go to and from the radio through its uplink_queue/downlink_queue (see cfdp_utils.c)
@@ -137,6 +138,11 @@ void main_cfdp(void *pvParameters) {
 
             if (result == CFDP_RESULT_COMPLETE) {
                 info("cfdp: transaction %lu complete\n", cfdp_txn_store.transactions[i].transaction_id.seq_num);
+                // The ground only sends us uplink command files, so every file we finish receiving is one
+                if (cfdp_txn_store.transactions[i].direction == CFDP_RECV &&
+                    cfdp_txn_store.transactions[i].condition_code == CFDP_COND_NOERROR) {
+                    uplink_commands_dispatch(cfdp_txn_store.transactions[i].buff_header, cfdp_txn_store.transactions[i].file_size);
+                }
                 if (cfdp_txn_store.transactions[i].direction == CFDP_SEND) {
                     info("cfdp: adding tracking for stale txn with seq: %d\n", cfdp_txn_store.transactions[i].transaction_id.seq_num);
                     fin_txn_buf_push(&cfdp_fin_txn,

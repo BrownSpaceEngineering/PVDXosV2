@@ -2,12 +2,14 @@
 
 #include <string.h>
 
-#include "cfdp_task.h"
 #include "ccsds/radio_routing.h"
+#include "cfdp_task.h"
+#include "globals.h"
+#include "libraries/cmd_dispatcher/cmd_dispatcher.h"
 #include "mutexes.h"
-#include "uhf_radio/uhf_radio_task.h"
 #include "rtos_start.h"
 #include "spp.h"
+#include "uhf_radio/uhf_radio_task.h"
 
 uint32_t next_seq_num(void) {
     static uint32_t counter = 0;
@@ -85,13 +87,29 @@ int cfdp_recv(void *buff, size_t sz, uint8_t *vcid) {
     size_t len = (size_t)packet_view.header.data_length + 1;
     if (packet_view.header.secondary_header_flag) {
         len -= SPP_SECONDARY_HEADER_SIZE;
+
+        command_t cmd = (command_t){.target = p_adcs_task,
+                                    .data = {.timestamp = packet_view.secondary_header.timestamp},
+                                    .data_type = CMD_DATA_TIMESTAMP,
+                                    .operation = OPERATION_SET_UNIX_TIME,
+                                    .result = SUCCESS};
+        enqueue_command(&cmd);
+
+        char callsign[7];
+        memcpy(callsign, packet_view.secondary_header.callsign, 6);
+        callsign[6] = '\0';
+
+        if (strcmp(callsign, "bsegnd") != 0) {
+            warning("spp: recieved packet with non-ground station callsign!\n");
+            return -1;
+        }
     }
 
     if (len == 0) {
         return -1; // no PDU, and 0 is reserved for an empty queue
     }
 
-    memmove(buff, packet_view.data, len);
+    memcpy(buff, packet_view.data, len);
 
     return (int)len;
 }
@@ -203,6 +221,13 @@ cfdp_transaction_t *cfdp_alloc_transaction(cfdp_transaction_store_t *txn_store) 
 void cfdp_free_transaction(cfdp_transaction_store_t *txn_store, cfdp_transaction_t *txn) {
     if (txn_store == NULL || txn == NULL) {
         return;
+    }
+    // Received files hold a CFDP buffer. Commands parsed out of it hold their own references, so this only drops
+    // the transaction's
+    if (txn->buff_header != NULL) {
+        cfdp_release_buff(txn->buff_header);
+        txn->buff_header = NULL;
+        txn->file_data = NULL;
     }
     for (int i = 0; i < MAX_TRANSACTIONS; i++) {
         if (&txn_store->transactions[i] == txn) {

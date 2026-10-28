@@ -10,6 +10,7 @@
 
 #include "display_task.h"
 
+#include "cfdp/uplink_commands.h"
 #include "display_driver.h"
 
 /* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
@@ -88,7 +89,14 @@ void exec_command_display(command_t *const p_cmd) {
 
     switch (p_cmd->operation) {
         case OPERATION_DISPLAY_IMAGE:
-            p_cmd->result = display_image((const color_t *)p_cmd->data.display_data);
+            if (p_cmd->data_type == CMD_DATA_UPLINK) {
+                // The bitmap is in the CFDP buffer the uplink arrived in; display_image copies it out
+                const uplink_cmd_t *uplink_cmd = &p_cmd->data.uplink_cmd;
+                p_cmd->result = display_image((const color_t *)((const uint8_t *)uplink_cmd->header->buff + uplink_cmd->buff_offset));
+                uplink_cmd_release(uplink_cmd);
+            } else {
+                p_cmd->result = display_image((const color_t *)p_cmd->data.display_data);
+            }
             break;
         case OPERATION_CLEAR_IMAGE:
             p_cmd->result = clear_image();

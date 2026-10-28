@@ -9,6 +9,7 @@
  */
 
 #include "adcs_task.h"
+#include "cfdp/uplink_commands.h"
 #include "globals.h"
 #include "libraries/cmd_dispatcher/cmd_dispatcher.h"
 #include "logging.h"
@@ -93,6 +94,16 @@ void main_adcs(void *pvParameters) {
                     case OPERATION_PROCESS:
                         debug("adcs processing: Command popped off queue. Target: %d, Operation: %d\n", cmd.target, cmd.operation);
                         exec_command_adcs_process(&cmd);
+                        break;
+                    case OPERATION_SET_UNIX_TIME:
+                    case OPERATION_SET_KEPLER_COEFF:
+                    case OPERATION_SET_ADCS_OP_MODE:
+                    case OPERATION_ADCS_UPDATE_PARAMS:
+                        // TODO: ADCS is still a mockup, so these are thrown away for now
+                        debug("adcs: operation %d not implemented, dropping command\n", cmd.operation);
+                        if (cmd.data_type == CMD_DATA_UPLINK) {
+                            uplink_cmd_release(&cmd.data.uplink_cmd);
+                        }
                         break;
                     default:
                         fatal("adcs: Invalid operation!\n");

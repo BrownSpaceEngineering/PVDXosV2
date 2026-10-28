@@ -35,7 +35,7 @@
 
 #define TXN_FRAME 0x200 // placeholder
 
-#define CFDP_LARGE_BUFF_SZ 8192
+#define CFDP_LARGE_BUFF_SZ 10240 // fits an uplink with a display bitmap (16 + 6 + 8192 bytes)
 #define CFDP_SMALL_BUFF_SZ 128
 #define CFDP_SMALL_BUFF_COUNT 4
 
@@ -170,6 +170,8 @@ typedef struct cfdp_transaction {
 
     cfdp_buff_header_t *buff_header;
     uint8_t *file_data;
+
+    uint32_t latest_packet_timestamp;
 
     cfdp_lv_t source_filename;
     cfdp_lv_t dest_filename;

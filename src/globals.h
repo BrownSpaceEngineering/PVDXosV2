@@ -89,7 +89,7 @@ typedef enum {
 
     // ADCS Operations
     OPERATION_SET_KEPLER_COEFF, // p_data: uplink_cmd_t* uplink_cmd
-    OPERATION_SET_UNIX_TIME,    // p_data: uplink_cmd_t* uplink_cmd
+    OPERATION_SET_UNIX_TIME,    // p_data: uint32_t timestamp
     OPERATION_SET_ADCS_OP_MODE, // p_data: uplink_cmd_t* uplink_cmd
     OPERATION_ADCS_UPDATE_PARAMS,
 
@@ -202,6 +202,7 @@ typedef union command_data {
     cfdp_request_data_t *cfdp_request;
     cfdp_transaction_t *cfdp_timeout_data;
     input_update_data_t *state_input_update_data;
+    uint32_t timestamp;
 } command_data_t;
 
 typedef enum {
@@ -214,6 +215,7 @@ typedef enum {
     CMD_CFDP_TIMEOUT,
     CMD_DATA_UPLINK,
     CMD_STATE_INPUT_UPDATE,
+    CMD_DATA_TIMESTAMP
 } command_data_type_t;
 
 // A struct to represent a command that OS tasks can execute

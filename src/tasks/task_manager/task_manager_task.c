@@ -11,6 +11,7 @@
 
 #include "task_manager_task.h"
 
+#include "cfdp/uplink_commands.h"
 #include "logging.h"
 #include "state_machine.h"
 #include "watchdog_task.h"
@@ -207,6 +208,17 @@ void exec_command_task_manager(command_t *const p_cmd) {
         case OPERATION_DISABLE_SUBTASK:
             task_manager_disable_task(p_cmd->data.pvdx_task); // Turn this into an index
             p_cmd->result = SUCCESS;
+            break;
+        case OPERATION_REBOOT:
+        case OPERATION_SLEEP_TRANSMIT:
+        case OPERATION_DISABLE_TRANSMIT:
+        case OPERATION_SET_POWER_MODE:
+            // TODO: uplinked commands that aren't implemented yet are thrown away
+            warning("task-manager: operation %d not implemented, dropping command\n", p_cmd->operation);
+            if (p_cmd->data_type == CMD_DATA_UPLINK) {
+                uplink_cmd_release(&p_cmd->data.uplink_cmd);
+            }
+            p_cmd->result = ERROR_NOT_READY;
             break;
         default:
             fatal("task-manager: Invalid operation!\n");

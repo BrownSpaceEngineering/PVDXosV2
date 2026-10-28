@@ -70,6 +70,7 @@ void cfdp_put_request(cfdp_put_data_t *put_data) {
     txn->nak_retransmit_counter = 0;
     txn->condition_code = CFDP_COND_NOERROR;
     txn->eof_acked = false;
+    txn->latest_packet_timestamp = 0;
     // The memset above cleared the timer handles cfdp_alloc_transaction attached, so attach this slot's own timers again
     size_t slot = (size_t)(txn - cfdp_txn_store.transactions);
     txn->inactivity_timer_handle = cfdp_mem.inactivity_timer_handles[slot];
@@ -148,8 +149,7 @@ void cfdp_cancel_request(uint32_t txn_id) {
         stop_timer(txn->inactivity_timer_handle);
         stop_timer(txn->retransmit_timer_handle);
 
-        cfdp_txn_store.active[store_index] = false;
-        cfdp_txn_store.slot_free = true;
+        cfdp_free_transaction(&cfdp_txn_store, txn);
     }
 }
 
@@ -596,6 +596,7 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz, uint8_t vcid) {
                 new_txn->condition_code = CFDP_COND_NOERROR;
                 new_txn->eof_acked = false;
                 new_txn->file_data = NULL;
+                new_txn->latest_packet_timestamp = 0;
 
                 cfdp_send_metadata_nak(&header);
                 cfdp_nak_buf_push(&new_txn->nak_buf, (cfdp_pdu_segment_request_t){.start_offset = 0, .end_offset = 0});
