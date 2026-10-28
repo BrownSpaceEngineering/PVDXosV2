@@ -249,7 +249,8 @@ static void show_logo_on_display(void) {
 
 static uint8_t camera_rtt_image_buffer[SEGGER_RTT_IMAGE_BUFFER_SIZE];
 
-static void send_picture_over_rtt(void) {
+// Called before the device checks, so that the camera check can capture too (BURN_SEQUENCE_CAMERA_CHECK_CAPTURE)
+static void configure_camera_rtt_channel(void) {
     #if defined(RELEASE)
     // No host drains channel 2 in flight, so drop image bytes that don't fit rather than hang
     const unsigned rtt_image_mode = SEGGER_RTT_MODE_NO_BLOCK_SKIP;
@@ -259,7 +260,9 @@ static void send_picture_over_rtt(void) {
     #endif
     SEGGER_RTT_ConfigUpBuffer(CAMERA_RTT_OUTPUT_CHANNEL, "Image", camera_rtt_image_buffer, SEGGER_RTT_IMAGE_BUFFER_SIZE,
                               rtt_image_mode);
+}
 
+static void send_picture_over_rtt(void) {
     for (uint32_t attempt = 1; attempt <= CAMERA_CAPTURE_ATTEMPTS; attempt++) {
         watchdog_feed(WDT);
         status_t status = init_arducam_hardware();
@@ -301,6 +304,10 @@ int main(void) {
     }
 
     /* ---------- DEVICE CHECKS ---------- */
+
+#ifdef BURN_SEQUENCE
+    configure_camera_rtt_channel();
+#endif
 
     // Called outside info(): in RELEASE builds info() compiles out, which would skip the checks entirely
     bool at_least_one_failed = check_all_devices_on_startup();

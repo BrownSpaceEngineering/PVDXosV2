@@ -83,8 +83,8 @@ static void fg_mux_disable(void) {
 // Maps an ASF I2C return code (hal_i2c_m_sync.h) to a short description, so a failed
 // transfer says *why* instead of collapsing to a generic error. The key distinction:
 // NACK = nobody acknowledged the address (chip silent/absent), vs BUS = an electrical
-// fault on the lines.
-static const char *fg_i2c_err_str(int32_t rc) {
+// fault on the lines. Only used inside warning(), which compiles out in RELEASE builds.
+__attribute__((unused)) static const char *fg_i2c_err_str(int32_t rc) {
     switch (rc) {
         case I2C_OK: return "OK";
         case I2C_ACK: return "ACK";

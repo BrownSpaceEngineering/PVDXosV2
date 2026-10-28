@@ -22,6 +22,9 @@
 // steps, idle; see main.c). Defined here rather than in main.c so that drivers can see it too.
 #define BURN_SEQUENCE
 
+// Uncomment to make the burn sequence's startup camera check also capture a picture over RTT channel 2
+// #define BURN_SEQUENCE_CAMERA_CHECK_CAPTURE
+
 /* ---------- LOGGING CONSTANTS ---------- */
 
 #if defined(RELEASE)
