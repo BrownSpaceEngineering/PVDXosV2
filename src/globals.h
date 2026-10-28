@@ -16,6 +16,15 @@
 #include <stdint.h>
 #include <task.h>
 
+/* ---------- BUILD MODE ---------- */
+
+// Comment out to build the normal OS instead of the burn sequence (device checks, 30 min wait, burn pin on, post-burn
+// steps, idle; see main.c). Defined here rather than in main.c so that drivers can see it too.
+#define BURN_SEQUENCE
+
+// Uncomment to make the burn sequence's startup camera check also capture a picture over RTT channel 2
+// #define BURN_SEQUENCE_CAMERA_CHECK_CAPTURE
+
 /* ---------- LOGGING CONSTANTS ---------- */
 
 #if defined(RELEASE)
