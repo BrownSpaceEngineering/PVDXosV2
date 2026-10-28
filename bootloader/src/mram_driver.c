@@ -344,7 +344,8 @@ mram_init_status_t set_persistent_mode(uint8_t mram) {
 }
 
 bool mram_write_bytes(uint32_t address, const uint8_t *data, uint32_t size) {
-    /** TODO: Only write bytes to known-good modules. */
+    /** TODO: Consider only writing bytes to known-good modules. */
+    /** TODO: Implement paging. */
     for (uint8_t mram = 1; mram <= 3; mram++) {
         bool succeeded = write_bytes(mram, address, data, size);
         if (!succeeded) {
@@ -357,7 +358,15 @@ bool mram_write_bytes(uint32_t address, const uint8_t *data, uint32_t size) {
 #define PAGE_SIZE 256
 
 bool mram_read_bytes(uint32_t address, uint8_t *data, uint32_t size) {
-    /** TODO: Only read bytes from known-good modules (no majority vote). */
+    /**
+     * TODO: Consider if we want majority vote and implement fallbacks in
+     * case one or more MRAM modules are incapacitated.
+     */
+
+    /**
+     * TODO: Fix paging logic so that read-from address and read size do
+     * not need to be divisible by PAGE_SIZE.
+     */
 
     if (size % PAGE_SIZE != 0) {
         return true; // Read failed.
