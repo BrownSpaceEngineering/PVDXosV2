@@ -183,13 +183,23 @@ uint32_t read_fifo_length(void) {
  * \returns `status_t`, ERROR_NOT_READY if the capture did not finish within ARDUCAM_CAPTURE_TIMEOUT_MS
  */
 static status_t wait_capture_done(void) {
+    // Before the scheduler starts the tick count never advances and vTaskDelay hard faults, so count 1 ms busy-waits
+    const bool scheduler_running = xTaskGetSchedulerState() != taskSCHEDULER_NOT_STARTED;
     const TickType_t start = xTaskGetTickCount();
+    uint32_t busy_waited_ms = 0;
     while (!get_bit(ARDUCHIP_TRIG, CAP_DONE_MASK)) {
-        if (xTaskGetTickCount() - start > pdMS_TO_TICKS(ARDUCAM_CAPTURE_TIMEOUT_MS)) {
+        const bool timed_out = scheduler_running ? (xTaskGetTickCount() - start > pdMS_TO_TICKS(ARDUCAM_CAPTURE_TIMEOUT_MS))
+                                                 : (busy_waited_ms > ARDUCAM_CAPTURE_TIMEOUT_MS);
+        if (timed_out) {
             warning("Arducam capture timed out!");
             return ERROR_NOT_READY;
         }
-        vTaskDelay(1);
+        if (scheduler_running) {
+            vTaskDelay(1);
+        } else {
+            delay_ms(1);
+            busy_waited_ms++;
+        }
     }
     return SUCCESS;
 }
@@ -286,7 +296,10 @@ status_t capture_rtt(void) {
         spi_m_sync_transfer(&SPI_CAMERA, &ardu_xfer);
         SEGGER_RTT_Write(CAMERA_RTT_OUTPUT_CHANNEL, ardu_spi_rx_buffer, (unsigned)will_copy);
         len -= will_copy;
+#ifndef BURN_SEQUENCE
+        // Left out of the burn sequence: p_arducam_task would pull the whole OS task list into that build
         watchdog_checkin(p_arducam_task);
+#endif
     }
 
     // Deselect SPI peripheral device

@@ -16,6 +16,12 @@
 #include <stdint.h>
 #include <task.h>
 
+/* ---------- BUILD MODE ---------- */
+
+// Comment out to build the normal OS instead of the burn sequence (device checks, 30 min wait, burn pin on, post-burn
+// steps, idle; see main.c). Defined here rather than in main.c so that drivers can see it too.
+#define BURN_SEQUENCE
+
 /* ---------- LOGGING CONSTANTS ---------- */
 
 #if defined(RELEASE)
