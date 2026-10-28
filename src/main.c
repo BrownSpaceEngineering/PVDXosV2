@@ -1,43 +1,38 @@
 /**
  * main.c
  *
- * The main entry point for PVDXos. This file initializes the hardware, verifies that the bootloader executed
- * successfully and runs the startup device checks. In a normal build it then creates the high-level OS integrity
- * tasks along with the Cosmic Monkey task, and finally starts the FreeRTOS scheduler. In a BURN_SEQUENCE build it
- * instead waits 30 minutes, turns on the burn pin and idles forever without ever starting the scheduler.
+ * The main entry point for PVDXos. This file initializes the hardware and verifies that the bootloader executed
+ * successfully. It then reads a boot counter from MRAM, increments it, writes it back, prints it and idles forever
+ * without ever starting the scheduler.
  *
  * Created: November 20, 2023
- * Modified: November 9, 2025
+ * Modified: October 28, 2026
  * Authors: Oren Kohavi, Siddharta Laloux, Tanish Makadia, Yi Liu,
  *          Defne Doken, Aidan Wang, Ignacio Blancas Rodriguez, Alexander Thaep
  */
 
-// Uncomment to build the burn sequence (device checks, 30 min wait, burn pin on, idle) instead of the normal OS
-// #define BURN_SEQUENCE
-
 #include "main.h"
 
+#include <string.h>
+
 #include "SEGGER_RTT.h"
-#include "checks/device_checks.h"
 #include "globals.h"
 #include "logging.h"
+#include "mram_driver.h"
+#include "watchdog_driver.h"
 
-#ifdef BURN_SEQUENCE
-    #include "watchdog_driver.h"
-#else
-    #include "ccsds/ccsds.h"
-    #include "cosmic_monkey_task.h"
-    #include "rtos_start.h"
-    #include "task_list.h"
-    #include "tasks/task_manager/task_manager_task.h"
-    #include "tests/test.h"
-#endif
+// The boot counter lives in the last 256-byte page of the 1 MB MRAM, clear of the development flash mirror
+// (MRAM_FLASH_BASE_ADDRESS..+MRAM_FLASH_SIZE) and the MRAM hardware test region. mram_read_bytes() only reads whole
+// pages, so the full page is read and the record is its first 8 bytes.
+#define BOOT_COUNTER_MRAM_ADDRESS 0x000FFF00u
+#define BOOT_COUNTER_PAGE_SIZE    256u
+// Marks the record as written by this code, so never-written MRAM starts the count at zero instead of garbage
+#define BOOT_COUNTER_MAGIC        0xB007C0DEu
 
-#ifdef BURN_SEQUENCE
-    #define BURN_WAIT_MINUTES 30
-#else
-cosmic_monkey_task_arguments_t cm_args = {0};
-#endif
+typedef struct {
+    uint32_t magic;
+    uint32_t count;
+} boot_counter_record_t;
 
 static status_t PVDX_init(void) {
     // Segger Buffer 0 is pre-configured at compile time according to segger documentation
@@ -49,7 +44,6 @@ static status_t PVDX_init(void) {
     return SUCCESS;
 }
 
-#ifdef BURN_SEQUENCE
 // Busy-waits one second at a time (delay_ms is fine here: the scheduler never runs, so nothing else owns SysTick).
 // The watchdog task never runs either, so the hardware watchdog is normally off. It is fed every second anyway in
 // case it is still running from an earlier boot.
@@ -59,7 +53,6 @@ static void wait_seconds_feeding_watchdog(uint32_t seconds) {
         delay_ms(1000);
     }
 }
-#endif
 
 int main(void) {
     /* ---------- HARDWARE & LOGGING INITIALIZATION + BOOTLOADER CHECK ---------- */
@@ -75,102 +68,34 @@ int main(void) {
     info("[+] Built from branch: %s\n", GIT_BRANCH_NAME);
     info("[+] Built from commit: %s\n", GIT_COMMIT_HASH);
 
-    // Bootloader sets a magic number in backup RAM to indicate that it has run successfully
-    uint32_t *p_magic_number = (uint32_t *)BOOTLOADER_MAGIC_NUMBER_ADDRESS;
-    uint32_t magic_number = *p_magic_number;
-    *p_magic_number = 0; // Clear the magic number so that this value doesn't linger
-    if (magic_number == BOOTLOADER_MAGIC_NUMBER_VALUE) {
-        info_impl("[+] Bootloader executed normally\n");
-    } else {
-        warning_impl("[!] Abnormal bootloader behavior (Magic Number: %x)\n", magic_number);
+    /* ---------- BOOT COUNTER ---------- */
+
+    mram_status_t mram_status = mram_init();
+    for (uint8_t mram = 1; mram <= 3; mram++) {
+        if (get_mram_state(mram_status, mram) != MRAM_STATE_OK) {
+            warning_impl("[!] MRAM%u failed to initialize; the boot counter relies on the other modules\n", mram);
+        }
     }
 
-    /* ---------- DEVICE CHECKS ---------- */
-
-    // Called outside info(): in RELEASE builds info() compiles out, which would skip the checks entirely
-    bool at_least_one_failed = check_all_devices_on_startup();
-    info("AT_LEAST_ONE_DEVICE_FAILED: %d\n", at_least_one_failed);
-    (void)at_least_one_failed; // unused when info() compiles out
-
-#ifdef BURN_SEQUENCE
-    /* ---------- WAIT, THEN BURN ---------- */
-
-    info("Waiting %d minutes before turning on the burn pin\n", BURN_WAIT_MINUTES);
-    for (uint32_t minute = 0; minute < BURN_WAIT_MINUTES; minute++) {
-        wait_seconds_feeding_watchdog(60);
-        info("%lu/%d minutes elapsed\n", (unsigned long)(minute + 1), BURN_WAIT_MINUTES);
+    // Read (majority-voted across the three MRAM modules), increment, and write back to all three
+    static uint8_t page[BOOT_COUNTER_PAGE_SIZE];
+    mram_read_bytes(BOOT_COUNTER_MRAM_ADDRESS, page, BOOT_COUNTER_PAGE_SIZE);
+    boot_counter_record_t record;
+    memcpy(&record, page, sizeof(record));
+    if (record.magic != BOOT_COUNTER_MAGIC) {
+        warning_impl("[!] No boot counter found in MRAM (magic: %x); starting from 0\n", record.magic);
+        record.magic = BOOT_COUNTER_MAGIC;
+        record.count = 0;
     }
+    record.count++;
+    mram_write_bytes(BOOT_COUNTER_MRAM_ADDRESS, (const uint8_t *)&record, sizeof(record));
 
-    gpio_set_pin_level(BURN, true);
-    info("Burn pin (PB29) on\n");
+    // Called outside info(): in RELEASE builds info() compiles out, but the boot counter should always be printed
+    info_impl("[+] Boot counter: %lu\n", (unsigned long)record.count);
 
     /* ---------- IDLE FOREVER (scheduler is never started) ---------- */
 
     while (true) {
         wait_seconds_feeding_watchdog(1);
     }
-#else
-    /* ---------- INIT WATCHDOG, COMMAND_DISPATCHER, TASK_MANAGER TASKS (in that order) ---------- */
-
-    ccsds_init();
-
-/* -------------------------------------- TESTS ---------------------------------------------- */
-    #ifdef UNITTEST
-    tests_run();
-    #endif
-
-    // Initialize a mutex wrapping the shared PVDX task list struct
-    task_list_mutex = xSemaphoreCreateMutexStatic(&task_list_mutex_buffer);
-
-    if (task_list_mutex == NULL) {
-        fatal("Failed to create PVDX task list mutex");
-    }
-
-    if (task_list[0] != p_watchdog_task) {
-        fatal("Watchdog is not first in task_list!");
-    }
-
-    // Initialize all OS integrity tasks
-    for (pvdx_task_t **curr_task = task_list; *curr_task != NULL; curr_task++) {
-        if ((*curr_task)->task_type == OS) {
-            init_task_pointer(*curr_task);
-            info("%s initialized\n", (*curr_task)->name);
-        }
-    }
-
-    // COMMENTED OUT because this is now controlled by the task manager
-    // Initialize all sensor integrity tasks
-    // for (pvdx_task_t **curr_task = task_list; *curr_task != NULL; curr_task++) {
-    //     if ((*curr_task)->task_type == SENSOR) {
-    //         init_task_pointer(*curr_task);
-    //         info("%s initialized\n", (*curr_task)->name);
-    //     }
-    // }
-
-    /* ---------- COSMIC MONKEY TASK ---------- */
-
-    #if defined(UNITTEST) || defined(DEVBUILD)
-        #if defined(UNITTEST)
-    cm_args.frequency = 1;
-        #endif
-        #if defined(DEVBUILD) // set to 0 for now for ease of debugging
-    cm_args.frequency = 0; // Bitflips per second
-        #endif
-
-    TaskHandle_t cosmic_monkey_task_handle =
-        xTaskCreateStatic(main_cosmic_monkey, "CosmicMonkey", COSMIC_MONKEY_TASK_STACK_SIZE, (void *)&cm_args, 1,
-                          cosmic_monkey_mem.cosmic_monkey_task_stack, &cosmic_monkey_mem.cosmic_monkey_task_tcb);
-    if (cosmic_monkey_task_handle == NULL) {
-        warning("Cosmic Monkey Task Creation Failed!\n");
-    } else {
-        info("Cosmic Monkey Task initialized\n");
-    }
-    #endif // Cosmic Monkey
-
-    /* ---------- START FREERTOS SCHEDULER ---------- */
-
-    // Start the scheduler
-    vTaskStartScheduler();
-    fatal("vTaskStartScheduler Returned! -- Should never happen!\n");
-#endif // BURN_SEQUENCE
 }
