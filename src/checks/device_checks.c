@@ -159,7 +159,9 @@ bool check_camera(void) {
 // S-band (STXG2): stxg2_init() powers the radio, waits for boot, checks the "STX2" ID and does a
 // scratchpad write/readback (from s-band-driver)
 bool check_sband(void) {
-    return stxg2_init() == SUCCESS;
+    bool okay = stxg2_init() == SUCCESS;
+    stxg2_power_off();
+    return okay;
 }
 
 // UHF (AT86RF215): reset + init, part-number check, then write/readback/restore of both RFn_CS

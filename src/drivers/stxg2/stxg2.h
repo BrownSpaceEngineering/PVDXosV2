@@ -254,6 +254,7 @@ typedef enum {
 
 // Setup, registers
 status_t stxg2_init(void);
+void stxg2_power_off(void);
 status_t stxg2_read_reg(uint16_t addr, uint32_t *value);
 status_t stxg2_write_reg(uint16_t addr, uint32_t value);
 status_t stxg2_check_i2c_status(void);

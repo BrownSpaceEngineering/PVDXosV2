@@ -279,6 +279,20 @@ status_t stxg2_init(void) {
     return SUCCESS;
 }
 
+void stxg2_power_off(void) {
+    spi_m_sync_disable(&SPI_SBAND);
+    i2c_m_sync_disable(&I2C_SBAND);
+    store_active = false;
+
+    gpio_set_pin_level(SBAND_RST, false);
+    gpio_set_pin_direction(SBAND_RST, GPIO_DIRECTION_OUT);
+    gpio_set_pin_function(SBAND_RST, GPIO_PIN_FUNCTION_OFF);
+
+    gpio_set_pin_level(SBAND_EN, false);
+    gpio_set_pin_direction(SBAND_EN, GPIO_DIRECTION_OUT);
+    gpio_set_pin_function(SBAND_EN, GPIO_PIN_FUNCTION_OFF);
+}
+
 /**
  * \brief Sets mode and checks for mode transition (USM 9.2.5.1)
  *
@@ -312,7 +326,7 @@ status_t stxg2_set_mode(stxg2_mode_t mode) {
  * \brief Sets frequency, symbol rate, MODCOD, and PA power
  *
  * \param freq_khz 2400000-2480000, 100 kHz steps (option sheet, USM 9.2.5.3)
- * \param sym_rate_ksps 5000-50000, 1000 ksps steps (option sheet, USM 9.2.5.2)
+ * \param sym_rate_ksps 100-50000, 1000 ksps steps (option sheet, USM 9.2.5.2)
  * \param modcod 1-28 (USM table 9-14)
  * \param power_dbm tx power in dbm (USM 9.2.9.2)
  * \returns ERROR_BAD_ARGS if out of range
