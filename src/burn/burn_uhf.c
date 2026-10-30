@@ -2,7 +2,7 @@
 
 #include "globals.h"
 
-#ifdef BURN_SEQUENCE
+#if defined(BURN_SEQUENCE) && BURN_SEQUENCE_UHF_MODE != BURN_UHF_MODE_OFF
 
     #include <hal_delay.h>
     #include <peripheral_clk_config.h>

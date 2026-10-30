@@ -170,7 +170,7 @@ int main(void) {
     #if BURN_SEQUENCE_UHF_MODE == BURN_UHF_MODE_LINK
     wait_minutes_before(POST_BURN_STEP_MINUTES, "the UHF tx/rx link");
     burn_uhf_link();
-    #else
+    #elif BURN_SEQUENCE_UHF_MODE == BURN_UHF_MODE_BEACON
     wait_minutes_before(POST_BURN_STEP_MINUTES, "UHF beacons");
     burn_uhf_beacon();
     #endif
