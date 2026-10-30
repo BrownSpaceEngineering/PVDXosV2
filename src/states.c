@@ -83,7 +83,7 @@ static state_id_t low_power_idle_next_state(const input_t *const input) {
 }
 
 // STATES
-// OS tasks are always on and never listed. ADCS runs in every state except STATE_LOW_POWER_IDLE
+// OS tasks are always on and never listed. ADCS runs in every state too.
 
 state_t mission_states[NUM_STATES];
 

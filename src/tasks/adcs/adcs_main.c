@@ -27,6 +27,13 @@
 adcs_task_memory_t adcs_mem;
 
 QueueHandle_t init_adcs(void) {
+    QueueHandle_t adcs_command_queue_handle = xQueueCreateStatic(COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE,
+                                                                 adcs_mem.adcs_command_queue_buffer, &adcs_mem.adcs_task_queue);
+
+    if (adcs_command_queue_handle == NULL) {
+        fatal("Failed to create adcs command queue!\n");
+    }
+
     // TODO: Uncomment once photodiode pin config is updated
     // status_t result = init_photodiode_hardware();
     // if (result != SUCCESS) {
@@ -47,9 +54,8 @@ QueueHandle_t init_adcs(void) {
         warning("rtc timer: Hardware initialization failed\n");
     }
 
-    // TODO: TLE and time-sync uplinks arrive on the command dispatcher's task, so ADCS will need a command queue
-    // (returned here and set up in task_list.c) to hand them to this task safely.
-    return NULL;
+    // TODO: TLE and time-sync uplinks should reach this task as commands on this queue too
+    return adcs_command_queue_handle;
 }
 
 void main_adcs(void *pvParameters) {
@@ -59,6 +65,8 @@ void main_adcs(void *pvParameters) {
     pvdx_task_t *const current_task = get_current_task();
     // Cache the watchdog checkin command to avoid creating it every iteration
     command_t cmd_checkin = get_watchdog_checkin_command(current_task);
+    // Variable to hold commands popped off the queue
+    command_t cmd;
 
     // The gyro startup sequence waits a few hundred ms, so it runs here rather than before the scheduler
     info("adcs: Initializing gyro\n");
@@ -98,24 +106,18 @@ void main_adcs(void *pvParameters) {
         const float dt = (float)(now_ticks - last_step_ticks) / configTICK_RATE_HZ;
         last_step_ticks = now_ticks;
 
+        // Empty the queue without blocking: this loop is paced by the delay above, not by commands
+        while (xQueueReceive(p_adcs_task->command_queue, &cmd, 0) == pdPASS) {
+            debug("adcs: Command popped off queue. Target: %d, Operation: %d\n", cmd.target, cmd.operation);
+            exec_command_adcs(&cmd);
+        }
+
         // failed reads fill their buffers with values body() rejects, so it bails with zero currents
         adcs_read_magnetometer(mag);
         adcs_read_gyro(gyro);
         adcs_read_photodiodes(photodiodes);
 
-        int unix_time;
-        int jd_scalar;
-        float jd_frac;
-
-        if (adcs_get_time(&unix_time, &jd_scalar, &jd_frac) == SUCCESS) {
-            body(last_mag, mag, gyro, photodiodes, adcs_get_tle_update(), unix_time, jd_scalar, jd_frac, dt, currents);
-            debug("adcs: did adcs body()\n");
-        } else {
-            // w/o a time there is no orbit or field model to compare against, so command nothing
-            memset(currents, 0, sizeof(currents));
-            // TODO actually, do bdot regardless here
-            debug("adcs: skipped adcs body()\n");
-        }
+        adcs_compute_currents(last_mag, mag, gyro, photodiodes, dt, currents);
 
         if (state_machine_get_current_state() != STATE_LOW_POWER_IDLE) {
             adcs_drive_magnetorquers(currents);

@@ -87,6 +87,10 @@ typedef enum {
     OPERATION_DISPLAY_IMAGE, // p_data: color_t *p_buffer
     OPERATION_CLEAR_IMAGE,   // p_data: NULL
 
+    // ADCS operations
+    OPERATION_ADCS_DO_POINT,      // p_data: NULL
+    OPERATION_ADCS_DETUMBLE_ONLY, // p_data: NULL
+
     // CFDP Operations
     OPERATION_CFDP_PUT,    // p_data: cfdp_request_t* req
     OPERATION_CFDP_CANCEL, // p_data: cfdp_request_t* req

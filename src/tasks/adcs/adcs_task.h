@@ -26,6 +26,8 @@
 typedef struct {
     StackType_t overflow_buffer[TASK_STACK_OVERFLOW_PADDING];
     StackType_t adcs_task_stack[ADCS_TASK_STACK_SIZE];
+    uint8_t adcs_command_queue_buffer[COMMAND_QUEUE_MAX_COMMANDS * COMMAND_QUEUE_ITEM_SIZE];
+    StaticQueue_t adcs_task_queue;
     StaticTask_t adcs_task_tcb;
 } adcs_task_memory_t;
 
@@ -37,9 +39,10 @@ extern adcs_task_memory_t adcs_mem;
 /**
  * \fn init_adcs
  *
- * \brief Initialises ADCS hardware that is safe to bring up before the scheduler starts, before `init_task_pointer()`.
+ * \brief Initialises the ADCS command queue and the hardware that is safe to bring up before the scheduler starts,
+ *      before `init_task_pointer()`.
  *
- * \returns QueueHandle_t, always NULL since the ADCS task takes no commands
+ * \returns QueueHandle_t, a handle to the created queue
  *
  * \see `init_task_pointer()` for usage of functions of the type `init_<TASK>()`
  */
@@ -53,6 +56,57 @@ QueueHandle_t init_adcs(void);
  * \warning should never return
  */
 void main_adcs(void *pvParameters);
+
+/* ---------- COMMANDS ---------- */
+
+/**
+ * \fn get_adcs_do_point_command
+ *
+ * \brief Creates a command to run `body()` whenever possible, falling back to B-dot whenever it is not pointing.
+ *      This is the mode ADCS starts in.
+ *
+ * \warning any filter state left over from before a detumble-only period is reused, not reset; `body()`'s own
+ *      failure checks are what catch it if it has gone stale
+ *
+ * \returns command_t command structure
+ */
+command_t get_adcs_do_point_command(void);
+
+/**
+ * \fn get_adcs_detumble_only_command
+ *
+ * \brief Creates a command to run only B-dot, without calling `body()` at all, until told otherwise
+ *
+ * \returns command_t command structure
+ */
+command_t get_adcs_detumble_only_command(void);
+
+/**
+ * \fn exec_command_adcs
+ *
+ * \brief Executes function corresponding to the command
+ *
+ * \param p_cmd a pointer to a command forwarded to the ADCS task
+ */
+void exec_command_adcs(command_t *const p_cmd);
+
+/* ---------- CONTROL ---------- */
+
+/**
+ * \fn adcs_compute_currents
+ *
+ * \brief Runs one ADCS control step in the current mode
+ *
+ * \param last_mag the previous step's magnetometer reading in Tesla (3 floats)
+ * \param mag this step's magnetometer reading in Tesla (3 floats)
+ * \param gyro this step's angular rate in rad/s (3 floats)
+ * \param photodiodes this step's photodiode readings (NUM_DIODES floats)
+ * \param dt time since the last step, in seconds
+ * \param currents buffer of 3 floats to fill with magnetorquer currents in Amps; zero if the magnetometer is unusable
+ *      and `body()` is not pointing
+ */
+void adcs_compute_currents(const float *const last_mag, const float *const mag, const float *const gyro, const float *const photodiodes,
+                           const float dt, float *const currents);
 
 /* ---------- SENSORS ---------- */
 
@@ -114,7 +168,7 @@ status_t adcs_get_time(int *const unix_time, int *const jd_scalar, float *const 
 /**
  * \fn adcs_drive_magnetorquers
  *
- * \brief Commands the magnetorquers with the currents computed by `body()`
+ * \brief Commands the magnetorquers with the currents computed by `adcs_compute_currents()`
  *
  * \note TODO: NEVER CALL THIS WHEN MAGNETOMETER TAKING READINGS
  *
