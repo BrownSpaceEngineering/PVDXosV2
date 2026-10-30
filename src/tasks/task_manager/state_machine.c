@@ -100,14 +100,29 @@ static void copy_input(input_update_t update, const input_t *const p_new_values)
         case SUNLIGHT_STATUS_UPDATE:
             inputs.in_sunlight = p_new_values->in_sunlight;
             break;
+        case DETUMBLING_UPDATE:
+            inputs.detumbling = p_new_values->detumbling;
+            break;
         case BATTERY_LEVEL_UPDATE:
             inputs.battery_level = p_new_values->battery_level;
             break;
         case IMAGE_READY_DISPLAY_UPDATE:
             inputs.image_ready_to_display = p_new_values->image_ready_to_display;
             break;
+        case DISPLAY_ACTIVE_UPDATE:
+            inputs.display_active = p_new_values->display_active;
+            break;
         case PHOTO_READY_DOWNLINK_UPDATE:
             inputs.photo_taken_for_downlink = p_new_values->photo_taken_for_downlink;
+            break;
+        case PEROVSKITE_READY_DOWNLINK_UPDATE:
+            inputs.perovskite_data_ready_for_downlink = p_new_values->perovskite_data_ready_for_downlink;
+            break;
+        case SBAND_READY_TRANSMIT_UPDATE:
+            inputs.sband_wants_to_transmit = p_new_values->sband_wants_to_transmit;
+            break;
+        case SAFE_DISABLE_RADIO_UPDATE:
+            inputs.safe_to_disable_radio = p_new_values->safe_to_disable_radio;
             break;
         case NUM_INPUT_UPDATE_OPTIONS:
             // Not an input; listed so that the switch covers the whole enum

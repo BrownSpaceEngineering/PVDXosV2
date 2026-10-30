@@ -297,8 +297,8 @@ status_t capture_rtt(void) {
         SEGGER_RTT_Write(CAMERA_RTT_OUTPUT_CHANNEL, ardu_spi_rx_buffer, (unsigned)will_copy);
         len -= will_copy;
 #ifndef BURN_SEQUENCE
-        // Left out of the burn sequence: p_arducam_task would pull the whole OS task list into that build
-        watchdog_checkin(p_arducam_task);
+        // Left out of the burn sequence: p_camera_task would pull the whole OS task list into that build
+        watchdog_checkin(p_camera_task);
 #endif
     }
 

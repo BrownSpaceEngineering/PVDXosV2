@@ -19,6 +19,7 @@
 #include "checks/device_checks.h"
 #include "globals.h" // defines BURN_SEQUENCE
 #include "logging.h"
+#include "mutexes.h"
 
 #ifdef BURN_SEQUENCE
     #include "arducam_driver.h"
@@ -144,6 +145,13 @@ int main(void) {
         info_impl("[+] Bootloader executed normally\n");
     } else {
         warning_impl("[!] Abnormal bootloader behavior (Magic Number: %x)\n", magic_number);
+    }
+
+    // Initialize the mutex for the I2C bus shared by Arducam, fuel gauges, and PMB before startup checks/tests
+    i2c_camera_bus_mutex = xSemaphoreCreateMutexStatic(&i2c_camera_bus_mutex_buffer);
+
+    if (i2c_camera_bus_mutex == NULL) {
+        fatal("Failed to create I2C_CAMERA bus mutex");
     }
 
     /* ---------- DEVICE CHECKS ---------- */

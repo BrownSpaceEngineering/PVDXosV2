@@ -10,6 +10,7 @@
 #include "shell_commands.h"
 
 #include <atmel_start.h>
+#include <string.h>
 #include "display_task.h"
 #include "image_buffers/image_buffer_BrownLogo.h"
 #include "image_buffers/image_buffer_PVDX.h"
@@ -245,23 +246,28 @@ void shell_display(char **args, int arg_count) {
         return;
     }
 
-    // Index 0 stays the Brown logo even when it is not built in, so image numbers don't depend on DISPLAY_BROWNLOGO
+    command_t display_command;
+    if (strcmp(args[1], "off") == 0) {
+        display_command = get_display_off_command();
+    } else {
+        // Index 0 stays the Brown logo even when it is not built in, so image numbers don't depend on DISPLAY_BROWNLOGO
 #ifdef DISPLAY_BROWNLOGO
-    const uint8_t *image_buffers[] = {IMAGE_BUFFER_BROWNLOGO, IMAGE_BUFFER_PVDX};
+        const uint8_t *image_buffers[] = {IMAGE_BUFFER_BROWNLOGO, IMAGE_BUFFER_PVDX};
 #else
-    const uint8_t *image_buffers[] = {NULL, IMAGE_BUFFER_PVDX};
+        const uint8_t *image_buffers[] = {NULL, IMAGE_BUFFER_PVDX};
 #endif
-    const int image_index = args[1][0] - '0';
-    if (image_index < 0 || image_index >= (int)(sizeof(image_buffers) / sizeof(image_buffers[0])) || image_buffers[image_index] == NULL) {
-        terminal_printf("Image %c is not available. Try 'help display'\n", args[1][0]);
-        return;
+        const int image_count = (int)(sizeof(image_buffers) / sizeof(image_buffers[0]));
+        const int image_index = args[1][0] - '0';
+        if (args[1][1] != '\0' || image_index < 0 || image_index >= image_count || image_buffers[image_index] == NULL) {
+            terminal_printf("Image %s is not available. Try 'help display'\n", args[1]);
+            return;
+        }
+        display_command = get_display_image_command(image_buffers[image_index]);
     }
-    command_t display_image_command = get_display_image_command(image_buffers[image_index]);
-    
-    while (enqueue_command(&display_image_command) != SUCCESS) {
-        warning("shell: Failed to enqueue display image command\n");
+    while (enqueue_command(&display_command) != SUCCESS) {
+        warning("shell: Failed to enqueue display command\n");
     }
-    terminal_printf("fr\n");
+    terminal_printf("Display command queued\n");
 }
 
 /**
@@ -271,6 +277,7 @@ void shell_display(char **args, int arg_count) {
  *
  */
 void help_display() {
-    terminal_printf("Usage: display\n");
-    terminal_printf("\tgjnerergjkn\n");
+    terminal_printf("Usage: display <0|1|off>\n");
+    terminal_printf("\t0: Brown logo, 1: PVDX logo\n");
+    terminal_printf("\toff: Put the display to sleep until reinitialized\n");
 }
