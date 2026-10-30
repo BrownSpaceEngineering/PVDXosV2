@@ -114,6 +114,12 @@ static void copy_input(input_update_t update, const input_t *const p_new_values)
         case PHOTO_READY_DOWNLINK_UPDATE:
             inputs.photo_taken_for_downlink = p_new_values->photo_taken_for_downlink;
             break;
+        case ADCS_POINTING_UPDATE:
+            inputs.adcs_pointing = p_new_values->adcs_pointing;
+            break;
+        case ADCS_SENSOR_FAULT_UPDATE:
+            inputs.adcs_sensor_fault = p_new_values->adcs_sensor_fault;
+            break;
         case NUM_INPUT_UPDATE_OPTIONS:
             // Not an input; listed so that the switch covers the whole enum
             break;

@@ -8,6 +8,8 @@
 
 #include "photodiode_driver.h"
 
+#include "mutexes/mutexes.h"
+
 // Photodiode index -> {ADC descriptor, AIN channel}.
 typedef struct {
     struct adc_sync_descriptor *adc;
@@ -47,10 +49,7 @@ status_t init_photodiodes(void) {
     return SUCCESS;
 }
 
-status_t phd_read_raw(uint8_t index, uint16_t *code) {
-    if (index >= PHD_COUNT || code == NULL) {
-        return ERROR_BAD_TARGET;
-    }
+static status_t phd_read_raw_unlocked(uint8_t index, uint16_t *code) {
     const phd_cfg_t *c = &PHD_CFG[index];
 
     if (adc_sync_set_inputs(c->adc, c->ain, ADC_INPUTCTRL_MUXNEG_GND_Val, 0) != ERR_NONE) {
@@ -76,6 +75,23 @@ status_t phd_read_raw(uint8_t index, uint16_t *code) {
 
     *code = (uint16_t)(acc / PHD_ADC_AVG_SAMPLES);
     return SUCCESS;
+}
+
+status_t phd_read_raw(uint8_t index, uint16_t *code) {
+    if (index >= PHD_COUNT || code == NULL) {
+        return ERROR_BAD_TARGET;
+    }
+
+    // Only ADC_1 is shared
+    const bool shared_adc = PHD_CFG[index].adc == &ADC_1;
+    if (shared_adc) {
+        lock_adc1();
+    }
+    status_t result = phd_read_raw_unlocked(index, code);
+    if (shared_adc) {
+        unlock_adc1();
+    }
+    return result;
 }
 
 status_t phd_read_voltage(uint8_t index, float *volts) {

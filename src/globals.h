@@ -90,6 +90,8 @@ typedef enum {
     // ADCS operations
     OPERATION_ADCS_DO_POINT,      // p_data: NULL
     OPERATION_ADCS_DETUMBLE_ONLY, // p_data: NULL
+    OPERATION_ADCS_SET_TLE,       // p_data: const adcs_tle_t *tle
+    OPERATION_ADCS_SET_UTC,       // data: uint32_t unix_time
 
     // CFDP Operations
     OPERATION_CFDP_PUT,    // p_data: cfdp_request_t* req
@@ -180,11 +182,14 @@ typedef struct {
     const task_type_t task_type;        // Whether the task is OS-integrity, a sensor, or an actuator
 } pvdx_task_t;
 
+typedef struct adcs_tle adcs_tle_t;
 typedef union cfdp_request_data cfdp_request_data_t;
 typedef struct cfdp_transaction cfdp_transaction_t;
 typedef struct input_update_data input_update_data_t;
 
 typedef union command_data {
+    const adcs_tle_t *adcs_tle;
+    uint32_t unix_time;
     const uint8_t *display_data;
     TaskHandle_t *task_handle;
     pvdx_task_t *pvdx_task;
@@ -195,6 +200,8 @@ typedef union command_data {
 
 typedef enum {
     CMD_DATA_NONE = 0,
+    CMD_DATA_ADCS_TLE,
+    CMD_DATA_UNIX_TIME,
     CMD_DATA_DISPLAY,
     CMD_DATA_TASK_HANDLE,
     CMD_DATA_PVDX_TASK,

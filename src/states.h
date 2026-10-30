@@ -38,6 +38,8 @@ typedef struct { // preliminary contents; still under discussion
 	float battery_level; // not sure yet how this will be stored/fetched
 	bool image_ready_to_display;
 	bool photo_taken_for_downlink;
+	bool adcs_pointing;
+	bool adcs_sensor_fault;
 	// Filled in by the task manager itself; never sent as an input update
 	TickType_t current_tick;
 	TickType_t last_transition_tick; // when the current state was entered
@@ -50,6 +52,8 @@ typedef enum { // preliminary contents; still under discussion
 	BATTERY_LEVEL_UPDATE,
 	IMAGE_READY_DISPLAY_UPDATE,
 	PHOTO_READY_DOWNLINK_UPDATE,
+	ADCS_POINTING_UPDATE,
+	ADCS_SENSOR_FAULT_UPDATE,
 	NUM_INPUT_UPDATE_OPTIONS
 } input_update_t;
 

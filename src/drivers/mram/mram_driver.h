@@ -10,6 +10,10 @@
 #define MRAM_FLASH_BASE_ADDRESS (0x00000000) // Address of complete flash copy in MRAM
 #define MRAM_FLASH_SIZE (0x80000)            // Size of complete flash copy in MRAM
 
+// One 256-byte page each, past the flash copy and the MRAM hardware test's scratch area (0x800F0)
+#define MRAM_ADCS_TLE_ADDRESS (0x00090000) // Last committed TLE
+#define MRAM_ADCS_UTC_ADDRESS (0x00090100) // Last saved UTC
+
 #include "atmel_start.h"
 #include "hal_delay.h"
 #include "hal_gpio.h"

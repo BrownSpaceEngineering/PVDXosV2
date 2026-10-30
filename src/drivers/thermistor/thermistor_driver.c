@@ -9,6 +9,8 @@
 
 #include "thermistor_driver.h"
 
+#include "mutexes/mutexes.h"
+
 #include <math.h>
 
 // Thermistor index -> ADC1 positive-input (MUXPOS AINx) value.
@@ -108,11 +110,7 @@ status_t init_thermistors(void) {
  * Switches the ADC mux to the thermistor's channel, discards one conversion for settling,
  * then averages THERM_ADC_AVG_SAMPLES conversions.
  */
-status_t therm_read_raw(uint8_t index, uint16_t *code) {
-    if (index >= THERM_COUNT || code == NULL) {
-        return ERROR_BAD_TARGET;
-    }
-
+static status_t therm_read_raw_unlocked(uint8_t index, uint16_t *code) {
     if (adc_sync_set_inputs(&ADC_1, THERM_AIN[index], ADC_INPUTCTRL_MUXNEG_GND_Val, 0) != ERR_NONE) {
         warning("thermistor: set_inputs failed (idx=%u)\n", index);
         return ERROR_READ_FAILED;
@@ -136,6 +134,17 @@ status_t therm_read_raw(uint8_t index, uint16_t *code) {
 
     *code = (uint16_t)(acc / THERM_ADC_AVG_SAMPLES);
     return SUCCESS;
+}
+
+status_t therm_read_raw(uint8_t index, uint16_t *code) {
+    if (index >= THERM_COUNT || code == NULL) {
+        return ERROR_BAD_TARGET;
+    }
+
+    lock_adc1();
+    status_t result = therm_read_raw_unlocked(index, code);
+    unlock_adc1();
+    return result;
 }
 
 status_t therm_read_celsius(uint8_t index, float *temp_c) {

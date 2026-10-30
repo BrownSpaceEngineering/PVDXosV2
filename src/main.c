@@ -203,6 +203,8 @@ int main(void) {
         fatal("Failed to create PVDX task list mutex");
     }
 
+    init_adc1_mutex();
+
     if (task_list[0] != p_watchdog_task) {
         fatal("Watchdog is not first in task_list!");
     }
