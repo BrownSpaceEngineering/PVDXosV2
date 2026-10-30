@@ -120,20 +120,21 @@ state_t mission_states[NUM_STATES];
 void init_states(void) {
     // TODO: remove once every state has its own line below. Until then, a state that is not set up
     // runs no tasks and goes straight back to idle.
+    // The fuel gauge task runs in every state: it supplies battery_level, which LOW_POWER_IDLE needs to recover.
     for (state_id_t state = 0; state < NUM_STATES; state++) {
-        mission_states[state] = (state_t){.enabled_tasks = {}, .fetch_next_state = unimplemented_next_state};
+        mission_states[state] = (state_t){.enabled_tasks = {p_fuel_gauge_task}, .fetch_next_state = unimplemented_next_state};
     }
 
     // TODO: the fuel gauge, thermistor and camera tasks are SENSOR tasks but no state lists them yet, so the state
     // machine suspends them on entering STATE_INITIAL and they never run (no battery telemetry, no heater control, no
     // images). Add p_fuel_gauge_task / p_thermistor_task / p_camera_task to the states that need them.
-    mission_states[STATE_INITIAL]                 = (state_t){.enabled_tasks = {},                                 .fetch_next_state = initial_next_state};
-    mission_states[STATE_BURN_WIRE]               = (state_t){.enabled_tasks = {},                                 .fetch_next_state = burn_wire_next_state};
-    mission_states[STATE_IDLE]                    = (state_t){.enabled_tasks = {p_adcs_task, p_cfdp_task},                                 .fetch_next_state = idle_next_state};
-    mission_states[STATE_STUDENT_PICTURE_CAPTURE] = (state_t){.enabled_tasks = {p_adcs_task, p_cfdp_task, p_display_task, p_camera_task},      .fetch_next_state = student_picture_capture_next_state, .on_enter = student_picture_capture_on_enter};
-    mission_states[STATE_SBAND_TRANS]             = (state_t){.enabled_tasks = {p_adcs_task, p_cfdp_task},         .fetch_next_state = sband_trans_next_state};
-    mission_states[STATE_LOW_POWER_IDLE]          = (state_t){.enabled_tasks = {p_adcs_task, p_cfdp_task},                                 .fetch_next_state = low_power_idle_next_state};
-    mission_states[STATE_FAKE_HEARTBEAT]          = (state_t){.enabled_tasks = {p_adcs_task, p_cfdp_task, p_heartbeat_task},                 .fetch_next_state = fake_heartbeat_next_state, .on_enter = fake_heartbeat_on_enter};
+    mission_states[STATE_INITIAL]                 = (state_t){.enabled_tasks = {p_fuel_gauge_task},                                 .fetch_next_state = initial_next_state};
+    mission_states[STATE_BURN_WIRE]               = (state_t){.enabled_tasks = {p_fuel_gauge_task},                                 .fetch_next_state = burn_wire_next_state};
+    mission_states[STATE_IDLE]                    = (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_cfdp_task},                                 .fetch_next_state = idle_next_state};
+    mission_states[STATE_STUDENT_PICTURE_CAPTURE] = (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_cfdp_task, p_display_task, p_camera_task},      .fetch_next_state = student_picture_capture_next_state, .on_enter = student_picture_capture_on_enter};
+    mission_states[STATE_SBAND_TRANS]             = (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_cfdp_task},         .fetch_next_state = sband_trans_next_state};
+    mission_states[STATE_LOW_POWER_IDLE]          = (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_cfdp_task},                                 .fetch_next_state = low_power_idle_next_state};
+    mission_states[STATE_FAKE_HEARTBEAT]          = (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_cfdp_task, p_heartbeat_task},                 .fetch_next_state = fake_heartbeat_next_state, .on_enter = fake_heartbeat_on_enter};
     // ... one line per state in state_id_t
 }
 
