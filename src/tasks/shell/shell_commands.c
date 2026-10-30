@@ -246,14 +246,24 @@ void shell_display(char **args, int arg_count) {
         return;
     }
 
-    const bool turn_off = strcmp(args[1], "off") == 0;
-    if (!turn_off && strcmp(args[1], "0") != 0 && strcmp(args[1], "1") != 0) {
-        terminal_printf("Invalid usage. Try 'help display'\n");
-        return;
+    command_t display_command;
+    if (strcmp(args[1], "off") == 0) {
+        display_command = get_display_off_command();
+    } else {
+        // Index 0 stays the Brown logo even when it is not built in, so image numbers don't depend on DISPLAY_BROWNLOGO
+#ifdef DISPLAY_BROWNLOGO
+        const uint8_t *image_buffers[] = {IMAGE_BUFFER_BROWNLOGO, IMAGE_BUFFER_PVDX};
+#else
+        const uint8_t *image_buffers[] = {NULL, IMAGE_BUFFER_PVDX};
+#endif
+        const int image_count = (int)(sizeof(image_buffers) / sizeof(image_buffers[0]));
+        const int image_index = args[1][0] - '0';
+        if (args[1][1] != '\0' || image_index < 0 || image_index >= image_count || image_buffers[image_index] == NULL) {
+            terminal_printf("Image %s is not available. Try 'help display'\n", args[1]);
+            return;
+        }
+        display_command = get_display_image_command(image_buffers[image_index]);
     }
-
-    const uint8_t *image_buffers[] = {IMAGE_BUFFER_BROWNLOGO, IMAGE_BUFFER_PVDX};
-    command_t display_command = turn_off ? get_display_off_command() : get_display_image_command(image_buffers[args[1][0] - '0']);
     while (enqueue_command(&display_command) != SUCCESS) {
         warning("shell: Failed to enqueue display command\n");
     }

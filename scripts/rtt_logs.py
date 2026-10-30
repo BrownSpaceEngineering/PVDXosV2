@@ -1,87 +1,104 @@
-"""Read diagnostic logs and framed JPEGs through one J-Link RTT connection."""
-
-import argparse
+import platform
+import pylink # pip install pylink-square
+import os
 import datetime
-import math
-from pathlib import Path
-import time
-
-from camera_stream import ImageDecoder
-
-ROOT = Path(__file__).resolve().parents[1]
+import re
 
 
-def save_image(image, directory):
-    directory = Path(directory)
-    directory.mkdir(parents=True, exist_ok=True)
-    stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d_%H-%M-%S_%f")
-    path = directory / f"{stamp}_frame-{image.frame_id}_{image.width}x{image.height}.jpg"
-    # Only completed frames reach this function; never replace an existing capture.
-    with path.open("xb") as output:
-        output.write(image.jpeg)
-    return path
-
-
-def capture_channels(jlink, logfile=None, images_dir=ROOT / "logs" / "images", duration=None):
-    """Drain both channels until interrupted or the optional duration expires."""
-    decoder = ImageDecoder()
-    deadline = None if duration is None else time.monotonic() + duration
-    while deadline is None or time.monotonic() < deadline:
-        # Prioritize the small image ring so a busy text channel cannot starve it.
-        image_data = bytes(jlink.rtt_read(2, 4096))
-        for image in decoder.feed(image_data):
-            path = save_image(image, images_dir)
-            print(f"[camera] Saved {path} ({len(image.jpeg)} bytes)", flush=True)
-        log_data = bytes(jlink.rtt_read(1, 2048))
-        if log_data:
-            text = log_data.decode("ascii", errors="replace")
-            print(text, end="", flush=True)
-            if logfile is not None:
-                logfile.write(text)
-                logfile.flush()
-        if not image_data and not log_data:
-            time.sleep(0.005)
-    return decoder
-
-
-def open_rtt_channels(logfile=None, images_dir=ROOT / "logs" / "images", duration=None):
-    import pylink  # pip install pylink-square; not required for decoding/tests.
-
+def open_rtt_channels(logfile = None):
     jlink = pylink.JLink()
     jlink.open()
-    try:
-        jlink.connect(chip_name="ATSAMD51P20A")
-        jlink.rtt_start()
-        try:
-            return capture_channels(jlink, logfile, images_dir, duration)
-        finally:
-            jlink.rtt_stop()
-    finally:
-        jlink.close()
+    jlink.connect(chip_name='ATSAMD51P20A')
+    jlink.rtt_start()
+
+    while True:
+        buf1 = jlink.rtt_read(1, 2048)
+
+        if buf1:
+            text1 = bytes(buf1).decode('ascii', errors='replace')
+            print(text1)
+            # Write to a log file if specified
+            if logfile is not None:
+                logfile.write(text1)
 
 
-def positive_seconds(value):
-    value = float(value)
-    if not math.isfinite(value) or value <= 0:
-        raise argparse.ArgumentTypeError("duration must be a positive, finite number of seconds")
-    return value
+def open_rtt_channels_arducam_debug(logfile = None):
+    """Same as open_rtt_channels but reads image bytes from RTT channel 2"""
+    jlink = pylink.JLink()
+    jlink.open()
+    jlink.connect(chip_name='ATSAMD51P20A')
+    jlink.rtt_start()
+
+    receiving = False
+    expected_len = 0
+    received = 0
+    img_file = None
+
+    while True:
+        # Read logs (channel 1)
+        buf1 = jlink.rtt_read(1, 4096)
+        if buf1:
+            text1 = bytes(buf1).decode('ascii', errors='replace')
+            print(text1, end="")
+            if logfile is not None:
+                logfile.write(text1)
+
+            # Detect image start / end markers in logs
+            m = re.search(r"IMG_BEGIN len=(\d+)", text1)
+            if m and not receiving:
+                expected_len = int(m.group(1))
+                received = 0
+                # Make a file name based on time
+                current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                logs_dir = os.path.join(os.path.dirname(__file__), '..', 'logs')
+                logs_dir = os.path.normpath(logs_dir)
+                os.makedirs(logs_dir, exist_ok=True)
+                img_path = os.path.join(logs_dir, f"{current_time}_capture.jpg")
+                img_file = open(img_path, "wb")
+                receiving = True
+                print(f"[RTT] Starting image capture to {img_path} ({expected_len} bytes)")
+
+            if "IMG_END" in text1 and receiving and img_file is not None:
+                # We also stop by size guard below; this is just informational.
+                print(f"[RTT] IMG_END seen in logs.")
+
+        # If we’re receiving, drain channel 2 (binary)
+        if receiving and img_file is not None:
+            buf2 = jlink.rtt_read(2, 8192)
+            if buf2:
+                img_file.write(bytes(buf2))
+                received += len(buf2)
+                if received >= expected_len:
+                    img_file.flush()
+                    img_file.close()
+                    print(f"[RTT] Image saved ({received} bytes).")
+                    receiving = False
+                    img_file = None
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--duration", type=positive_seconds,
-                        help="stop after this many seconds (otherwise run until interrupted)")
-    parser.add_argument("--images-dir", type=Path, default=ROOT / "logs" / "images",
-                        help="directory for validated JPEGs (default: logs/images)")
-    args = parser.parse_args()
-    logs_path = ROOT / "logs"
-    logs_path.mkdir(parents=True, exist_ok=True)
-    stamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S_%f")
-    try:
-        with (logs_path / f"{stamp}.log").open("x", encoding="utf-8") as logfile:
-            open_rtt_channels(logfile, args.images_dir, args.duration)
-    except KeyboardInterrupt:
-        pass
+    # Sanity check to make sure this is not in WSL
+    # if "microsoft" in platform.uname().release:
+    #     print("This code cannot be executed in a WSL environment. Run natively on Windows instead!")
+    #     exit(1)
+
+    #Check if the ./logs directory exists
+    current_script_dir = os.path.dirname(__file__)
+    logs_path = os.path.join(current_script_dir, '..', 'logs')
+    logs_path = os.path.normpath(logs_path)
+
+    #If the logs directory does not exist, create it
+    if not os.path.exists(logs_path):
+        os.makedirs(logs_path)
+
+    # Create a log file in the logs directory with the current date and time
+    current_time = datetime.datetime.now()
+    log_filename = current_time.strftime("%Y-%m-%d_%H-%M-%S.log")
+    log_file_path = os.path.join(logs_path, log_filename)
+    
+    with open (log_file_path, "w") as file:
+        # open_rtt_channels(file)
+        open_rtt_channels_arducam_debug(file)
 
 
 if __name__ == "__main__":

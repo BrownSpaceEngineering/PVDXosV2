@@ -11,10 +11,12 @@
 
 #include "globals.h"
 
-// Buffer for SPI transactions
-uint8_t spi_rx_buffer[DISPLAY_SPI_BUFFER_CAPACITY] = {0x00};
-uint8_t spi_tx_buffer[DISPLAY_SPI_BUFFER_CAPACITY] = {0x00};
-struct spi_xfer xfer = {.rxbuf = spi_rx_buffer, .txbuf = spi_tx_buffer, .size = 0};
+#include "image_buffer_PVDX.h"
+
+// Buffer for SPI command transactions. The display is write-only, so nothing is received (the HAL discards
+// MISO when rxbuf is NULL), and display_update() sends display_buffer directly instead of copying it here.
+uint8_t spi_tx_buffer[DISPLAY_SPI_CMD_BUFFER_SIZE] = {0x00};
+struct spi_xfer xfer = {.rxbuf = NULL, .txbuf = spi_tx_buffer, .size = 0};
 
 // Buffer for the display
 color_t display_buffer[DISPLAY_BUFFER_SIZE] = {0x00};
@@ -142,16 +144,26 @@ status_t display_update(void) {
     // set the display window to the entire display
     ret_err_status(display_set_window(), "display: set_window failed");
 
-    // write the display buffer to the display
-    xfer.size = (SSD1362_WIDTH / 2) * SSD1362_HEIGHT;
+    // write the display buffer to the display, pointing the transfer at it directly to avoid an 8 KB copy
+    xfer.txbuf = display_buffer;
+    xfer.size = DISPLAY_BUFFER_SIZE;
+    status_t status = spi_transfer(true);
+    xfer.txbuf = spi_tx_buffer; // restore before returning, since every command transfer writes into spi_tx_buffer
 
-    for (uint16_t i = 0; i < xfer.size; i++) {
-        spi_tx_buffer[i] = display_buffer[i];
-    }
-
-    ret_err_status(spi_transfer(true), "display: spi_transer(true) failed");
+    ret_err_status(status, "display: spi_transer(true) failed");
 
     return SUCCESS;
+}
+
+// Waits `ms` milliseconds. Before the scheduler starts (the startup device check runs init from main()),
+// vTaskDelay dereferences a NULL current task and hard faults, so busy-wait with delay_ms() there instead;
+// once the scheduler is running, delay_ms() would disturb SysTick, so yield with vTaskDelay.
+static void display_delay_ms(uint16_t ms) {
+    if (xTaskGetSchedulerState() == taskSCHEDULER_NOT_STARTED) {
+        delay_ms(ms);
+    } else {
+        vTaskDelay(pdMS_TO_TICKS(ms));
+    }
 }
 
 /**
@@ -180,11 +192,11 @@ status_t init_display_hardware(void) {
     // Reset the display by setting RST to low (it should be high during normal operation)
     // SSD1362 requires: >=1ms before asserting reset, >=100us reset pulse, >=50ms before first command
     RST_HIGH();
-    vTaskDelay(pdMS_TO_TICKS(1));
+    display_delay_ms(1);
     RST_LOW();
-    vTaskDelay(pdMS_TO_TICKS(1)); // >=100us reset pulse
+    display_delay_ms(1); // >=100us reset pulse
     RST_HIGH();
-    vTaskDelay(pdMS_TO_TICKS(RESET_WAIT_INTERVAL)); // >=50ms before first command
+    display_delay_ms(RESET_WAIT_INTERVAL); // >=50ms before first command
 
     // Unlock command lock (just in case)
     xfer.size = 2;
@@ -292,10 +304,10 @@ status_t init_display_hardware(void) {
     spi_tx_buffer[0] = SSD1362_CMD_1B_DISPLAYON;
     ret_err_status(spi_transfer(false), "display hardware init: could not turn display on");
 
-    // Clear the display buffer
-    display_clear_buffer();
+    // Show the PVDX logo straight away, so a working display is visible at init
+    display_set_buffer((const color_t *)IMAGE_BUFFER_PVDX);
 
-    // Trigger an update so the empty buffer is actually displayed
+    // Trigger an update so the buffer is actually displayed
     ret_err_status(display_update(), "display: Update failed");
 
     return SUCCESS;

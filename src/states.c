@@ -112,7 +112,7 @@ static void fake_heartbeat_on_enter(state_id_t previous_state, const input_t *co
 }
 
 // STATES
-// OS tasks are always on and never listed
+// OS tasks are always on and never listed. ADCS runs in every state except STATE_LOW_POWER_IDLE
 
 state_t mission_states[NUM_STATES];
 

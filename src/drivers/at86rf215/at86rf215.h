@@ -329,8 +329,8 @@ typedef enum
  */
 typedef enum
 {
-  AT86RF215_FCS_16 = 0, //!< 16-bit
-  AT86RF215_FCS_32 = 1  //!< 32-bit
+  AT86RF215_FCS_32 = 0, //!< 32-bit (PC.FCST = 0)
+  AT86RF215_FCS_16 = 1  //!< 16-bit (PC.FCST = 1)
 } at86rf215_fcs_t;
 
 /**

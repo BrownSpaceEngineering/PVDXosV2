@@ -1,7 +1,7 @@
 /**
  * thermistor_driver.c
  *
- * Four NTC thermistors on ADC1 + two heater enable lines held at HEATER_SETPOINT_C.
+ * Four NTC thermistors on ADC1 + two heater enable lines held between HEATER_ON_C and HEATER_OFF_C.
  * See thermistor_driver.h for the wiring and model overview.
  */
 
@@ -24,6 +24,11 @@ static const uint8_t HEATER_THERMS[THERM_HEATER_COUNT][2] = {{0, 1}, {2, 3}};
 
 // Persisted heater state (needed for hysteresis across the dead band).
 static bool heater_on[THERM_HEATER_COUNT] = {false, false};
+
+// Node-voltage thresholds for HEATER_ON_C / HEATER_OFF_C, computed in init_thermistors(). Until then they sit
+// above any possible reading, so heater_control_update() can only turn heaters off.
+static float heater_on_v = 2.0f * THERM_VREF_V;
+static float heater_off_v = 2.0f * THERM_VREF_V;
 
 // ---------------------- Pure math helpers ----------------------
 
@@ -65,6 +70,13 @@ static status_t therm_celsius_from_code(uint8_t index, uint16_t code, float *tem
     return SUCCESS;
 }
 
+// Inverse of the two helpers above: the ADC node voltage the divider produces at `temp_c`.
+//   Rth = R0 * exp(B * (1/T - 1/T0)),  Vtap = Vref * (R_T2 + Rth) / (R_T1 + R_T2 + Rth)
+static float therm_volts_from_celsius(float temp_c) {
+    float r_ohms = THERM_R0_OHMS * expf(THERM_BETA * (1.0f / (temp_c + 273.15f) - 1.0f / THERM_T0_K));
+    return THERM_VREF_V * (THERM_R_T2_OHMS + r_ohms) / (THERM_R_T1_OHMS + THERM_R_T2_OHMS + r_ohms);
+}
+
 // ---------------------- ADC ----------------------
 
 status_t init_thermistors(void) {
@@ -72,6 +84,12 @@ status_t init_thermistors(void) {
     adc_sync_set_reference(&ADC_1, ADC_REFCTRL_REFSEL_INTVCC1_Val);
     adc_sync_set_resolution(&ADC_1, ADC_CTRLB_RESSEL_12BIT_Val);
     adc_sync_enable_channel(&ADC_1, 0); // HAL has no global enable; enable the channel
+
+    // Heater thresholds: colder = higher voltage, so ON is the higher of the two.
+    heater_on_v = therm_volts_from_celsius(HEATER_ON_C);
+    heater_off_v = therm_volts_from_celsius(HEATER_OFF_C);
+    info("thermistor: heater ON at >= %ld mV (%ld mC), OFF at <= %ld mV (%ld mC)\n", (long)(heater_on_v * 1000.0f),
+         (long)(HEATER_ON_C * 1000.0f), (long)(heater_off_v * 1000.0f), (long)(HEATER_OFF_C * 1000.0f));
 
     // Heater enable lines: outputs, driven off.
     for (uint8_t h = 0; h < THERM_HEATER_COUNT; h++) {
@@ -193,7 +211,7 @@ void heater_control_update(const uint16_t codes[THERM_COUNT]) {
     // ---- (1a) Electrical guard (a failed read arrives as code 0, which is invalid) ----
     for (uint8_t i = 0; i < THERM_COUNT; i++) {
         bool elec_ok = therm_electrically_valid(codes[i]);
-        volts[i] = (float)codes[i] / THERM_ADC_FS * 3.3f; // ratiometric, VREF = VDDANA
+        volts[i] = (float)codes[i] / THERM_ADC_FS * THERM_VREF_V; // ratiometric, VREF = VDDANA
         good[i] = elec_ok; // provisional; the consensus test below may clear it
         if (elec_ok) {
             valid_v[n_valid++] = volts[i];
@@ -246,10 +264,12 @@ void heater_control_update(const uint16_t codes[THERM_COUNT]) {
         }
 
         if (have) {
-            // TODO: no hysteresis yet - HEATER_SETPOINT_C/HEATER_HYST_C are unused, so the heater chatters
-            // when ctrl sits near the threshold. HEATER_ON_VOLTAGE (2.3 V) is also ~1.4 C on this divider,
-            // not the 5 C setpoint. Replace with ON below (setpoint - hyst) / OFF above (setpoint + hyst).
-            heater_on[h] = (ctrl > HEATER_ON_VOLTAGE);
+            // Hysteresis: switch only on crossing a threshold, hold the current state in between.
+            if (ctrl >= heater_on_v) {
+                heater_on[h] = true; // at or below HEATER_ON_C
+            } else if (ctrl <= heater_off_v) {
+                heater_on[h] = false; // at or above HEATER_OFF_C
+            }
         } else {
             // All four sensors invalid: no consensus available. Hold the last-good state.
             warning("heater %u: no valid thermistors - holding last state (%s)\n", h + 1,

@@ -107,7 +107,7 @@ status_t camera_capture(void) {
     if (camera_stop_requested()) {
         return ERROR_TASK_DISABLED;
     }
-    status_t status = capture_rtt_cancellable(camera_stop_requested);
+    status_t status = capture_rtt();
     if (status != SUCCESS) {
         if (status != ERROR_TASK_DISABLED) {
             warning("camera: Capture failed (status=%d)\n", status);

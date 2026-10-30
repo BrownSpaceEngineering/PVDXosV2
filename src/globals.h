@@ -16,6 +16,20 @@
 #include <stdint.h>
 #include <task.h>
 
+/* ---------- BUILD MODE ---------- */
+
+// Comment out to build the normal OS instead of the burn sequence (device checks, 30 min wait, burn pin on, post-burn
+// steps, idle; see main.c). Defined here rather than in main.c so that drivers can see it too.
+#define BURN_SEQUENCE
+
+// Uncomment to make the burn sequence's startup camera check also capture a picture over RTT channel 2
+#define BURN_SEQUENCE_CAMERA_CHECK_CAPTURE
+
+#define BURN_UHF_MODE_BEACON 0
+#define BURN_UHF_MODE_LINK   1
+#define BURN_UHF_MODE_OFF    2
+#define BURN_SEQUENCE_UHF_MODE BURN_UHF_MODE_OFF
+
 /* ---------- LOGGING CONSTANTS ---------- */
 
 #if defined(RELEASE)
@@ -44,7 +58,7 @@ typedef enum {
     // Error Responses
     ERROR_READ_FAILED,
     ERROR_WRITE_FAILED,
-    ERROR_BAD_ARGS, 
+    ERROR_BAD_ARGS,
     ERROR_SPI_TRANSFER_FAILED,
     ERROR_I2C_FAILED,
     ERROR_TASK_DISABLED,
@@ -72,10 +86,6 @@ typedef enum {
     // Display operations
     OPERATION_DISPLAY_IMAGE, // p_data: color_t *p_buffer
     OPERATION_CLEAR_IMAGE,   // p_data: NULL
-
-    // Magnetometer & Photodiode operations
-    OPERATION_READ,    // p_data: photomag_read_args_t *readings
-    OPERATION_PROCESS, // p_data: TBD
 
     // CFDP Operations
     OPERATION_CFDP_PUT,    // p_data: cfdp_request_t* req
@@ -117,7 +127,7 @@ typedef enum {
  * An enum to represent the ID/tag for each hardware device
  */
 
-#define NUM_DEVICES 10 // This **must** be updated to reflect the number of enums
+#define NUM_DEVICES 12 // This **must** be updated to reflect the number of enums
 typedef enum {
     MAGNETOMETER_ID = 0,
     PHOTODIODE_ID = 1,
@@ -129,6 +139,8 @@ typedef enum {
     EPS_ID = 7,
     DISPLAY_ID = 8,
     CAMERA_ID = 9,
+    PEROVSKITE_ID = 10, // perovskite measurement board (PMB)
+    THERMISTOR_ID = 11, // four NTC thermistors + two heater enables
 } device_id_t;
 
 /* ---------- MISCELLANEOUS TASK TYPES ---------- */
@@ -172,13 +184,11 @@ typedef struct {
     void (*prepare_resume)(void);      // Optional nonblocking hook; called before the task is resumed
 } pvdx_task_t;
 
-typedef struct adcs_data adcs_data_t;
 typedef union cfdp_request_data cfdp_request_data_t;
 typedef struct cfdp_transaction cfdp_transaction_t;
 typedef struct input_update_data input_update_data_t;
 
 typedef union command_data {
-    adcs_data_t *adcs_data;
     const uint8_t *display_data;
     TaskHandle_t *task_handle;
     pvdx_task_t *pvdx_task;
@@ -189,7 +199,6 @@ typedef union command_data {
 
 typedef enum {
     CMD_DATA_NONE = 0,
-    CMD_DATA_ADCS,
     CMD_DATA_DISPLAY,
     CMD_DATA_TASK_HANDLE,
     CMD_DATA_PVDX_TASK,
@@ -200,11 +209,11 @@ typedef enum {
 
 // A struct to represent a command that OS tasks can execute
 typedef struct {
-    pvdx_task_t *const target;           // The target task for the command
-    const command_data_t data;           // Union containing a pointer to the data needed for the operation
-    const command_data_type_t data_type; // Tag indicating the type of data help
-    const operation_t operation;         // The operation to perform
-    status_t result;                     // Ttatus indicating result of the operation
+    pvdx_task_t *target;           // The target task for the command
+    command_data_t data;           // Union containing a pointer to the data needed for the operation
+    command_data_type_t data_type; // Tag indicating the type of data help
+    operation_t operation;         // The operation to perform
+    status_t result;               // Ttatus indicating result of the operation
 } command_t;
 
 /* ---------- BUILD CONSTANTS ---------- */

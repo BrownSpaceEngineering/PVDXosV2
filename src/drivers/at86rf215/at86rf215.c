@@ -34,7 +34,6 @@ static uint8_t spi_buffer[UHF_SPI_BUF_SIZE];
 // Preset buffers for the driver
 //
 // I know their driver just uses the above spi buffer but I like this more.
-uint8_t uhf_spi_rx_buffer[UHF_SPI_BUF_SIZE] = {0x00};
 uint8_t uhf_spi_tx_buffer[UHF_SPI_BUF_SIZE] = {0x00};
 
 #define INIT_MAGIC_VAL 0x92c2f0e3
@@ -516,6 +515,16 @@ at86rf215_set_seln(struct at86rf215 *h, uint8_t enable)
 __attribute__((weak)) void
 at86rf215_delay_us(struct at86rf215 *h, uint32_t us)
 {
+  /* Before the scheduler starts (e.g. the startup device check) vTaskDelay is
+   * not usable, so busy-wait instead (ASF delay_us takes a uint16_t) */
+  if (xTaskGetSchedulerState() == taskSCHEDULER_NOT_STARTED) {
+    while (us > UINT16_MAX) {
+      delay_us(UINT16_MAX);
+      us -= UINT16_MAX;
+    }
+    delay_us((uint16_t)us);
+    return;
+  }
   TickType_t ticks = pdMS_TO_TICKS((us + 999u) / 1000u);
   vTaskDelay(ticks ? ticks : 1);
 }
@@ -578,7 +587,7 @@ at86rf215_spi_write(struct at86rf215 *h, const uint8_t *in, size_t len)
 {
   struct spi_xfer xfer = {
       .txbuf = (uint8_t *)in,
-      .rxbuf = uhf_spi_rx_buffer, // Unused
+      .rxbuf = NULL, // MISO is not needed for writes; the HAL discards it
       .size  = len,
   };
 
@@ -2470,7 +2479,7 @@ at86rf215_bb_conf(struct at86rf215 *h, at86rf215_radio_t radio,
     return -AT86RF215_INVAL_PARAM;
   }
   uint8_t val = conf->pt | (conf->fcst << 3) | (conf->txafcs << 4) |
-                (conf->fcsfe << 6) | (conf->ctx << 3);
+                (conf->fcsfe << 6) | (conf->ctx << 7);
 
   uint16_t reg = 0;
   if (radio == AT86RF215_RF09) {
@@ -2520,7 +2529,7 @@ at86rf215_bb_enable(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t en)
   }
   const struct at86rf215_bb_conf *conf = &h->priv.bbc[radio];
   uint8_t val = conf->pt | ((en & 0x1) << 2) | (conf->fcst << 3) |
-                (conf->txafcs << 4) | (conf->fcsfe << 6) | (conf->ctx << 3);
+                (conf->txafcs << 4) | (conf->fcsfe << 6) | (conf->ctx << 7);
   uint16_t reg = 0;
   if (radio == AT86RF215_RF09) {
     reg = REG_BBC0_PC;

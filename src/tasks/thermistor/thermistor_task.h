@@ -11,7 +11,7 @@
 #include "drivers/thermistor/thermistor_driver.h"
 
 // Memory for the thermistor task
-#define THERMISTOR_TASK_STACK_SIZE 1024 // Size of the stack in words (multiply by 4 to get bytes)
+#define THERMISTOR_TASK_STACK_SIZE 384 // Size of the stack in words (multiply by 4 to get bytes)
 
 // Placed in a struct to ensure that the TCB is placed higher than the stack in memory
 //^ This ensures that stack overflows do not corrupt the TCB (since the stack grows downwards)
