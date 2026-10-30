@@ -33,6 +33,8 @@ status_t display_update(void);
 void display_set_buffer(const color_t *const p_buffer);
 void display_clear_buffer(void);
 command_t get_display_image_command(const color_t *const p_buffer);
+command_t get_display_init_command(void);
+command_t get_display_off_command(void);
 void exec_command_display(command_t *const p_cmd);
 
 #endif // DISPLAY_TASK_H

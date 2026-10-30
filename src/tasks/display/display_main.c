@@ -33,10 +33,10 @@ void main_display(void *pvParameters) {
     // Varible to hold commands popped off the queue
     command_t cmd;
 
-    // Initialize the display hardware
-    status_t status = init_display_hardware();
-
-    fatal_on_error(status, "Failed to initialize display hardware!\n");
+    // Display hardware is now initialised by an OPERATION_DISPLAY_INIT command (sent on entry to states that use the display)
+    // status_t status = init_display_hardware();
+    //
+    // fatal_on_error(status, "Failed to initialize display hardware!\n");
 
     while (true) {
         debug("\n---------- Display Task Loop ----------\n");
@@ -49,20 +49,6 @@ void main_display(void *pvParameters) {
             } while (xQueueReceive(p_display_task->command_queue, &cmd, 0) == pdPASS);
         }
         debug("display: No more commands queued.\n");
-
-        // Enqueue image display commands. Commands are copied by value into the queue, so
-        // .result cannot be checked here (it reflects only the pre-enqueue PROCESSING state).
-        // TODO: add a blocking/callback mechanism to observe the per-command result.
-        {
-            command_t display_image_command = get_display_image_command(IMAGE_BUFFER_PVDX);
-            enqueue_command(&display_image_command);
-        }
-#ifdef DISPLAY_BROWNLOGO
-        {
-            command_t display_image_command = get_display_image_command(IMAGE_BUFFER_BROWNLOGO);
-            enqueue_command(&display_image_command);
-        }
-#endif
 
         // Check in with the watchdog task
         if (should_checkin(current_task)) {

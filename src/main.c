@@ -4,8 +4,8 @@
  * The main entry point for PVDXos. This file initializes the hardware, verifies that the bootloader executed
  * successfully and runs the startup device checks. In a normal build it then creates the high-level OS integrity
  * tasks along with the Cosmic Monkey task, and finally starts the FreeRTOS scheduler. In a BURN_SEQUENCE build it
- * instead waits 30 minutes, turns on the burn pin, then two minutes apart sends UHF beacons, shows the PVDX logo on
- * the OLED and streams a camera picture over RTT, and idles forever without ever starting the scheduler.
+ * instead never burns (the burn pin stays low): two minutes apart it sends UHF beacons, shows the PVDX logo on the OLED
+ * and streams a camera picture over RTT, and idles forever without ever starting the scheduler.
  *
  * Created: November 20, 2023
  * Modified: October 28, 2026
@@ -19,30 +19,26 @@
 #include "checks/device_checks.h"
 #include "globals.h" // defines BURN_SEQUENCE
 #include "logging.h"
+#include "mutexes.h"
+#include "arducam_driver.h"
+#include "display_driver.h"
+#include "burn/burn_uhf.h"
+#include "image_buffer_PVDX.h"
+#include "watchdog_driver.h"
+#include "ccsds/ccsds.h"
+#include "cosmic_monkey_task.h"
+#include "rtos_start.h"
+#include "task_list.h"
+#include "tasks/task_manager/task_manager_task.h"
+#include "tests/test.h"
 
-#ifdef BURN_SEQUENCE
-    #include "arducam_driver.h"
-    #include "display_driver.h"
-    #include "burn/burn_uhf.h"
-    #include "image_buffer_PVDX.h"
-    #include "watchdog_driver.h"
-#else
-    #include "ccsds/ccsds.h"
-    #include "cosmic_monkey_task.h"
-    #include "rtos_start.h"
-    #include "task_list.h"
-    #include "tasks/task_manager/task_manager_task.h"
-    #include "tests/test.h"
-#endif
 
-#ifdef BURN_SEQUENCE
-    #define BURN_WAIT_MINUTES      30
-    #define POST_BURN_STEP_MINUTES 2 // wait before each post-burn step
+#define BURN_WAIT_MINUTES      30
+#define POST_BURN_STEP_MINUTES 2 // wait before each post-burn step
 
-    #define CAMERA_CAPTURE_ATTEMPTS 3
-#else
+#define CAMERA_CAPTURE_ATTEMPTS 3
 cosmic_monkey_task_arguments_t cm_args = {0};
-#endif
+
 
 static status_t PVDX_init(void) {
     // Segger Buffer 0 is pre-configured at compile time according to segger documentation
@@ -54,18 +50,17 @@ static status_t PVDX_init(void) {
     return SUCCESS;
 }
 
-#ifdef BURN_SEQUENCE
 // Busy-waits one second at a time (delay_ms is fine here: the scheduler never runs, so nothing else owns SysTick).
 // The watchdog task never runs either, so the hardware watchdog is normally off. It is fed every second anyway in
 // case it is still running from an earlier boot.
-static void wait_seconds_feeding_watchdog(uint32_t seconds) {
+[[maybe_unused]] static void wait_seconds_feeding_watchdog(uint32_t seconds) {
     for (uint32_t s = 0; s < seconds; s++) {
         watchdog_feed(WDT);
         delay_ms(1000);
     }
 }
 
-static void wait_minutes_before(uint32_t minutes, const char *next_step) {
+[[maybe_unused]] static void wait_minutes_before(uint32_t minutes, const char *next_step) {
     info("Waiting %lu minutes before %s\n", (unsigned long)minutes, next_step);
     for (uint32_t minute = 0; minute < minutes; minute++) {
         wait_seconds_feeding_watchdog(60);
@@ -75,7 +70,7 @@ static void wait_minutes_before(uint32_t minutes, const char *next_step) {
 
 /* ---------- STEP 2: OLED ---------- */
 
-static void show_logo_on_display(void) {
+[[maybe_unused]] static void show_logo_on_display(void) {
     if (init_display_hardware() != SUCCESS) {
         warning("display: init failed, skipping OLED\n");
         return;
@@ -90,10 +85,8 @@ static void show_logo_on_display(void) {
 
 /* ---------- STEP 3: CAMERA PICTURE OVER RTT ---------- */
 
-static uint8_t camera_rtt_image_buffer[SEGGER_RTT_IMAGE_BUFFER_SIZE];
-
 // Called before the device checks, so that the camera check can capture too (BURN_SEQUENCE_CAMERA_CHECK_CAPTURE)
-static void configure_camera_rtt_channel(void) {
+[[maybe_unused]] static void configure_camera_rtt_channel(void) {
     #if defined(RELEASE)
     // No host drains channel 2 in flight, so drop image bytes that don't fit rather than hang
     const unsigned rtt_image_mode = SEGGER_RTT_MODE_NO_BLOCK_SKIP;
@@ -105,7 +98,7 @@ static void configure_camera_rtt_channel(void) {
                               rtt_image_mode);
 }
 
-static void send_picture_over_rtt(void) {
+[[maybe_unused]] static void send_picture_over_rtt(void) {
     for (uint32_t attempt = 1; attempt <= CAMERA_CAPTURE_ATTEMPTS; attempt++) {
         watchdog_feed(WDT);
         status_t status = init_arducam_hardware();
@@ -120,7 +113,6 @@ static void send_picture_over_rtt(void) {
     }
     warning("camera: giving up on the picture\n");
 }
-#endif
 
 int main(void) {
     /* ---------- HARDWARE & LOGGING INITIALIZATION + BOOTLOADER CHECK ---------- */
@@ -136,65 +128,40 @@ int main(void) {
     info("[+] Built from branch: %s\n", GIT_BRANCH_NAME);
     info("[+] Built from commit: %s\n", GIT_COMMIT_HASH);
 
-    // Bootloader sets a magic number in backup RAM to indicate that it has run successfully
-    uint32_t *p_magic_number = (uint32_t *)BOOTLOADER_MAGIC_NUMBER_ADDRESS;
-    uint32_t magic_number = *p_magic_number;
-    *p_magic_number = 0; // Clear the magic number so that this value doesn't linger
-    if (magic_number == BOOTLOADER_MAGIC_NUMBER_VALUE) {
-        info_impl("[+] Bootloader executed normally\n");
-    } else {
-        warning_impl("[!] Abnormal bootloader behavior (Magic Number: %x)\n", magic_number);
+    // Initialize the mutex for the I2C bus shared by Arducam, fuel gauges, and PMB before startup checks/tests
+    i2c_camera_bus_mutex = xSemaphoreCreateMutexStatic(&i2c_camera_bus_mutex_buffer);
+
+    if (i2c_camera_bus_mutex == NULL) {
+        fatal("Failed to create I2C_CAMERA bus mutex");
     }
 
     /* ---------- DEVICE CHECKS ---------- */
 
-#ifdef BURN_SEQUENCE
     configure_camera_rtt_channel();
-#endif
 
-    // Called outside info(): in RELEASE builds info() compiles out, which would skip the checks entirely
     bool at_least_one_failed = check_all_devices_on_startup();
     info("AT_LEAST_ONE_DEVICE_FAILED: %d\n", at_least_one_failed);
     (void)at_least_one_failed; // unused when info() compiles out
 
-#ifdef BURN_SEQUENCE
-    /* ---------- WAIT, THEN BURN ---------- */
-
-    wait_minutes_before(BURN_WAIT_MINUTES, "turning on the burn pin");
-
-    gpio_set_pin_level(BURN, true);
-    info("Burn pin (PB29) on\n");
 
     /* ---------- POST-BURN STEPS, TWO MINUTES APART ---------- */
 
-    #if BURN_SEQUENCE_UHF_MODE == BURN_UHF_MODE_LINK
+#if BURN_SEQUENCE_UHF_MODE == BURN_UHF_MODE_LINK
     wait_minutes_before(POST_BURN_STEP_MINUTES, "the UHF tx/rx link");
     burn_uhf_link();
-    #elif BURN_SEQUENCE_UHF_MODE == BURN_UHF_MODE_BEACON
+#elif BURN_SEQUENCE_UHF_MODE == BURN_UHF_MODE_BEACON
     wait_minutes_before(POST_BURN_STEP_MINUTES, "UHF beacons");
     burn_uhf_beacon();
-    #endif
+#endif
 
-    wait_minutes_before(POST_BURN_STEP_MINUTES, "showing the PVDX logo on the OLED");
-    show_logo_on_display();
-
-    wait_minutes_before(POST_BURN_STEP_MINUTES, "sending a camera picture over RTT");
-    send_picture_over_rtt();
-
-    /* ---------- IDLE FOREVER (scheduler is never started) ---------- */
-
-    while (true) {
-        wait_seconds_feeding_watchdog(1);
-    }
-#else
     /* ---------- INIT WATCHDOG, COMMAND_DISPATCHER, TASK_MANAGER TASKS (in that order) ---------- */
 
     ccsds_init();
 
 /* -------------------------------------- TESTS ---------------------------------------------- */
-    #ifdef UNITTEST
+#ifdef UNITTEST
     tests_run();
-    #endif
+#endif
 
     // Initialize a mutex wrapping the shared PVDX task list struct
     task_list_mutex = xSemaphoreCreateMutexStatic(&task_list_mutex_buffer);
@@ -216,15 +183,6 @@ int main(void) {
             info("%s initialized\n", (*curr_task)->name);
         }
     }
-
-    // COMMENTED OUT because this is now controlled by the task manager
-    // Initialize all sensor integrity tasks
-    // for (pvdx_task_t **curr_task = task_list; *curr_task != NULL; curr_task++) {
-    //     if ((*curr_task)->task_type == SENSOR) {
-    //         init_task_pointer(*curr_task);
-    //         info("%s initialized\n", (*curr_task)->name);
-    //     }
-    // }
 
     /* ---------- COSMIC MONKEY TASK ---------- */
 
@@ -251,5 +209,4 @@ int main(void) {
     // Start the scheduler
     vTaskStartScheduler();
     fatal("vTaskStartScheduler Returned! -- Should never happen!\n");
-#endif // BURN_SEQUENCE
 }

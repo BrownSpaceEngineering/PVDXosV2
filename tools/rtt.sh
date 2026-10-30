@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
-# Capture the firmware log (RTT up-channel 1) to a file using the repo's own
-# scripts/rtt_logs.py. Runs in the background so agents never block on it.
+# Capture firmware logs (RTT up-channel 1) and framed JPEGs (channel 2) using
+# scripts/rtt_logs.py. Images go to logs/images; runs in the background.
 # Usage: tools/rtt.sh start|stop|status|tail [n]
-# Note: RTT channel 0 is the PVDXos shell (telnet :19021); this doesn't touch it.
 set -u
 cd "$(dirname "$0")/.." || exit 1
 PIDF=/tmp/pvdxos-rtt.pid
@@ -23,7 +22,7 @@ start)
     tail -n 20 "$OUT" >&2
     rm -f "$PIDF"; exit 1
   fi
-  echo "capturing RTT channel 1 -> $OUT (rtt_logs.py also writes logs/<timestamp>.log)"
+  echo "capturing RTT channel 1 -> $OUT; channel 2 JPEGs -> logs/images (also writes logs/<timestamp>.log)"
   ;;
 stop)
   if running; then kill "$(cat "$PIDF")" 2>/dev/null; fi

@@ -53,6 +53,8 @@ extern struct io_descriptor *arducam_spi_io;
 
 // External SPI Buffers
 extern uint8_t ardu_spi_rx_buffer[ARDUCAM_SPI_RX_BUF_SIZE];
+// Backs the camera's RTT channel. main() configures the channel at boot, and the camera task reconfigures it for itself.
+extern uint8_t camera_rtt_image_buffer[SEGGER_RTT_IMAGE_BUFFER_SIZE];
 extern uint8_t ardu_spi_tx_buffer[ARDUCAM_SPI_TX_BUF_SIZE];
 extern struct spi_xfer ardu_xfer;
 

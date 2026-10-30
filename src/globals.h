@@ -23,7 +23,7 @@
 #define BURN_SEQUENCE
 
 // Uncomment to make the burn sequence's startup camera check also capture a picture over RTT channel 2
-// #define BURN_SEQUENCE_CAMERA_CHECK_CAPTURE
+#define BURN_SEQUENCE_CAMERA_CHECK_CAPTURE
 
 #define BURN_UHF_MODE_BEACON 0
 #define BURN_UHF_MODE_LINK   1
@@ -105,6 +105,12 @@ typedef enum {
 
     // TESTING
     TEST_OP, // p_data: char message[]
+
+    // Camera operations (append to preserve existing operation values)
+    OPERATION_CAMERA_CAPTURE, // No command data; capture a JPEG and stream it on RTT channel 2
+
+    // Display operations (append to preserve existing operation values)
+    OPERATION_DISPLAY_INIT, // p_data: NULL
 } operation_t;
 
 // An enum to represent the different log levels that functions can use
@@ -180,6 +186,8 @@ typedef struct {
     uint32_t last_checkin_time_ticks;   // Last time the task checked in with the watchdog
     bool has_registered;                // Whether the task is being monitored by the watchdog (initialized to NULL)
     const task_type_t task_type;        // Whether the task is OS-integrity, a sensor, or an actuator
+    bool (*prepare_suspend)(void);     // Optional safe-point handshake; called without the task list mutex
+    void (*prepare_resume)(void);      // Optional nonblocking hook; called before the task is resumed
 } pvdx_task_t;
 
 typedef struct adcs_tle adcs_tle_t;

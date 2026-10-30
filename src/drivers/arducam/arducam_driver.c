@@ -15,6 +15,7 @@
 
 // Buffer for SPI transactions
 uint8_t ardu_spi_rx_buffer[ARDUCAM_SPI_RX_BUF_SIZE] = {0x00};
+uint8_t camera_rtt_image_buffer[SEGGER_RTT_IMAGE_BUFFER_SIZE];
 uint8_t ardu_spi_tx_buffer[ARDUCAM_SPI_TX_BUF_SIZE] = {0x00};
 struct spi_xfer ardu_xfer = {.rxbuf = ardu_spi_rx_buffer, .txbuf = ardu_spi_tx_buffer, .size = 0};
 
@@ -95,7 +96,7 @@ status_t init_arducam_hardware(void) {
     arducam_i2c_multi_write(OV2640_JPEG);
     arducam_i2c_write(0xFF, &data[1], 1);
     arducam_i2c_write(0x15, &data[0], 1);
-    arducam_i2c_multi_write(OV2640_320x240_JPEG);
+    arducam_i2c_multi_write(OV2640_800x600_JPEG); // SVGA: sharper than 320x240, a quarter the size of full-res UXGA
 
     return SUCCESS;
 }
@@ -297,8 +298,8 @@ status_t capture_rtt(void) {
         SEGGER_RTT_Write(CAMERA_RTT_OUTPUT_CHANNEL, ardu_spi_rx_buffer, (unsigned)will_copy);
         len -= will_copy;
 #ifndef BURN_SEQUENCE
-        // Left out of the burn sequence: p_arducam_task would pull the whole OS task list into that build
-        watchdog_checkin(p_arducam_task);
+        // Left out of the burn sequence: p_camera_task would pull the whole OS task list into that build
+        watchdog_checkin(p_camera_task);
 #endif
     }
 

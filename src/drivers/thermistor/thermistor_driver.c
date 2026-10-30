@@ -13,8 +13,8 @@
 
 #include <math.h>
 
-// Thermistor index -> ADC1 positive-input (MUXPOS AINx) value.
-static const uint8_t THERM_AIN[THERM_COUNT] = {6, 7, 14, 15};
+// Thermistor index -> ADC1 positive-input (MUXPOS AINx) value: THERM_0..3 = PB04, PB05, PB06, PB07.
+static const uint8_t THERM_AIN[THERM_COUNT] = {6, 7, 8, 9};
 
 // Heater index -> enable GPIO, and the two thermistors that govern it.
 static const uint32_t HEATER_PIN[THERM_HEATER_COUNT] = {HEATER_CTRL_1, HEATER_CTRL_2};
