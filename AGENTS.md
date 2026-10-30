@@ -29,9 +29,8 @@ Adafruit Grand Central development board.
 - A disabled task is still created and then suspended; enabling or disabling it
   registers or unregisters it with the watchdog.
 - Hardware flashing and debugging assume a SEGGER J-Link, target
-  `ATSAMD51P20A`, SWD, and (for GDB) server port 2331. The shell uses
-  `localhost:19021` when enabled, and RTT diagnostics use the existing SEGGER
-  RTT path.
+  `ATSAMD51P20A`, SWD, and (for GDB) server port 2331. RTT diagnostics use the
+  existing SEGGER RTT path.
 
 ## Build, test, and debug
 
@@ -135,8 +134,7 @@ path `../PVDXdevref` is a directory). If it is absent, immediately tell the user
 ## Agent-safe hardware debugging
 
 Several commands above are interactive or never terminate. Agents must NOT run `make connect`,
-`make connect_bl`, `gdb` directly, `python3 scripts/rtt_logs.py`, `scripts/rtt_shell.py` or
-`scripts/rtt_splitscreen.py`. Use these wrappers instead (details in the `debug-pvdxos-hardware` skill):
+`make connect_bl`, `gdb` directly or `python3 scripts/rtt_logs.py`. Use these wrappers instead (details in the `debug-pvdxos-hardware` skill):
 
 - GDB server: `tools/jlink.sh start|stop|status`
 - Firmware log (RTT channel 1) in the background: `tools/rtt.sh start`, `tools/rtt.sh tail 200`, `tools/rtt.sh stop`

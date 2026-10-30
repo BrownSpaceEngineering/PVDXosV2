@@ -14,6 +14,11 @@
 // Whether state_machine_init() has run; no transition is taken before then
 static bool state_machine_initialised = false;
 static state_id_t current_state = STATE_INITIAL;
+
+state_id_t state_machine_get_current_state(void) {
+    return current_state;
+}
+
 // Current inputs; only written by task manager.
 // TODO: battery_level starts full so that the example low-battery transitions in states.c do not
 // fire before anything has reported a real value
@@ -120,6 +125,12 @@ static void copy_input(input_update_t update, const input_t *const p_new_values)
             break;
         case PHOTO_READY_DOWNLINK_UPDATE:
             inputs.photo_taken_for_downlink = p_new_values->photo_taken_for_downlink;
+            break;
+        case ADCS_POINTING_UPDATE:
+            inputs.adcs_pointing = p_new_values->adcs_pointing;
+            break;
+        case ADCS_SENSOR_FAULT_UPDATE:
+            inputs.adcs_sensor_fault = p_new_values->adcs_sensor_fault;
             break;
         case PEROVSKITE_READY_DOWNLINK_UPDATE:
             inputs.perovskite_data_ready_for_downlink = p_new_values->perovskite_data_ready_for_downlink;

@@ -85,8 +85,6 @@ static status_t PVDX_init(void) {
 
 /* ---------- STEP 3: CAMERA PICTURE OVER RTT ---------- */
 
-static uint8_t camera_rtt_image_buffer[SEGGER_RTT_IMAGE_BUFFER_SIZE];
-
 // Called before the device checks, so that the camera check can capture too (BURN_SEQUENCE_CAMERA_CHECK_CAPTURE)
 [[maybe_unused]] static void configure_camera_rtt_channel(void) {
     #if defined(RELEASE)
@@ -171,6 +169,8 @@ int main(void) {
     if (task_list_mutex == NULL) {
         fatal("Failed to create PVDX task list mutex");
     }
+
+    init_adc1_mutex();
 
     if (task_list[0] != p_watchdog_task) {
         fatal("Watchdog is not first in task_list!");

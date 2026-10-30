@@ -7,7 +7,7 @@ description: Debug the PVDXos firmware (SAMD51P20A, FreeRTOS) on real hardware v
 
 Use only the wrappers in `tools/`. Never run these directly; they are interactive or never
 terminate and will hang the session: `make connect`, `make connect_bl`, `gdb`,
-`python3 scripts/rtt_logs.py`, `scripts/rtt_shell.py`, `scripts/rtt_splitscreen.py`.
+`python3 scripts/rtt_logs.py`.
 
 ## How this firmware is laid out (matters for debugging)
 
@@ -32,8 +32,7 @@ terminate and will hang the session: `make connect`, `make connect_bl`, `gdb`,
 6. When done: `tools/rtt.sh stop` and `tools/jlink.sh stop`.
 
 Macros in `tools/gdb/helpers.gdb`: `faults`, `rtos_current`, `tasks`, `reset_halt`, `wait_fault`
-(`help <macro>` for details). The PVDXos shell is on telnet :19021 (RTT channel 0); the log is
-channel 1, so they don't collide.
+(`help <macro>` for details). The log is RTT channel 1.
 
 ## Approval rules
 
