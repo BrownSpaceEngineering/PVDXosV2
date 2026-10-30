@@ -48,8 +48,9 @@ static bool state_enables_task(state_id_t state, const pvdx_task_t *const p_task
 /**
  * \fn enter_state
  *
- * \brief Enables/disables tasks so that exactly the new state's `enabled_tasks` are running, then
- *      records the new state. OS and TESTING tasks are not part of the state machine and are left alone.
+ * \brief Enables/disables tasks so that exactly the new state's `enabled_tasks` are running, records
+ *      the new state, then runs its `on_enter` action if it has one. OS and TESTING tasks are not part
+ *      of the state machine and are left alone.
  *
  * \warning every task must already have been initialised by the task manager
  */
@@ -79,8 +80,13 @@ static void enter_state(state_id_t next_state) {
     }
 
     info("state_machine: state %d -> state %d\n", current_state, next_state);
+    const state_id_t previous_state = current_state;
     current_state = next_state;
     inputs.last_transition_tick = xTaskGetTickCount();
+
+    if (mission_states[next_state].on_enter != NULL) {
+        mission_states[next_state].on_enter(previous_state, &inputs);
+    }
 }
 
 /**

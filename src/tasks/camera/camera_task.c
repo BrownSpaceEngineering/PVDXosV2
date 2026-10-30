@@ -1,6 +1,8 @@
 #include "camera_task.h"
 
 #include "SEGGER_RTT.h"
+#include "cmd_dispatcher.h"
+#include "display_task.h"
 #include "drivers/arducam/arducam_driver.h"
 #include "logging.h"
 #include "semphr.h"
@@ -133,6 +135,14 @@ void exec_command_camera(command_t *const p_cmd) {
                 break;
             }
             p_cmd->result = camera_capture();
+            {
+                // The photo is of the display, so turn it off whether or not the capture worked
+                command_t display_off_cmd = get_display_off_command();
+                const status_t status = enqueue_command(&display_off_cmd);
+                if (status != SUCCESS) {
+                    warning("camera: Failed to turn off the display after capture (status %d)\n", status);
+                }
+            }
             break;
         default:
             warning("camera: Unsupported operation %d\n", p_cmd->operation);

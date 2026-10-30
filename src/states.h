@@ -68,9 +68,15 @@ struct input_update_data {
 // cursed transition_checker_t function pointer
 typedef state_id_t (*transition_checker_t)(const input_t* const input);
 
+// Runs once, in the task manager, each time a state is entered, after its task list has been applied.
+// Must be short and non-blocking, and must not cause a transition itself: to change an input, send an
+// input update like any other task. Newly enabled tasks have not run yet, so talk to them via commands.
+typedef void (*entry_action_t)(state_id_t previous_state, const input_t *const input);
+
 typedef struct {
 	pvdx_task_t *enabled_tasks[MAX_ENABLED_TASKS];
 	transition_checker_t fetch_next_state;
+	entry_action_t on_enter; // NULL if the state has no entry action
 } state_t;
 
 // Filled in by init_states(); read-only after that
