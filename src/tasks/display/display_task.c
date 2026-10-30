@@ -10,7 +10,46 @@
 
 #include "display_task.h"
 
+#include "camera_task.h"
+#include "cmd_dispatcher.h"
 #include "display_driver.h"
+#include "state_machine.h"
+
+// The state machine inputs the display task owns
+static input_update_data_t display_inputs = {
+    .input_update_bitmask = INPUT_UPDATE_BIT(PHOTO_READY_DOWNLINK_UPDATE),
+};
+
+/* ---------- PHOTO SEQUENCE ----------
+ * display image -> camera capture -> display off -> photo_taken_for_downlink input update
+ */
+
+/**
+ * \fn request_photo
+ *
+ * \brief Asks the camera to photograph what is currently on the display
+ */
+static void request_photo(void) {
+    command_t cmd = get_camera_capture_command();
+    const status_t status = enqueue_command(&cmd);
+    if (status != SUCCESS) {
+        warning("display: Failed to request a photo from the camera (status %d)\n", status);
+    }
+}
+
+/**
+ * \fn report_photo_taken
+ *
+ * \brief Tells the state machine that a photo is ready for downlink
+ */
+static void report_photo_taken(void) {
+    display_inputs.new_values.photo_taken_for_downlink = true;
+    command_t cmd = get_state_input_update_command(&display_inputs);
+    const status_t status = enqueue_command(&cmd);
+    if (status != SUCCESS) {
+        warning("display: Failed to report photo taken to the state machine (status %d)\n", status);
+    }
+}
 
 /* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command dispatcher task) ---------- */
 
@@ -74,6 +113,23 @@ inline command_t get_display_image_command(const color_t *const p_buffer) {
 }
 
 /**
+ * \fn get_display_init_command
+ *
+ * \brief Gets the task command to (re)initialise the display hardware
+ *
+ * \returns `command_t`, the command to initialise the display
+ */
+command_t get_display_init_command(void) {
+    return (command_t){
+        .target = p_display_task,
+        .operation = OPERATION_DISPLAY_INIT,
+        .data = {0},
+        .data_type = CMD_DATA_NONE,
+        .result = PROCESSING,
+    };
+}
+
+/**
  * \brief Get a command to put the display to sleep, preserving its image memory.
  */
 command_t get_display_off_command(void) {
@@ -102,9 +158,20 @@ void exec_command_display(command_t *const p_cmd) {
     switch (p_cmd->operation) {
         case OPERATION_POWER_OFF:
             p_cmd->result = display_off();
+            if (p_cmd->result == SUCCESS) {
+                // The camera turns the display off once it has taken the photo
+                report_photo_taken();
+            }
+            break;
+        case OPERATION_DISPLAY_INIT:
+            p_cmd->result = init_display_hardware();
             break;
         case OPERATION_DISPLAY_IMAGE:
             p_cmd->result = display_image((const color_t *)p_cmd->data.display_data);
+            if (p_cmd->result == SUCCESS) {
+                // Photograph the image now that it is on the display
+                request_photo();
+            }
             break;
         case OPERATION_CLEAR_IMAGE:
             p_cmd->result = clear_image();

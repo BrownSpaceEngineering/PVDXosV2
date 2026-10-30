@@ -92,6 +92,9 @@ typedef enum {
 
     // Camera operations (append to preserve existing operation values)
     OPERATION_CAMERA_CAPTURE, // No command data; capture a JPEG and stream it on RTT channel 2
+
+    // Display operations (append to preserve existing operation values)
+    OPERATION_DISPLAY_INIT, // p_data: NULL
 } operation_t;
 
 // An enum to represent the different log levels that functions can use
