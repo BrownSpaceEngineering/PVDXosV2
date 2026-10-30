@@ -14,6 +14,11 @@
 // Whether state_machine_init() has run; no transition is taken before then
 static bool state_machine_initialised = false;
 static state_id_t current_state = STATE_INITIAL;
+
+state_id_t state_machine_get_current_state(void) {
+    return current_state;
+}
+
 // Current inputs; only written by task manager.
 // TODO: battery_level starts full so that the example low-battery transitions in states.c do not
 // fire before anything has reported a real value

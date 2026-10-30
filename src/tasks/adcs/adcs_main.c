@@ -18,6 +18,8 @@
 #include "libraries/adcs/include/photodiode_determination.h"
 #include "libraries/cmd_dispatcher/cmd_dispatcher.h"
 #include "logging.h"
+#include "state_machine.h"
+#include "states.h"
 #include "tasks/adcs/adcs_task.h"
 #include "watchdog_task.h"
 
@@ -115,7 +117,9 @@ void main_adcs(void *pvParameters) {
             debug("adcs: skipped adcs body()\n");
         }
 
-        adcs_drive_magnetorquers(currents);
+        if (state_machine_get_current_state() != STATE_LOW_POWER_IDLE) {
+            adcs_drive_magnetorquers(currents);
+        }
         adcs_publish_telemetry();
 
         // TODO: save the orbit to MRAM so it survives a reboot. Only when body() committed a new TLE this step
