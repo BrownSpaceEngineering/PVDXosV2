@@ -10,6 +10,9 @@
 #define MRAM_FLASH_BASE_ADDRESS (0x00000000) // Address of complete flash copy in MRAM
 #define MRAM_FLASH_SIZE (0x80000)            // Size of complete flash copy in MRAM
 
+#define MRAM_PEROVSKITE_BASE_ADDRESS (0x00090000) // Address of perovskite sweeps in MRAM, past the flash copy
+#define MRAM_PEROVSKITE_SIZE (0x4800)             // Size of perovskite sweeps in MRAM
+
 #include "atmel_start.h"
 #include "hal_delay.h"
 #include "hal_gpio.h"

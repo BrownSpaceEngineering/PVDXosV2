@@ -30,6 +30,14 @@
 #define BURN_UHF_MODE_OFF    2
 #define BURN_SEQUENCE_UHF_MODE BURN_UHF_MODE_OFF
 
+// TEMPORARY: leaves out the CFDP receive buffers (about 8.7 KB) so that the image fits in RAM. Until this is removed,
+// CFDP rejects every incoming file. Sending is unaffected.
+#define DO_NOT_BUILD_CFDP_BUFFERS
+
+// Comment out to save perovskite sweeps to MRAM. While defined, the perovskite task only logs its readings over RTT
+// and never touches MRAM, so nothing it measures survives a reboot.
+#define PEROVSKITE_LOG_ONLY
+
 /* ---------- LOGGING CONSTANTS ---------- */
 
 #if defined(RELEASE)
@@ -105,6 +113,9 @@ typedef enum {
 
     // Display operations (append to preserve existing operation values)
     OPERATION_DISPLAY_INIT, // p_data: NULL
+
+    // Perovskite operations (append to preserve existing operation values)
+    OPERATION_PEROVSKITE_SWEEP, // p_data: NULL
 } operation_t;
 
 // An enum to represent the different log levels that functions can use

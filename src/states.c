@@ -13,6 +13,7 @@
 #include "cmd_dispatcher.h"
 #include "display_task.h"
 #include "logging.h"
+#include "perovskite_task.h"
 #include "state_machine.h"
 
 // TRANSITIONS
@@ -21,6 +22,7 @@
 #define LOW_BATTERY_LEVEL 0.1 // absolutely made up
 #define RECOVERED_BATTERY_LEVEL 0.5 // absolutely made up
 #define FAKE_HEARTBEAT_PERIOD_MS 10000 // EXAMPLE ONLY: how long to stay in each of IDLE and FAKE_HEARTBEAT
+#define PEROVSKITE_CAPTURE_TIMEOUT_MS 300000 // Give up on a sweep that hasn't finished; a normal one takes about 90 s
 
 // How long the state machine has been in its current state
 static TickType_t ticks_in_state(const input_t *const input) {
@@ -47,9 +49,17 @@ static state_id_t idle_next_state(const input_t *const input) {
         && !input->photo_taken_for_downlink 
         && !input->in_sunlight)                     return STATE_STUDENT_PICTURE_CAPTURE;
     // if (input->photo_taken_for_downlink)            return STATE_SBAND_TRANS; // TODO: nothing clears photo_taken_for_downlink yet, so SBAND_TRANS never exits
-    if (input->in_sunlight)                         return STATE_PEROVSKITE_CAPTURE;
+    if (input->in_sunlight
+        && !input->perovskite_data_ready_for_downlink) return STATE_PEROVSKITE_CAPTURE;
     if (ticks_in_state(input) >= pdMS_TO_TICKS(FAKE_HEARTBEAT_PERIOD_MS)) return STATE_FAKE_HEARTBEAT; // EXAMPLE ONLY
     return STATE_IDLE;
+}
+
+static state_id_t perovskite_capture_next_state(const input_t *const input) {
+    if (input->battery_level < LOW_BATTERY_LEVEL)   return STATE_LOW_POWER_IDLE;
+    if (input->perovskite_data_ready_for_downlink)  return STATE_IDLE; // cleared once the downlink finishes
+    if (ticks_in_state(input) >= pdMS_TO_TICKS(PEROVSKITE_CAPTURE_TIMEOUT_MS)) return STATE_IDLE;
+    return STATE_PEROVSKITE_CAPTURE;
 }
 
 // EXAMPLE ONLY: runs the heartbeat task for a while, then goes back to idle
@@ -96,6 +106,14 @@ static void student_picture_capture_on_enter(state_id_t previous_state, const in
     }
 }
 
+static void perovskite_capture_on_enter(state_id_t previous_state, const input_t *const input) {
+    command_t cmd = get_perovskite_sweep_command();
+    const status_t status = enqueue_command(&cmd);
+    if (status != SUCCESS) {
+        warning("states: failed to enqueue perovskite sweep command (status %d)\n", status);
+    }
+}
+
 // EXAMPLE ONLY: pretends a new student picture has arrived, so that IDLE moves to STUDENT_PICTURE_CAPTURE
 // once the heartbeat period is over
 static input_update_data_t fake_heartbeat_inputs = {
@@ -131,6 +149,7 @@ void init_states(void) {
     mission_states[STATE_INITIAL]                 = (state_t){.enabled_tasks = {p_fuel_gauge_task},                                 .fetch_next_state = initial_next_state};
     mission_states[STATE_BURN_WIRE]               = (state_t){.enabled_tasks = {p_fuel_gauge_task},                                 .fetch_next_state = burn_wire_next_state};
     mission_states[STATE_IDLE]                    = (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_cfdp_task},                                 .fetch_next_state = idle_next_state};
+    mission_states[STATE_PEROVSKITE_CAPTURE]      = (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_cfdp_task, p_perovskite_task},              .fetch_next_state = perovskite_capture_next_state, .on_enter = perovskite_capture_on_enter};
     mission_states[STATE_STUDENT_PICTURE_CAPTURE] = (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_cfdp_task, p_display_task, p_camera_task},      .fetch_next_state = student_picture_capture_next_state, .on_enter = student_picture_capture_on_enter};
     mission_states[STATE_SBAND_TRANS]             = (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_cfdp_task},         .fetch_next_state = sband_trans_next_state};
     mission_states[STATE_LOW_POWER_IDLE]          = (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_cfdp_task},                                 .fetch_next_state = low_power_idle_next_state};
