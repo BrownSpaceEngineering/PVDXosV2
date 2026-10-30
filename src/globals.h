@@ -23,7 +23,7 @@
 #define BURN_SEQUENCE
 
 // Uncomment to make the burn sequence's startup camera check also capture a picture over RTT channel 2
-// #define BURN_SEQUENCE_CAMERA_CHECK_CAPTURE
+#define BURN_SEQUENCE_CAMERA_CHECK_CAPTURE
 
 #define BURN_UHF_MODE_BEACON 0
 #define BURN_UHF_MODE_LINK   1

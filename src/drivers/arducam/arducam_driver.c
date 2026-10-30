@@ -95,7 +95,7 @@ status_t init_arducam_hardware(void) {
     arducam_i2c_multi_write(OV2640_JPEG);
     arducam_i2c_write(0xFF, &data[1], 1);
     arducam_i2c_write(0x15, &data[0], 1);
-    arducam_i2c_multi_write(OV2640_320x240_JPEG);
+    arducam_i2c_multi_write(OV2640_800x600_JPEG); // SVGA: sharper than 320x240, a quarter the size of full-res UXGA
 
     return SUCCESS;
 }

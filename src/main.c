@@ -4,8 +4,8 @@
  * The main entry point for PVDXos. This file initializes the hardware, verifies that the bootloader executed
  * successfully and runs the startup device checks. In a normal build it then creates the high-level OS integrity
  * tasks along with the Cosmic Monkey task, and finally starts the FreeRTOS scheduler. In a BURN_SEQUENCE build it
- * instead waits 30 minutes, turns on the burn pin, then two minutes apart sends UHF beacons, shows the PVDX logo on
- * the OLED and streams a camera picture over RTT, and idles forever without ever starting the scheduler.
+ * instead never burns (the burn pin stays low): two minutes apart it sends UHF beacons, shows the PVDX logo on the OLED
+ * and streams a camera picture over RTT, and idles forever without ever starting the scheduler.
  *
  * Created: November 20, 2023
  * Modified: October 28, 2026
@@ -158,12 +158,6 @@ int main(void) {
     (void)at_least_one_failed; // unused when info() compiles out
 
 #ifdef BURN_SEQUENCE
-    /* ---------- WAIT, THEN BURN ---------- */
-
-    wait_minutes_before(BURN_WAIT_MINUTES, "turning on the burn pin");
-
-    gpio_set_pin_level(BURN, true);
-    info("Burn pin (PB29) on\n");
 
     /* ---------- POST-BURN STEPS, TWO MINUTES APART ---------- */
 
