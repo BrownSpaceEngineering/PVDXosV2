@@ -67,6 +67,9 @@
 #define REG_TEMP_1 0x0033 // Board, FPGA
 #define REG_TEMP_2 0x0034 // Board x2
 #define REG_TEMP_3 0x0035 // Board
+#define REG_CURRENTS_0 0x0040 // mA, PA_VBAT in bits 15:0, PA_VCC in 31:16
+#define REG_VOLTAGES_0 0x0050 // mV, PA_VBAT in bits 15:0, PA_VCC in 31:16
+#define REG_VOLTAGES_1 0x0051 // mV, Board_VBAT in bits 15:0
 #define REG_CURRENT_ERR 0x003E
 #define REG_VOLTAGE_ERR 0x003F
 #define REG_CURRENTS 0x0040 // To 0x004F

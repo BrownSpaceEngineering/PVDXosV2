@@ -60,6 +60,8 @@
 #endif
 #define STXG2_TEST_LOCK_TIMEOUT_MS 5000U
 #define STXG2_TEST_REPORT_PERIOD_MS 1000U
+#define STXG2_TEST_REPORT_EVERY 10U
+#define STXG2_TEST_MAX_PROBLEM_LOGS 5U
 #define STXG2_TEST_MEM_INDEX 0U             // Flash packet that holds the callsign pattern
 #define STXG2_TEST_PRBS_BYTES 64U           // PRBS7 bytes after each ID text
 #define STXG2_TEST_PACKET_TIMEOUT_MS 10000U // Generous: one packet takes well under a second at 1 Msps
@@ -189,6 +191,7 @@ static status_t test_stxg2_disable_pa_timeout(void) {
 // Logs the registers that can explain why the RF synthesizers did not lock
 static void test_stxg2_log_lock_failure(void) {
     uint32_t v = 0;
+    (void)test_stxg2_read_log("UPTIME", REG_UPTIME, &v);
     (void)test_stxg2_read_log("MODE", REG_MODE, &v);
     (void)test_stxg2_read_log("RF_STATUS", REG_RF_STATUS, &v);
     (void)test_stxg2_read_log("BOARD_STATUS", REG_BOARD_STATUS, &v);
@@ -295,21 +298,47 @@ static status_t test_stxg2_wait_packet_sent(void) {
 }
     #endif // STXG2_TEST_PATTERN_CALLSIGN
 
-static void test_stxg2_report(uint32_t counter) {
+// Logs the radio state when always_log is set or when something is wrong, and only for the first few problems so a dead radio
+// cannot fill the log buffer.
+static void test_stxg2_report(uint32_t counter, bool always_log) {
+    static bool left_transmit_logged = false;
+    static uint32_t problems_logged = 0;
     uint32_t mode = 0;
     uint32_t rf_status = 0;
     uint32_t board_status = 0;
     uint32_t temp = 0;
+    uint32_t currents = 0;
+    uint32_t pa_voltages = 0;
+    uint32_t board_voltages = 0;
     status_t status = stxg2_read_reg(REG_MODE, &mode);
     status |= stxg2_get_rf_status(&rf_status);
     status |= stxg2_get_board_status(&board_status);
     status |= stxg2_read_reg(REG_TEMP_0, &temp);
-    test_log("tx: mode 0x%lx  rf 0x%lx  board 0x%lx  count %lu  pa temp 0x%lx  (status %d)\n", (unsigned long)mode,
-             (unsigned long)rf_status, (unsigned long)board_status, (unsigned long)counter, (unsigned long)temp, status);
+    status |= stxg2_read_reg(REG_CURRENTS_0, &currents);
+    status |= stxg2_read_reg(REG_VOLTAGES_0, &pa_voltages);
+    status |= stxg2_read_reg(REG_VOLTAGES_1, &board_voltages);
+
+    bool transmitting = status == SUCCESS && (mode & MODE_MODE_MSK) == STXG2_MODE_TRANSMIT &&
+                        (rf_status & RF_STATUS_LOCKED) == RF_STATUS_LOCKED;
+    if (!always_log) {
+        if (transmitting || problems_logged >= STXG2_TEST_MAX_PROBLEM_LOGS) {
+            return;
+        }
+        problems_logged++;
+    }
+
+    test_log("tx: mode 0x%lx rf 0x%lx board 0x%lx cnt %lu pa %d C smps %d C vbat %lu mV pa %lu mV %lu mA (status %d)\n",
+             (unsigned long)mode, (unsigned long)rf_status, (unsigned long)board_status, (unsigned long)counter,
+             (int16_t)(temp & 0xFFFFU) / 4, (int16_t)(temp >> 16) / 4, (unsigned long)(board_voltages & 0xFFFFU),
+             (unsigned long)(pa_voltages & 0xFFFFU), (unsigned long)(currents & 0xFFFFU), status);
 
     if (status == SUCCESS) {
         PVDX_ASSERT_MSG((mode & MODE_MODE_MSK) == STXG2_MODE_TRANSMIT, "stxg2 still in transmit mode\n");
         PVDX_ASSERT_MSG((rf_status & RF_STATUS_LOCKED) == RF_STATUS_LOCKED, "stxg2 rf still locked\n");
+        if ((mode & MODE_MODE_MSK) != STXG2_MODE_TRANSMIT && !left_transmit_logged) {
+            left_transmit_logged = true;
+            test_stxg2_log_lock_failure();
+        }
     }
 }
 
@@ -347,7 +376,7 @@ static status_t test_stxg2_sweep_step(uint32_t freq_khz) {
 
     uint32_t tp_count = 0;
     (void)stxg2_read_reg(REG_TP_GEN_CNT, &tp_count);
-    test_stxg2_report(tp_count);
+    test_stxg2_report(tp_count, true);
     return stxg2_write_reg(REG_TP_GEN_CTRL, 0);
 }
 
@@ -424,7 +453,7 @@ void test_stxg2(void) {
             packets_sent++;
         }
         PVDX_ASSERT_MSG(status == SUCCESS, "stxg2 packet sent\n");
-        test_stxg2_report(packets_sent);
+        test_stxg2_report(packets_sent, true);
 
         status = stxg2_downlink_end();
         if (status == SUCCESS) {
@@ -438,12 +467,12 @@ void test_stxg2(void) {
         }
     }
     #else
-    while (true) {
+    for (uint32_t i = 0;; i++) {
         watchdog_feed(WDT);
         delay_ms(STXG2_TEST_REPORT_PERIOD_MS);
         uint32_t tp_count = 0;
         (void)stxg2_read_reg(REG_TP_GEN_CNT, &tp_count);
-        test_stxg2_report(tp_count);
+        test_stxg2_report(tp_count, i % STXG2_TEST_REPORT_EVERY == 0);
     }
     #endif
 }
