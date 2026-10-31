@@ -24,6 +24,7 @@
 #include "display_driver.h"
 #include "burn/burn_uhf.h"
 #include "image_buffer_PVDX.h"
+#include "mram_driver.h"
 #include "watchdog_driver.h"
 #include "ccsds/ccsds.h"
 #include "cosmic_monkey_task.h"
@@ -34,10 +35,21 @@
 
 
 #define BURN_WAIT_MINUTES      30
+#define BURN_ON_FOR_SECONDS 30
 #define POST_BURN_STEP_MINUTES 2 // wait before each post-burn step
 
 #define CAMERA_CAPTURE_ATTEMPTS 3
 cosmic_monkey_task_arguments_t cm_args = {0};
+
+// The burn record lives in the last 256-byte page of the 1 MB MRAM, clear of the development flash mirror
+// (MRAM_FLASH_BASE_ADDRESS..+MRAM_FLASH_SIZE) and the MRAM hardware test region. mram_read_bytes() only reads whole
+// pages, so the full page is read and the record is its first bytes.
+#define BURN_RECORD_MRAM_ADDRESS 0x000FFF00u
+#define BURN_RECORD_PAGE_SIZE    256u
+// Marks the record as written by this code, so never-written MRAM starts from a fresh record instead of garbage
+#define BURN_RECORD_MAGIC        0xB12EC0DEu
+// How often the burn wait saves its progress to MRAM, so a reboot resumes the wait instead of restarting it
+#define BURN_RECORD_SAVE_PERIOD_S 60u
 
 
 static status_t PVDX_init(void) {
@@ -116,6 +128,37 @@ static uint8_t camera_rtt_image_buffer[SEGGER_RTT_IMAGE_BUFFER_SIZE];
     warning("camera: giving up on the picture\n");
 }
 
+/* ---------- BURN WIRE STATE IN MRAM ---------- */
+
+// Persists across reboots
+typedef struct {
+    uint32_t magic;
+    uint32_t boot_count;     // boots seen since the record was created
+    uint32_t burned;         // nonzero once the burn wire has been fired
+    uint32_t burn_attempts;  // incremented just before each burn, so a reboot mid-burn is visible
+    uint32_t elapsed_wait_s; // seconds of the pre-burn wait completed so far
+} burn_record_t;
+
+// Reads the record (majority-voted across the three MRAM modules). A missing record is replaced by a fresh one,
+// which means the full wait runs again: waiting too long is safer than burning too early.
+static burn_record_t load_burn_record(void) {
+    // uint32_t so that the page is word-aligned and can be read as a burn_record_t
+    static uint32_t page[BURN_RECORD_PAGE_SIZE / sizeof(uint32_t)];
+    mram_read_bytes(BURN_RECORD_MRAM_ADDRESS, (uint8_t *)page, BURN_RECORD_PAGE_SIZE);
+
+    burn_record_t record = *(const burn_record_t *)page;
+    if (record.magic != BURN_RECORD_MAGIC) {
+        warning_impl("[!] No burn record in MRAM (magic: %lx); starting a fresh one\n", (unsigned long)record.magic);
+        record = (burn_record_t){.magic = BURN_RECORD_MAGIC};
+    }
+    return record;
+}
+
+// Writes the record to all three MRAM modules
+static void save_burn_record(const burn_record_t *const p_record) {
+    mram_write_bytes(BURN_RECORD_MRAM_ADDRESS, (const uint8_t *)p_record, sizeof(*p_record));
+}
+
 int main(void) {
     /* ---------- HARDWARE & LOGGING INITIALIZATION + BOOTLOADER CHECK ---------- */
 
@@ -129,6 +172,63 @@ int main(void) {
     info("[+] Build Time: %s\n", BUILD_TIME);
     info("[+] Built from branch: %s\n", GIT_BRANCH_NAME);
     info("[+] Built from commit: %s\n", GIT_COMMIT_HASH);
+
+
+    // BURN SEQUENCE
+
+    mram_status_t mram_status = mram_init();
+    for (uint8_t mram = 1; mram <= 3; mram++) {
+        if (get_mram_state(mram_status, mram) != MRAM_STATE_OK) {
+            warning_impl("[!] MRAM%u failed to initialize; the burn record relies on the other modules\n", mram);
+        }
+    }
+
+    burn_record_t burn_record = load_burn_record();
+    burn_record.boot_count++;
+    
+    // BEFORE-FLIGHT: remove
+    burn_record.burned = true; 
+
+    save_burn_record(&burn_record);
+    // Called outside info(): in RELEASE builds info() compiles out, but this should always be printed
+    info_impl("[+] Boot %lu; burn wire %s (%lu attempts), %lu s of the burn wait done\n", (unsigned long)burn_record.boot_count,
+              burn_record.burned ? "burned" : "not burned", (unsigned long)burn_record.burn_attempts,
+              (unsigned long)burn_record.elapsed_wait_s);
+
+    if (!burn_record.burned) {
+        // Wait out the rest of BURN_WAIT_MINUTES, saving progress every BURN_RECORD_SAVE_PERIOD_S so that a reboot
+        // resumes the wait instead of restarting it. BURN_WAIT_MINUTES * 60 must be a multiple of the save period.
+        while (burn_record.elapsed_wait_s < BURN_WAIT_MINUTES * 60u) {
+            wait_seconds_feeding_watchdog(BURN_RECORD_SAVE_PERIOD_S);
+            burn_record.elapsed_wait_s += BURN_RECORD_SAVE_PERIOD_S;
+            save_burn_record(&burn_record);
+            info("Burn wait: %lu/%lu s\n", (unsigned long)burn_record.elapsed_wait_s, (unsigned long)(BURN_WAIT_MINUTES * 60u));
+        }
+
+        // Recorded before burning, so that a reboot mid-burn shows up as an attempt
+        burn_record.burn_attempts++;
+        save_burn_record(&burn_record);
+
+    // BEFORE-FLIGHT: define macro 
+    #ifdef BURN_SEQUENCE_FIRE_BURN_WIRE
+        // stuff commented out for utmost safety
+        
+        // BEFORE-FLIGHT: uncomment and test
+        // gpio_set_pin_level(BURN, true); 
+        
+        info_impl("[+] Burn pin (PB29) on for %d s (attempt %lu)\n", BURN_ON_FOR_SECONDS, (unsigned long)burn_record.burn_attempts);
+        wait_seconds_feeding_watchdog(BURN_ON_FOR_SECONDS);
+
+        // BEFORE-FLIGHT: uncomment and test
+        // gpio_set_pin_level(BURN, false);
+        
+        burn_record.burned = 1;
+        save_burn_record(&burn_record);
+        info_impl("[+] Burn pin (PB29) off; burn recorded in MRAM\n");
+    #else
+        info_impl("[+] BURN_SEQUENCE_FIRE_BURN_WIRE is not defined: burn wire not fired\n");
+    #endif
+    }
 
     // Initialize the mutex for the I2C bus shared by Arducam, fuel gauges, and PMB before startup checks/tests
     i2c_camera_bus_mutex = xSemaphoreCreateMutexStatic(&i2c_camera_bus_mutex_buffer);
@@ -156,7 +256,6 @@ int main(void) {
     burn_uhf_beacon();
 #endif
 
-    /* ---------- INIT WATCHDOG, COMMAND_DISPATCHER, TASK_MANAGER TASKS (in that order) ---------- */
 
     ccsds_init();
 

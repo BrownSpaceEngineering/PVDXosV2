@@ -22,6 +22,10 @@
 // steps, idle; see main.c). Defined here rather than in main.c so that drivers can see it too.
 #define BURN_SEQUENCE
 
+// Uncomment to let the burn sequence actually fire the burn wire once the wait is over. Left commented out, the wait and
+// its MRAM record still run, but the burn pin is never driven and the burn is never recorded as done.
+// #define BURN_SEQUENCE_FIRE_BURN_WIRE
+
 // Uncomment to make the burn sequence's startup camera check also capture a picture over RTT channel 2
 #define BURN_SEQUENCE_CAMERA_CHECK_CAPTURE
 
