@@ -20,7 +20,7 @@ else
 			GDBCMD = gdb-multiarch
 		else
 			# "Pure" Linux
-			GDBCMD = gdb-multiarch
+			GDBCMD = gdb
 		endif
 	else
 		$(error Unknown or unsupported OS)

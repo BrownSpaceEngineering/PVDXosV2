@@ -112,16 +112,21 @@ CFLAGS += -Wno-unused-parameter #Because some ASF functions have unused paramete
 
 # Tests that `make test` can build individually. Each NAME is guarded by #ifdef TEST_NAME in src/tests
 # Keep this list in sync with src/tests/test.h
-TEST_NAMES := SPP LINALG CFDP USLP PMB TELEMETRY FLOAT MRAM
+TEST_NAMES := SPP LINALG CFDP USLP PMB TELEMETRY FLOAT MRAM STXG2 STXG2_SWEEP
 
 # `make test TESTS="spp cfdp"` builds only those tests by passing -DTEST_SPP -DTEST_CFDP.
-# Leaving TESTS empty builds the default tests; destructive hardware MRAM tests are opt-in only.
+# Leaving TESTS empty builds the default tests; destructive MRAM and RF-transmitting STXG2 tests are opt-in only.
 SELECTED_TESTS := $(patsubst TEST_%,%,$(shell echo '$(TESTS)' | tr 'a-z,' 'A-Z '))
 UNKNOWN_TESTS := $(filter-out $(TEST_NAMES),$(SELECTED_TESTS))
 ifneq ($(UNKNOWN_TESTS),)
     $(error Unknown test(s) in TESTS: $(UNKNOWN_TESTS). Available tests: $(TEST_NAMES))
 endif
 TEST_DEFINES := $(addprefix -DTEST_,$(SELECTED_TESTS))
+
+# `make test TESTS=stxg2 STXG2_TEST_MODCOD=1 STXG2_TEST_SYM_RATE_KSPS=200` overrides the STXG2 test defaults
+STXG2_TEST_SETTINGS := STXG2_TEST_FREQ_KHZ STXG2_TEST_SYM_RATE_KSPS STXG2_SWEEP_START_KHZ STXG2_SWEEP_STOP_KHZ STXG2_SWEEP_STEP_KHZ \
+    STXG2_SWEEP_DWELL_MS STXG2_TEST_MODCOD STXG2_TEST_POWER_DBM STXG2_TEST_TX_SECONDS
+TEST_DEFINES += $(foreach setting,$(STXG2_TEST_SETTINGS),$(if $($(setting)),-D$(setting)=$($(setting))U))
 
 # Build-specific flags
 CFLAGS_DEV := -DDEVBUILD

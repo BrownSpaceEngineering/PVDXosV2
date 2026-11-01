@@ -12,6 +12,7 @@
 #include "logging.h"
 #include "telemetry/telemetry.h"
 #include "tests/test_pmb.h"
+#include "tests/test_stxg2.h"
 
 int tests_passed = 0;
 int tests_total = 0;
@@ -43,6 +44,12 @@ void tests_run(void) {
 #endif
 #ifdef TEST_PMB
     test_pmb();
+#endif
+#ifdef TEST_STXG2_SWEEP
+    test_stxg2_sweep();
+#endif
+#ifdef TEST_STXG2
+    test_stxg2(); // Transmits until reset, so it runs last of the hardware tests
 #endif
   #ifdef TEST_FLOAT
     test_float();

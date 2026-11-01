@@ -20,16 +20,15 @@
 #define STXG2_I2C_ADDR 0x26
 #define STXG2_ID_VALUE 0x53545832u // "STX2" (USM 9.2.1.1)
 
-// Pins from the PVDX-SAMD-PinConfig README.
-// WARNING: main's ASF labels PB19 as BURN. Fix upstream.
+// ASF (atmel_start_pins.h) defines these pins. The fallbacks match the PVDX-SAMD-PinConfig README.
 #ifndef SBAND_CS
     #define SBAND_CS GPIO(GPIO_PORTB, 19) // Active low. Radio pin H1.32 (option sheet), not H1.9.
 #endif
 #ifndef SBAND_EN
-    #define SBAND_EN GPIO(GPIO_PORTC, 23) // High = on (ICD 2.2)
+    #define SBAND_EN GPIO(GPIO_PORTC, 25) // High = on (ICD 2.2)
 #endif
 #ifndef SBAND_RST
-    #define SBAND_RST GPIO(GPIO_PORTB, 20) // Low = reset (ICD 2.2)
+    #define SBAND_RST GPIO(GPIO_PORTC, 26) // Low = reset (ICD 2.2)
 #endif
 
 #define SBAND_CS_LOW() gpio_set_pin_level(SBAND_CS, false)
@@ -67,6 +66,9 @@
 #define REG_TEMP_1 0x0033 // Board, FPGA
 #define REG_TEMP_2 0x0034 // Board x2
 #define REG_TEMP_3 0x0035 // Board
+#define REG_CURRENTS_0 0x0040 // mA, PA_VBAT in bits 15:0, PA_VCC in 31:16
+#define REG_VOLTAGES_0 0x0050 // mV, PA_VBAT in bits 15:0, PA_VCC in 31:16
+#define REG_VOLTAGES_1 0x0051 // mV, Board_VBAT in bits 15:0
 #define REG_CURRENT_ERR 0x003E
 #define REG_VOLTAGE_ERR 0x003F
 #define REG_CURRENTS 0x0040 // To 0x004F
@@ -182,6 +184,9 @@ typedef enum {
 #define STXG2_SPI_CHUNK_BYTES 2048u    // Half the radio buffer
 #define STXG2_PACKET_DATA_BYTES 16380u // Payload per memory packet (USM 9.2.7.5)
 
+// PA_STAT_0 (USM 9.2.9.1)
+#define PA_STATUS_PA_ON (1u << 0)
+
 // RF_STAT (USM 9.2.4.2)
 #define RF_STATUS_RF_SYNTH_LOCK (1u << 0)
 #define RF_STATUS_IF_SYNTH_LOCK (1u << 1)
@@ -218,12 +223,23 @@ typedef enum {
 #define MEM_RT_QUEUE_INDEX_MSK 0x00FFFFFFu
 #define MEM_RT_QUEUE_LEN_POS 24u
 
+// ENCODING_CTRL (USM 9.2.5.4). Write only outside Transmit.
+#define ENCODING_CTRL_CCSDS (1u << 0) // 0 = DVB-S2, 1 = CCSDS
+#define ENCODING_CTRL_RRC_POS 1u
+#define ENCODING_CTRL_RRC_MSK (0x3u << ENCODING_CTRL_RRC_POS) // 0 = 0.35, 1 = 0.25, 2 = 0.2
+#define ENCODING_CTRL_INSERT_ASM (1u << 3)
+#define ENCODING_CTRL_IQ_MSK (0x7u << 4)                      // Invert_I, Invert_Q, Swap_IQ
+#define ENCODING_CTRL_FRAME_LEN_POS 16u // Transfer frame data bytes, 200-16380 for DVB-S2
+
 // DVBS2_CONF (USM 9.2.5.5)
 #define DVBS2_CONF_MODCOD_MSK 0x1Fu
+#define DVBS2_CONF_PILOTS (1u << 8)
+#define DVBS2_CONF_SHORT_FRAME (1u << 9)
 #define DVBS2_MODCOD_MAX 28u
 
 // TF_CTRL (USM 9.2.8.1). The radio sets Enable on entering Config. The driver clears it.
 #define TF_CTRL_ENABLE (1u << 0)
+#define TF_CTRL_EN_CRC (1u << 1) // CRC-16 at the end of each transfer frame
 #define TF_CTRL_BUF_FLUSH (1u << 4) // Unused. Framer only.
 
 // Crossbar inputs (USM 9.2.8.7, table 9-22). 0 disconnects.

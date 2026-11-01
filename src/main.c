@@ -159,6 +159,21 @@ static void save_burn_record(const burn_record_t *const p_record) {
     mram_write_bytes(BURN_RECORD_MRAM_ADDRESS, (const uint8_t *)p_record, sizeof(*p_record));
 }
 
+#ifdef TEST_SBAND_ONLY_IMAGE
+// S-band-only test image (make test TESTS=stxg2 or stxg2_sweep). Skips the MRAM burn record, the burn wire, the startup
+// device checks, UHF and all tasks, so no other device is touched. atmel_start_init() leaves the burn pin, heaters,
+// magnetorquer drivers and S-band enable low. The S-band test runs the STXG2 POST and transmits only if it passes.
+// When the test stops, the MCU idles here. The scheduler never starts.
+[[noreturn]] static void sband_only_image_main(void) {
+    info_impl("[+] S-band-only test image: no burn, no device checks, no tasks. Only the STXG2 is powered.\n");
+    tests_run();
+    info_impl("[+] S-band test stopped. Idling. Turn off the power or flash another image.\n");
+    while (true) {
+        wait_seconds_feeding_watchdog(1);
+    }
+}
+#endif
+
 int main(void) {
     /* ---------- HARDWARE & LOGGING INITIALIZATION + BOOTLOADER CHECK ---------- */
 
@@ -172,6 +187,10 @@ int main(void) {
     info("[+] Build Time: %s\n", BUILD_TIME);
     info("[+] Built from branch: %s\n", GIT_BRANCH_NAME);
     info("[+] Built from commit: %s\n", GIT_COMMIT_HASH);
+
+#ifdef TEST_SBAND_ONLY_IMAGE
+    sband_only_image_main(); // Never returns
+#endif
 
 
     // BURN SEQUENCE
