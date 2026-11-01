@@ -21,7 +21,8 @@
 // these state transitions are just examples
 #define LOW_BATTERY_LEVEL 0.1 // absolutely made up
 #define RECOVERED_BATTERY_LEVEL 0.5 // absolutely made up
-#define FAKE_HEARTBEAT_PERIOD_MS 10000 // EXAMPLE ONLY: how long to stay in each of IDLE and FAKE_HEARTBEAT
+#define FAKE_IDLE_PERIOD_MS 25000     // EXAMPLE ONLY: how long IDLE waits before the next FAKE_HEARTBEAT
+#define FAKE_HEARTBEAT_PERIOD_MS 5000 // EXAMPLE ONLY: how long to stay in FAKE_HEARTBEAT
 #define PEROVSKITE_CAPTURE_TIMEOUT_MS 300000 // Give up on a sweep that hasn't finished; a normal one takes about 90 s
 
 // How long the state machine has been in its current state
@@ -34,15 +35,6 @@ static state_id_t unimplemented_next_state(const input_t *const input) {
     return STATE_IDLE;
 }
 
-static state_id_t initial_next_state(const input_t *const input) {
-    return STATE_IDLE;
-}
-
-static state_id_t burn_wire_next_state(const input_t *const input) {
-    if (input->burn_wire_burned)                    return STATE_POST;
-    return STATE_BURN_WIRE;
-}
-
 static state_id_t idle_next_state(const input_t *const input) {
     if (input->battery_level < LOW_BATTERY_LEVEL)   return STATE_LOW_POWER_IDLE;
     if (input->image_ready_to_display 
@@ -51,7 +43,7 @@ static state_id_t idle_next_state(const input_t *const input) {
     // if (input->photo_taken_for_downlink)            return STATE_SBAND_TRANS; // TODO: nothing clears photo_taken_for_downlink yet, so SBAND_TRANS never exits
     if (input->in_sunlight
         && !input->perovskite_data_ready_for_downlink) return STATE_PEROVSKITE_CAPTURE;
-    if (ticks_in_state(input) >= pdMS_TO_TICKS(FAKE_HEARTBEAT_PERIOD_MS)) return STATE_FAKE_HEARTBEAT; // EXAMPLE ONLY
+    if (ticks_in_state(input) >= pdMS_TO_TICKS(FAKE_IDLE_PERIOD_MS)) return STATE_FAKE_HEARTBEAT; // EXAMPLE ONLY
     return STATE_IDLE;
 }
 
@@ -62,7 +54,8 @@ static state_id_t perovskite_capture_next_state(const input_t *const input) {
     return STATE_PEROVSKITE_CAPTURE;
 }
 
-// EXAMPLE ONLY: runs the heartbeat task for a while, then goes back to idle
+// EXAMPLE ONLY: runs the heartbeat task for a while, then goes back to idle. The heartbeat task mocks the inputs that
+// nothing produces yet, so that IDLE goes on to a student picture or a perovskite sweep afterwards (see heartbeat_main.c)
 static state_id_t fake_heartbeat_next_state(const input_t *const input) {
     if (ticks_in_state(input) >= pdMS_TO_TICKS(FAKE_HEARTBEAT_PERIOD_MS)) return STATE_IDLE;
     return STATE_FAKE_HEARTBEAT;
@@ -114,21 +107,6 @@ static void perovskite_capture_on_enter(state_id_t previous_state, const input_t
     }
 }
 
-// EXAMPLE ONLY: pretends a new student picture has arrived, so that IDLE moves to STUDENT_PICTURE_CAPTURE
-// once the heartbeat period is over
-static input_update_data_t fake_heartbeat_inputs = {
-    .input_update_bitmask = INPUT_UPDATE_BIT(IMAGE_READY_DISPLAY_UPDATE) | INPUT_UPDATE_BIT(PHOTO_READY_DOWNLINK_UPDATE),
-    .new_values = {.image_ready_to_display = true, .photo_taken_for_downlink = false},
-};
-
-static void fake_heartbeat_on_enter(state_id_t previous_state, const input_t *const input) {
-    command_t cmd = get_state_input_update_command(&fake_heartbeat_inputs);
-    const status_t status = enqueue_command(&cmd);
-    if (status != SUCCESS) {
-        warning("states: failed to enqueue fake heartbeat input update (status %d)\n", status);
-    }
-}
-
 // STATES
 // OS tasks are always on and never listed. ADCS runs in every state except STATE_LOW_POWER_IDLE
 
@@ -144,16 +122,14 @@ void init_states(void) {
     }
 
     // TODO: the fuel gauge, thermistor and camera tasks are SENSOR tasks but no state lists them yet, so the state
-    // machine suspends them on entering STATE_INITIAL and they never run (no battery telemetry, no heater control, no
+    // machine suspends them on entering STATE_IDLE and they never run (no battery telemetry, no heater control, no
     // images). Add p_fuel_gauge_task / p_thermistor_task / p_camera_task to the states that need them.
-    mission_states[STATE_INITIAL]                 = (state_t){.enabled_tasks = {p_fuel_gauge_task},                                 .fetch_next_state = initial_next_state};
-    mission_states[STATE_BURN_WIRE]               = (state_t){.enabled_tasks = {p_fuel_gauge_task},                                 .fetch_next_state = burn_wire_next_state};
     mission_states[STATE_IDLE]                    = (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_cfdp_task},                                 .fetch_next_state = idle_next_state};
     mission_states[STATE_PEROVSKITE_CAPTURE]      = (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_cfdp_task, p_perovskite_task},              .fetch_next_state = perovskite_capture_next_state, .on_enter = perovskite_capture_on_enter};
     mission_states[STATE_STUDENT_PICTURE_CAPTURE] = (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_cfdp_task, p_display_task, p_camera_task},      .fetch_next_state = student_picture_capture_next_state, .on_enter = student_picture_capture_on_enter};
     mission_states[STATE_SBAND_TRANS]             = (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_cfdp_task},         .fetch_next_state = sband_trans_next_state};
     mission_states[STATE_LOW_POWER_IDLE]          = (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_cfdp_task},                                 .fetch_next_state = low_power_idle_next_state};
-    mission_states[STATE_FAKE_HEARTBEAT]          = (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_cfdp_task, p_heartbeat_task},                 .fetch_next_state = fake_heartbeat_next_state, .on_enter = fake_heartbeat_on_enter};
+    mission_states[STATE_FAKE_HEARTBEAT]          = (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_cfdp_task, p_heartbeat_task},                 .fetch_next_state = fake_heartbeat_next_state};
     // ... one line per state in state_id_t
 }
 

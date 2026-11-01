@@ -400,6 +400,17 @@ static status_t perovskite_capture(void) {
     return SUCCESS;
 }
 
+// Logs how close the task has come to overflowing its stack. A sweep goes through the deepest calls (MRAM reads and
+// writes, logging), so this is checked after each one.
+static void perovskite_log_stack_usage(void) {
+    const UBaseType_t free_words = uxTaskGetStackHighWaterMark(NULL);
+    if (free_words < PEROVSKITE_TASK_STACK_SIZE / 4U) {
+        warning("perovskite: stack nearly full: %lu of %u words never used\n", (unsigned long)free_words, PEROVSKITE_TASK_STACK_SIZE);
+    } else {
+        info("perovskite: stack %lu of %u words never used\n", (unsigned long)free_words, PEROVSKITE_TASK_STACK_SIZE);
+    }
+}
+
 void exec_command_perovskite(command_t *const p_cmd) {
     if (p_cmd->target != p_perovskite_task) {
         warning("perovskite: Command addressed to another task\n");
@@ -418,6 +429,7 @@ void exec_command_perovskite(command_t *const p_cmd) {
                 break;
             }
             p_cmd->result = perovskite_capture();
+            perovskite_log_stack_usage();
             break;
         default:
             warning("perovskite: Unsupported operation %d\n", p_cmd->operation);

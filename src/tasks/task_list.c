@@ -33,7 +33,7 @@ pvdx_task_t watchdog_task = {.name = "Watchdog",
                              .stack_size = WATCHDOG_TASK_STACK_SIZE,
                              .stack_buffer = watchdog_mem.watchdog_task_stack,
                              .pvParameters = NULL,
-                             .priority = 3,
+                             .priority = 4, // Above everything, so it can always check in and feed the hardware watchdog
                              .task_tcb = &watchdog_mem.watchdog_task_tcb,
                              .watchdog_timeout_ms = 10000,
                              .last_checkin_time_ticks = 0xDEADBEEF,
@@ -49,7 +49,9 @@ pvdx_task_t task_manager_task = {.name = "TaskManager",
                                  .stack_size = TASK_MANAGER_TASK_STACK_SIZE,
                                  .stack_buffer = task_manager_mem.task_manager_task_stack,
                                  .pvParameters = NULL,
-                                 .priority = 2,
+                                 // Above the subtasks (2): they cannot run until it has created them all and the
+                                 // state machine has suspended the ones the first state does not list
+                                 .priority = 3,
                                  .task_tcb = &task_manager_mem.task_manager_task_tcb,
                                  .watchdog_timeout_ms = 10000,
                                  .last_checkin_time_ticks = 0xDEADBEEF,
@@ -155,7 +157,9 @@ pvdx_task_t fuel_gauge_task = {.name = "FuelGauge",
                                .task_type = SENSOR};
 
 pvdx_task_t thermistor_task = {.name = "Thermistor",
-                               .enabled = true,
+                               // Disabled until a state lists it: otherwise it can run briefly at startup, switch a
+                               // heater on, and then be suspended by the state machine with the heater left on
+                               .enabled = false,
                                .handle = NULL,
                                .command_queue = NULL,
                                .init = NULL,
