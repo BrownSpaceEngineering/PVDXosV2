@@ -4,7 +4,9 @@
 
 #include "ccsds/radio_routing.h"
 #include "cfdp_task.h"
+#include "cfdp_timer.h"
 #include "globals.h"
+#include "logging.h"
 #include "libraries/cmd_dispatcher/cmd_dispatcher.h"
 #include "mutexes.h"
 #include "rtos_start.h"
@@ -38,10 +40,11 @@ int cfdp_send(void *buff, size_t sz, radio_stream_t stream) {
         .sequence_count = spp_seq_count & 0x3FFF,
     };
 
+    // TODO(temp): placeholder timestamps and callsign. Transmitting on UHF needs the real callsign before flight
     spp_secondary_packet_header_t secondary_header = {
-        .timestamp = 0,                             // TODO: unix time
-        .boot_timestamp = 0,                        // TODO: unix time of last boot
-        .callsign = {'B', 'S', 'E', 'B', 'S', 'E'}, // TODO: real callsign
+        .timestamp = 0,                             // TODO(temp): unix time
+        .boot_timestamp = 0,                        // TODO(temp): unix time of last boot
+        .callsign = {'B', 'S', 'E', 'B', 'S', 'E'}, // TODO(temp): real callsign
     };
 
     radio_queue_item_t item;
@@ -88,13 +91,6 @@ int cfdp_recv(void *buff, size_t sz, uint8_t *vcid) {
     if (packet_view.header.secondary_header_flag) {
         len -= SPP_SECONDARY_HEADER_SIZE;
 
-        command_t cmd = (command_t){.target = p_adcs_task,
-                                    .data = {.timestamp = packet_view.secondary_header.timestamp},
-                                    .data_type = CMD_DATA_TIMESTAMP,
-                                    .operation = OPERATION_SET_UNIX_TIME,
-                                    .result = SUCCESS};
-        enqueue_command(&cmd);
-
         char callsign[7];
         memcpy(callsign, packet_view.secondary_header.callsign, 6);
         callsign[6] = '\0';
@@ -103,13 +99,22 @@ int cfdp_recv(void *buff, size_t sz, uint8_t *vcid) {
             warning("spp: recieved packet with non-ground station callsign!\n");
             return -1;
         }
+
+        // Only trust the time once the packet is known to be from the ground station
+        command_t cmd = (command_t){.target = p_adcs_task,
+                                    .data = {.timestamp = packet_view.secondary_header.timestamp},
+                                    .data_type = CMD_DATA_TIMESTAMP,
+                                    .operation = OPERATION_SET_UNIX_TIME,
+                                    .result = SUCCESS};
+        enqueue_command(&cmd);
     }
 
     if (len == 0) {
         return -1; // no PDU, and 0 is reserved for an empty queue
     }
 
-    memcpy(buff, packet_view.data, len);
+    // packet_view.data points into buff, so the two overlap
+    memmove(buff, packet_view.data, len);
 
     return (int)len;
 }
@@ -221,6 +226,13 @@ cfdp_transaction_t *cfdp_alloc_transaction(cfdp_transaction_store_t *txn_store) 
 void cfdp_free_transaction(cfdp_transaction_store_t *txn_store, cfdp_transaction_t *txn) {
     if (txn_store == NULL || txn == NULL) {
         return;
+    }
+    // The slot's timers outlive the transaction, so stop them or they fire on whatever uses the slot next
+    if (txn->inactivity_timer_handle != NULL) {
+        stop_timer(txn->inactivity_timer_handle);
+    }
+    if (txn->retransmit_timer_handle != NULL) {
+        stop_timer(txn->retransmit_timer_handle);
     }
     // Received files hold a CFDP buffer. Commands parsed out of it hold their own references, so this only drops
     // the transaction's

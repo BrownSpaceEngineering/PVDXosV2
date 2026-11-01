@@ -204,9 +204,9 @@ extern cfdp_small_buff_t cfdp_small_buffs[CFDP_SMALL_BUFF_COUNT];
 QueueHandle_t init_cfdp(void);
 void main_cfdp(void *pvParameters);
 
-cfdp_result_t cfdp_handle_send_state(cfdp_transaction_t *transaction, uint32_t elapsed_ms);
-cfdp_result_t cfdp_handle_recv_state(cfdp_transaction_t *transaction, uint32_t elapsed_ms);
-cfdp_result_t cfdp_transact(cfdp_transaction_t *txn, uint32_t elapsed_ms);
+cfdp_result_t cfdp_handle_send_state(cfdp_transaction_t *transaction);
+cfdp_result_t cfdp_handle_recv_state(cfdp_transaction_t *transaction);
+cfdp_result_t cfdp_transact(cfdp_transaction_t *txn);
 
 void cfdp_put_request(cfdp_put_data_t *put_data);
 void cfdp_cancel_request(uint32_t txn_id);

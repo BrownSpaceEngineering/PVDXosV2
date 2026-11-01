@@ -2,6 +2,7 @@
 
 #include "cfdp_task.h"
 #include "libraries/cmd_dispatcher/cmd_dispatcher.h"
+#include "logging.h"
 
 // --------- Timer Init (Ran in CFDP Task) ---------
 void init_cfdp_timers(cfdp_task_memory_t *mem) {
@@ -19,7 +20,27 @@ void init_cfdp_timers(cfdp_task_memory_t *mem) {
 }
 
 // --------- Timer Timeout Functions (Ran in CFDP Task) ---------
-void inactivity_timer_timeout(cfdp_transaction_t *txn) {
+
+// A timeout command can still be queued after its transaction is freed, since freeing stops the timer but can't recall a
+// command it already sent. By then the slot may be free or hold a new transaction, which seq_num tells apart
+static cfdp_transaction_t *timeout_txn(const cfdp_timeout_t *timeout) {
+    for (size_t i = 0; i < MAX_TRANSACTIONS; i++) {
+        if (&cfdp_txn_store.transactions[i] == timeout->txn) {
+            if (cfdp_txn_store.active[i] && timeout->txn->transaction_id.seq_num == timeout->seq_num) {
+                return timeout->txn;
+            }
+            return NULL;
+        }
+    }
+    return NULL;
+}
+
+void inactivity_timer_timeout(const cfdp_timeout_t *timeout) {
+    cfdp_transaction_t *txn = timeout_txn(timeout);
+    if (txn == NULL) {
+        warning("timer: inactivity timeout for finished txn %lu, ignoring\n", timeout->seq_num);
+        return;
+    }
     stop_timer(txn->retransmit_timer_handle);
     txn->condition_code = CFDP_COND_INACTIVITY;
     if (txn->direction == CFDP_SEND) {
@@ -32,7 +53,12 @@ void inactivity_timer_timeout(cfdp_transaction_t *txn) {
     }
 }
 
-void retransmit_timer_timeout(cfdp_transaction_t *txn) {
+void retransmit_timer_timeout(const cfdp_timeout_t *timeout) {
+    cfdp_transaction_t *txn = timeout_txn(timeout);
+    if (txn == NULL) {
+        warning("timer: retransmit timeout for finished txn %lu, ignoring\n", timeout->seq_num);
+        return;
+    }
     // --- ACK role (was ack_timer_callback) ---
     if (txn->state == CFDP_SEND_STATE_WAIT_ACK || txn->state == CFDP_RECV_STATE_WAIT_FIN_ACK) {
         if (txn->ack_retransmit_counter >= ACK_RETRANSMIT_LIMIT) {
@@ -84,7 +110,7 @@ void retransmit_timer_timeout(cfdp_transaction_t *txn) {
 void inactivity_timer_callback(TimerHandle_t timer) {
     cfdp_transaction_t *txn = (cfdp_transaction_t *)pvTimerGetTimerID(timer);
     command_t cmd = (command_t){.target = p_cfdp_task,
-                                .data.cfdp_timeout_data = txn,
+                                .data.cfdp_timeout = {.txn = txn, .seq_num = txn->transaction_id.seq_num},
                                 .data_type = CMD_CFDP_TIMEOUT,
                                 .operation = OPERATION_CFDP_TIMEOUT_INACTIVITY,
                                 .result = NO_STATUS_RETURN};
@@ -94,7 +120,7 @@ void inactivity_timer_callback(TimerHandle_t timer) {
 void retransmit_timer_callback(TimerHandle_t timer) {
     cfdp_transaction_t *txn = (cfdp_transaction_t *)pvTimerGetTimerID(timer);
     command_t cmd = (command_t){.target = p_cfdp_task,
-                                .data.cfdp_timeout_data = txn,
+                                .data.cfdp_timeout = {.txn = txn, .seq_num = txn->transaction_id.seq_num},
                                 .data_type = CMD_CFDP_TIMEOUT,
                                 .operation = OPERATION_CFDP_TIMEOUT_RETRANSMIT,
                                 .result = NO_STATUS_RETURN};

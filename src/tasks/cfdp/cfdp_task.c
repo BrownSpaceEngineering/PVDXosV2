@@ -59,7 +59,9 @@ void cfdp_put_request(cfdp_put_data_t *put_data) {
     txn->file_offset = 0;
     txn->state = CFDP_SEND_STATE_METADATA_SEND;
     txn->direction = CFDP_SEND;
-    txn->reliable_mode = true;
+    // Telemetry is sent unacknowledged (class 1), since most of it is sent with no ground station in view. Everything
+    // else is acknowledged (class 2)
+    txn->reliable_mode = (put_data->stream != RADIO_STREAM_TELEMETRY);
     txn->source_filename.length = 0;
     txn->source_filename.value = NULL;
     txn->dest_filename.length = 0;
@@ -178,10 +180,10 @@ void exec_command_cfdp_request(command_t *const p_cmd) {
             cfdp_put_telemetry();
             break;
         case OPERATION_CFDP_TIMEOUT_RETRANSMIT:
-            retransmit_timer_timeout(p_cmd->data.cfdp_timeout_data);
+            retransmit_timer_timeout(&p_cmd->data.cfdp_timeout);
             break;
         case OPERATION_CFDP_TIMEOUT_INACTIVITY:
-            inactivity_timer_timeout(p_cmd->data.cfdp_timeout_data);
+            inactivity_timer_timeout(&p_cmd->data.cfdp_timeout);
             break;
         default:
             warning("cfdp request: invalid operation for cfdp! operation %d\n", p_cmd->operation);
@@ -353,7 +355,9 @@ static void handle_finished_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data
     }
 
     cfdp_pdu_finished_t fin;
-    cfdp_pdu_finished_parse(pdu_data, pdu_data_sz, &fin);
+    if (cfdp_pdu_finished_parse(pdu_data, pdu_data_sz, &fin) < 0) {
+        warning("cfdp: unable to parse finished PDU\n");
+    }
 
     info("cfdp: recved fin w/ code: %d\n", fin.condition_code);
 
@@ -376,6 +380,7 @@ static void handle_ack_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data, siz
 
     if (txn->state != CFDP_RECV_STATE_WAIT_FIN_ACK && txn->state != CFDP_SEND_STATE_WAIT_ACK) {
         info("disregarding unexpected ack pdu\n");
+        return;
     }
 
     if (pdu_data_sz < 2) {
@@ -553,7 +558,9 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz, uint8_t vcid) {
                 if (cfdp_fin_txn.txns[i].src_entity_id == header.source_entity_id &&
                     cfdp_fin_txn.txns[i].seq_num == header.transaction_seq) {
                     cfdp_pdu_finished_t fin;
-                    cfdp_pdu_finished_parse(pdu_data, pdu_data_sz, &fin);
+                    if (cfdp_pdu_finished_parse(pdu_data, pdu_data_sz, &fin) < 0) {
+                        warning("cfdp: unable to parse finished PDU\n");
+                    }
                     cfdp_send_stale_ack(&header, fin.condition_code);
                     info("cfdp: sending stale ack for txn id: %d\n", header.transaction_seq);
                     return;
@@ -715,10 +722,10 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz, uint8_t vcid) {
             handle_filedata_pdu(txn, pdu_data, pdu_data_sz, header.largefile, header.segment_metadata_field);
             break;
         case CFDP_DIR_EOF:
-            handle_eof_pdu(txn, pdu_data, header.pdu_data_length);
+            handle_eof_pdu(txn, pdu_data, pdu_data_sz);
             break;
         case CFDP_DIR_FINISHED:
-            handle_finished_pdu(txn, pdu_data, header.pdu_data_length);
+            handle_finished_pdu(txn, pdu_data, pdu_data_sz);
             break;
         case CFDP_DIR_ACK:
             handle_ack_pdu(txn, pdu_data, pdu_data_sz);
@@ -739,8 +746,7 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz, uint8_t vcid) {
 
 static bool wait_ack_start = 0;
 
-cfdp_result_t cfdp_handle_send_state(cfdp_transaction_t *transaction, uint32_t elapsed_ms) {
-    (void)elapsed_ms;
+cfdp_result_t cfdp_handle_send_state(cfdp_transaction_t *transaction) {
     switch (transaction->state) {
         case CFDP_SEND_STATE_METADATA_SEND:
             wait_ack_start = 0;
@@ -802,8 +808,7 @@ cfdp_result_t cfdp_handle_send_state(cfdp_transaction_t *transaction, uint32_t e
     }
 }
 
-cfdp_result_t cfdp_handle_recv_state(cfdp_transaction_t *transaction, uint32_t elapsed_ms) {
-    (void)elapsed_ms;
+cfdp_result_t cfdp_handle_recv_state(cfdp_transaction_t *transaction) {
     switch (transaction->state) {
         case CFDP_RECV_STATE_MISSING_MD:
             return CFDP_RESULT_BLOCKED;
@@ -854,7 +859,7 @@ cfdp_result_t cfdp_handle_recv_state(cfdp_transaction_t *transaction, uint32_t e
     }
 }
 
-cfdp_result_t cfdp_transact(cfdp_transaction_t *txn, uint32_t elapsed_ms) {
+cfdp_result_t cfdp_transact(cfdp_transaction_t *txn) {
     if (txn == NULL) {
         return CFDP_RESULT_INVALID_ARG;
     }
@@ -862,9 +867,9 @@ cfdp_result_t cfdp_transact(cfdp_transaction_t *txn, uint32_t elapsed_ms) {
     cfdp_result_t result = CFDP_RESULT_ERROR;
 
     if (txn->direction == CFDP_SEND) {
-        result = cfdp_handle_send_state(txn, elapsed_ms);
+        result = cfdp_handle_send_state(txn);
     } else {
-        result = cfdp_handle_recv_state(txn, elapsed_ms);
+        result = cfdp_handle_recv_state(txn);
     }
 
     return result;

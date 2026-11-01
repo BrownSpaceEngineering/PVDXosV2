@@ -122,18 +122,15 @@ void main_cfdp(void *pvParameters) {
             info("cfdp: recieved PDU\n");
             cfdp_process_pdu(recv_buff, (size_t)pdu_len, vcid);
         }
-        uint32_t elapsed_ms = 10; // how do i use RTC? / calculate this
-
         for (size_t i = 0; i < MAX_TRANSACTIONS; i++) {
             if (!cfdp_txn_store.active[i]) {
                 continue;
             }
 
-            // probably need to update elapsed_ms for each transaction
             // Runs until the transaction is waiting on a received PDU, the downlink queue is full, or it has finished
             cfdp_result_t result;
             do {
-                result = cfdp_transact(&cfdp_txn_store.transactions[i], elapsed_ms);
+                result = cfdp_transact(&cfdp_txn_store.transactions[i]);
             } while (result == CFDP_RESULT_IN_PROGRESS);
 
             if (result == CFDP_RESULT_COMPLETE) {
@@ -143,7 +140,8 @@ void main_cfdp(void *pvParameters) {
                     cfdp_txn_store.transactions[i].condition_code == CFDP_COND_NOERROR) {
                     uplink_commands_dispatch(cfdp_txn_store.transactions[i].buff_header, cfdp_txn_store.transactions[i].file_size);
                 }
-                if (cfdp_txn_store.transactions[i].direction == CFDP_SEND) {
+                // Only class 2 sends get a FIN from the ground, so only they can get a stale one
+                if (cfdp_txn_store.transactions[i].direction == CFDP_SEND && cfdp_txn_store.transactions[i].reliable_mode) {
                     info("cfdp: adding tracking for stale txn with seq: %d\n", cfdp_txn_store.transactions[i].transaction_id.seq_num);
                     fin_txn_buf_push(&cfdp_fin_txn,
                                      (fin_txn_t){.seq_num = cfdp_txn_store.transactions[i].transaction_id.seq_num,

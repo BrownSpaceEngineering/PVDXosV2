@@ -193,6 +193,13 @@ typedef struct {
     cfdp_buff_header_t *header;
 } uplink_cmd_t;
 
+// A CFDP timer timeout. The slot's transaction may have been freed or replaced since the timer fired, so seq_num is
+// checked against the transaction now in the slot
+typedef struct {
+    cfdp_transaction_t *txn;
+    uint32_t seq_num;
+} cfdp_timeout_t;
+
 typedef union command_data {
     uplink_cmd_t uplink_cmd; // Can't be a pointer: Data has to live in the command queue -> must be in the command_t struct
     adcs_data_t *adcs_data;
@@ -200,7 +207,7 @@ typedef union command_data {
     TaskHandle_t *task_handle;
     pvdx_task_t *pvdx_task;
     cfdp_request_data_t *cfdp_request;
-    cfdp_transaction_t *cfdp_timeout_data;
+    cfdp_timeout_t cfdp_timeout; // By value, so it doesn't depend on the transaction outliving the command
     input_update_data_t *state_input_update_data;
     uint32_t timestamp;
 } command_data_t;
