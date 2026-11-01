@@ -22,6 +22,7 @@
 #include "mutexes.h"
 #include "arducam_driver.h"
 #include "display_driver.h"
+#include "burn/burn_sband.h"
 #include "burn/burn_uhf.h"
 #include "image_buffer_PVDX.h"
 #include "mram_driver.h"
@@ -245,6 +246,12 @@ int main(void) {
     info("AT_LEAST_ONE_DEVICE_FAILED: %d\n", at_least_one_failed);
     (void)at_least_one_failed; // unused when info() compiles out
 
+
+    /* ---------- S-BAND TRANSMIT TEST ---------- */
+
+#if defined(SBAND_TX_TEST) && defined(DEVBUILD)
+    sband_tx_test();
+#endif
 
     /* ---------- POST-BURN STEPS, TWO MINUTES APART ---------- */
 

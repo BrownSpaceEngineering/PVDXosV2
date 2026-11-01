@@ -29,6 +29,15 @@
 // Uncomment to make the burn sequence's startup camera check also capture a picture over RTT channel 2
 #define BURN_SEQUENCE_CAMERA_CHECK_CAPTURE
 
+// Uncomment to transmit the S-band station identification pattern for 30 seconds after the startup device checks, then
+// power the radio off and boot the OS as normal (see src/burn/burn_sband.c). It radiates 27 dBm at 2418.5 MHz under the
+// callsign in burn_sband.c, so connect the antenna or a 50 ohm load before powering the board. It is guarded by
+// DEVBUILD as well, so it can never reach a release image. Nothing here touches the burn wire.
+#define SBAND_TX_TEST
+
+// Uncomment to store the identification packet in the radio's flash again even when MRAM says it is already there.
+// #define SBAND_TX_FORCE_STORE
+
 #define BURN_UHF_MODE_BEACON 0
 #define BURN_UHF_MODE_LINK   1
 #define BURN_UHF_MODE_OFF    2

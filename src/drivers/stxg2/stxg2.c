@@ -325,10 +325,14 @@ status_t stxg2_set_mode(stxg2_mode_t mode) {
 /**
  * \brief Sets frequency, symbol rate, MODCOD, and PA power
  *
+ * Call in Config mode (USM 8.2.2). Frequency and symbol rate are read back and a mismatch is logged, because the radio
+ * reports no error for a value it does not accept. A mismatch is not treated as a failure: our unit read back a symbol
+ * rate it was not using and still transmitted at the rate that was written.
+ *
  * \param freq_khz 2400000-2480000, 100 kHz steps (option sheet, USM 9.2.5.3)
- * \param sym_rate_ksps 100-50000, 1000 ksps steps (option sheet, USM 9.2.5.2)
- * \param modcod 1-28 (USM table 9-14)
- * \param power_dbm tx power in dbm (USM 9.2.9.2)
+ * \param sym_rate_ksps 100-50000, 100 ksps steps (see STXG2_SYM_RATE_MIN_KSPS)
+ * \param modcod 1-28 (USM table 9-14). Pilots on, normal frames.
+ * \param power_dbm tx power in dbm, 27-33 on a flight model (USM 9.2.9.2)
  * \returns ERROR_BAD_ARGS if out of range
  */
 status_t stxg2_configure_rf(uint32_t freq_khz, uint32_t sym_rate_ksps, uint8_t modcod, uint8_t power_dbm) {
@@ -353,12 +357,56 @@ status_t stxg2_configure_rf(uint32_t freq_khz, uint32_t sym_rate_ksps, uint8_t m
     ret_err_status(stxg2_write_reg(REG_FREQUENCY, freq_khz), "stxg2: frequency write failed\n");
     ret_err_status(stxg2_write_reg(REG_SYMBOL_RATE, sym_rate_ksps), "stxg2: symbol rate write failed\n");
 
-    uint32_t dvbs2 = 0;
-    ret_err_status(stxg2_read_reg(REG_DVBS2_CONF, &dvbs2), "stxg2: DVB-S2 config read failed\n");
-    dvbs2 = (dvbs2 & ~DVBS2_CONF_MODCOD_MSK) | ((uint32_t)modcod & DVBS2_CONF_MODCOD_MSK);
+    // Logged, not enforced: on our unit the symbol rate register read back a different value while the radio still
+    // transmitted at the rate that was written, so a readback mismatch does not mean the setting was not applied.
+    // Confirm the real frequency and symbol rate on a spectrum analyzer.
+    uint32_t applied = 0;
+    if (stxg2_read_reg(REG_FREQUENCY, &applied) == SUCCESS && applied != freq_khz) {
+        warning("stxg2: wrote %lu kHz, FREQUENCY reads %lu kHz\n", (unsigned long)freq_khz, (unsigned long)applied);
+    }
+    if (stxg2_read_reg(REG_SYMBOL_RATE, &applied) == SUCCESS && applied != sym_rate_ksps) {
+        warning("stxg2: wrote %lu ksps, SYMBOL_RATE reads %lu ksps\n", (unsigned long)sym_rate_ksps, (unsigned long)applied);
+    }
+
+    // Written whole: the documented reset value selects 16APSK 4/5, which contradicts the field defaults
+    uint32_t dvbs2 = ((uint32_t)modcod & DVBS2_CONF_MODCOD_MSK) | DVBS2_CONF_PILOT_EN;
     ret_err_status(stxg2_write_reg(REG_DVBS2_CONF, dvbs2), "stxg2: DVB-S2 config write failed\n");
 
+    // Target_Power is ignored while the PA control loop is off (USM 9.2.9.2)
+    uint32_t pa_conf_1 = 0;
+    ret_err_status(stxg2_read_reg(REG_PA_CONF_1, &pa_conf_1), "stxg2: PA config read failed\n");
+    if ((pa_conf_1 & PA_PID_MODE_MSK) == PA_PID_MODE_OFF) {
+        warning("stxg2: PA control loop was off, setting power detector with temperature\n");
+        pa_conf_1 = (pa_conf_1 & ~PA_PID_MODE_MSK) | PA_PID_MODE_PWR_DET_TEMP;
+        ret_err_status(stxg2_write_reg(REG_PA_CONF_1, pa_conf_1), "stxg2: PA config write failed\n");
+    }
+
     return stxg2_write_reg(REG_PA_CONF_0, power_dbm);
+}
+
+/**
+ * \brief Selects DVB-S2 encoding, the roll-off and the transfer frame length (USM 9.2.5.4)
+ *
+ * Call in Config mode, before stxg2_configure_rf(). Encoding and Frame_Length are set on the option sheet and have no
+ * documented reset value, so PVDX writes them rather than inheriting whatever the radio booted with.
+ *
+ * \param rrc ENCODING_CTRL_RRC_0_35, _0_25 or _0_20
+ * \param frame_len user data bytes per transfer frame, 200-16380 (16380 aligns with a memory packet)
+ * \returns ERROR_BAD_ARGS if out of range
+ */
+status_t stxg2_configure_encoding(uint8_t rrc, uint16_t frame_len) {
+    if (rrc > ENCODING_CTRL_RRC_0_20) {
+        warning("stxg2: bad roll-off %u\n", rrc);
+        return ERROR_BAD_ARGS;
+    }
+    if (frame_len < ENCODING_FRAME_LEN_MIN || frame_len > ENCODING_FRAME_LEN_MAX) {
+        warning("stxg2: bad frame length %u\n", frame_len);
+        return ERROR_BAD_ARGS;
+    }
+
+    uint32_t encoding = ENCODING_CTRL_DVBS2 | ((uint32_t)rrc << ENCODING_CTRL_RRC_POS) | ENCODING_CTRL_INSERT_ASM |
+                        ((uint32_t)frame_len << ENCODING_CTRL_FRAME_LEN_POS);
+    return stxg2_write_reg(REG_ENCODING_CTRL, encoding);
 }
 
 /**

@@ -1,0 +1,10 @@
+1. Uncomment #define SBAND_TX_TEST in src/globals.h.
+2. cd /Users/alicia/Desktop/BSE/PVDXosV2 — every command runs from here.
+3. tools/jlink.sh stop — frees the probe for JLinkExe.
+4. make clean all — dev build, so DEVBUILD is set.
+5. JLinkExe -CommanderScript flash.jlink — done when it prints O.K. and Script processing completed.
+6. tools/rtt.sh start — start within a few seconds. The board stalls at the camera check until this drains RTT channel 2.
+7. tools/rtt.sh tail 200 — watch the sband: and sband tx: lines. The test takes about 30 seconds of carrier plus the checks.
+8. tools/rtt.sh stop when finished.
+
+To re-run, make reset_mcu. To debug a fault, tools/jlink.sh start then GDB_TIMEOUT=90 tools/gdb.sh wait_fault, and tools/jlink.sh stop after.
