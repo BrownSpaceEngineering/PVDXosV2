@@ -6,7 +6,8 @@
  * Each setting is written in Config mode and read back before the PA turns on. STXG2_TEST_PATTERN selects the data:
  *  - STXG2_TEST_PATTERN_TPGEN: 8-bit counter from the STXG2's internal test pattern generator. The radio's transfer framer
  *    puts it in CCSDS TM frames (ASM + CRC-16). The ground decoder (GNURadio/sband in radio-testing) checks the frames and
- *    the counter with `decode_dvbs2.py --pattern counter`. Should not be transmitted over a full link.
+ *    the counter with `decode_dvbs2.py --pattern counter`. At the end, and every 9 minutes, the test sends a station ID
+ *    frame with STXG2_TEST_CALLSIGN (test_stxg2.h). Should not be transmitted over a full link.
  *  - STXG2_TEST_PATTERN_CALLSIGN: Repeats "DE <callsign> PVDX TEST " followed by a PRBS7 sequence. The packet is
  *    stored in the radio's flash over SPI and then sent again and again.
  * Requires the STXG2 hardware with an antenna or a 50 ohm load on the RF port. Results can be obtained over RTT.
@@ -34,11 +35,10 @@
     #define STXG2_TEST_PATTERN STXG2_TEST_PATTERN_TPGEN
 #endif
 
-// The callsign must be a string literal. It is deliberately not defaulted: an on-air ID must be the operator's own.
-// For example: #define STXG2_TEST_CALLSIGN "W1AW"
-#if STXG2_TEST_PATTERN == STXG2_TEST_PATTERN_CALLSIGN && !defined(STXG2_TEST_CALLSIGN)
-    #error "Define STXG2_TEST_CALLSIGN as a string literal (your amateur callsign) to use STXG2_TEST_PATTERN_CALLSIGN"
-#endif
+_Static_assert(sizeof(STXG2_TEST_CALLSIGN) >= 2 && sizeof(STXG2_TEST_CALLSIGN) <= 11, "STXG2_TEST_CALLSIGN must be 1 to 10 characters");
+#define STXG2_TEST_CALLSIGN_PLACEHOLDER "N0CALL"
+#define STXG2_TEST_STATION_ID "DE " STXG2_TEST_CALLSIGN " PVDX S-BAND TEST"
+#define STXG2_TEST_ID_PERIOD_S 540U // ID every 9 minutes and at the end, inside the 10 minute rule (47 CFR 97.119)
 
 #ifndef STXG2_TEST_FREQ_KHZ
     #define STXG2_TEST_FREQ_KHZ 2418500U
@@ -67,14 +67,19 @@
 #ifndef STXG2_TEST_TX_SECONDS
     #define STXG2_TEST_TX_SECONDS 30U // Transmit time. Then the radio goes to Standby and is powered off.
 #endif
-// The radio PA timeout (PA_TIMEOUT, seconds) stops the PA by itself this long after the MCU should have
-#define STXG2_TEST_PA_BACKSTOP_SECONDS 5U
-#if STXG2_TEST_TX_SECONDS == 0 || STXG2_TEST_TX_SECONDS + STXG2_TEST_PA_BACKSTOP_SECONDS > 0xFFFFU
-    #error "STXG2_TEST_TX_SECONDS must be 1..65530"
+// The radio PA timeout (PA_TIMEOUT, seconds) stops the PA by itself if the MCU does not. The margin covers the station
+// ID frames: up to approximately 11 s each at 100 ksps and MODCOD 1.
+#define STXG2_TEST_PA_LIMIT_SECONDS (STXG2_TEST_TX_SECONDS + 20U + (STXG2_TEST_TX_SECONDS / STXG2_TEST_ID_PERIOD_S) * 12U)
+#if STXG2_TEST_TX_SECONDS == 0 || STXG2_TEST_PA_LIMIT_SECONDS > 0xFFFFU
+    #error "STXG2_TEST_TX_SECONDS is out of range"
 #endif
 #define STXG2_TEST_LOCK_TIMEOUT_MS 5000U
 #define STXG2_TEST_PA_OFF_TIMEOUT_MS 2000U
 #define STXG2_TEST_OFF_SETTLE_MS 1000U // Standby to power off. Estimate: the USM gives no figure.
+#define STXG2_TF_OVERHEAD_BYTES 16U    // ASM 4 + primary header 6 + secondary header 4 + CRC-16 2 (USM 7.1)
+
+// On-air time of one transfer frame, set by test_stxg2_configure_radio()
+static uint32_t test_stxg2_frame_air_ms = 2000;
 #define STXG2_TEST_REPORT_PERIOD_MS 1000U
 #define STXG2_TEST_REPORT_EVERY 10U
 #define STXG2_TEST_MAX_PROBLEM_LOGS 5U
@@ -266,7 +271,12 @@ static status_t test_stxg2_configure_radio(uint32_t freq_khz) {
              (unsigned long)freq_khz, (unsigned long)STXG2_TEST_SYM_RATE_KSPS, (unsigned long)(dvbs2 & DVBS2_CONF_MODCOD_MSK),
              (dvbs2 & DVBS2_CONF_PILOTS) ? "on" : "off", (dvbs2 & DVBS2_CONF_SHORT_FRAME) ? "short" : "normal",
              rolloff[(enc & ENCODING_CTRL_RRC_MSK) >> ENCODING_CTRL_RRC_POS], (unsigned long)((enc & ENCODING_CTRL_IQ_MSK) >> 4));
-    test_log("stxg2: expected data rate %lu bit/s\n", (unsigned long)stxg2_expected_data_bps(STXG2_TEST_SYM_RATE_KSPS, dvbs2));
+    uint32_t data_bps = stxg2_expected_data_bps(STXG2_TEST_SYM_RATE_KSPS, dvbs2);
+    test_log("stxg2: expected data rate %lu bit/s\n", (unsigned long)data_bps);
+    if (data_bps > 0) {
+        uint32_t frame_bits = ((enc >> ENCODING_CTRL_FRAME_LEN_POS) + STXG2_TF_OVERHEAD_BYTES) * 8u;
+        test_stxg2_frame_air_ms = (uint32_t)((uint64_t)frame_bits * 1000u / data_bps) + 1u;
+    }
     uint32_t tf_conf = 0;
     (void)stxg2_read_reg(REG_TF_CONF, &tf_conf);
     test_log("stxg2: transfer frames: %lu data bytes, SCID %lu, VCID %lu (idle frames on VCID 7)\n",
@@ -276,7 +286,7 @@ static status_t test_stxg2_configure_radio(uint32_t freq_khz) {
 
 // Sets the radio PA timeout to the transmit time plus a margin, so the PA stops even if the MCU does not stop it
 static status_t test_stxg2_set_pa_timeout(void) {
-    uint32_t limit_s = STXG2_TEST_TX_SECONDS + STXG2_TEST_PA_BACKSTOP_SECONDS;
+    uint32_t limit_s = STXG2_TEST_PA_LIMIT_SECONDS;
     return test_stxg2_write_verify("PA_TIMEOUT", REG_PA_TIMEOUT, limit_s << PA_TIMEOUT_LIMIT_POS, PA_TIMEOUT_LIMIT_MSK);
 }
 
@@ -308,6 +318,50 @@ static void test_stxg2_stop_transmit(void) {
         delay_ms(100);
     }
     stxg2_power_off();
+}
+
+// Waits ms milliseconds in 10 ms steps and feeds the watchdog
+static void test_stxg2_wait_feeding(uint32_t ms) {
+    for (uint32_t waited_ms = 0; waited_ms < ms; waited_ms += 10) {
+        watchdog_feed(WDT);
+        delay_ms(10);
+    }
+}
+
+// Sends the station ID in its own transfer frame and waits until it is on air. First the test pattern stops and its last
+// partial frame is flushed, so the ID frame holds only the ID text and padding. If resume_pattern is set, the test pattern
+// starts again after the ID.
+static status_t test_stxg2_send_station_id(bool resume_pattern) {
+    ret_err_status(stxg2_write_reg(REG_TP_GEN_CTRL, 0), "stxg2 test: test pattern stop failed\n");
+    ret_err_status(stxg2_flush_framer(), "stxg2 test: framer flush failed\n");
+
+    uint32_t frames_before = 0;
+    ret_err_status(stxg2_read_reg(REG_TF_DATA_CNT, &frames_before), "stxg2 test: TF_DATA_CNT read failed\n");
+
+    // Whole SPI words, padded with spaces
+    uint8_t id[(sizeof(STXG2_TEST_STATION_ID) + 3u) & ~3u];
+    memset(id, ' ', sizeof(id));
+    memcpy(id, STXG2_TEST_STATION_ID, sizeof(STXG2_TEST_STATION_ID) - 1u);
+    ret_err_status(stxg2_framer_send(id, sizeof(id)), "stxg2 test: station ID send failed\n");
+
+    // The framer counts the frame when it hands it to the encoder. The encoder then needs up to about two frame times.
+    uint32_t frames_now = frames_before;
+    for (uint32_t waited_ms = 0; frames_now == frames_before; waited_ms += 10) {
+        if (waited_ms >= 3u * test_stxg2_frame_air_ms + 1000u) {
+            warning("stxg2 test: station ID frame was not generated (TF_DATA_CNT = %lu)\n", (unsigned long)frames_now);
+            return ERROR_NOT_READY;
+        }
+        test_stxg2_wait_feeding(10);
+        (void)stxg2_read_reg(REG_TF_DATA_CNT, &frames_now);
+    }
+    test_stxg2_wait_feeding(2u * test_stxg2_frame_air_ms);
+    test_log("stxg2: station ID sent: %s\n", STXG2_TEST_STATION_ID);
+
+    if (resume_pattern) {
+        ret_err_status(stxg2_route(XBAR_IN_TPGEN, XBAR_OUT_FRAMER_SHIFT), "stxg2 test: route test pattern failed\n");
+        ret_err_status(stxg2_write_reg(REG_TP_GEN_CTRL, TP_GEN_CTRL_ENABLE), "stxg2 test: test pattern restart failed\n");
+    }
+    return SUCCESS;
 }
 
 // Logs the registers that can explain why the RF synthesizers did not lock
@@ -533,6 +587,11 @@ void test_stxg2_sweep(void) {
 
 void test_stxg2(void) {
     test_log("----- testing stxg2 hw -----\n");
+    if (strcmp(STXG2_TEST_CALLSIGN, STXG2_TEST_CALLSIGN_PLACEHOLDER) == 0) {
+        test_log("stxg2: NOTE: station ID uses the placeholder callsign %s. Set STXG2_TEST_CALLSIGN in test_stxg2.h before "
+                 "an over-the-air test.\n",
+                 STXG2_TEST_CALLSIGN);
+    }
 
     // POST: power, identity, uptime, I2C, board health, currents, voltages and temperatures. No RF until it passes.
     test_log("stxg2 POST: start\n");
@@ -623,10 +682,19 @@ void test_stxg2(void) {
             test_log("tx: test pattern %lu bytes, %lu bit/s, frames: %lu data, %lu idle\n", (unsigned long)tp_count,
                      (unsigned long)tp_rate, (unsigned long)data_frames, (unsigned long)idle_frames);
         }
+        if ((i + 1u) % STXG2_TEST_ID_PERIOD_S == 0 && i + 1u < STXG2_TEST_TX_SECONDS) {
+            status = test_stxg2_send_station_id(true);
+            PVDX_ASSERT_MSG(status == SUCCESS, "stxg2 periodic station ID\n");
+            if (status != SUCCESS) {
+                break; // Stop without a later ID rather than transmit without one
+            }
+        }
     }
     uint32_t tp_count = 0;
     (void)stxg2_read_reg(REG_TP_GEN_CNT, &tp_count);
     test_stxg2_report(tp_count, true);
+    status = test_stxg2_send_station_id(false);
+    PVDX_ASSERT_MSG(status == SUCCESS, "stxg2 final station ID\n");
     #endif
     test_stxg2_stop_transmit();
     test_log("stxg2: transmitted for %u s, radio powered off\n", (unsigned)STXG2_TEST_TX_SECONDS);

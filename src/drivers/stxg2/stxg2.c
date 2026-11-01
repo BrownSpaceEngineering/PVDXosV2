@@ -587,6 +587,68 @@ status_t stxg2_store_end(uint32_t *packets_written) {
 }
 
 /**
+ * \brief Sends the partial frame in the transfer framer, padded with the TF_CTRL padding byte (USM 9.2.8.1)
+ *
+ * \returns ERROR_NOT_READY if Buf_Flush does not clear
+ */
+status_t stxg2_flush_framer(void) {
+    uint32_t tf_ctrl = 0;
+    ret_err_status(stxg2_read_reg(REG_TF_CTRL, &tf_ctrl), "stxg2: TF_CTRL read failed\n");
+    ret_err_status(stxg2_write_reg(REG_TF_CTRL, tf_ctrl | TF_CTRL_BUF_FLUSH), "stxg2: framer flush failed\n");
+    status_t result = stxg2_poll_reg(REG_TF_CTRL, TF_CTRL_BUF_FLUSH, 0, STXG2_MEM_TIMEOUT_MS, &tf_ctrl);
+    if (result == ERROR_NOT_READY) {
+        warning("stxg2: framer flush did not finish (TF_CTRL = 0x%08lx)\n", (unsigned long)tf_ctrl);
+    }
+    return result;
+}
+
+/**
+ * \brief Sends data over SPI into the transfer framer, then flushes the framer, so that the data goes out in one transfer
+ * frame (USM 9.2.8.1, 9.2.8.7). The radio must be transmitting with the framer on.
+ *
+ * \param len Multiple of 4, at most STXG2_SPI_CHUNK_BYTES
+ * \note Leaves the framer input on SPI. The caller routes the framer input again if needed.
+ */
+status_t stxg2_framer_send(const uint8_t *data, size_t len) {
+    if (store_active) {
+        warning("stxg2: framer send during a store session\n");
+        return ERROR_NOT_READY;
+    }
+    if (data == NULL || len == 0 || (len % 4u) != 0 || len > STXG2_SPI_CHUNK_BYTES) {
+        return ERROR_BAD_ARGS;
+    }
+
+    // Re-enable applies the mode and resets SPI_RX_CNT
+    ret_err_status(stxg2_write_reg(REG_SPI_CTRL, 0), "stxg2: SPI disable failed\n");
+    ret_err_status(stxg2_write_reg(REG_SPI_CTRL, SPI_CTRL_ENABLE | SPI_CTRL_MODE(STXG2_SPI_MODE)), "stxg2: SPI enable failed\n");
+    ret_err_status(stxg2_route(XBAR_IN_SPI, XBAR_OUT_FRAMER_SHIFT), "stxg2: route SPI to framer failed\n");
+
+    store_words_sent = 0;
+    status_t result = stxg2_spi_send_words(data, len);
+    if (result == SUCCESS) {
+        result = stxg2_poll_reg(REG_SPI_STATUS, SPI_STATUS_COUNT_MSK, 0, STXG2_MEM_TIMEOUT_MS, NULL);
+        if (result != SUCCESS) {
+            warning("stxg2: SPI buffer did not empty\n");
+        }
+    }
+    if (result == SUCCESS) {
+        uint32_t rx_words = 0;
+        result = stxg2_read_reg(REG_SPI_RX_CNT, &rx_words);
+        if (result == SUCCESS && rx_words != store_words_sent) {
+            warning("stxg2: radio got %lu SPI words, sent %lu\n", (unsigned long)rx_words, (unsigned long)store_words_sent);
+            result = ERROR_SPI_TRANSFER_FAILED;
+        }
+    }
+    if (result == SUCCESS) {
+        result = stxg2_flush_framer();
+    }
+    if (stxg2_write_reg(REG_SPI_CTRL, 0) != SUCCESS) {
+        warning("stxg2: SPI disable failed\n");
+    }
+    return result;
+}
+
+/**
  * \brief Turns off the radio framer. (USM 9.2.8.1).
  *
  * \note On config enter, STX turns framer back on.

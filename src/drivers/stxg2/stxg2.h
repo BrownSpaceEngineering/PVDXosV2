@@ -240,7 +240,7 @@ typedef enum {
 // TF_CTRL (USM 9.2.8.1). The radio sets Enable on entering Config. The driver clears it.
 #define TF_CTRL_ENABLE (1u << 0)
 #define TF_CTRL_EN_CRC (1u << 1) // CRC-16 at the end of each transfer frame
-#define TF_CTRL_BUF_FLUSH (1u << 4) // Unused. Framer only.
+#define TF_CTRL_BUF_FLUSH (1u << 4) // Pads the partial frame in the framer and sends it. Clears itself.
 
 // Crossbar inputs (USM 9.2.8.7, table 9-22). 0 disconnects.
 #define XBAR_IN_NONE 0x0
@@ -284,6 +284,10 @@ status_t stxg2_route(uint8_t input_code, uint8_t output_shift);
 status_t stxg2_store_begin(uint32_t start_index);
 status_t stxg2_store(const uint8_t *data_buf, size_t sz);
 status_t stxg2_store_end(uint32_t *packets_written);
+
+// Framer input over SPI, while transmitting with the framer on
+status_t stxg2_flush_framer(void);
+status_t stxg2_framer_send(const uint8_t *data, size_t len);
 
 // Downlink
 status_t stxg2_downlink_begin(uint32_t start_index, uint32_t num_packets);
