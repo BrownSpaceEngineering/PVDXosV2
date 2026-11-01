@@ -14,6 +14,9 @@
 #define MRAM_ADCS_TLE_ADDRESS (0x00090000) // Last committed TLE
 #define MRAM_ADCS_UTC_ADDRESS (0x00090100) // Last saved UTC
 
+#define MRAM_PEROVSKITE_BASE_ADDRESS (0x00090200) // Address of perovskite sweeps in MRAM, right after the ADCS records
+#define MRAM_PEROVSKITE_SIZE (0x4800)             // Size of perovskite sweeps in MRAM
+
 #include "atmel_start.h"
 #include "hal_delay.h"
 #include "hal_gpio.h"

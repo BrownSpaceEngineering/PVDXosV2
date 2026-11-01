@@ -16,10 +16,8 @@
 #define MAX_ENABLED_TASKS 9
 
 typedef enum { // preliminary contents; still under discussion
-	STATE_INITIAL,
+	// The burn wire and the other boot steps run in main() before the scheduler starts; the state machine starts in STATE_IDLE
 	STATE_FIRST_BOOT,
-	STATE_BURN_WIRE,
-	STATE_POST,
 	STATE_LOW_POWER_IDLE,
 	STATE_IDLE,
 	STATE_PEROVSKITE_CAPTURE,

@@ -14,8 +14,9 @@ extern pvdx_task_t *const p_cfdp_task;
 extern pvdx_task_t *const p_fuel_gauge_task;
 extern pvdx_task_t *const p_thermistor_task;
 extern pvdx_task_t *const p_camera_task;
+extern pvdx_task_t *const p_perovskite_task;
 extern pvdx_task_t *task_list[];
-// TODO: p_fuel_task, p_camera_task, p_reflash_task, p_uhf_task, p_sband_task, p_perovskite_task, p_burn_wire_task
+// TODO: p_fuel_task, p_camera_task, p_reflash_task, p_uhf_task, p_sband_task, p_burn_wire_task
 
 
 pvdx_task_t *get_current_task(void);

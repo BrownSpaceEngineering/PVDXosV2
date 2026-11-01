@@ -13,7 +13,7 @@
 
 // Whether state_machine_init() has run; no transition is taken before then
 static bool state_machine_initialised = false;
-static state_id_t current_state = STATE_INITIAL;
+static state_id_t current_state = STATE_IDLE;
 
 state_id_t state_machine_get_current_state(void) {
     return current_state;
@@ -152,13 +152,13 @@ static void copy_input(input_update_t update, const input_t *const p_new_values)
 /**
  * \fn state_machine_init
  *
- * \brief Sets up the state table and enters STATE_INITIAL
+ * \brief Sets up the state table and enters STATE_IDLE
  *
  * \warning must be called after `task_manager_init_subtasks()`
  */
 void state_machine_init(void) {
     init_states();
-    enter_state(STATE_INITIAL);
+    enter_state(STATE_IDLE);
     state_machine_initialised = true;
 }
 

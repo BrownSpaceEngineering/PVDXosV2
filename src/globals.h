@@ -22,6 +22,10 @@
 // steps, idle; see main.c). Defined here rather than in main.c so that drivers can see it too.
 #define BURN_SEQUENCE
 
+// Uncomment to let the burn sequence actually fire the burn wire once the wait is over. Left commented out, the wait and
+// its MRAM record still run, but the burn pin is never driven and the burn is never recorded as done.
+// #define BURN_SEQUENCE_FIRE_BURN_WIRE
+
 // Uncomment to make the burn sequence's startup camera check also capture a picture over RTT channel 2
 #define BURN_SEQUENCE_CAMERA_CHECK_CAPTURE
 
@@ -29,6 +33,14 @@
 #define BURN_UHF_MODE_LINK   1
 #define BURN_UHF_MODE_OFF    2
 #define BURN_SEQUENCE_UHF_MODE BURN_UHF_MODE_OFF
+
+// TEMPORARY: leaves out the CFDP receive buffers (about 8.7 KB) so that the image fits in RAM. Until this is removed,
+// CFDP rejects every incoming file. Sending is unaffected.
+#define DO_NOT_BUILD_CFDP_BUFFERS
+
+// Comment out to save perovskite sweeps to MRAM. While defined, the perovskite task only logs its readings over RTT
+// and never touches MRAM, so nothing it measures survives a reboot.
+#define PEROVSKITE_LOG_ONLY
 
 /* ---------- LOGGING CONSTANTS ---------- */
 
@@ -111,6 +123,9 @@ typedef enum {
 
     // Display operations (append to preserve existing operation values)
     OPERATION_DISPLAY_INIT, // p_data: NULL
+
+    // Perovskite operations (append to preserve existing operation values)
+    OPERATION_PEROVSKITE_SWEEP, // p_data: NULL
 } operation_t;
 
 // An enum to represent the different log levels that functions can use
