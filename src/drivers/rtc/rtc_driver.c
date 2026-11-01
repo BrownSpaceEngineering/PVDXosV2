@@ -47,7 +47,8 @@ status_t get_rtc_values(rtc_data_t *data) {
         return ERROR_NOT_READY;
     }
     data->rtc_count = hri_rtcmode0_get_COUNT_reg(rtc_hw, 4294967295UL);
-    data->microseconds_count = (data->rtc_count / 32);
+    // The RTC counts at 32768 Hz, and 1000000 / 32768 reduces to 15625 / 512
+    data->microseconds_count = (uint32_t)(((uint64_t)data->rtc_count * 15625u) >> 9);
     data->seconds_count = data->rtc_count / 32768;
     return SUCCESS;
 }

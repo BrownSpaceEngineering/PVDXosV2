@@ -10,7 +10,11 @@
 #define MRAM_FLASH_BASE_ADDRESS (0x00000000) // Address of complete flash copy in MRAM
 #define MRAM_FLASH_SIZE (0x80000)            // Size of complete flash copy in MRAM
 
-#define MRAM_PEROVSKITE_BASE_ADDRESS (0x00090000) // Address of perovskite sweeps in MRAM, past the flash copy
+// One 256-byte page each, past the flash copy and the MRAM hardware test's scratch area (0x800F0)
+#define MRAM_ADCS_TLE_ADDRESS (0x00090000) // Last committed TLE
+#define MRAM_ADCS_UTC_ADDRESS (0x00090100) // Last saved UTC
+
+#define MRAM_PEROVSKITE_BASE_ADDRESS (0x00090200) // Address of perovskite sweeps in MRAM, right after the ADCS records
 #define MRAM_PEROVSKITE_SIZE (0x4800)             // Size of perovskite sweeps in MRAM
 
 #include "atmel_start.h"

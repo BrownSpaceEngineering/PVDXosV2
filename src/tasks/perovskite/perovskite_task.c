@@ -6,7 +6,8 @@
  *
  * A sweep takes about 90 s: each step waits out two INA226 conversions, see ina226_wait_for_fresh_conversion().
  *
- * NOTE: the MRAM driver has no lock, and this is the only task that uses MRAM. A second MRAM task needs one added.
+ * NOTE: the MRAM driver has no lock, and the ADCS task also uses MRAM (see adcs_persist.c) and runs during sweeps. A lock
+ * must be added before PEROVSKITE_LOG_ONLY is turned off.
  */
 
 #include "perovskite_task.h"

@@ -27,3 +27,25 @@ void unlock_mutex(SemaphoreHandle_t mutex) {
         fatal("%s task failed to unlock mutex\n", get_current_task()->name);
     }
 }
+
+static SemaphoreHandle_t adc1_mutex;
+static StaticSemaphore_t adc1_mutex_buffer;
+
+void init_adc1_mutex(void) {
+    adc1_mutex = xSemaphoreCreateMutexStatic(&adc1_mutex_buffer);
+    if (adc1_mutex == NULL) {
+        fatal("Failed to create ADC1 mutex\n");
+    }
+}
+
+void lock_adc1(void) {
+    if (xTaskGetSchedulerState() == taskSCHEDULER_RUNNING) {
+        lock_mutex(adc1_mutex);
+    }
+}
+
+void unlock_adc1(void) {
+    if (xTaskGetSchedulerState() == taskSCHEDULER_RUNNING) {
+        unlock_mutex(adc1_mutex);
+    }
+}
