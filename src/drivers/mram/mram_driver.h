@@ -4,7 +4,11 @@
 // Shared by the bootloader (stage 2) and PVDXos. MRAM 0x000000-0x07EFFF holds the bootloader's golden copy of flash
 // (layout in bootloader/src/image_format.h); PVDXos must not write there.
 
-#define MRAM_PEROVSKITE_BASE_ADDRESS (0x00090000) // Address of perovskite sweeps in MRAM, past the golden copy
+// One 256-byte page each, past the golden copy and the MRAM hardware test's scratch area (0x800F0)
+#define MRAM_ADCS_TLE_ADDRESS (0x00090000) // Last committed TLE
+#define MRAM_ADCS_UTC_ADDRESS (0x00090100) // Last saved UTC
+
+#define MRAM_PEROVSKITE_BASE_ADDRESS (0x00090200) // Address of perovskite sweeps in MRAM, right after the ADCS records
 #define MRAM_PEROVSKITE_SIZE (0x4800)             // Size of perovskite sweeps in MRAM
 
 #include "atmel_start.h"

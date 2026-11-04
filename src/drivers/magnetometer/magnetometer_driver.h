@@ -68,7 +68,7 @@
 // options
 #define INITIAL_CC  200 // Set the cycle count
 #define SAMPLE_RATE   2 // 2 HZ
-#define SINGLE_MODE   0 // 0 = use continuous measurement mode; 1 = use single measurement mode
+#define SINGLE_MODE   1 // 0 = use continuous measurement mode; 1 = use single measurement mode
 #define SENSOR_OK     0 // Used in magnetometer initialization
 
 typedef enum {

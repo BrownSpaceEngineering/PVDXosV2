@@ -13,7 +13,6 @@ static StaticSemaphore_t stop_ack_storage;
 static SemaphoreHandle_t stop_ack;
 static bool camera_ready = false;
 static bool image_channel_ready = false;
-static uint8_t camera_rtt_image_buffer[SEGGER_RTT_IMAGE_BUFFER_SIZE];
 
 QueueHandle_t init_camera(void) {
     stop_ack = xSemaphoreCreateBinaryStatic(&stop_ack_storage);

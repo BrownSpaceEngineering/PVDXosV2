@@ -42,7 +42,7 @@ start)
     rm -f "$PIDF"
     exit 1
   fi
-  echo "started (pid $(cat "$PIDF")); GDB on $HOST:$GDB_PORT; shell telnet on :19021"
+  echo "started (pid $(cat "$PIDF")); GDB on $HOST:$GDB_PORT"
   ;;
 stop)
   if running; then
