@@ -14,9 +14,14 @@
 # Stage-2 copies (must match FLASH_STAGE2_COUNT in image_format.h)
 export NUM_STAGE2_COPIES := 3
 
+# The MRAM driver is shared with PVDXos and lives in src/drivers/mram. Paths below are relative to the ASF build
+# directory (CHILD_MAKEFILE_PATH), where the compiler runs; mram_driver.o is found there through VPATH.
+SHARED_MRAM_DIR := ../../../src/drivers/mram
+
 STAGE2_OBJS := \
 ../src/stage2.o \
-../src/mram_driver.o \
+mram_driver.o \
+../src/mram_delay.o \
 ../src/flash_driver.o \
 ../src/watchdog_driver.o
 
@@ -68,6 +73,7 @@ endif
 # Compiler flags
 # Include git branch and commit hash in the build
 CFLAGS += -D'GIT_BRANCH_NAME="$(GIT_BRANCH_NAME)"' -D'GIT_COMMIT_HASH="$(GIT_COMMIT_HASH)"'
+CFLAGS += -I"$(SHARED_MRAM_DIR)"
 
 # Robust error checking
 CFLAGS += -Wextra -Werror -Werror=maybe-uninitialized
@@ -109,7 +115,7 @@ all: clean #Might as well clean before compiling the release build
 		OBJS="$(STAGE2_OBJS)" \
 		OBJS_AS_ARGS="$(STAGE2_OBJS_AS_ARGS)" \
 		DEPS_AS_ARGS="$(STAGE2_DEPS_AS_ARGS)" \
-		$(MAKE) -C $(CHILD_MAKEFILE_PATH) CFLAGS="$(CFLAGS)" LINKER_SCRIPT="../../src/stage2_flash$$index.ld"; \
+		$(MAKE) -C $(CHILD_MAKEFILE_PATH) CFLAGS="$(CFLAGS)" VPATH="$(SHARED_MRAM_DIR)" LINKER_SCRIPT="../../src/stage2_flash$$index.ld"; \
 		cp -f ../ASF/gcc/PVDXos_bootloader.bin ./stage2_$$index.bin; \
 		cp -f ../ASF/gcc/PVDXos_bootloader.elf ./stage2_$$index.elf; \
 	done

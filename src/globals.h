@@ -20,7 +20,7 @@
 
 // Comment out to build the normal OS instead of the burn sequence (device checks, 30 min wait, burn pin on, post-burn
 // steps, idle; see main.c). Defined here rather than in main.c so that drivers can see it too.
-#define BURN_SEQUENCE
+// #define BURN_SEQUENCE
 
 // Uncomment to let the burn sequence actually fire the burn wire once the wait is over. Left commented out, the wait and
 // its MRAM record still run, but the burn pin is never driven and the burn is never recorded as done.
@@ -36,7 +36,7 @@
 
 // TEMPORARY: leaves out the CFDP receive buffers (about 8.7 KB) so that the image fits in RAM. Until this is removed,
 // CFDP rejects every incoming file. Sending is unaffected.
-#define DO_NOT_BUILD_CFDP_BUFFERS
+// #define DO_NOT_BUILD_CFDP_BUFFERS
 
 // Comment out to save perovskite sweeps to MRAM. While defined, the perovskite task only logs its readings over RTT
 // and never touches MRAM, so nothing it measures survives a reboot.

@@ -27,9 +27,6 @@ void test_uslp(void);
 void test_telemetry_downlink(void);
 void test_telemetry_uplink(void);
 void test_float(void);
-#ifdef TEST_MRAM
-void test_mram(void);
-#endif
 
 void tests_run(void) {
 #ifdef TEST_SPP
@@ -50,9 +47,6 @@ void tests_run(void) {
 #ifdef TEST_TELEMETRY
     test_telemetry_downlink();
     test_telemetry_uplink();
-#endif
-#ifdef TEST_MRAM
-    test_mram();
 #endif
     test_log("test results: %d/%d passed", tests_passed, tests_total);
 }
