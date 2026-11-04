@@ -1,131 +1,124 @@
 /**
  * photodiode_driver.c
  *
- * Hardware driver for photodiode sensors used in ADCS sun sensing.
- *
- * Created: September 20, 2025
- * Modified: November 24, 2025
- * Authors: Avinash Patel, Yi Lyo, Alexander Thaep
+ * 18 photodiode channels across ADC0 and ADC1. See photodiode_driver.h.
  */
 
-// TODO: Update pinconfig with photodiode pins before uncommenting this
-//
-// #include "photodiode_driver.h"
-// 
-// // Photodiode system constants
-// #define PHOTODIODE_COUNT 22   // Number of photodiodes (8 mux + 14 direct)
-// #define PHOTODIODE_S0_PIN (Photodiode_MUX_S0 & 0x1Fu)
-// #define PHOTODIODE_MUX_MASK (0xFu << PHOTODIODE_S0_PIN)
-// 
-// /**
-//  * \fn init_photodiode_hardware
-//  *
-//  * \brief Initialize photodiode hardware (ADC channels)
-//  *
-//  * \returns status_t SUCCESS if initialization was successful
-//  */
-// status_t init_photodiode_hardware(void) {
-//     debug("photodiode_driver: Initializing photodiode hardware\n");
-// 
-//     // TODO: Configure ADC channels for photodiode readings
-//     // TODO: Initialize any required peripherals
-// 
-//     info("photodiode_driver: Hardware initialization complete\n");
-//     return SUCCESS;
-// }
-// 
-// /**
-//  * \fn photodiode_read
-//  *
-//  * \brief Reads photodiode values and calculates sun vector
-//  *
-//  * \param data pointer to photodiode_data_t structure to fill
-//  *
-//  * \returns status_t SUCCESS if reading was successful
-//  */
-// status_t photodiode_read(photodiode_data_t *const data) {
-//     if (!data) {
-//         return ERROR_SANITY_CHECK_FAILED;
-//     }
-// 
-//     debug("photodiode: Reading photodiode values\n");
-// 
-//     // Read raw ADC values
-//     uint16_t raw_values[PHOTODIODE_COUNT];
-//     status_t result = read_photodiodes(raw_values);
-// 
-//     if (result != SUCCESS) {
-//         warning("photodiode: ADC read failed\n");
-//         return result;
-//     }
-// 
-//     // Copy raw values to data structure
-//     for (int i = 0; i < PHOTODIODE_COUNT; i++) {
-//         data->raw_values[i] = raw_values[i];
-//     }
-// 
-//     data->timestamp = xTaskGetTickCount();
-//     data->valid = true;
-// 
-//     return SUCCESS;
-// }
-// 
-// /**
-//  * \fn read_photodiodes
-//  *
-//  * \brief Read ADC values from photodiode sensors
-//  *
-//  * \param values pointer to array to store ADC readings
-//  * \param count number of photodiodes to read
-//  *
-//  * \returns status_t SUCCESS if reading was successful
-//  */
-// status_t read_photodiodes(uint16_t *values) {
-//     if (!values) {
-//         return ERROR_SANITY_CHECK_FAILED;
-//     }
-// 
-//     debug("photodiode_driver: Reading photodiode ADC values\n");
-// 
-//     // TODO: Read values from ADCs
-// 
-//     return SUCCESS;
-// }
-// 
-// /**
-//  * \fn set_multiplexer_outputs
-//  *
-//  * \brief Set multiplexer outputs to enable/disable and select channel
-//  *
-//  * \param output Output to write. The three least significant bits determine
-//  *      channel, the fourth bit determines enable pin. Note the enable pin is
-//  *      active low. Thus, if output is between 0 and 7 inclusive, then the
-//  *      multiplexer is enabled and the appropriate channel is selected. If
-//  *      output is between 8 and 15 inclusive, then the multiplexer is disabled.
-//  *      Values outside this range are not permitted and will result in
-//  *      ERROR_SANITY_CHECK_FAILED being returned.
-//  *
-//  * \returns status_t SUCCESS if output write was successful,
-//  *                   ERROR_SANITY_CHECK_FAILED if output is invalid
-//  */
-// status_t set_multiplexer_outputs(int_fast8_t output) {
-//     if (output & (~0xF)) { // Only the four least significant bits should be set
-//         return ERROR_SANITY_CHECK_FAILED;
-//     }
-//     static int_fast8_t current_output = 0xF;
-// 
-//     debug("photodiode_driver: Setting multiplexer output to " PRIxFAST8 "\n", output);
-// 
-//     int_fast8_t toggles_needed = output ^ current_output;
-//     PORT->Group[GPIO_PORTC].OUTTGL.reg = toggles_needed << PHOTODIODE_S0_PIN;
-//     current_output = output;
-// 
-//     debug("photodiode_driver: MUX output set to " PRIxFAST8 "\n", output);
-// 
-//     return SUCCESS;
-// }
-// 
-// bool check_photodiode(void) {
-//     // TODO: will this actally work? 
-//     return init_photodiode_hardware() == SUCCESS;
-// }; 
+#include "globals.h"
+
+#include "photodiode_driver.h"
+
+// Photodiode index -> {ADC descriptor, AIN channel}.
+typedef struct {
+    struct adc_sync_descriptor *adc;
+    uint8_t ain;
+} phd_cfg_t;
+
+static const phd_cfg_t PHD_CFG[PHD_COUNT] = {
+    {&ADC_1, 10}, // PHD_0  PC00 ADC1_AIN10
+    {&ADC_0, 1},  // PHD_1  PA03 ADC0_AIN1
+    {&ADC_0, 2},  // PHD_2  PB08 ADC0_AIN2
+    {&ADC_0, 3},  // PHD_3  PB09 ADC0_AIN3
+    {&ADC_0, 4},  // PHD_4  PA04 ADC0_AIN4
+    {&ADC_0, 5},  // PHD_5  PA05 ADC0_AIN5
+    {&ADC_0, 6},  // PHD_6  PA06 ADC0_AIN6
+    {&ADC_0, 7},  // PHD_7  PA07 ADC0_AIN7
+    {&ADC_0, 8},  // PHD_8  PA08 ADC0_AIN8
+    {&ADC_0, 9},  // PHD_9  PA09 ADC0_AIN9
+    {&ADC_0, 10}, // PHD_10 PA10 ADC0_AIN10
+    {&ADC_0, 11}, // PHD_11 PA11 ADC0_AIN11
+    {&ADC_0, 12}, // PHD_12 PB00 ADC0_AIN12
+    {&ADC_0, 13}, // PHD_13 PB01 ADC0_AIN13
+    {&ADC_0, 14}, // PHD_14 PB02 ADC0_AIN14
+    {&ADC_0, 15}, // PHD_15 PB03 ADC0_AIN15
+    {&ADC_1, 4},  // PHD_16 PC02 ADC1_AIN4
+    {&ADC_1, 5},  // PHD_17 PC03 ADC1_AIN5
+};
+
+status_t init_photodiodes(void) {
+    // Ratiometric, 12-bit, on both ADCs. (ADC1 config is shared with the thermistor driver;
+    // identical settings, so this is idempotent.)
+    struct adc_sync_descriptor *const adcs[2] = {&ADC_0, &ADC_1};
+    for (uint8_t i = 0; i < 2; i++) {
+        adc_sync_set_reference(adcs[i], ADC_REFCTRL_REFSEL_INTVCC1_Val);
+        adc_sync_set_resolution(adcs[i], ADC_CTRLB_RESSEL_12BIT_Val);
+        adc_sync_enable_channel(adcs[i], 0);
+    }
+    return SUCCESS;
+}
+
+status_t phd_read_raw(uint8_t index, uint16_t *code) {
+    if (index >= PHD_COUNT || code == NULL) {
+        return ERROR_BAD_TARGET;
+    }
+    const phd_cfg_t *c = &PHD_CFG[index];
+
+    if (adc_sync_set_inputs(c->adc, c->ain, ADC_INPUTCTRL_MUXNEG_GND_Val, 0) != ERR_NONE) {
+        warning("photodiode: set_inputs failed (idx=%u)\n", index);
+        return ERROR_READ_FAILED;
+    }
+
+    uint8_t buf[2];
+    // Settling conversion after switching the mux (discarded).
+    if (adc_sync_read_channel(c->adc, 0, buf, sizeof(buf)) < 0) {
+        warning("photodiode: ADC read failed (idx=%u)\n", index);
+        return ERROR_READ_FAILED;
+    }
+
+    uint32_t acc = 0;
+    for (uint8_t i = 0; i < PHD_ADC_AVG_SAMPLES; i++) {
+        if (adc_sync_read_channel(c->adc, 0, buf, sizeof(buf)) < 0) {
+            warning("photodiode: ADC read failed (idx=%u)\n", index);
+            return ERROR_READ_FAILED;
+        }
+        acc += (uint32_t)buf[0] | ((uint32_t)buf[1] << 8);
+    }
+
+    *code = (uint16_t)(acc / PHD_ADC_AVG_SAMPLES);
+    return SUCCESS;
+}
+
+status_t phd_read_voltage(uint8_t index, float *volts) {
+    if (volts == NULL) {
+        return ERROR_BAD_TARGET;
+    }
+    uint16_t code = 0;
+    ret_err_status(phd_read_raw(index, &code), "photodiode: raw read failed");
+    *volts = (float)code / PHD_ADC_FS * PHD_VREF_V;
+    return SUCCESS;
+}
+
+status_t phd_read_all(uint16_t codes[PHD_COUNT]) {
+    if (codes == NULL) {
+        return ERROR_BAD_TARGET;
+    }
+    status_t worst = SUCCESS;
+    for (uint8_t i = 0; i < PHD_COUNT; i++) {
+        codes[i] = 0;
+        status_t rc = phd_read_raw(i, &codes[i]);
+        if (rc != SUCCESS) {
+            worst = rc;
+        }
+    }
+    return worst;
+}
+
+// ---------------------- ADCS task interface ----------------------
+
+status_t init_photodiode_hardware(void) {
+    return init_photodiodes();
+}
+
+status_t read_photodiodes(uint16_t *values) {
+    return phd_read_all(values);
+}
+
+status_t photodiode_read(photodiode_data_t *const data) {
+    if (data == NULL) {
+        return ERROR_SANITY_CHECK_FAILED;
+    }
+    status_t result = phd_read_all(data->raw_values);
+    data->timestamp = xTaskGetTickCount();
+    data->valid = (result == SUCCESS);
+    return result;
+}

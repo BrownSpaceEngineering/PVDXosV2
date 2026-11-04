@@ -10,7 +10,7 @@
 #define TESTS_TEST_H
 
 // Each test is only compiled when its TEST_<NAME> macro is defined, which `make test TESTS="spp cfdp"`
-// does via -DTEST_SPP -DTEST_CFDP. If no test is selected, all of them are compiled.
+// does via -DTEST_SPP -DTEST_CFDP. If no test is selected, the defaults below are compiled.
 // Keep this list in sync with TEST_NAMES in src/Makefile
 #if !defined(TEST_SPP) && !defined(TEST_CFDP) && !defined(TEST_USLP) && !defined(TEST_PMB) &&                     \
     !defined(TEST_TELEMETRY) && !defined(TEST_UPLINK) && !defined(TEST_FLOAT)

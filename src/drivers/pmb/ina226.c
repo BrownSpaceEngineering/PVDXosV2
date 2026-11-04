@@ -89,7 +89,7 @@ status_t ina226_conversion_ready(bool *ready) {
 /**
  * Waits until a conversion that started after this call has completed, so the next read reflects the
  * current input. The conversion in flight when called may include samples taken before an input change,
- * so it is discarded and the following one is waited for. Busy-waits in 1 ms steps.
+ * so it is discarded and the following one is waited for. Polls in 1 ms steps.
  */
 status_t ina226_wait_for_fresh_conversion(uint32_t timeout_ms) {
     bool ready = false;
@@ -101,7 +101,12 @@ status_t ina226_wait_for_fresh_conversion(uint32_t timeout_ms) {
         if (timeout_ms-- == 0) {
             return ERROR_NOT_READY;
         }
-        delay_ms(1);
+        // delay_ms() overwrites SysTick, which FreeRTOS owns once the scheduler has started
+        if (xTaskGetSchedulerState() == taskSCHEDULER_NOT_STARTED) {
+            delay_ms(1);
+        } else {
+            vTaskDelay(pdMS_TO_TICKS(1));
+        }
         if ((status = ina226_conversion_ready(&ready)) != SUCCESS) {
             return status;
         }

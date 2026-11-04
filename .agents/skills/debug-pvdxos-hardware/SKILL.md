@@ -11,12 +11,15 @@ terminate and will hang the session: `make connect`, `make connect_bl`, `gdb`,
 
 ## How this firmware is laid out (matters for debugging)
 
-- Flash holds three bootloader copies (0x0, 0x3000, 0x6000) and three app copies. On boot the
-  bootloader majority-votes the app and copies it to RAM at 0x20000000, then jumps to it.
-  So the app runs from RAM, and GDB needs `src/PVDXos.elf` (linked for RAM) plus the bootloader ELFs.
-  `tools/gdb.sh` loads all of them the same way `make connect` does.
-- Flashing is done with `JLinkExe -CommanderScript flash.jlink` (the composite `flash.bin`),
-  never GDB `load` (that would write the RAM-linked ELF to the wrong place). See build-and-flash-pvdxos.
+- Flash layout (`bootloader/src/image_format.h`): stage 1 bootloader at 0x0, three stage-2 bootloader copies at
+  0x2000/0x6000/0xA000, image metadata at 0xE000, and PVDXos at 0x1E000, which runs in place from flash.
+  On boot, stage 2 checks every flash block against the MRAM golden copy, rewrites bad blocks, leaves a
+  report in backup RAM (PVDXos logs it as "[+] Bootloader ..."), and jumps to PVDXos.
+  GDB needs `src/PVDXos.elf` plus the bootloader ELFs in `bootloader/src/`; `tools/gdb.sh` loads them
+  the same way `make connect` does.
+- Flashing is done with `JLinkExe -CommanderScript flash.jlink` (the composite `flash.bin`), never GDB
+  `load`: loading only the app ELF leaves the metadata stale, and the bootloader then rewrites flash
+  from the MRAM golden copy. See build-and-flash-pvdxos.
 - ELFs are gitignored: build first (`make dev`) and make sure the ELFs match what is flashed.
 
 ## Workflow
@@ -45,8 +48,10 @@ channel 1, so they don't collide.
 - The hardware watchdog is enabled in every build (period 16384 cycles, about 16 s assuming the
   usual 1.024 kHz clock). Don't leave the core halted for long; `tools/gdb.sh` resumes by default.
   Use `GDB_RESUME=0` only for short inspections.
-- If the PC is below 0x10000 the core is in a bootloader, and app symbols/backtraces are meaningless.
-- After a reset, code in RAM is re-copied by the bootloader. Breakpoints set before a reset are lost.
+- If the PC is below 0x1E000 the core is in a bootloader, and app symbols/backtraces are meaningless.
+- The bootloader may rewrite flash blocks at boot (check the "[+] Bootloader" log lines). A build that
+  differs from the golden copy gets overwritten by it, so the ELFs you built no longer match the target,
+  unless it was flashed with `make flash_to_mram` (asks permission, like any flash).
 - Task names are truncated to 8 characters. `info threads` may be empty if the J-Link FreeRTOS plugin
   can't find its symbols (the firmware doesn't define `uxTopUsedPriority`); try `JLINK_RTOS=0`
   if the server misbehaves, and use `rtos_current` instead.

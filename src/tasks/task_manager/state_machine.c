@@ -13,7 +13,7 @@
 
 // Whether state_machine_init() has run; no transition is taken before then
 static bool state_machine_initialised = false;
-static state_id_t current_state = STATE_INITIAL;
+static state_id_t current_state = STATE_IDLE;
 // Current inputs; only written by task manager.
 // TODO: battery_level starts full so that the example low-battery transitions in states.c do not
 // fire before anything has reported a real value
@@ -48,8 +48,9 @@ static bool state_enables_task(state_id_t state, const pvdx_task_t *const p_task
 /**
  * \fn enter_state
  *
- * \brief Enables/disables tasks so that exactly the new state's `enabled_tasks` are running, then
- *      records the new state. OS and TESTING tasks are not part of the state machine and are left alone.
+ * \brief Enables/disables tasks so that exactly the new state's `enabled_tasks` are running, records
+ *      the new state, then runs its `on_enter` action if it has one. OS and TESTING tasks are not part
+ *      of the state machine and are left alone.
  *
  * \warning every task must already have been initialised by the task manager
  */
@@ -79,8 +80,13 @@ static void enter_state(state_id_t next_state) {
     }
 
     info("state_machine: state %d -> state %d\n", current_state, next_state);
+    const state_id_t previous_state = current_state;
     current_state = next_state;
     inputs.last_transition_tick = xTaskGetTickCount();
+
+    if (mission_states[next_state].on_enter != NULL) {
+        mission_states[next_state].on_enter(previous_state, &inputs);
+    }
 }
 
 /**
@@ -100,14 +106,29 @@ static void copy_input(input_update_t update, const input_t *const p_new_values)
         case SUNLIGHT_STATUS_UPDATE:
             inputs.in_sunlight = p_new_values->in_sunlight;
             break;
+        case DETUMBLING_UPDATE:
+            inputs.detumbling = p_new_values->detumbling;
+            break;
         case BATTERY_LEVEL_UPDATE:
             inputs.battery_level = p_new_values->battery_level;
             break;
         case IMAGE_READY_DISPLAY_UPDATE:
             inputs.image_ready_to_display = p_new_values->image_ready_to_display;
             break;
+        case DISPLAY_ACTIVE_UPDATE:
+            inputs.display_active = p_new_values->display_active;
+            break;
         case PHOTO_READY_DOWNLINK_UPDATE:
             inputs.photo_taken_for_downlink = p_new_values->photo_taken_for_downlink;
+            break;
+        case PEROVSKITE_READY_DOWNLINK_UPDATE:
+            inputs.perovskite_data_ready_for_downlink = p_new_values->perovskite_data_ready_for_downlink;
+            break;
+        case SBAND_READY_TRANSMIT_UPDATE:
+            inputs.sband_wants_to_transmit = p_new_values->sband_wants_to_transmit;
+            break;
+        case SAFE_DISABLE_RADIO_UPDATE:
+            inputs.safe_to_disable_radio = p_new_values->safe_to_disable_radio;
             break;
         case NUM_INPUT_UPDATE_OPTIONS:
             // Not an input; listed so that the switch covers the whole enum
@@ -120,13 +141,13 @@ static void copy_input(input_update_t update, const input_t *const p_new_values)
 /**
  * \fn state_machine_init
  *
- * \brief Sets up the state table and enters STATE_INITIAL
+ * \brief Sets up the state table and enters STATE_IDLE
  *
  * \warning must be called after `task_manager_init_subtasks()`
  */
 void state_machine_init(void) {
     init_states();
-    enter_state(STATE_INITIAL);
+    enter_state(STATE_IDLE);
     state_machine_initialised = true;
 }
 

@@ -45,12 +45,11 @@
 #define USLP_PRIMARY_HEADER_FIXED_SIZE 7 // everything except the VC frame count
 #define USLP_DATA_FIELD_HEADER_SIZE 1    // rule 111 does not use the optional 16-bit pointer
 
-// The Frame Error Control Field (FECF) is a CRC-16 over the rest of the frame, carried in the
-// final two octets. Whether frames carry one is a managed parameter -- nothing in the frame
-// itself announces it -- so the ground station has to be configured to expect it.
-// Set this to 0 to send frames without a FECF.
+// The Frame Error Control Field (FECF) is a over the rest of the frame, carried in the
 // Reference: USLP Blue Book Annex B
-#define USLP_FECF_SIZE 2
+#define USLP_FECF_SIZE 4
+#define USLP_IS_CRC32 ((bool)(USLP_FECF_SIZE == 4))
+#define USLP_IS_CRC16 ((bool)(USLP_FECF_SIZE == 2))
 
 // Size, in bytes, of the Operational Control Field, present when the OCF flag is set
 // Reference: USLP Blue Book 4.1.5

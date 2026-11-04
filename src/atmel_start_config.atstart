@@ -2323,12 +2323,13 @@ pads:
     mode: Digital input
     user_label: SBAND_MISO
     configuration: null
-  BURN:
+  SBAND_CS:
     name: PB19
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB19
     mode: Digital output
-    user_label: BURN
-    configuration: null
+    user_label: SBAND_CS
+    configuration:
+      pad_initial_level: High
   EPS_RST:
     name: PB20
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB20
@@ -2466,6 +2467,24 @@ pads:
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB03
     mode: Analog
     user_label: PHD_15
+    configuration: null
+  BURN:
+    name: PB29
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB29
+    mode: Digital output
+    user_label: BURN
+    configuration: null
+  SBAND_EN:
+    name: PC25
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC25
+    mode: Digital output
+    user_label: SBAND_EN
+    configuration: null
+  SBAND_RST:
+    name: PC26
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC26
+    mode: Digital output
+    user_label: SBAND_RST
     configuration: null
 toolchain_options: []
 static_files: []
