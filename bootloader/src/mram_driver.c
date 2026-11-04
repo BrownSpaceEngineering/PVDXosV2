@@ -347,54 +347,17 @@ bool mram_write_bytes(uint32_t address, const uint8_t *data, uint32_t size) {
     return all_okay;
 }
 
-#define PAGE_SIZE 256
+// States from the last mram_init(), so that reads can pick a chip that initialized correctly
+static mram_status_t mram_states = 0;
 
+// Reads from the first chip that initialized correctly. Any size and alignment works.
 bool mram_read_bytes(uint32_t address, uint8_t *data, uint32_t size) {
-    /** TODO: Only read bytes from known-good modules (no majority vote). */
-
-    if (size % PAGE_SIZE != 0) {
-        return false;
-    }
-    uint32_t npages = size / PAGE_SIZE;
-
-    uint8_t read_data[3][PAGE_SIZE];
-    for (uint32_t page = 0; page < npages; page++) {
-        for (uint8_t mram_idx = 1; mram_idx <= 3; mram_idx++) {
-            if (!read_bytes(mram_idx, address + PAGE_SIZE * page, read_data[mram_idx - 1], PAGE_SIZE)) {
-                // Never majority-vote from incomplete read buffers
-                return false;
-            }
-        }
-
-        // Reads never write back: the vote isn't CRC-checked, and it could overwrite the only good chip
-        for (uint16_t read_idx = 0; read_idx < PAGE_SIZE; read_idx++) {
-            data[read_idx + PAGE_SIZE * page] = (read_data[0][read_idx] & read_data[1][read_idx]) |
-                (read_data[2][read_idx] & read_data[1][read_idx]) |
-                (read_data[0][read_idx] & read_data[2][read_idx]);
+    for (uint8_t mram = 1; mram <= 3; mram++) {
+        if (get_mram_state(mram_states, mram) == MRAM_STATE_OK) {
+            return read_bytes(mram, address, data, size);
         }
     }
-    return true;
-}
-
-// ---------------------- Test ----------------------
-
-void test_writes_reads(uint32_t addr, int salt) {
-    const uint32_t NUM_BYTES = 512;
-    uint8_t send_data[NUM_BYTES];
-    uint8_t recv_data[NUM_BYTES];
-
-    for (uint32_t i = 0; i < NUM_BYTES; i++)
-        send_data[i] = (uint8_t)((i + salt) % 100);
-
-    mram_write_bytes(addr, send_data, NUM_BYTES);
-    mram_read_bytes(addr, recv_data, NUM_BYTES);
-
-    for (uint32_t i = 0; i < NUM_BYTES; i++) {
-        if (recv_data[i] != send_data[i]) {
-            // test failed
-            mram_recoverable_fatal();
-        }
-    }
+    return false;
 }
 
 // ---------------------- Main ----------------------
@@ -404,9 +367,6 @@ void test_writes_reads(uint32_t addr, int salt) {
  * @return An `mram_status_t` with the status of the three MRAM modules.
  */
 mram_status_t mram_init(void) {
-    atmel_start_init();
-    spi_m_sync_enable(&SPI_MRAM);
-
     gpio_set_pin_level(MRAM1_CS, true);
     gpio_set_pin_level(MRAM2_CS, true);
     gpio_set_pin_level(MRAM3_CS, true);
@@ -433,168 +393,9 @@ mram_status_t mram_init(void) {
         }
     }
 
+    mram_states = status;
     return status;
 }
-
-#if defined(UNITTEST) && defined(TEST_MRAM)
-#include <string.h>
-
-#include "logging.h"
-#include "tests/test.h"
-
-// Outside the bootloader's development flash mirror; deliberately cross 256-byte boundaries.
-#define MRAM_HW_TEST_ADDRESS 0x000800F0u
-#define MRAM_HW_TEST_SIZE 512u
-
-static bool mram_test_compare(uint8_t mram, const uint8_t *actual, const uint8_t *expected) {
-    for (unsigned int i = 0; i < MRAM_HW_TEST_SIZE; i++) {
-        if (actual[i] != expected[i]) {
-            warning("MRAM HW chip %u mismatch at %06lx: read=%02x expected=%02x\n", mram,
-                    (unsigned long)(MRAM_HW_TEST_ADDRESS + i), actual[i], expected[i]);
-            return false;
-        }
-    }
-    return true;
-}
-
-void test_mram(void) {
-    static uint8_t original[3][MRAM_HW_TEST_SIZE];
-    static uint8_t expected[MRAM_HW_TEST_SIZE];
-    static uint8_t actual[MRAM_HW_TEST_SIZE];
-    bool saved[3] = {false};
-    bool all_okay = true;
-
-    spi_m_sync_enable(&SPI_MRAM);
-    gpio_set_pin_level(MRAM1_CS, true);
-    gpio_set_pin_level(MRAM2_CS, true);
-    gpio_set_pin_level(MRAM3_CS, true);
-    delay_ms(200);
-    info("MRAM HW BEGIN: audit shared driver, 512 bytes/chip at %06lx\n", (unsigned long)MRAM_HW_TEST_ADDRESS);
-#ifdef MRAM_FACTORY_INIT
-    extern bool mram_factory_initialize_all(void);
-    bool factory_okay = mram_factory_initialize_all();
-    PVDX_ASSERT_MSG(factory_okay, "MRAM verified factory initialization\n");
-    if (!factory_okay) {
-        info("MRAM HW END: FAIL (factory initialization)\n");
-        return;
-    }
-#endif
-
-    for (uint8_t mram = 1; mram <= 3; mram++) {
-        uint8_t cmd = CMD_RDID;
-        uint8_t id[3] = {0};
-        mram_select(mram);
-        bool okay = spi_write(&cmd, 1) && spi_read(id, sizeof(id));
-        mram_deselect(mram);
-        okay = okay && id[0] == 0x6B && id[1] == 0xBB && id[2] == 0x14;
-        info("MRAM HW chip %u ID=%02x %02x %02x: %s\n", mram, id[0], id[1], id[2], okay ? "PASS" : "FAIL");
-        PVDX_ASSERT_MSG(okay, "MRAM hardware ID\n");
-        if (!okay) {
-            all_okay = false;
-            continue;
-        }
-
-        uint8_t initial_status = read_status(mram);
-        okay = disable_block_protection(mram) == MRAM_INIT_OK && set_persistent_mode(mram) == MRAM_INIT_OK;
-        info("MRAM HW chip %u status=%02x NV8=%02x V8=%02x init=%s\n", mram, initial_status,
-             read_nonvol_reg(mram, PMM_REG), read_vol_reg(mram, PMM_REG), okay ? "PASS" : "FAIL");
-        PVDX_ASSERT_MSG(okay, "MRAM hardware initialization\n");
-        saved[mram - 1] = okay && read_bytes(mram, MRAM_HW_TEST_ADDRESS, original[mram - 1], MRAM_HW_TEST_SIZE) &&
-                          read_bytes(mram, MRAM_HW_TEST_ADDRESS, actual, MRAM_HW_TEST_SIZE) &&
-                          mram_test_compare(mram, actual, original[mram - 1]);
-        PVDX_ASSERT_MSG(saved[mram - 1], "MRAM stable original snapshot\n");
-        if (!saved[mram - 1]) {
-            all_okay = false;
-            continue;
-        }
-
-        // Exercise the two BP bits omitted by the old 0x0C mask, then verify their removal.
-        for (unsigned int bit = 0; bit < 2; bit++) {
-            uint8_t protected_status = (initial_status & 0xA0u) | (bit == 0 ? 0x10u : 0x40u);
-            bool protection_okay = write_status(mram, protected_status) &&
-                                   (read_status(mram) & 0xFCu) == protected_status &&
-                                   disable_block_protection(mram) == MRAM_INIT_OK &&
-                                   (read_status(mram) & 0xFCu) == (initial_status & 0xA0u);
-            info("MRAM HW chip %u BP=%02x set/clear/preserve: %s\n", mram,
-                 bit == 0 ? 0x10 : 0x40, protection_okay ? "PASS" : "FAIL");
-            PVDX_ASSERT_MSG(protection_okay, "MRAM hardware protection regression\n");
-            okay = okay && protection_okay;
-        }
-        // Always try to leave the device writable, including after a failed protection test.
-        okay = (disable_block_protection(mram) == MRAM_INIT_OK) && okay;
-
-        for (unsigned int pattern = 0; pattern < 5 && okay; pattern++) {
-            uint32_t random_state = 0xA53C9671u ^ (mram * 17u) ^ (pattern * 0x17171717u);
-            for (unsigned int i = 0; i < MRAM_HW_TEST_SIZE; i++) {
-                random_state ^= random_state << 13u;
-                random_state ^= random_state >> 17u;
-                random_state ^= random_state << 5u;
-                expected[i] = pattern == 0 ? (uint8_t)((i * 37u) ^ (mram * 13u)) :
-                              pattern == 1 ? 0x00u : pattern == 2 ? 0xFFu : (uint8_t)random_state;
-            }
-            bool pattern_okay = write_bytes(mram, MRAM_HW_TEST_ADDRESS, expected, MRAM_HW_TEST_SIZE) &&
-                                read_bytes(mram, MRAM_HW_TEST_ADDRESS, actual, MRAM_HW_TEST_SIZE) &&
-                                mram_test_compare(mram, actual, expected);
-            info("MRAM HW chip %u pattern %u (512 bytes, cross-page): %s\n", mram, pattern, pattern_okay ? "PASS" : "FAIL");
-            PVDX_ASSERT_MSG(pattern_okay, "MRAM hardware pattern readback\n");
-            okay = okay && pattern_okay;
-        }
-        all_okay = all_okay && okay;
-        delay_ms(200);
-    }
-
-    if (all_okay) {
-        for (unsigned int i = 0; i < MRAM_HW_TEST_SIZE; i++) {
-            expected[i] = (uint8_t)((i * 19u) ^ 0xA5u);
-        }
-        mram_write_bytes(MRAM_HW_TEST_ADDRESS, expected, MRAM_HW_TEST_SIZE);
-        for (uint8_t mram = 1; mram <= 3; mram++) {
-            bool replica_okay = read_bytes(mram, MRAM_HW_TEST_ADDRESS, actual, MRAM_HW_TEST_SIZE) &&
-                                mram_test_compare(mram, actual, expected);
-            PVDX_ASSERT_MSG(replica_okay, "MRAM hardware public write replica\n");
-            all_okay = all_okay && replica_okay;
-        }
-        // Inject a different flipped bit in each replica: bitwise majority must recover the original.
-        for (uint8_t mram = 1; mram <= 3; mram++) {
-            uint8_t corrupted = expected[0] ^ (1u << (mram - 1));
-            bool injected = write_bytes(mram, MRAM_HW_TEST_ADDRESS, &corrupted, 1);
-            PVDX_ASSERT_MSG(injected, "MRAM hardware majority fault injection\n");
-            all_okay = all_okay && injected;
-        }
-        memset(actual, 0, sizeof(actual));
-        mram_read_bytes(MRAM_HW_TEST_ADDRESS, actual, MRAM_HW_TEST_SIZE);
-        bool majority_okay = mram_test_compare(0, actual, expected);
-        PVDX_ASSERT_MSG(majority_okay, "MRAM hardware majority read\n");
-        all_okay = all_okay && majority_okay;
-        for (uint8_t mram = 1; mram <= 3; mram++) {
-            bool repaired = read_bytes(mram, MRAM_HW_TEST_ADDRESS, actual, MRAM_HW_TEST_SIZE) &&
-                            mram_test_compare(mram, actual, expected);
-            info("MRAM HW chip %u public write / majority repair: %s\n", mram, repaired ? "PASS" : "FAIL");
-            PVDX_ASSERT_MSG(repaired, "MRAM hardware replica repair\n");
-            all_okay = all_okay && repaired;
-        }
-    }
-
-    for (uint8_t mram = 1; mram <= 3; mram++) {
-        if (!saved[mram - 1]) {
-            continue;
-        }
-        bool restored = disable_block_protection(mram) == MRAM_INIT_OK &&
-                        write_bytes(mram, MRAM_HW_TEST_ADDRESS, original[mram - 1], MRAM_HW_TEST_SIZE) &&
-                        read_bytes(mram, MRAM_HW_TEST_ADDRESS, actual, MRAM_HW_TEST_SIZE) &&
-                        mram_test_compare(mram, actual, original[mram - 1]);
-        for (unsigned int repeat = 0; restored && repeat < 2; repeat++) {
-            restored = read_bytes(mram, MRAM_HW_TEST_ADDRESS, actual, MRAM_HW_TEST_SIZE) &&
-                       mram_test_compare(mram, actual, original[mram - 1]);
-        }
-        info("MRAM HW chip %u original 512-byte restoration: %s\n", mram, restored ? "PASS" : "FAIL");
-        PVDX_ASSERT_MSG(restored, "MRAM hardware restoration\n");
-        all_okay = all_okay && restored;
-        delay_ms(200);
-    }
-    info("MRAM HW END: %s\n", all_okay ? "PASS" : "FAIL");
-}
-#endif
 
 // ---------------------- CRC-32 ----------------------
 

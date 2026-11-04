@@ -4,7 +4,7 @@ Layout (see bootloader/src/image_format.h):
     0x00000  stage 1 bootloader
     0x02000  stage-2 bootloader copies (16 KB each, CRC32 in the last 4 bytes)
     0x0E000  metadata: image_header_t with a CRC32 for every block, used by the bootloader to check flash
-    0x10000  PVDXos (runs in place from flash), padded with 0xFF to a whole number of 8 KB blocks
+    0x1E000  PVDXos (runs in place from flash), padded with 0xFF to a whole number of 8 KB blocks
 Gaps are 0xFF, the value of erased flash.
 """
 

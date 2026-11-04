@@ -16,7 +16,8 @@ export NUM_STAGE2_COPIES := 3
 
 STAGE2_OBJS := \
 ../src/stage2.o \
-../src/mram_driver.o
+../src/mram_driver.o \
+../src/flash_driver.o
 
 export OBJS := $(STAGE2_OBJS)
 
@@ -71,6 +72,7 @@ CFLAGS += -D'GIT_BRANCH_NAME="$(GIT_BRANCH_NAME)"' -D'GIT_COMMIT_HASH="$(GIT_COM
 CFLAGS += -Wextra -Werror -Werror=maybe-uninitialized
 CFLAGS += -Wshadow -Wnull-dereference -Wduplicated-cond -Wlogical-op -Werror=return-type -Wfloat-equal
 CFLAGS += -Wdangling-else -Wtautological-compare
+CFLAGS += -fno-delete-null-pointer-checks # Flash starts at address 0 (stage 1), so reading through a pointer to 0 is valid
 CFLAGS += -fwrapv # Enable fwrapv (wrap on overflow of signed integers) just to be safe
 CFLAGS += -fsigned-char # Ensure that char is signed as your average c programmer might expect -- it's actually default unsigned on arm!
 

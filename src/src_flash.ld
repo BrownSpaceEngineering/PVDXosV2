@@ -3,12 +3,12 @@ OUTPUT_ARCH(arm)
 SEARCH_DIR(.)
 
 /* Memory Spaces Definitions */
-/* PVDXos runs in place from flash, right after the boot region, and is limited to its 440 KB MRAM golden-copy slot (see
+/* PVDXos runs in place from flash, above the largest BOOTPROT region, and is limited to its 440 KB MRAM golden-copy slot (see
    bootloader/src/image_format.h). The bootloader is finished by the time PVDXos starts, so all 256 KB of RAM belongs to
    PVDXos. */
 MEMORY
 {
-  rom      (rx)  : ORIGIN = 0x00010000, LENGTH = 0x0006E000
+  rom      (rx)  : ORIGIN = 0x0001E000, LENGTH = 0x0006E000
   ram      (rwx) : ORIGIN = 0x20000000, LENGTH = 0x00040000
   bkupram  (rwx) : ORIGIN = 0x47000000, LENGTH = 0x00002000
   qspi     (rwx) : ORIGIN = 0x04000000, LENGTH = 0x01000000

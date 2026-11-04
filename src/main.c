@@ -68,9 +68,9 @@ static void log_boot_report(void) {
                              : "unknown";
     info_impl("[+] Bootloader (stage 2 copy %u): golden copy %s, MRAM status 0x%02x\n", report->stage2_index, golden,
               report->mram_status);
-    info_impl("[+] Bootloader blocks: %u checked, %u repaired, %u failed, %u skipped\n", report->blocks_checked,
-              report->blocks_repaired, report->blocks_failed, report->blocks_skipped);
-    if (report->blocks_failed != 0 || report->blocks_skipped != 0) {
+    info_impl("[+] Bootloader blocks: %u checked, %u repaired, %u failed\n", report->blocks_checked, report->blocks_repaired,
+              report->blocks_failed);
+    if (report->blocks_failed != 0) {
         warning_impl("[!] Bootloader could not repair every flash block\n");
     }
     report->magic = 0; // So a stale report is never logged after a reset that skipped the bootloader

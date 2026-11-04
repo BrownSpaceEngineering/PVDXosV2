@@ -49,8 +49,8 @@ static inline uint8_t get_mram_state(mram_status_t status, uint8_t mram) {
 mram_status_t mram_init(void);
 // Reads one chip (1-3). Returns false if any SPI transfer fails.
 bool read_bytes(uint8_t mram, uint32_t address, uint8_t *data, uint32_t size);
-// Majority-votes the three chips page by page (size must be a multiple of 256) and rewrites pages that disagree.
-// Returns false, leaving `data` incomplete, if the size is invalid or any chip's read fails.
+// Reads from the first chip that mram_init() found working; any size works. Returns false if there is no such chip
+// or its read fails.
 bool mram_read_bytes(uint32_t address, uint8_t *data, uint32_t size);
 // Writes all three chips. Returns false if any chip's write fails.
 bool mram_write_bytes(uint32_t address, const uint8_t *data, uint32_t size);

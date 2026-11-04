@@ -27,12 +27,16 @@
 #define FLASH_METADATA_ADDR (0x0000E000u) // One block holding this build's image_header_t
 #define FLASH_BOOT_REGION_SIZE (0x00010000u) // Stage 1 + stage-2 copies + metadata
 
-#define FLASH_APP_ADDR (0x00010000u) // PVDXos runs from here, right after the boot region; its size limit is MRAM_GOLDEN_APP_MAX_SIZE
+// PVDXos runs from here, above the largest region BOOTPROT can protect (15 blocks, 120 KB), so the bootloader can always
+// rewrite it; its size limit is MRAM_GOLDEN_APP_MAX_SIZE
+#define FLASH_APP_ADDR (0x0001E000u)
+#define BOOTPROT_MAX_SIZE (15u * IMAGE_BLOCK_SIZE)
+_Static_assert(FLASH_APP_ADDR >= BOOTPROT_MAX_SIZE, "PVDXos must start above every BOOTPROT region");
 
 /* ---------- MRAM GOLDEN COPY LAYOUT (same on all three chips) ---------- */
 
 #define MRAM_GOLDEN_HEADER_ADDR (0x000000u) // image_header_t (4 KB reserved)
-#define MRAM_GOLDEN_HEADER_READ_SIZE (0x200u) // MRAM reads are whole 256-byte pages; covers sizeof(image_header_t)
+#define MRAM_GOLDEN_HEADER_READ_SIZE (0x200u) // Covers sizeof(image_header_t)
 #define MRAM_GOLDEN_BOOT_ADDR (0x001000u) // Copy of the flash boot region
 #define MRAM_GOLDEN_APP_ADDR (0x011000u) // Copy of the PVDXos image
 #define MRAM_GOLDEN_APP_MAX_SIZE (0x06E000u) // Ends at 0x7F000, clear of the MRAM hardware test region at 0x800F0
@@ -73,7 +77,7 @@ typedef struct {
 typedef enum {
     GOLDEN_VALID = 0,    // Flash was checked against the golden copy
     GOLDEN_WRITTEN,      // A debugger requested it: flash was copied into MRAM
-    GOLDEN_WRITE_FAILED, // A debugger requested it: flash was damaged, or an MRAM write or read-back failed
+    GOLDEN_WRITE_FAILED, // A debugger requested it, but an MRAM write or read-back failed
     GOLDEN_UNREADABLE,   // No MRAM or no valid golden header, so flash was not checked
 } golden_state_t;
 
@@ -85,7 +89,6 @@ typedef struct {
     uint16_t blocks_checked;
     uint16_t blocks_repaired;
     uint16_t blocks_failed;   // Blocks that were wrong and could not be repaired (or whose golden data was bad)
-    uint16_t blocks_skipped;  // Blocks skipped because BOOTPROT protects them, or the running stage-2 copy
 } boot_report_t;
 
 #endif // IMAGE_FORMAT_H
