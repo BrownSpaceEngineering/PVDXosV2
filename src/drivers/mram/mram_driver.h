@@ -1,14 +1,8 @@
 #ifndef MRAM_H
 #define MRAM_H
 
-// Set this flag to commit the OS and bootloaders from flash into MRAM (for development)
-#define WRITE_FLASH_TO_MRAM
-
-#define MRAM_OS_BASE_ADDRESS (0x00020000) // Address of OS in MRAM
-#define MRAM_OS_SIZE (0x20000)            // Size of OS in MRAM
-
-#define MRAM_FLASH_BASE_ADDRESS (0x00000000) // Address of complete flash copy in MRAM
-#define MRAM_FLASH_SIZE (0x80000)            // Size of complete flash copy in MRAM
+// MRAM 0x000000-0x07EFFF holds the bootloader's golden copy of flash (layout in bootloader/src/image_format.h).
+// Don't write there from PVDXos: the bootloader repairs flash from it at every boot.
 
 #include "atmel_start.h"
 #include "hal_delay.h"

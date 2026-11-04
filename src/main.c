@@ -17,6 +17,7 @@
 
 #include "SEGGER_RTT.h"
 #include "checks/device_checks.h"
+#include "../bootloader/src/image_format.h"
 #include "globals.h" // defines BURN_SEQUENCE
 #include "logging.h"
 
@@ -53,6 +54,27 @@
 #else
 cosmic_monkey_task_arguments_t cm_args = {0};
 #endif
+
+// Logs (and clears) the report stage 2 of the bootloader leaves in backup RAM about checking flash against MRAM
+static void log_boot_report(void) {
+    static const char *const golden_states[] = {"valid", "written from flash", "write failed", "unreadable"};
+    volatile boot_report_t *report = (volatile boot_report_t *)BOOT_REPORT_ADDR;
+    if (report->magic != BOOT_REPORT_MAGIC) {
+        warning_impl("[!] No bootloader flash report\n");
+        return;
+    }
+    const char *golden = report->golden_state < sizeof(golden_states) / sizeof(golden_states[0])
+                             ? golden_states[report->golden_state]
+                             : "unknown";
+    info_impl("[+] Bootloader (stage 2 copy %u): golden copy %s, MRAM status 0x%02x\n", report->stage2_index, golden,
+              report->mram_status);
+    info_impl("[+] Bootloader blocks: %u checked, %u repaired, %u failed, %u skipped\n", report->blocks_checked,
+              report->blocks_repaired, report->blocks_failed, report->blocks_skipped);
+    if (report->blocks_failed != 0 || report->blocks_skipped != 0) {
+        warning_impl("[!] Bootloader could not repair every flash block\n");
+    }
+    report->magic = 0; // So a stale report is never logged after a reset that skipped the bootloader
+}
 
 static status_t PVDX_init(void) {
     // Segger Buffer 0 is pre-configured at compile time according to segger documentation
@@ -302,6 +324,7 @@ int main(void) {
     } else {
         warning_impl("[!] Abnormal bootloader behavior (Magic Number: %x)\n", magic_number);
     }
+    log_boot_report();
 
     /* ---------- DEVICE CHECKS ---------- */
 

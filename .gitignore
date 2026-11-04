@@ -55,3 +55,12 @@ compile_commands.json
 
 # scratch
 scratch/
+
+# Bootloader build artifacts (the ASF Makefile there is tracked) and generated linker scripts
+bootloader/ASF/gcc/*
+!bootloader/ASF/gcc/Makefile
+bootloader/src/stage2_flash[0-9]*.ld
+bootloader/src/stage1_flash.ld
+
+# Python bytecode from scripts/
+__pycache__/

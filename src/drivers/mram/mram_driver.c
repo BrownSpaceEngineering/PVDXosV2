@@ -27,7 +27,6 @@ _|"""""|_|"""""|_|"""""|_|"""""|
 /*
  * OS port of bootloader/src/mram_driver.c from yi-mram-driver-audit. Differences:
  * - mram_init() does not call atmel_start_init(); main() has already done it.
- * - No watchdog_pet(): in the OS only the watchdog task kicks the WDT.
  * - Delays go through mram_delay_ms(), which is safe before and after the scheduler starts.
  */
 
@@ -76,7 +75,7 @@ typedef enum {
 // ---------------------- SPI Helpers ----------------------
 
 /**
- * @brief Halts execution and waits for the watchdog to reboot the system.
+ * @brief Halts execution until the system reboots.
  * @warning Should only be called when a reboot will definitely fix the fatal
  *          state. If the fatal state is unrecoverable, use
  *          `mram_complete_fatal` instead.
