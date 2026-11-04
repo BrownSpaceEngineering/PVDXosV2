@@ -4,6 +4,9 @@
 // MRAM 0x000000-0x07EFFF holds the bootloader's golden copy of flash (layout in bootloader/src/image_format.h).
 // Don't write there from PVDXos: the bootloader repairs flash from it at every boot.
 
+#define MRAM_PEROVSKITE_BASE_ADDRESS (0x00090000) // Address of perovskite sweeps in MRAM, past the flash copy
+#define MRAM_PEROVSKITE_SIZE (0x4800)             // Size of perovskite sweeps in MRAM
+
 #include "atmel_start.h"
 #include "hal_delay.h"
 #include "hal_gpio.h"

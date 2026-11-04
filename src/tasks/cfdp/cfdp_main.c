@@ -19,8 +19,10 @@
 // CFDP Task Memory Structure & CFDP Memory Stores
 cfdp_task_memory_t cfdp_mem;
 cfdp_transaction_store_t cfdp_txn_store;
+#ifndef DO_NOT_BUILD_CFDP_BUFFERS
 cfdp_large_buff_t cfdp_large_buff;
 cfdp_small_buffs_t cfdp_small_buffs;
+#endif
 fin_txn_buf_t cfdp_fin_txn;
 
 /**

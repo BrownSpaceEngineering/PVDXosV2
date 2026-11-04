@@ -79,8 +79,8 @@
 // Duration to wait between display initialization steps
 #define RESET_WAIT_INTERVAL 100
 
-// Maximum number of bytes that can be sent to the display in a single SPI transaction
-#define DISPLAY_SPI_BUFFER_CAPACITY (SSD1362_WIDTH / 2) * SSD1362_HEIGHT
+// Maximum number of bytes in a single SPI command transaction (the longest commands, SETCOLUMN/SETROW, are 3 bytes)
+#define DISPLAY_SPI_CMD_BUFFER_SIZE 3
 
 // Data types
 typedef uint16_t point_t; // 16 bits per coordinate (larger than 8-bit for overflow checking)
@@ -93,6 +93,7 @@ extern color_t display_buffer[DISPLAY_BUFFER_SIZE]; // pixels are 4 bits, so 2 c
 void display_set_buffer(const color_t *const p_buffer)                                                            ;
 void display_clear_buffer(void)                                                                                   ;
 status_t display_update(void)                                                                                     ;
+status_t display_off(void);
 status_t init_display_hardware(void)                                                                              ;
 
 #endif // DISPLAY_DRIVER_H

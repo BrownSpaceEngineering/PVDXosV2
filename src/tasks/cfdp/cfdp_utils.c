@@ -154,6 +154,21 @@ cfdp_transaction_t *cfdp_find_transaction(cfdp_transaction_store_t *txn_store, u
     return NULL;
 }
 
+#ifdef DO_NOT_BUILD_CFDP_BUFFERS
+// Callers treat NULL as no free buffer, and reject the incoming file
+uint8_t *cfdp_alloc_small_buff() {
+    return NULL;
+}
+
+uint8_t *cfdp_alloc_large_buff() {
+    return NULL;
+}
+
+int cfdp_free_buff(uint8_t *buff) {
+    (void)buff;
+    return -1;
+}
+#else
 uint8_t *cfdp_alloc_small_buff() {
     for (size_t i = 0; i < CFDP_SMALL_BUFF_COUNT; ++i) {
         if (!cfdp_small_buffs.in_use[i]) {
@@ -186,6 +201,7 @@ int cfdp_free_buff(uint8_t *buff) {
     }
     return -1;
 }
+#endif // DO_NOT_BUILD_CFDP_BUFFERS
 
 uint32_t cfdp_calculate_modular_checksum(cfdp_transaction_t *txn) {
     size_t words = txn->file_size / 4;

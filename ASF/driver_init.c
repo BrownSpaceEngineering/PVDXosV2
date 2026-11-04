@@ -157,44 +157,19 @@ void ADC_1_PORT_init(void)
 	gpio_set_pin_function(THERM_1, PINMUX_PB05B_ADC1_AIN7);
 
 	// Disable digital pin circuitry
-	gpio_set_pin_direction(PB06, GPIO_DIRECTION_OFF);
+	gpio_set_pin_direction(THERM_2, GPIO_DIRECTION_OFF);
 
-	gpio_set_pin_function(PB06, PINMUX_PB06B_ADC1_AIN8);
+	gpio_set_pin_function(THERM_2, PINMUX_PB06B_ADC1_AIN8);
 
 	// Disable digital pin circuitry
-	gpio_set_pin_direction(PB07, GPIO_DIRECTION_OFF);
+	gpio_set_pin_direction(THERM_3, GPIO_DIRECTION_OFF);
 
-	gpio_set_pin_function(PB07, PINMUX_PB07B_ADC1_AIN9);
+	gpio_set_pin_function(THERM_3, PINMUX_PB07B_ADC1_AIN9);
 
 	// Disable digital pin circuitry
 	gpio_set_pin_direction(PHD_0, GPIO_DIRECTION_OFF);
 
 	gpio_set_pin_function(PHD_0, PINMUX_PC00B_ADC1_AIN10);
-
-	// Disable digital pin circuitry
-	gpio_set_pin_direction(PC01, GPIO_DIRECTION_OFF);
-
-	gpio_set_pin_function(PC01, PINMUX_PC01B_ADC1_AIN11);
-
-	// Disable digital pin circuitry
-	gpio_set_pin_direction(PC30, GPIO_DIRECTION_OFF);
-
-	gpio_set_pin_function(PC30, PINMUX_PC30B_ADC1_AIN12);
-
-	// Disable digital pin circuitry
-	gpio_set_pin_direction(PC31, GPIO_DIRECTION_OFF);
-
-	gpio_set_pin_function(PC31, PINMUX_PC31B_ADC1_AIN13);
-
-	// Disable digital pin circuitry
-	gpio_set_pin_direction(THERM_2, GPIO_DIRECTION_OFF);
-
-	gpio_set_pin_function(THERM_2, PINMUX_PD00B_ADC1_AIN14);
-
-	// Disable digital pin circuitry
-	gpio_set_pin_direction(THERM_3, GPIO_DIRECTION_OFF);
-
-	gpio_set_pin_function(THERM_3, PINMUX_PD01B_ADC1_AIN15);
 }
 
 void ADC_1_CLOCK_init(void)
@@ -666,13 +641,13 @@ void delay_driver_init(void)
 void MAGNETORQUER_1_PORT_init(void)
 {
 
-	gpio_set_pin_function(PA20, PINMUX_PA20G_TCC0_WO0);
+	gpio_set_pin_function(MTQ_X_IN1, PINMUX_PA20G_TCC0_WO0);
 
-	gpio_set_pin_function(PA21, PINMUX_PA21G_TCC0_WO1);
+	gpio_set_pin_function(MTQ_X_IN2, PINMUX_PA21G_TCC0_WO1);
 
-	gpio_set_pin_function(PA22, PINMUX_PA22G_TCC0_WO2);
+	gpio_set_pin_function(MTQ_Y_IN1, PINMUX_PA22G_TCC0_WO2);
 
-	gpio_set_pin_function(PA23, PINMUX_PA23G_TCC0_WO3);
+	gpio_set_pin_function(MTQ_Y_IN2, PINMUX_PA23G_TCC0_WO3);
 }
 
 void MAGNETORQUER_1_CLOCK_init(void)
@@ -692,9 +667,9 @@ void MAGNETORQUER_1_init(void)
 void MAGNETORQUER_2_PORT_init(void)
 {
 
-	gpio_set_pin_function(PD20, PINMUX_PD20F_TCC1_WO0);
+	gpio_set_pin_function(MTQ_Z_IN1, PINMUX_PD20F_TCC1_WO0);
 
-	gpio_set_pin_function(PD21, PINMUX_PD21F_TCC1_WO1);
+	gpio_set_pin_function(MTQ_Z_IN2, PINMUX_PD21F_TCC1_WO1);
 }
 
 void MAGNETORQUER_2_CLOCK_init(void)
@@ -893,7 +868,7 @@ void system_init(void)
 
 	// GPIO on PB23
 
-	gpio_set_pin_level(EPS_A3,
+	gpio_set_pin_level(EPS_A2,
 	                   // <y> Initial level
 	                   // <id> pad_initial_level
 	                   // <false"> Low
@@ -901,9 +876,9 @@ void system_init(void)
 	                   false);
 
 	// Set pin direction to output
-	gpio_set_pin_direction(EPS_A3, GPIO_DIRECTION_OUT);
+	gpio_set_pin_direction(EPS_A2, GPIO_DIRECTION_OUT);
 
-	gpio_set_pin_function(EPS_A3, GPIO_PIN_FUNCTION_OFF);
+	gpio_set_pin_function(EPS_A2, GPIO_PIN_FUNCTION_OFF);
 
 	// GPIO on PB28
 

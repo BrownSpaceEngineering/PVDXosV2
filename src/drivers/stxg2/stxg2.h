@@ -20,8 +20,6 @@
 #define STXG2_I2C_ADDR 0x26
 #define STXG2_ID_VALUE 0x53545832u // "STX2" (USM 9.2.1.1)
 
-// Pins from the PVDX-SAMD-PinConfig README.
-// WARNING: main's ASF labels PB19 as BURN. Fix upstream.
 #ifndef SBAND_CS
     #define SBAND_CS GPIO(GPIO_PORTB, 19) // Active low. Radio pin H1.32 (option sheet), not H1.9.
 #endif
@@ -254,6 +252,7 @@ typedef enum {
 
 // Setup, registers
 status_t stxg2_init(void);
+void stxg2_power_off(void);
 status_t stxg2_read_reg(uint16_t addr, uint32_t *value);
 status_t stxg2_write_reg(uint16_t addr, uint32_t value);
 status_t stxg2_check_i2c_status(void);

@@ -305,41 +305,6 @@ drivers:
       definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::optional_signal_definition::ADC1.AIN.10
       name: ADC1/AIN/10
       label: AIN/10
-    - identifier: ADC_1:AIN/11
-      pad: PC01
-      mode: Enabled
-      configuration: null
-      definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::optional_signal_definition::ADC1.AIN.11
-      name: ADC1/AIN/11
-      label: AIN/11
-    - identifier: ADC_1:AIN/12
-      pad: PC30
-      mode: Enabled
-      configuration: null
-      definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::optional_signal_definition::ADC1.AIN.12
-      name: ADC1/AIN/12
-      label: AIN/12
-    - identifier: ADC_1:AIN/13
-      pad: PC31
-      mode: Enabled
-      configuration: null
-      definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::optional_signal_definition::ADC1.AIN.13
-      name: ADC1/AIN/13
-      label: AIN/13
-    - identifier: ADC_1:AIN/14
-      pad: PD00
-      mode: Enabled
-      configuration: null
-      definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::optional_signal_definition::ADC1.AIN.14
-      name: ADC1/AIN/14
-      label: AIN/14
-    - identifier: ADC_1:AIN/15
-      pad: PD01
-      mode: Enabled
-      configuration: null
-      definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::optional_signal_definition::ADC1.AIN.15
-      name: ADC1/AIN/15
-      label: AIN/15
     variant: null
     clocks:
       domain_group:
@@ -1936,12 +1901,6 @@ pads:
     mode: Analog
     user_label: PHD_0
     configuration: null
-  PC01:
-    name: PC01
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC01
-    mode: Analog
-    user_label: PC01
-    configuration: null
   PHD_16:
     name: PC02
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC02
@@ -1979,28 +1938,16 @@ pads:
     user_label: THERM_1
     configuration: null
   THERM_2:
-    name: PD00
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PD00
+    name: PB06
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB06
     mode: Analog
     user_label: THERM_2
     configuration: null
   THERM_3:
-    name: PD01
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PD01
-    mode: Analog
-    user_label: THERM_3
-    configuration: null
-  PB06:
-    name: PB06
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB06
-    mode: Analog
-    user_label: PB06
-    configuration: null
-  PB07:
     name: PB07
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB07
     mode: Analog
-    user_label: PB07
+    user_label: THERM_3
     configuration: null
   PHD_2:
     name: PB08
@@ -2293,17 +2240,17 @@ pads:
     mode: Digital output
     user_label: HEATER_CTRL_1
     configuration: null
-  PD20:
+  MTQ_Z_IN1:
     name: PD20
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PD20
     mode: Peripheral IO
-    user_label: PD20
+    user_label: MTQ_Z_IN1
     configuration: null
-  PD21:
+  MTQ_Z_IN2:
     name: PD21
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PD21
     mode: Peripheral IO
-    user_label: PD21
+    user_label: MTQ_Z_IN2
     configuration: null
   SBAND_MOSI:
     name: PB16
@@ -2342,29 +2289,29 @@ pads:
     mode: Digital output
     user_label: EPS_A0
     configuration: null
-  PA20:
+  MTQ_X_IN1:
     name: PA20
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA20
     mode: Peripheral IO
-    user_label: PA20
+    user_label: MTQ_X_IN1
     configuration: null
-  PA21:
+  MTQ_X_IN2:
     name: PA21
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA21
     mode: Peripheral IO
-    user_label: PA21
+    user_label: MTQ_X_IN2
     configuration: null
-  PA22:
+  MTQ_Y_IN1:
     name: PA22
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA22
     mode: Peripheral IO
-    user_label: PA22
+    user_label: MTQ_Y_IN1
     configuration: null
-  PA23:
+  MTQ_Y_IN2:
     name: PA23
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA23
     mode: Peripheral IO
-    user_label: PA23
+    user_label: MTQ_Y_IN2
     configuration: null
   EPS_A1:
     name: PB22
@@ -2372,11 +2319,11 @@ pads:
     mode: Digital output
     user_label: EPS_A1
     configuration: null
-  EPS_A3:
+  EPS_A2:
     name: PB23
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB23
     mode: Digital output
-    user_label: EPS_A3
+    user_label: EPS_A2
     configuration: null
   MRAM_MOSI:
     name: PB24
@@ -2431,18 +2378,6 @@ pads:
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB31
     mode: Digital output
     user_label: MTQ_Y_SLP
-    configuration: null
-  PC30:
-    name: PC30
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC30
-    mode: Analog
-    user_label: PC30
-    configuration: null
-  PC31:
-    name: PC31
-    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PC31
-    mode: Analog
-    user_label: PC31
     configuration: null
   PHD_12:
     name: PB00

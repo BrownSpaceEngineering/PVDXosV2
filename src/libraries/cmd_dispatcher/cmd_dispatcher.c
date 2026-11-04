@@ -71,15 +71,19 @@ status_t enqueue_command(command_t *p_cmd) {
     if (target == NULL) {
         return ERROR_BAD_TARGET;
     }
+    // The enabled check and zero-wait enqueue must be atomic with task-manager
+    // transitions. Otherwise a producer paused across disable/resume can enqueue
+    // a stale capture after the camera's shutdown queue reset.
+    taskENTER_CRITICAL();
+    status_t result;
     if (!target->enabled) {
-        return ERROR_TASK_DISABLED;
+        result = ERROR_TASK_DISABLED;
+    } else if (xQueueSendToBack(target->command_queue, p_cmd, 0) != pdTRUE) {
+        result = ERROR_QUEUE_ERROR;
+    } else {
+        result = SUCCESS;
     }
-
-    // now forward cmd to task command queue
-    if (xQueueSendToBack(p_cmd->target->command_queue, p_cmd, 0) != pdTRUE) {
-        return ERROR_QUEUE_ERROR; 
-    }
-
-    return SUCCESS;
+    taskEXIT_CRITICAL();
+    return result;
 } 
 

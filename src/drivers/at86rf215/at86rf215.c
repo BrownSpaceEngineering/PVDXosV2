@@ -34,7 +34,6 @@ static uint8_t spi_buffer[UHF_SPI_BUF_SIZE];
 // Preset buffers for the driver
 //
 // I know their driver just uses the above spi buffer but I like this more.
-uint8_t uhf_spi_rx_buffer[UHF_SPI_BUF_SIZE] = {0x00};
 uint8_t uhf_spi_tx_buffer[UHF_SPI_BUF_SIZE] = {0x00};
 
 #define INIT_MAGIC_VAL 0x92c2f0e3
@@ -588,7 +587,7 @@ at86rf215_spi_write(struct at86rf215 *h, const uint8_t *in, size_t len)
 {
   struct spi_xfer xfer = {
       .txbuf = (uint8_t *)in,
-      .rxbuf = uhf_spi_rx_buffer, // Unused
+      .rxbuf = NULL, // MISO is not needed for writes; the HAL discards it
       .size  = len,
   };
 

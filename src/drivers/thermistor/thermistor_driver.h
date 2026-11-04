@@ -10,7 +10,7 @@
  *
  * Thermistor pins are already ADC1-pinmuxed by the ASF (ADC_1_PORT_init):
  *   THERM_0 = PB04 -> AIN6, THERM_1 = PB05 -> AIN7,
- *   THERM_2 = PD00 -> AIN14, THERM_3 = PD01 -> AIN15.
+ *   THERM_2 = PB06 -> AIN8, THERM_3 = PB07 -> AIN9.
  * Heaters: HEATER_CTRL_1 = PC23 (thermistors 0,1), HEATER_CTRL_2 = PC24 (thermistors 2,3).
  *
  * The ADC is read ratiometrically (reference = VDDANA, same rail that powers the divider),

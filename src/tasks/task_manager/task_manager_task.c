@@ -59,11 +59,14 @@ void task_manager_enable_task(pvdx_task_t *const p_task) {
         fatal("task_manager: Tried to enable a task that has already been enabled");
     }
 
-    vTaskResume(p_task->handle);
+    if (p_task->prepare_resume != NULL) {
+        p_task->prepare_resume();
+    }
     p_task->enabled = true;
 
-    // Register the task with the watchdog allowing it to be monitored
+    // Publish registration before resume, which may immediately schedule the task.
     register_task_with_watchdog(p_task);
+    vTaskResume(p_task->handle);
 
     unlock_mutex(task_list_mutex);
     debug("task_manager: %s task enabled\n", p_task->name);
@@ -93,6 +96,25 @@ void task_manager_disable_task(pvdx_task_t *const p_task) {
     // If given an already disabled task, something went wrong
     if (!p_task->enabled) {
         fatal("task_manager: Tried to disable a task that has already been disabled");
+    }
+
+    if (p_task->prepare_suspend != NULL) {
+        // Close command admission before releasing the mutex, but keep watchdog
+        // registration until the task has acknowledged and is actually suspended.
+        p_task->enabled = false;
+        // The task/driver and watchdog may need this mutex while reaching the safe point.
+        unlock_mutex(task_list_mutex);
+        if (!p_task->prepare_suspend()) {
+            fatal("task_manager: %s safe-suspend acknowledgement timed out; NOT force-suspending. "
+                  "Check camera init/capture cleanup and shared I2C/SPI ownership.\n", p_task->name);
+            return;
+        }
+        lock_mutex(task_list_mutex);
+        if (p_task->handle == NULL || p_task->enabled) {
+            fatal("task_manager: %s lifecycle changed during safe-suspend handshake\n", p_task->name);
+            unlock_mutex(task_list_mutex);
+            return;
+        }
     }
 
     vTaskSuspend(p_task->handle);

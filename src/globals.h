@@ -22,8 +22,25 @@
 // steps, idle; see main.c). Defined here rather than in main.c so that drivers can see it too.
 #define BURN_SEQUENCE
 
+// Uncomment to let the burn sequence actually fire the burn wire once the wait is over. Left commented out, the wait and
+// its MRAM record still run, but the burn pin is never driven and the burn is never recorded as done.
+// #define BURN_SEQUENCE_FIRE_BURN_WIRE
+
 // Uncomment to make the burn sequence's startup camera check also capture a picture over RTT channel 2
-// #define BURN_SEQUENCE_CAMERA_CHECK_CAPTURE
+#define BURN_SEQUENCE_CAMERA_CHECK_CAPTURE
+
+#define BURN_UHF_MODE_BEACON 0
+#define BURN_UHF_MODE_LINK   1
+#define BURN_UHF_MODE_OFF    2
+#define BURN_SEQUENCE_UHF_MODE BURN_UHF_MODE_OFF
+
+// TEMPORARY: leaves out the CFDP receive buffers (about 8.7 KB) so that the image fits in RAM. Until this is removed,
+// CFDP rejects every incoming file. Sending is unaffected.
+#define DO_NOT_BUILD_CFDP_BUFFERS
+
+// Comment out to save perovskite sweeps to MRAM. While defined, the perovskite task only logs its readings over RTT
+// and never touches MRAM, so nothing it measures survives a reboot.
+#define PEROVSKITE_LOG_ONLY
 
 /* ---------- LOGGING CONSTANTS ---------- */
 
@@ -94,6 +111,15 @@ typedef enum {
 
     // TESTING
     TEST_OP, // p_data: char message[]
+
+    // Camera operations (append to preserve existing operation values)
+    OPERATION_CAMERA_CAPTURE, // No command data; capture a JPEG and stream it on RTT channel 2
+
+    // Display operations (append to preserve existing operation values)
+    OPERATION_DISPLAY_INIT, // p_data: NULL
+
+    // Perovskite operations (append to preserve existing operation values)
+    OPERATION_PEROVSKITE_SWEEP, // p_data: NULL
 } operation_t;
 
 // An enum to represent the different log levels that functions can use
@@ -169,6 +195,8 @@ typedef struct {
     uint32_t last_checkin_time_ticks;   // Last time the task checked in with the watchdog
     bool has_registered;                // Whether the task is being monitored by the watchdog (initialized to NULL)
     const task_type_t task_type;        // Whether the task is OS-integrity, a sensor, or an actuator
+    bool (*prepare_suspend)(void);     // Optional safe-point handshake; called without the task list mutex
+    void (*prepare_resume)(void);      // Optional nonblocking hook; called before the task is resumed
 } pvdx_task_t;
 
 typedef union cfdp_request_data cfdp_request_data_t;
