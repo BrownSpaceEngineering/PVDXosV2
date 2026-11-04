@@ -96,6 +96,7 @@ static void put_status(tel_writer_t *w, tel_device_status_t status) {
 }
 
 /* ---------- DOWNLINK ---------- */
+static tel_downlink_t tel_cache; // Telemetry downlink cache
 
 static void serialize_magnetometer(tel_writer_t *w, const tel_magnetometer_data_t *mag) {
     put_uint8(w, mag->revid_register);
@@ -142,8 +143,31 @@ static void serialize_os_errors(tel_writer_t *w, const tel_os_error_data_t *os) 
 }
 
 void telemetry_collect(tel_downlink_t *downlink) {
-    // TODO: gather telemetry from each subsystem
-    memset(downlink, 0, sizeof(*downlink));
+    // TODO: Do we need some kid of mutex here to prevent half of the data from being written?
+    *downlink = tel_cache;
+}
+
+void telemetry_update_magnetometer_registers(uint8_t revid, uint8_t bist) {
+    tel_cache.magnetometer.revid_register = revid;
+    tel_cache.magnetometer.bist_register = bist;
+}
+
+void telemetry_update_magnetometer_readings(const mag_raw_reading_t *raw, const mag_data_t *gain_adjusted) {
+    tel_cache.magnetometer.raw_readings[0] = raw->x;
+    tel_cache.magnetometer.raw_readings[1] = raw->y;
+    tel_cache.magnetometer.raw_readings[2] = raw->z;
+    tel_cache.magnetometer.gain_adjusted_readings[0] = gain_adjusted->x;
+    tel_cache.magnetometer.gain_adjusted_readings[1] = gain_adjusted->y;
+    tel_cache.magnetometer.gain_adjusted_readings[2] = gain_adjusted->z;
+}
+
+void telemetry_update_magnetorquer_data(mag_torque_input_t *mag_data) {
+    tel_cache.magnetorquer.current[0] = mag_data->x;
+    tel_cache.magnetorquer.current[1] = mag_data->y;
+    tel_cache.magnetorquer.current[1] = mag_data->z;
+}
+void telemetry_update_photodiode_data(const float photodiode_data[22]) {
+    memcpy(tel_cache.photodiode.raw_readings, photodiode_data, sizeof(tel_cache.photodiode.raw_readings));
 }
 
 bool telemetry_downlink_serialize(const tel_downlink_t *downlink, uint8_t *buf, size_t buf_size) {

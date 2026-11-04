@@ -5,6 +5,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "drivers/magnetometer/magnetometer_driver.h"
+#include "drivers/magnetorquer/magnetorquer_driver.h"
+
 // Reference: PVDX UHF Uplink/Downlink Summary 3/3/2026
 // (https://docs.google.com/spreadsheets/d/1XYJBU4V2vjlKj8QtCxaPuW247gf_tx6XY4dey5q0v0k/edit?usp=sharing)
 // Every multi-byte value is sent most significant byte first, and floats are sent as their IEEE 754 bits
@@ -130,5 +133,35 @@ bool telemetry_downlink_serialize(const tel_downlink_t *downlink, uint8_t *buf, 
  * \param downlink - telemetry to fill in
  */
 void telemetry_collect(tel_downlink_t *downlink);
+
+/**
+ * Updates the magnetometer registers inside the telemetry cache
+ *
+ * \param revid - revid register
+ * \param bist - bist register
+ */
+void telemetry_update_magnetometer_registers(uint8_t revid, uint8_t bist);
+
+/**
+ * Updates the magnetometer readings inside the telemetry cache
+ *
+ * \param raw - raw magnetometer data
+ * \param gain_adjusted - gain adjusted magnetometer data
+ */
+void telemetry_update_magnetometer_readings(const mag_raw_reading_t *raw, const mag_data_t *gain_adjusted);
+
+/**
+ * Updates the magnetorquer data inside the telemetry cache
+ *
+ * \param mag_data - magnetorquer data to update
+ */
+void telemetry_update_magnetorquer_data(mag_torque_input_t *mag_data);
+
+/**
+ * Updates the magnetorquer data inside the telemetry cache
+ *
+ * \param photodiode_data - photodiode data to update
+ */
+void telemetry_update_photodiode_data(const float photodiode_data[22]);
 
 #endif
