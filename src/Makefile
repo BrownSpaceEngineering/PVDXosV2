@@ -112,10 +112,10 @@ CFLAGS += -Wno-unused-parameter #Because some ASF functions have unused paramete
 
 # Tests that `make test` can build individually. Each NAME is guarded by #ifdef TEST_NAME in src/tests
 # Keep this list in sync with src/tests/test.h
-TEST_NAMES := SPP LINALG CFDP USLP PMB TELEMETRY FLOAT MRAM
+TEST_NAMES := SPP LINALG CFDP USLP PMB TELEMETRY FLOAT
 
 # `make test TESTS="spp cfdp"` builds only those tests by passing -DTEST_SPP -DTEST_CFDP.
-# Leaving TESTS empty builds the default tests; destructive hardware MRAM tests are opt-in only.
+# Leaving TESTS empty builds the default tests.
 SELECTED_TESTS := $(patsubst TEST_%,%,$(shell echo '$(TESTS)' | tr 'a-z,' 'A-Z '))
 UNKNOWN_TESTS := $(filter-out $(TEST_NAMES),$(SELECTED_TESTS))
 ifneq ($(UNKNOWN_TESTS),)
@@ -150,9 +150,9 @@ define ensure_build_type
 	fi
 endef
 
-# The bootloader copies PVDXos.bin into RAM and runs it from there, so it can't
-# be larger than the SAMD51's 256 KB of RAM
-MAX_BIN_SIZE := 262144
+# PVDXos runs from flash, and the bootloader keeps a golden copy of it in MRAM, so it can't be larger than the
+# golden copy's slot (MRAM_GOLDEN_APP_MAX_SIZE in bootloader/src/image_format.h)
+MAX_BIN_SIZE := 450560
 
 BUILD_LOG := $(CHILD_MAKEFILE_PATH)/build.log
 
@@ -168,23 +168,22 @@ size_hint = $(if $(filter test,$(1)),$(TEST_SIZE_HINT))
 # literally in the recipe, and without it dry runs (which compiledb relies on)
 # would never see the compile commands.
 
-# $(call child_build,<build type>,<CFLAGS>) runs the child make. The linker
-# script's RAM region is smaller than MAX_BIN_SIZE, so an oversized image
-# usually fails at link time rather than in check_bin_size; catch that here
-# too so test builds still get the hint.
+# $(call child_build,<build type>,<CFLAGS>) runs the child make. An image whose
+# data, bss and stacks don't fit in RAM fails at link time rather than in
+# check_bin_size; catch that here too so test builds still get the hint.
 define child_build
 	+@set -o pipefail; $(CHILD_MAKE) CFLAGS="$(2)" 2>&1 | tee $(BUILD_LOG) \
 	|| { if grep -q "overflowed by\|will not fit in region" $(BUILD_LOG); then \
-		echo "ERROR: PVDXos does not fit in RAM (see the linker error above)"; \
+		echo "ERROR: PVDXos does not fit in flash or RAM (see the linker error above)"; \
 		$(call size_hint,$(1)) \
 	fi; exit 1; }
 endef
 
-# $(call check_bin_size,<build type>) fails the build if PVDXos.bin is bigger than RAM
+# $(call check_bin_size,<build type>) fails the build if PVDXos.bin is bigger than its MRAM golden-copy slot
 define check_bin_size
 	@size=$$(wc -c < ../ASF/gcc/PVDXos.bin | tr -d ' '); \
 	if [ "$$size" -gt $(MAX_BIN_SIZE) ]; then \
-		echo "ERROR: PVDXos.bin is $$size bytes, which is larger than RAM ($(MAX_BIN_SIZE) bytes)"; \
+		echo "ERROR: PVDXos.bin is $$size bytes, which is larger than its MRAM golden-copy slot ($(MAX_BIN_SIZE) bytes)"; \
 		$(call size_hint,$(1)) \
 		exit 1; \
 	fi
@@ -281,7 +280,7 @@ update_asf:
 	&& echo "(8.3) ASF FreeRTOSConfig.h: Task stack overflow checking upgraded to type 2 (higher accuracy)" \
 	&& $(SED) -i "/#define INCLUDE_xTaskGetCurrentTaskHandle 0/a #endif \n\n// \<q\> Include thread-local storage pointers \n// \<id\> freertos_num_thread_local_storage_pointers \n#ifndef configNUM_THREAD_LOCAL_STORAGE_POINTERS \n#define configNUM_THREAD_LOCAL_STORAGE_POINTERS 1" ../ASF/config/FreeRTOSConfig.h \
 	&& echo "(8.4) ASF FreeRTOSConfig.h: Thread-local storage enabled" \
-	&& $(SED) -i 's|"\.\./samd51a/gcc/gcc/samd51p20a_flash\.ld"|"\.\./\.\./src/src_ram\.ld"|' ../ASF/gcc/Makefile \
+	&& $(SED) -i 's|"\.\./samd51a/gcc/gcc/samd51p20a_flash\.ld"|"\.\./\.\./src/src_flash\.ld"|' ../ASF/gcc/Makefile \
 	&& echo "(9) ASF Linker Script: ASF Makefile updated to use custom flash script" \
 	&& find ../ASF -type f -newermt now -exec touch {} + \
 	&& echo "(10) Timestamps in future updated to present" \

@@ -17,6 +17,7 @@
 
 #include "SEGGER_RTT.h"
 #include "checks/device_checks.h"
+#include "../bootloader/src/image_format.h"
 #include "globals.h" // defines BURN_SEQUENCE
 #include "logging.h"
 #include "mutexes.h"
@@ -41,16 +42,35 @@
 #define CAMERA_CAPTURE_ATTEMPTS 3
 cosmic_monkey_task_arguments_t cm_args = {0};
 
-// The burn record lives in the last 256-byte page of the 1 MB MRAM, clear of the development flash mirror
-// (MRAM_FLASH_BASE_ADDRESS..+MRAM_FLASH_SIZE) and the MRAM hardware test region. mram_read_bytes() only reads whole
-// pages, so the full page is read and the record is its first bytes.
+// The burn record lives in the last 256-byte page of the 1 MB MRAM, clear of the bootloader's golden copy and the MRAM
+// hardware test region
 #define BURN_RECORD_MRAM_ADDRESS 0x000FFF00u
-#define BURN_RECORD_PAGE_SIZE    256u
 // Marks the record as written by this code, so never-written MRAM starts from a fresh record instead of garbage
 #define BURN_RECORD_MAGIC        0xB12EC0DEu
 // How often the burn wait saves its progress to MRAM, so a reboot resumes the wait instead of restarting it
 #define BURN_RECORD_SAVE_PERIOD_S 60u
 
+
+// Logs (and clears) the report stage 2 of the bootloader leaves in backup RAM about checking flash against MRAM
+static void log_boot_report(void) {
+    static const char *const golden_states[] = {"valid", "written from flash", "write failed", "unreadable"};
+    volatile boot_report_t *report = (volatile boot_report_t *)BOOT_REPORT_ADDR;
+    if (report->magic != BOOT_REPORT_MAGIC) {
+        warning_impl("[!] No bootloader flash report\n");
+        return;
+    }
+    const char *golden = report->golden_state < sizeof(golden_states) / sizeof(golden_states[0])
+                             ? golden_states[report->golden_state]
+                             : "unknown";
+    info_impl("[+] Bootloader (stage 2 copy %u): golden copy %s, MRAM status 0x%02x\n", report->stage2_index, golden,
+              report->mram_status);
+    info_impl("[+] Bootloader blocks: %u checked, %u repaired, %u failed\n", report->blocks_checked, report->blocks_repaired,
+              report->blocks_failed);
+    if (report->blocks_failed != 0) {
+        warning_impl("[!] Bootloader could not repair every flash block\n");
+    }
+    report->magic = 0; // So a stale report is never logged after a reset that skipped the bootloader
+}
 
 static status_t PVDX_init(void) {
     // Segger Buffer 0 is pre-configured at compile time according to segger documentation
@@ -142,11 +162,10 @@ typedef struct {
 // Reads the record (majority-voted across the three MRAM modules). A missing record is replaced by a fresh one,
 // which means the full wait runs again: waiting too long is safer than burning too early.
 static burn_record_t load_burn_record(void) {
-    // uint32_t so that the page is word-aligned and can be read as a burn_record_t
-    static uint32_t page[BURN_RECORD_PAGE_SIZE / sizeof(uint32_t)];
-    mram_read_bytes(BURN_RECORD_MRAM_ADDRESS, (uint8_t *)page, BURN_RECORD_PAGE_SIZE);
-
-    burn_record_t record = *(const burn_record_t *)page;
+    burn_record_t record = {0};
+    if (!mram_read_bytes(BURN_RECORD_MRAM_ADDRESS, (uint8_t *)&record, sizeof(record))) {
+        warning_impl("[!] Could not read the burn record from MRAM\n");
+    }
     if (record.magic != BURN_RECORD_MAGIC) {
         warning_impl("[!] No burn record in MRAM (magic: %lx); starting a fresh one\n", (unsigned long)record.magic);
         record = (burn_record_t){.magic = BURN_RECORD_MAGIC};
@@ -156,7 +175,9 @@ static burn_record_t load_burn_record(void) {
 
 // Writes the record to all three MRAM modules
 static void save_burn_record(const burn_record_t *const p_record) {
-    mram_write_bytes(BURN_RECORD_MRAM_ADDRESS, (const uint8_t *)p_record, sizeof(*p_record));
+    if (!mram_write_bytes(BURN_RECORD_MRAM_ADDRESS, (const uint8_t *)p_record, sizeof(*p_record))) {
+        warning_impl("[!] Could not write the burn record to every MRAM chip\n");
+    }
 }
 
 int main(void) {
@@ -236,6 +257,7 @@ int main(void) {
     if (i2c_camera_bus_mutex == NULL) {
         fatal("Failed to create I2C_CAMERA bus mutex");
     }
+    log_boot_report();
 
     /* ---------- DEVICE CHECKS ---------- */
 

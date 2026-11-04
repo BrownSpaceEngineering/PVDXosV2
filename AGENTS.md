@@ -7,18 +7,21 @@ Adafruit Grand Central development board.
 
 ## Architecture and hardware
 
-- `bootloader/` contains three independently linked `0x3000`-byte bootloader
-  images at flash offsets `0x00000000`, `0x00003000`, and `0x00006000`.
-  `startup.c` validates checksums (stored at `0x0000E000`) and falls through to
-  the next copy if needed.
-  `bootloader.c` byte-wise majority-votes three back-to-back application
-  copies starting at `0x00010000`, copies the result to RAM at `0x20000000`,
-  sets VTOR, and jumps to it. Each copy's slot is the image size rounded up to
-  the 8 KB NVM erase block; the slot size is stored three times at `0x0000E00C`
-  and majority-voted by the bootloader.
-- `src/` is the application; `src/src_ram.ld` links it for RAM execution after
-  the bootloader copy. `src/main.c` initializes Atmel Start hardware, logging,
-  startup checks, tasks, and FreeRTOS.
+- `bootloader/` is a two-stage bootloader; the layout is defined in
+  `bootloader/src/image_format.h`. Stage 1 (`src/stage1.c`, flash
+  `0x00000000`) jumps to the first of three stage-2 copies (`0x00002000`,
+  `0x00006000`, `0x0000A000`, 16 KB each, CRC32 in the last 4 bytes) whose CRC
+  is valid. Stage 2 (`src/stage2.c`, an ASF project in `bootloader/ASF`)
+  copies MRAM (three chips holding the same copy; header at MRAM `0x000000`) into any
+  8 KB flash block that doesn't match it, using the ASF flash HAL. When a
+  debugger requests it (`make flash_to_mram`), it instead copies flash into
+  MRAM on that one boot. It then
+  leaves a boot report in backup RAM, and jumps to PVDXos. The block CRCs live
+  in the metadata block at `0x0000E000`.
+- `src/` is the application; `src/src_flash.ld` links it to run in place from
+  flash at `0x0001E000`, above any `BOOTPROT` region (RAM holds only data, bss and stacks).
+  `src/main.c` initializes Atmel Start hardware, logging, logs the bootloader's
+  boot report, runs startup checks, tasks, and FreeRTOS.
 - `ASF/` is generated Atmel Start/HAL/FreeRTOS support. Drivers are under
   `src/drivers/`, CCSDS protocols under `src/ccsds/`, and numerical routines
   under `src/linalg/`. Host-only utilities are under `scripts/`.
@@ -43,14 +46,19 @@ make dev
 make clean all
 make release
 make test
-make -C bootloader
+make -C bootloader/src
 make -C src dev
 make clean
 ```
 
 `make dev`, `make release`, and `make test` rebuild the bootloader and run
-`scripts/create_flash_segment.py`, which assembles the three bootloader images,
-checksums, and three application copies into `flash.bin`. `src/Makefile` passes
+`scripts/create_flash_segment.py`, which assembles the stage 1 bootloader, the three
+CRC-checked stage-2 bootloaders, the image metadata and PVDXos into `flash.bin`.
+The bootloader copies MRAM into any flash block that doesn't match and never
+writes to MRAM, so a build flashed with `flash.jlink` gets overwritten by the
+golden copy. To make a build the golden copy, flash it with `make flash_to_mram`
+(`flash_to_mram.jlink`), which leaves a request word in backup RAM that makes
+the bootloader copy flash into MRAM on that one boot. `src/Makefile` passes
 exactly one of `DEVBUILD`, `RELEASE`, or `UNITTEST`; do not combine these
 manually. Tests are embedded firmware tests: `make test` calls `tests_run()` in
 `src/main.c` before FreeRTOS, with results emitted through SEGGER RTT. Current
@@ -58,8 +66,8 @@ test functions cover SPP, linear algebra matrix multiplication, and CFDP
 parsing. To build only some tests, pass their names, e.g.
 `make test TESTS="spp cfdp"` (defines `TEST_SPP`/`TEST_CFDP`; see `TEST_NAMES`
 in `src/Makefile` and `src/tests/test.h`); with no `TESTS`, all are built.
-Builds fail if `PVDXos.bin` exceeds 256 KB or the linker's RAM region
-overflows.
+Builds fail if `PVDXos.bin` exceeds its 440 KB MRAM golden-copy slot or the
+linker's flash or RAM region overflows.
 
 For hardware flashing, start a J-Link GDB server configured for
 `ATSAMD51P20A`, SWD, and port 2331. For J-Link/GDB workflows:
@@ -73,7 +81,8 @@ make reset_mcu
 python3 scripts/rtt_logs.py
 ```
 
-`make flash_monkey` intentionally flips random bits in `flash.bin`; rebuild
+`make flash_monkey` intentionally flips random bits in `flash.bin` (limit them
+with `REGION=app` or `REGION=boot`) to exercise the bootloader's repair; rebuild
 before using a normal image again. Build documentation with
 `doxygen Doxyfile`. Format C/C++ with the repository `.clang-format`
 configuration, for example `clang-format -i path/to/file.c`.
@@ -100,11 +109,12 @@ configuration, for example `clang-format -i path/to/file.c`.
   the project's `fatal`, `warning`, `info`, `debug`, and assertion helpers.
 - Follow `.clang-format`: Google-derived style, four-space indentation, no
   tabs, right-aligned pointer declarators (`int *p`), and a 140-column limit.
-- Linker scripts and flash offsets are part of the redundancy protocol.
-  Coordinate any change to bootloader sizes, application addresses, or
-  checksum locations across the three bootloader linker scripts,
-  `src/src_ram.ld`, `bootloader/bootloader.c`, and
-  `scripts/create_flash_segment.py`.
+- Linker scripts and flash/MRAM offsets are part of the redundancy protocol.
+  Change them in `bootloader/src/image_format.h` (which
+  `scripts/image_format.py` parses for `create_flash_segment.py` and
+  `gen_bootloaders.py`), and keep `src/src_flash.ld`,
+  `bootloader/src/bootloader_flash.ld.template` and `NUM_STAGE2_COPIES` in
+  `bootloader/src/Makefile` consistent with it.
 
 Shared procedures with detailed build/flash or logic-analyzer workflows are
 documented in `.agents/skills/`.
@@ -142,8 +152,9 @@ Several commands above are interactive or never terminate. Agents must NOT run `
 - Firmware log (RTT channel 1) in the background: `tools/rtt.sh start`, `tools/rtt.sh tail 200`, `tools/rtt.sh stop`
 - Inspect the running target (safe, read-only): `tools/gdb.sh "bt" "rtos_current" "faults" "info threads"`
 - Catch a fault (board resets ~1 s after `fatal()`): `GDB_TIMEOUT=90 tools/gdb.sh wait_fault`
-- Build/flash: see the `build-and-flash-pvdxos` skill. Flashing uses `flash.jlink`, never GDB `load`
-  (the app is linked for RAM and copied there by the bootloader).
+- Build/flash: see the `build-and-flash-pvdxos` skill. Flash with `flash.jlink`, which writes the whole
+  `flash.bin`. Never GDB `load` `src/PVDXos.elf`: it leaves the metadata block stale, so at the next boot the
+  bootloader sees flash as corrupt and rewrites it from the MRAM golden copy.
 
 Rules:
 

@@ -283,7 +283,7 @@ $(OUTPUT_FILE_PATH): $(OBJS)
 	$(QUOTE)arm-none-eabi-gcc$(QUOTE) -o $(OUTPUT_FILE_NAME).elf $(OBJS_AS_ARGS) -Wl,--start-group -lm -Wl,--end-group -mthumb \
 -Wl,-Map="$(OUTPUT_FILE_NAME).map" --specs=nano.specs -Wl,--gc-sections -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 \
  \
--T"../../src/src_ram.ld" \
+-T"../../src/src_flash.ld" \
 -L"../samd51a/gcc/gcc"
 	@echo Finished building target: $(strip $(patsubst ../%, %, $@))
 
