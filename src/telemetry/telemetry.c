@@ -96,7 +96,12 @@ static void put_status(tel_writer_t *w, tel_device_status_t status) {
 }
 
 /* ---------- DOWNLINK ---------- */
-static tel_downlink_t tel_cache; // Telemetry downlink cache
+// Telemetry downlink cache - starts health as disabled before the devices check in
+static tel_downlink_t tel_cache = {.gyro.health = TEL_DEVICE_STATUS_DISABLED,
+                                   .camera.health = TEL_DEVICE_STATUS_DISABLED,
+                                   .display_health = TEL_DEVICE_STATUS_DISABLED,
+                                   .uhf_health = TEL_DEVICE_STATUS_DISABLED,
+                                   .sband.health = TEL_DEVICE_STATUS_DISABLED};
 
 static void serialize_magnetometer(tel_writer_t *w, const tel_magnetometer_data_t *mag) {
     put_uint8(w, mag->revid_register);
@@ -147,6 +152,14 @@ void telemetry_collect(tel_downlink_t *downlink) {
     *downlink = tel_cache;
 }
 
+void telemetry_update_boot_timestamp(uint32_t boot_timestamp) {
+    tel_cache.boot_timestamp = boot_timestamp;
+}
+
+void telemetry_update_last_bootloader(uint8_t bootloader) {
+    tel_cache.last_bootloader = bootloader;
+}
+
 void telemetry_update_magnetometer_registers(uint8_t revid, uint8_t bist) {
     tel_cache.magnetometer.revid_register = revid;
     tel_cache.magnetometer.bist_register = bist;
@@ -161,13 +174,95 @@ void telemetry_update_magnetometer_readings(const mag_raw_reading_t *raw, const 
     tel_cache.magnetometer.gain_adjusted_readings[2] = gain_adjusted->z;
 }
 
-void telemetry_update_magnetorquer_data(mag_torque_input_t *mag_data) {
-    tel_cache.magnetorquer.current[0] = mag_data->x;
-    tel_cache.magnetorquer.current[1] = mag_data->y;
-    tel_cache.magnetorquer.current[1] = mag_data->z;
+void telemetry_update_magnetorquer_data(const mag_torque_input_t *mag_data) {
+    tel_cache.magnetorquer.duty[0] = mag_data->x;
+    tel_cache.magnetorquer.duty[1] = mag_data->y;
+    tel_cache.magnetorquer.duty[2] = mag_data->z;
 }
+
 void telemetry_update_photodiode_data(const float photodiode_data[22]) {
     memcpy(tel_cache.photodiode.raw_readings, photodiode_data, sizeof(tel_cache.photodiode.raw_readings));
+}
+
+void telemetry_update_gyro_data(const SCH1_result_t *gyro_readings) {
+    if (gyro_readings == NULL) {
+        tel_cache.gyro.health = TEL_DEVICE_STATUS_BROKEN;
+        return;
+    }
+
+    for (size_t i = 0; i < 3; i++) {
+        tel_cache.gyro.rate[i] = gyro_readings->Rate1[i];
+    }
+    tel_cache.gyro.health = TEL_DEVICE_STATUS_OK;
+}
+
+void telemetry_update_camera_data(tel_device_status_t camera_status, bool last_capture_succeeded, uint8_t resolution) {
+    tel_cache.camera.health = camera_status;
+    tel_cache.camera.last_capture_succeeded = last_capture_succeeded;
+    tel_cache.camera.resolution = resolution;
+}
+
+void telemetry_update_display_data(tel_device_status_t display_status) {
+    tel_cache.display_health = display_status;
+}
+
+void telemetry_update_uhf_data(tel_device_status_t uhf_status) {
+    tel_cache.uhf_health = uhf_status;
+}
+
+void telemetry_update_sband_data(tel_device_status_t sband_status, uint32_t last_transmission_timestamp) {
+    tel_cache.sband.health = sband_status;
+    tel_cache.sband.last_transmission_timestamp = last_transmission_timestamp;
+}
+
+void telemetry_update_adcs_data(const tel_adcs_data_t *adcs_data) {
+    tel_cache.adcs = *adcs_data;
+}
+
+void telemetry_update_eps_data(uint8_t pack_number, float charge_percent, float voltage, float current, float temperature) {
+    // 4 battery packs
+    if (pack_number < 4) {
+        tel_cache.eps.charge_percent[pack_number] = charge_percent;
+        tel_cache.eps.voltage[pack_number] = voltage;
+        tel_cache.eps.current[pack_number] = current;
+        tel_cache.eps.temperature[pack_number] = temperature;
+    }
+}
+
+void telemetry_update_state(uint8_t state, float transition_time) {
+    tel_state_machine_data_t *sm = &tel_cache.state_machine;
+
+    for (size_t i = 7; i > 0; i--) {
+        sm->state_history[i] = sm->state_history[i - 1];
+        sm->transition_times[i] = sm->transition_times[i - 1];
+    }
+
+    sm->state_history[0] = state;
+    sm->transition_times[0] = transition_time;
+}
+
+void telemetry_update_mram_data(const tel_mram_data_t *mram_data) {
+    tel_cache.mram = *mram_data;
+}
+
+void telemetry_update_os_error(uint8_t error_code, uint32_t error_timestamp) {
+    tel_os_error_data_t *os = &tel_cache.os_errors;
+
+    for (size_t i = 7; i > 0; i--) {
+        os->error_codes[i] = os->error_codes[i - 1];
+        os->error_timestamps[i] = os->error_timestamps[i - 1];
+    }
+
+    os->error_codes[0] = error_code;
+    os->error_timestamps[0] = error_timestamp;
+}
+
+void telemetry_update_command(uint16_t command_timestamp) {
+    for (size_t i = 15; i > 0; i--) {
+        tel_cache.command_timestamps[i] = tel_cache.command_timestamps[i - 1];
+    }
+
+    tel_cache.command_timestamps[0] = command_timestamp;
 }
 
 bool telemetry_downlink_serialize(const tel_downlink_t *downlink, uint8_t *buf, size_t buf_size) {
@@ -183,7 +278,7 @@ bool telemetry_downlink_serialize(const tel_downlink_t *downlink, uint8_t *buf, 
     put_uint32(&w, downlink->boot_timestamp);
     put_uint8(&w, downlink->last_bootloader);
     serialize_magnetometer(&w, &downlink->magnetometer);
-    put_int32s(&w, downlink->magnetorquer.current, TEL_ARRAY_LEN(downlink->magnetorquer.current));
+    put_floats(&w, downlink->magnetorquer.duty, TEL_ARRAY_LEN(downlink->magnetorquer.duty));
     put_floats(&w, downlink->photodiode.raw_readings, TEL_ARRAY_LEN(downlink->photodiode.raw_readings));
     serialize_gyro(&w, &downlink->gyro);
     put_status(&w, downlink->camera.health);
