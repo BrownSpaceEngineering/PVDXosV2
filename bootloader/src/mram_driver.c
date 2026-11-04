@@ -53,24 +53,7 @@ typedef enum {
 
 // ---------------------- SPI Helpers ----------------------
 
-/**
- * @brief Halts execution forever.
- * TODO: consider if having this at all is risky; we might want to remove this entirely
- */
 void mram_recoverable_fatal(void) { while (1); }
-
-/**
- * @brief Sets the MRAM state to fatal to prevent functions from using MRAM
- *        inappropriately. Does not reboot the system.
- */
-void mram_complete_fatal(void) {
-    /**
-     * TODO: Figure out what to do in case of unrecoverable failure.
-     * Consider a function bool mram_is_fatal(void) that returns the status;
-     * every exposed function should call that function and only proceed if the
-     * result is false.
-     */
-}
 
 static inline void mram_select(uint8_t mram) {
     if (mram == 1) {
@@ -213,7 +196,6 @@ bool read_bytes(uint8_t mram, uint32_t address, uint8_t *data, uint32_t size) {
 }
 
 bool write_bytes(uint8_t mram, uint32_t address, const uint8_t *data, uint32_t size) {
-
     uint8_t hdr[4] = {
         CMD_WRITE,
         (uint8_t)(address >> 16),
@@ -275,7 +257,6 @@ void write_vol_reg(uint8_t mram, uint8_t reg, uint8_t reg_val) {
     mram_deselect(mram);
 }
 
-
 // ---------------------- Core Operations ----------------------
 
 void mram_init_report_err(uint8_t mram, mram_init_status_t status) {
@@ -332,12 +313,6 @@ mram_init_status_t set_persistent_mode(uint8_t mram) {
     }
 }
 
-/**
- * @brief Writes data to all MRAM modules.
- * @param address Destination address.
- * @param data Data to be written.
- * @param size Size of data to be written, in bytes.
- */
 bool mram_write_bytes(uint32_t address, const uint8_t *data, uint32_t size) {
     /** TODO: Only write bytes to known-good modules. */
     bool all_okay = true;
@@ -362,10 +337,6 @@ bool mram_read_bytes(uint32_t address, uint8_t *data, uint32_t size) {
 
 // ---------------------- Main ----------------------
 
-/**
- * @brief Initializes MRAM modules.
- * @return An `mram_status_t` with the status of the three MRAM modules.
- */
 mram_status_t mram_init(void) {
     gpio_set_pin_level(MRAM1_CS, true);
     gpio_set_pin_level(MRAM2_CS, true);

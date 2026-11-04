@@ -7,12 +7,6 @@
 #include "hal_delay.h"
 #include "hal_gpio.h"
 
-/**
- * @brief A type representing the current status of all MRAM modules.
- *
- * @note Use `get_mram_state` and `set_mram_state` to interact with this data. Use the
- * predefined states `MRAM_STATE_OFF`, `MRAM_STATE_OK`, `MRAM_STATE_DEGRADED`, and `MRAM_STATE_FAILED`.
- */
 typedef uint8_t mram_status_t;
 
 #define MRAM_STATE_OFF (0x00)      // MRAM module powered off.
@@ -20,27 +14,12 @@ typedef uint8_t mram_status_t;
 #define MRAM_STATE_DEGRADED (0x02) // MRAM module appears mostly functional but may not be 100% reliable.
 #define MRAM_STATE_FAILED (0x03)   // MRAM module not functioning.
 
-/**
- * @brief Sets the state of the specified MRAM module to the specified status.
- *
- * @param[out] status Pointer to the `mram_status_t` object to modify.
- * @param mram Number (1 through 3) of the MRAM module to update status for.
- * @param state New MRAM state.
- */
 static inline void set_mram_state(mram_status_t *status, uint8_t mram, uint8_t state) {
     uint8_t shift = (mram - 1) * 2;
     uint8_t mask = 0x03 << shift;
     *status = (*status & ~mask) | ((state & 0x03) << shift);
 }
 
-/**
- * @brief Retrieves the state of the specified MRAM module from the given MRAM status object.
- *
- * @param status MRAM status object to read from.
- * @param mram Number (1 through 3) of the MRAM module to read state for.
- * @returns State of the specified MRAM module, corresponding to the predefined states `MRAM_STATE_OFF`, `MRAM_STATE_OK`,
- * `MRAM_STATE_DEGRADED`, and `MRAM_STATE_FAILED`.
- */
 static inline uint8_t get_mram_state(mram_status_t status, uint8_t mram) {
     uint8_t shift = (mram - 1) * 2;
     return (status >> shift) & 0x03;

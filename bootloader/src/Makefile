@@ -17,7 +17,8 @@ export NUM_STAGE2_COPIES := 3
 STAGE2_OBJS := \
 ../src/stage2.o \
 ../src/mram_driver.o \
-../src/flash_driver.o
+../src/flash_driver.o \
+../src/watchdog_driver.o
 
 export OBJS := $(STAGE2_OBJS)
 

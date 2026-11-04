@@ -19,6 +19,7 @@
 
 #include "flash_driver.h"
 #include "image_format.h"
+#include "watchdog_driver.h"
 
 #define SCB_VTOR (*(volatile uint32_t *)0xE000ED08u)
 
@@ -91,6 +92,7 @@ static bool write_golden_copy(const image_header_t *flash_header) {
     }
 
     for (uint32_t n = 0; n < count_covered_blocks(&header); n++) {
+        watchdog_pet();
         if (n == METADATA_BLOCK_INDEX) {
             continue;
         }
@@ -123,6 +125,7 @@ static bool write_golden_copy(const image_header_t *flash_header) {
 // (stage 1, the stage-2 copies and the metadata) are never checked or rewritten.
 static void repair_flash(const image_header_t *reference) {
     for (uint32_t n = BOOT_REGION_BLOCKS; n < count_covered_blocks(reference); n++) {
+        watchdog_pet();
         block_ref_t block = get_covered_block(reference, n);
         report.blocks_checked++;
 
@@ -141,8 +144,9 @@ static void repair_flash(const image_header_t *reference) {
 /* ---------- JUMP TO PVDXOS ---------- */
 
 static void go_to_app(void) {
-    // Hand over the hardware the way PVDXos expects it after a reset: no bootloader peripherals or interrupts, flash
-    // caches back on
+    // Hand over the hardware: watchdog still running but just petted, so PVDXos has a full period to set it up again,
+    // no bootloader peripherals or interrupts, flash caches back on
+    watchdog_pet();
     spi_m_sync_disable(&SPI_MRAM);
     NVIC_DisableIRQ(NVMCTRL_0_IRQn);
     NVIC_DisableIRQ(NVMCTRL_1_IRQn);
@@ -167,6 +171,7 @@ static void go_to_app(void) {
 }
 
 int main(void) {
+    watchdog_setup();
     atmel_start_init();
     spi_m_sync_enable(&SPI_MRAM);
 
