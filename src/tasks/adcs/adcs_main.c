@@ -12,7 +12,6 @@
 #include <string.h>
 
 #include "drivers/gyro/gyro_driver.h"
-#include "drivers/rtc/rtc_driver.h"
 #include "globals.h"
 #include "libraries/adcs/include/body.h"
 #include "libraries/adcs/include/photodiode_determination.h"
@@ -37,13 +36,6 @@ QueueHandle_t init_adcs(void) {
     // if (result != SUCCESS) {
     //     warning("rm3100: Hardware initialization failed\n");
     // }
-
-    // Initialize RTC timer hardware
-    info("Initializing RTC timer\n");
-    status_t result = init_rtc_hardware();
-    if (result != SUCCESS) {
-        warning("rtc timer: Hardware initialization failed\n");
-    }
 
     // TODO: TLE and time-sync uplinks arrive on the command dispatcher's task, so ADCS will need a command queue
     // (returned here and set up in task_list.c) to hand them to this task safely.
