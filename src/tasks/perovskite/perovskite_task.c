@@ -142,10 +142,8 @@ status_t perovskite_load_header(uint8_t record, perovskite_header_t *p_header) {
         return ERROR_BAD_ARGS;
     }
 
-    // mram_read_bytes() cannot report a failed read and leaves the buffer as it was, so start from one that fails the checks
-    memset(p_header, 0, sizeof(*p_header));
-    mram_read_bytes(perovskite_header_address(record), (uint8_t *)p_header, sizeof(*p_header));
-    if (p_header->magic != PEROVSKITE_SWEEP_MAGIC || p_header->crc != perovskite_header_crc(p_header)) {
+    if (!mram_read_bytes(perovskite_header_address(record), (uint8_t *)p_header, sizeof(*p_header)) ||
+        p_header->magic != PEROVSKITE_SWEEP_MAGIC || p_header->crc != perovskite_header_crc(p_header)) {
         return ERROR_READ_FAILED;
     }
     return SUCCESS;
@@ -156,10 +154,8 @@ status_t perovskite_load_page(uint8_t record, uint8_t page, const perovskite_hea
         return ERROR_BAD_ARGS;
     }
 
-    // As in perovskite_load_header(), a failed read must not pass the check below on stale contents
-    memset(p_page, 0, sizeof(*p_page));
-    mram_read_bytes(perovskite_data_page_address(record, page), (uint8_t *)p_page, sizeof(*p_page));
-    if (p_header->page_crc[page] != crc32((const uint8_t *)p_page, sizeof(*p_page))) {
+    if (!mram_read_bytes(perovskite_data_page_address(record, page), (uint8_t *)p_page, sizeof(*p_page)) ||
+        p_header->page_crc[page] != crc32((const uint8_t *)p_page, sizeof(*p_page))) {
         return ERROR_READ_FAILED;
     }
     return SUCCESS;
@@ -205,13 +201,15 @@ static void perovskite_erase_header(void) {
 #endif
 }
 
-// mram_write_bytes() cannot report failure, so the read back is the only check
+// The read back also catches a write that mram_write_bytes() reported as done
 static status_t perovskite_save_data_page(uint8_t page) {
 #ifdef PEROVSKITE_LOG_ONLY
     return SUCCESS;
 #else
     header.page_crc[page] = crc32((const uint8_t *)&data_page, sizeof(data_page));
-    mram_write_bytes(perovskite_data_page_address(next_record, page), (const uint8_t *)&data_page, sizeof(data_page));
+    if (!mram_write_bytes(perovskite_data_page_address(next_record, page), (const uint8_t *)&data_page, sizeof(data_page))) {
+        return ERROR_WRITE_FAILED;
+    }
     return perovskite_load_page(next_record, page, &header, &readback.data_page);
 #endif
 }
@@ -221,7 +219,9 @@ static status_t perovskite_save_header(void) {
     return SUCCESS;
 #else
     header.crc = perovskite_header_crc(&header);
-    mram_write_bytes(perovskite_header_address(next_record), (const uint8_t *)&header, sizeof(header));
+    if (!mram_write_bytes(perovskite_header_address(next_record), (const uint8_t *)&header, sizeof(header))) {
+        return ERROR_WRITE_FAILED;
+    }
     return perovskite_load_header(next_record, &readback.header);
 #endif
 }

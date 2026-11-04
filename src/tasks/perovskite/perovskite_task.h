@@ -18,7 +18,7 @@
  * time. Each of the PEROVSKITE_RECORD_COUNT records is PEROVSKITE_DATA_PAGE_COUNT data pages followed by a header page.
  * The header is erased first and written last, so a record only has a valid header once its whole sweep is saved.
  */
-#define PEROVSKITE_MRAM_PAGE_SIZE 256U      // mram_read_bytes() only reads whole pages
+#define PEROVSKITE_MRAM_PAGE_SIZE 256U      // Sweeps are laid out in 256-byte MRAM pages
 #define PEROVSKITE_PIXELS_PER_PAGE 2U       // 2 pixels * 64 steps * 2 bytes
 #define PEROVSKITE_DATA_PAGE_COUNT (PEROVSKITE_PIXEL_COUNT / PEROVSKITE_PIXELS_PER_PAGE)
 #define PEROVSKITE_RECORD_SIZE ((PEROVSKITE_DATA_PAGE_COUNT + 1U) * PEROVSKITE_MRAM_PAGE_SIZE)

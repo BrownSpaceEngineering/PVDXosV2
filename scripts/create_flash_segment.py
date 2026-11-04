@@ -1,108 +1,70 @@
-import struct
+"""Assembles flash.bin: the stage 1 bootloader, three CRC-checked stage 2 bootloaders, the image metadata block and PVDXos.
 
-bootloader_path1 = "bootloader/bootloader1.bin"
-bootloader_path2 = "bootloader/bootloader2.bin"
-bootloader_path3 = "bootloader/bootloader3.bin"
+Layout (see bootloader/src/image_format.h):
+    0x00000  stage 1 bootloader
+    0x02000  stage-2 bootloader copies (16 KB each, CRC32 in the last 4 bytes)
+    0x0E000  metadata: image_header_t with a CRC32 for every block, used by the bootloader to check flash
+    0x1E000  PVDXos (runs in place from flash), padded with 0xFF to a whole number of 8 KB blocks
+Gaps are 0xFF, the value of erased flash.
+"""
+
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import image_format as fmt  # noqa: E402
+
+stage1_path = "bootloader/src/stage1.bin"
+stage2_paths = [f"bootloader/src/stage2_{i + 1}.bin" for i in range(fmt.FLASH_STAGE2_COUNT)]
 pvdxos_path = "src/PVDXos.bin"
 flash_path = "flash.bin"
 
-start_offset = 0x00010000
 
-# PVDXos copies are aligned to the NVM erase block size (8 KB) so each copy can be erased independently
-# - must match APP_FLASH_ALIGN in bootloader/bootloader.c
-block_size = 0x2000
-
-# the bootloader copies at most this many bytes to RAM
-# - must match RAM_SIZE in bootloader/bootloader.c
-ram_size = 0x3E000
-
-# Define offsets
-offsets = {
-    "bootloader1": 0x00000000,
-    "bootloader2": 0x00003000,
-    "bootloader3": 0x00006000,
-    # metadata gets its own 8 KB erase block so it can be rewritten without erasing a bootloader or PVDXos copy
-    # - checksum addresses must match bootloader/startup.c
-    "checksum1": 0x0000E000,
-    "checksum2": 0x0000E004,
-    "checksum3": 0x0000E008,
-    # three copies of the PVDXos slot size (must match APP_FLASH_STEP_ADDR in bootloader/bootloader.c)
-    "slot_size1": 0x0000E00C,
-    "slot_size2": 0x0000E010,
-    "slot_size3": 0x0000E014,
-}
+def read(path):
+    with open(path, "rb") as f:
+        return f.read()
 
 
-bootloaders = []
-bootloader_sums = []
-# Read binaries
-with open(bootloader_path1, "rb") as f:
-    bootloader = f.read()
-bootloader_sum = sum(bootloader) % 256
-bootloaders.append(bootloader)
-bootloader_sums.append(bootloader_sum)
+def place(flash, offset, data, limit, name):
+    if len(data) > limit:
+        raise SystemExit(f"error: {name} is {len(data)} bytes, but its slot holds {limit} bytes")
+    flash[offset : offset + len(data)] = data
 
-with open(bootloader_path2, "rb") as f:
-    bootloader = f.read()
-bootloader_sum = sum(bootloader) % 256
-bootloaders.append(bootloader)
-bootloader_sums.append(bootloader_sum)
 
-with open(bootloader_path3, "rb") as f:
-    bootloader = f.read()
-bootloader_sum = sum(bootloader) % 256
-bootloaders.append(bootloader)
-bootloader_sums.append(bootloader_sum)
+pvdxos = read(pvdxos_path)
+app_blocks = (len(pvdxos) + fmt.IMAGE_BLOCK_SIZE - 1) // fmt.IMAGE_BLOCK_SIZE
+app_size = app_blocks * fmt.IMAGE_BLOCK_SIZE
+if app_blocks == 0 or app_blocks > fmt.APP_MAX_BLOCKS:
+    raise SystemExit(f"error: {pvdxos_path} is {len(pvdxos)} bytes; it must be 1 to {fmt.MRAM_GOLDEN_APP_MAX_SIZE} bytes")
 
-with open(pvdxos_path, "rb") as f:
-    pvdxos = f.read()
+flash = bytearray([0xFF] * (fmt.FLASH_APP_ADDR + app_size))
 
-# each PVDXos slot is the image size rounded up to a whole erase block
-pvdxos_slot_size = (len(pvdxos) + block_size - 1) // block_size * block_size
+place(flash, fmt.FLASH_STAGE1_ADDR, read(stage1_path), fmt.FLASH_STAGE1_SIZE, stage1_path)
 
-# the bootloader rejects an empty slot or one larger than the app's RAM region
-if pvdxos_slot_size == 0 or pvdxos_slot_size > ram_size:
-    raise SystemExit(
-        f"error: {pvdxos_path} is {len(pvdxos)} bytes ({pvdxos_slot_size} bytes block-aligned), but must be between 1 and {ram_size} bytes"
-    )
+for i, path in enumerate(stage2_paths):
+    start = fmt.stage2_addr(i)
+    body_size = fmt.FLASH_STAGE2_SIZE - fmt.CRC_SIZE
+    place(flash, start, read(path), body_size, path)
+    flash[start + body_size : start + fmt.FLASH_STAGE2_SIZE] = fmt.crc32(flash[start : start + body_size]).to_bytes(4, "little")
 
-offsets.update(
-    {
-        "pvdxos_1": start_offset,
-        "pvdxos_2": start_offset + 1 * pvdxos_slot_size,
-        "pvdxos_3": start_offset + 2 * pvdxos_slot_size,
-    }
-)
+place(flash, fmt.FLASH_APP_ADDR, pvdxos, app_size, pvdxos_path)
 
-# Create flash image buffer (large enough to hold everything)
-flash_size = offsets["pvdxos_3"] + pvdxos_slot_size
-flash = bytearray([0x00] * flash_size)
 
-# Place bootloader
-# flash[offsets["bootloader"]:offsets["bootloader"] + len(bootloader)] = bootloader
+def block(offset):
+    return flash[offset : offset + fmt.IMAGE_BLOCK_SIZE]
 
-for i in range(1, 4):
-    start = offsets[f"bootloader{i}"]
-    flash[start : start + len(bootloaders[i - 1])] = bootloaders[i - 1]
-    sum_start = offsets[f"checksum{i}"]
-    flash[sum_start] = bootloader_sums[i - 1]
 
-# REMOVE THIS LINE LATER
-# flash[offsets["bootloader1"]+49] = 0x00;
-# flash[offsets["bootloader2"]+49] = 0x00;
+# CRC32 of every block the bootloader checks; the metadata block can't contain its own CRC, so its entry is 0
+boot_block_crc = [
+    0 if n == fmt.METADATA_BLOCK_INDEX else fmt.crc32(block(fmt.FLASH_STAGE1_ADDR + n * fmt.IMAGE_BLOCK_SIZE))
+    for n in range(fmt.BOOT_REGION_BLOCKS)
+]
+app_block_crc = [fmt.crc32(block(fmt.FLASH_APP_ADDR + n * fmt.IMAGE_BLOCK_SIZE)) for n in range(app_blocks)]
 
-# Place PVDXos slot sizes
-for i in range(1, 4):
-    start = offsets[f"slot_size{i}"]
-    flash[start : start + 4] = struct.pack("<I", pvdxos_slot_size)
+header = fmt.pack_header(app_size, boot_block_crc, app_block_crc)
+place(flash, fmt.FLASH_METADATA_ADDR, header, fmt.IMAGE_BLOCK_SIZE, "image header")
 
-# Place PVDXos copies
-for i in range(1, 4):
-    start = offsets[f"pvdxos_{i}"]
-    flash[start : start + len(pvdxos)] = pvdxos
-
-# Write to flash.bin
 with open(flash_path, "wb") as f:
     f.write(flash)
 
-print(f"flash.bin created successfully! (PVDXos slot size {pvdxos_slot_size:#x})")
+print(f"flash.bin created successfully! (PVDXos {len(pvdxos)} bytes in {app_blocks} blocks)")
