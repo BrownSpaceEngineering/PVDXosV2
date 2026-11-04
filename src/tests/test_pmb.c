@@ -15,8 +15,8 @@
 #include "drivers/pmb/pmb_i2c.h"
 #include "drivers/pmb/pvd_dac.h"
 #include "drivers/watchdog/watchdog_driver.h"
-#include "hal_delay.h"
 #include "logging.h"
+#include "os_delay.h"
 #include "tests/test.h"
 
 #define PMB_TEST_STEP_MV 50U                                              // Pixel voltage step
@@ -48,7 +48,7 @@ static void test_pmb_sweep_pixel(uint8_t pixel) {
         ina226_measurement_t m = {0};
         status_t status = pvd_dac_set_pixel_mv(target_mv);
         if (status == SUCCESS) {
-            delay_ms(PMB_TEST_SETTLE_MS);
+            os_delay_ms(PMB_TEST_SETTLE_MS);
             status = ina226_wait_for_fresh_conversion(PMB_TEST_CONVERSION_TIMEOUT_MS);
         }
         if (status == SUCCESS) {
@@ -78,7 +78,7 @@ static void test_pmb_sweep_pixel(uint8_t pixel) {
 
 // Settles, waits for a conversion that reflects the current input, and reads the opamp output voltage (-1 on failure)
 static status_t test_pmb_measure_mv(int *measured_mv) {
-    delay_ms(PMB_TEST_SETTLE_MS);
+    os_delay_ms(PMB_TEST_SETTLE_MS);
     status_t status = ina226_wait_for_fresh_conversion(PMB_TEST_CONVERSION_TIMEOUT_MS);
     ina226_measurement_t m = {0};
     if (status == SUCCESS) {

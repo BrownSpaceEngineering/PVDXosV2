@@ -10,6 +10,7 @@
 #include "arducam_driver.h"
 #include <string.h> // For memcpy
 #include "arducam_registers.h"
+#include "os_delay.h"
 #include "task_list.h"
 #include "watchdog_task.h"
 
@@ -77,18 +78,7 @@ status_t init_arducam_hardware(void) {
     // Without this, the JPEG/size config is written while the sensor is still
     // resetting, so the resolution never takes and the sensor stays near its
     // power-up default (~176x144) regardless of the size table below.
-    //
-    // NOTE: From a task, use vTaskDelay, NOT the ASF delay_ms(). delay_ms() busy-waits on
-    // SysTick and overwrites SysTick->LOAD/VAL, which is the same timer FreeRTOS
-    // uses for its scheduler tick -- calling it from a task corrupts the tick
-    // rate and breaks every RTOS timeout. vTaskDelay yields without touching it.
-    // Before the scheduler starts (the startup device check runs this from main()),
-    // vTaskDelay cannot be used, so fall back to delay_ms() there.
-    if (xTaskGetSchedulerState() == taskSCHEDULER_NOT_STARTED) {
-        delay_ms(100);
-    } else {
-        vTaskDelay(pdMS_TO_TICKS(100));
-    }
+    os_delay_ms(100);
 
     // fmt to jpeg config
     arducam_i2c_multi_write(OV2640_JPEG_INIT);
@@ -184,23 +174,15 @@ uint32_t read_fifo_length(void) {
  * \returns `status_t`, ERROR_NOT_READY if the capture did not finish within ARDUCAM_CAPTURE_TIMEOUT_MS
  */
 static status_t wait_capture_done(void) {
-    // Before the scheduler starts the tick count never advances and vTaskDelay hard faults, so count 1 ms busy-waits
-    const bool scheduler_running = xTaskGetSchedulerState() != taskSCHEDULER_NOT_STARTED;
-    const TickType_t start = xTaskGetTickCount();
-    uint32_t busy_waited_ms = 0;
+    // Each os_delay_ms(1) lasts at least 1 ms, so counting them never times out early
+    uint32_t waited_ms = 0;
     while (!get_bit(ARDUCHIP_TRIG, CAP_DONE_MASK)) {
-        const bool timed_out = scheduler_running ? (xTaskGetTickCount() - start > pdMS_TO_TICKS(ARDUCAM_CAPTURE_TIMEOUT_MS))
-                                                 : (busy_waited_ms > ARDUCAM_CAPTURE_TIMEOUT_MS);
-        if (timed_out) {
+        if (waited_ms > ARDUCAM_CAPTURE_TIMEOUT_MS) {
             warning("Arducam capture timed out!");
             return ERROR_NOT_READY;
         }
-        if (scheduler_running) {
-            vTaskDelay(1);
-        } else {
-            delay_ms(1);
-            busy_waited_ms++;
-        }
+        os_delay_ms(1);
+        waited_ms++;
     }
     return SUCCESS;
 }

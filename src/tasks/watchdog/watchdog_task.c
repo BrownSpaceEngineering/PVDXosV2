@@ -10,6 +10,7 @@
  */
 
 #include "watchdog_task.h"
+#include "os_delay.h"
 
 // Reference to the hardware watchdog timer on the SAMD51 microcontroller
 static volatile Wdt *const p_watchdog_timer = WDT                                                                                       ;
@@ -113,17 +114,17 @@ void early_warning_callback_watchdog(void)                                      
     // TODO: Test if this works
     // This is also fine to leave blank
     gpio_set_pin_level(LED_ORANGE1, false)                                                                                              ;
-    vTaskDelay(pdMS_TO_TICKS(100))                                                                                                      ;
+    os_delay_ms(100)                                                                                                                    ;
     gpio_set_pin_level(LED_ORANGE2, false)                                                                                              ;
-    vTaskDelay(pdMS_TO_TICKS(100))                                                                                                      ;
+    os_delay_ms(100)                                                                                                                    ;
     gpio_set_pin_level(LED_RED, true)                                                                                                   ;
-    vTaskDelay(pdMS_TO_TICKS(400))                                                                                                      ;
+    os_delay_ms(400)                                                                                                                    ;
     gpio_set_pin_level(LED_ORANGE1, true)                                                                                               ;
-    vTaskDelay(pdMS_TO_TICKS(33))                                                                                                       ;
+    os_delay_ms(33)                                                                                                                     ;
     gpio_set_pin_level(LED_ORANGE2, true)                                                                                               ;
-    vTaskDelay(pdMS_TO_TICKS(33))                                                                                                       ;
+    os_delay_ms(33)                                                                                                                     ;
     gpio_set_pin_level(LED_RED, false)                                                                                                  ;
-    vTaskDelay(pdMS_TO_TICKS(300))                                                                                                      ;;}
+    os_delay_ms(300)                                                                                                                    ;;}
 
 /**
  * \fn pet_watchdog

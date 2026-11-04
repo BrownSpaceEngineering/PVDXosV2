@@ -11,6 +11,7 @@
 #include "logging.h"
 #include "arducam_task.h"
 #include "cmd_dispatcher.h"
+#include "os_delay.h"
 #include "SEGGER_RTT.h"
 
 // Arducam task memory structures
@@ -49,7 +50,7 @@ void main_arducam(void *pvParameters) {
     bool camera_ready = false;
 
     // Capture period; kept below the watchdog timeout/2 so the task still checks in on time.
-    const TickType_t capture_interval_ticks = pdMS_TO_TICKS(3000);
+    const uint32_t capture_interval_ms = 3000;
 
     while (true) {
         debug("\n---------- Arducam Task Loop ----------\n");
@@ -80,6 +81,6 @@ void main_arducam(void *pvParameters) {
             }
         }
 
-        vTaskDelay(capture_interval_ticks);
+        os_delay_ms(capture_interval_ms);
     }
 }

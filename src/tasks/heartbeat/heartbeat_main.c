@@ -9,6 +9,7 @@
  */
 
 #include "logging.h"
+#include "os_delay.h"
 #include "heartbeat_task.h"
 #include "cmd_dispatcher.h"
 #include "state_machine.h"
@@ -24,7 +25,7 @@ heartbeat_task_memory_t heartbeat_mem                                           
  */
 
 // At most one mock update per MOCK_INPUT_PERIOD_MS. Longer than a FAKE_HEARTBEAT visit (5 s) and shorter than the
-// time between visits (about 30 s), so each visit sends exactly one. Measured in ticks rather than with vTaskDelay(),
+// time between visits (about 30 s), so each visit sends exactly one. Measured in ticks rather than with os_delay_ms(),
 // because suspending this task between visits cuts any delay short.
 #define MOCK_INPUT_PERIOD_MS 20000
 static input_update_data_t mock_eclipse_inputs = {
@@ -94,17 +95,17 @@ void main_heartbeat(void *pvParameters)                                         
 // Devbuild heartbeat pattern (Smoothly turning on and off LEDs in a line)
 #if defined(DEVBUILD)
         gpio_set_pin_level(LED_ORANGE1, false)                                                       ;
-        vTaskDelay(pdMS_TO_TICKS(100))                                                               ;
+        os_delay_ms(100)                                                                             ;
         gpio_set_pin_level(LED_ORANGE2, false)                                                       ;
-        vTaskDelay(pdMS_TO_TICKS(100))                                                               ;
+        os_delay_ms(100)                                                                             ;
         gpio_set_pin_level(LED_RED, true)                                                            ;
-        vTaskDelay(pdMS_TO_TICKS(400))                                                               ;
+        os_delay_ms(400)                                                                             ;
         gpio_set_pin_level(LED_ORANGE1, true)                                                        ;
-        vTaskDelay(pdMS_TO_TICKS(33))                                                                ;
+        os_delay_ms(33)                                                                              ;
         gpio_set_pin_level(LED_ORANGE2, true)                                                        ;
-        vTaskDelay(pdMS_TO_TICKS(33))                                                                ;
+        os_delay_ms(33)                                                                              ;
         gpio_set_pin_level(LED_RED, false)                                                           ;
-        vTaskDelay(pdMS_TO_TICKS(300))                                                               ;
+        os_delay_ms(300)                                                                             ;
 #endif
 
 // Testing heartbeat pattern (Blinking LEDs in an oscillating pattern [ON/OFF/ON] -> [OFF/ON/OFF])
@@ -112,19 +113,19 @@ void main_heartbeat(void *pvParameters)                                         
         gpio_set_pin_level(LED_ORANGE1, false)                                                       ;
         gpio_set_pin_level(LED_ORANGE2, true)                                                        ;
         gpio_set_pin_level(LED_RED, true)                                                            ;
-        vTaskDelay(pdMS_TO_TICKS(500))                                                               ;
+        os_delay_ms(500)                                                                             ;
         gpio_set_pin_level(LED_ORANGE1, true)                                                        ;
         gpio_set_pin_level(LED_ORANGE2, false)                                                       ;
         gpio_set_pin_level(LED_RED, false)                                                           ;
-        vTaskDelay(pdMS_TO_TICKS(500))                                                               ;
+        os_delay_ms(500)                                                                             ;
 #endif
 
 // Release heartbeat pattern (Red LED only, blinking at 1Hz)
 #if defined(RELEASE)
         gpio_set_pin_level(LED_RED, true)                                                            ;
-        vTaskDelay(pdMS_TO_TICKS(500))                                                               ;
+        os_delay_ms(500)                                                                             ;
         gpio_set_pin_level(LED_RED, false)                                                           ;
-        vTaskDelay(pdMS_TO_TICKS(500))                                                               ;
+        os_delay_ms(500)                                                                             ;
 #endif
 
         // Check in with the watchdog task

@@ -12,6 +12,7 @@
 #include "logging.h"
 #include "thermistor_task.h"
 #include "cmd_dispatcher.h"
+#include "os_delay.h"
 
 // Thermistor task memory structures
 thermistor_task_memory_t thermistor_mem;
@@ -37,7 +38,7 @@ void main_thermistor(void *pvParameters) {
         info("thermistor: initialized\n");
     }
 
-    const TickType_t interval_ticks = pdMS_TO_TICKS(2000);
+    const uint32_t interval_ms = 2000;
 
     while (true) {
         debug("\n---------- Thermistor Task Loop ----------\n");
@@ -65,6 +66,6 @@ void main_thermistor(void *pvParameters) {
             }
         }
 
-        vTaskDelay(interval_ticks);
+        os_delay_ms(interval_ms);
     }
 }

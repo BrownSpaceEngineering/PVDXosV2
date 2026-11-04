@@ -13,6 +13,7 @@
 #include "hal_i2c_m_sync.h"
 #include "hal_spi_m_sync.h"
 #include "logging.h"
+#include "os_delay.h"
 
 // NOTE: these are all estimates
 #define STXG2_POLL_MS 10u
@@ -33,18 +34,6 @@ static bool store_active = false;
 static uint32_t store_words_sent = 0; // Since SPI enable
 static uint8_t store_carry[4] = {0};  // Partial word
 static size_t store_carry_len = 0;
-
-/**
- * \brief Blocks for ms
- */
-static void stxg2_delay_ms(uint32_t ms) {
-    if (xTaskGetSchedulerState() == taskSCHEDULER_NOT_STARTED) {
-        delay_ms((uint16_t)ms);
-    } else {
-        TickType_t ticks = pdMS_TO_TICKS(ms);
-        vTaskDelay(ticks ? ticks : 1);
-    }
-}
 
 /**
  * \brief Polls addr until (value & mask) == expected
@@ -69,7 +58,7 @@ static status_t stxg2_poll_reg(uint16_t addr, uint32_t mask, uint32_t expected, 
                 return SUCCESS;
             }
         }
-        stxg2_delay_ms(STXG2_POLL_MS);
+        os_delay_ms(STXG2_POLL_MS);
     }
     if (!read_succeeded) {
         warning("stxg2: all reads of 0x%04x failed (i2c error %ld)\n", addr, (long)last_i2c_error);
@@ -231,7 +220,7 @@ status_t stxg2_init(void) {
     gpio_set_pin_direction(SBAND_EN, GPIO_DIRECTION_OUT);
     gpio_set_pin_function(SBAND_EN, GPIO_PIN_FUNCTION_OFF);
 
-    stxg2_delay_ms(STXG2_POWER_SETTLE_MS);
+    os_delay_ms(STXG2_POWER_SETTLE_MS);
     gpio_set_pin_level(SBAND_RST, true);
 
     gpio_set_pin_pull_mode(SBAND_SDA, GPIO_PULL_UP);
@@ -251,7 +240,7 @@ status_t stxg2_init(void) {
         if (result == SUCCESS) {
             break;
         }
-        stxg2_delay_ms(STXG2_POLL_MS);
+        os_delay_ms(STXG2_POLL_MS);
     }
     if (result == ERROR_I2C_FAILED) {
         warning("stxg2: no answer on I2C after %u ms (i2c error %ld)\n", STXG2_BOOT_TIMEOUT_MS, (long)last_i2c_error);
@@ -306,7 +295,7 @@ status_t stxg2_set_mode(stxg2_mode_t mode) {
     for (uint32_t waited = 0; waited <= STXG2_MODE_TIMEOUT_MS; waited += STXG2_POLL_MS) {
         // The radio does not answer I2C during the switch
         if (stxg2_read_reg(REG_MODE, &value) != SUCCESS) {
-            stxg2_delay_ms(STXG2_POLL_MS);
+            os_delay_ms(STXG2_POLL_MS);
             continue;
         }
         if (value & MODE_ERROR) {
@@ -316,7 +305,7 @@ status_t stxg2_set_mode(stxg2_mode_t mode) {
         if (!(value & MODE_BUSY) && ((value & MODE_MODE_MSK) == (uint32_t)mode)) {
             return SUCCESS;
         }
-        stxg2_delay_ms(STXG2_POLL_MS);
+        os_delay_ms(STXG2_POLL_MS);
     }
     warning("stxg2: timeout changing to mode %u (MODE = 0x%08lx)\n", (unsigned)mode, (unsigned long)value);
     return ERROR_NOT_READY;
@@ -401,7 +390,7 @@ static status_t stxg2_spi_send_words(const uint8_t *buf, size_t len) {
                 warning("stxg2: SPI buffer did not drain (SPI_STAT = 0x%08lx)\n", (unsigned long)spi_status);
                 return ERROR_NOT_READY;
             }
-            stxg2_delay_ms(1);
+            os_delay_ms(1);
             continue;
         }
         waits = 0;

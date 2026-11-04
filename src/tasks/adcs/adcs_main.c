@@ -19,6 +19,7 @@
 #include "libraries/adcs/include/photodiode_determination.h"
 #include "libraries/cmd_dispatcher/cmd_dispatcher.h"
 #include "logging.h"
+#include "os_delay.h"
 #include "state_machine.h"
 #include "states.h"
 #include "tasks/adcs/adcs_task.h"
@@ -97,7 +98,7 @@ void main_adcs(void *pvParameters) {
 
         // The coils are driven during this delay. vTaskDelayUntil is disabled in the ASF FreeRTOS config, so a whole
         // step takes this long plus its run time; dt is measured below so body() still sees the true step length
-        vTaskDelay(pdMS_TO_TICKS(ADCS_LOOP_PERIOD_MS));
+        os_delay_ms(ADCS_LOOP_PERIOD_MS);
 
         // time since the last body() step, in seconds
         const TickType_t now_ticks = xTaskGetTickCount();
@@ -113,7 +114,7 @@ void main_adcs(void *pvParameters) {
         // The coils' own field would corrupt the magnetometer reading (and with it B-dot's dB/dt), so they are off
         // from before the measurement starts until its result has been used
         mtq_stop_all();
-        vTaskDelay(pdMS_TO_TICKS(ADCS_MTQ_SETTLE_MS));
+        os_delay_ms(ADCS_MTQ_SETTLE_MS);
 
         // failed reads fill their buffers with values body() rejects, so it bails with zero currents
         adcs_read_sensors(mag, gyro, photodiodes);
