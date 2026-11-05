@@ -5,6 +5,7 @@
 #include "at86rf215.h"
 #include "ccsds/radio_routing.h"
 #include "ccsds/uslp.h"
+#include "hal_gpio.h"
 #include "logging.h"
 #include "regs.h"
 #include "task_list.h"
@@ -12,25 +13,50 @@
 #define AT86_RF_IRQ_WAKEUP (1u << 0)
 #define AT86_RF_IRQ_TRXRDY (1u << 1)
 #define AT86_RF_IRQ_TRXERR (1u << 4)
+#define AT86_BBC_IRQ_RXFS (1u << 0)
 #define AT86_BBC_IRQ_RXFE (1u << 1)
 #define AT86_BBC_IRQ_TXFE (1u << 4)
 
 #define AT86_BBC_PC_FCSOK (1u << 5) // BBCn_PC bit 5: FCS of the last received frame is valid
 #define AT86_FCS_LEN 2              // PC.FCST = AT86RF215_FCS_16 in every config
 
+#define AT86_IRQ GPIO(GPIO_PORTA, 27) // temp
+#define AT86_IRQ_LINE 11
+#define AT86_IRQ_PINMUX PINMUX_PA27A_EIC_EXTINT11
+#define AT86_IRQ_NVIC EIC_11_IRQn
+
 uint8_t at86_buffer[AT86RF215_MAX_PDU];
 
-// TODO(chip setup): this handle is never initialised. Before the task touches the radio it needs, in order:
-//   1. spi_m_sync_enable(&SPI_UHF) (currently only done inside at86_check_health)
-//   2. at86_init_pvdx(&at86_dev)
-//   3. at86rf215_radio_conf(&at86_dev, AT86RF215_RF09, ...) for carrier frequency/channel, set while in TRXOFF
-//   4. TX power (at86rf215_set_pac), also in TRXOFF so the PA calibrates against it
-//   5. change_at86_config(...) to pick the PHY
-//   6. uhf_go_rx() so the radio starts out listening
+// Set up by uhf_chip_setup()
 static struct at86rf215 at86_dev;
 
 // local uplink/downlink_queue item
 radio_queue_item_t item;
+
+/**
+ * Sets up IRQs for the At86
+ */
+void at86_irq_setup(void) {
+    // set pin function
+    gpio_set_pin_direction(AT86_IRQ, GPIO_DIRECTION_IN);
+    gpio_set_pin_pull_mode(AT86_IRQ, GPIO_PULL_OFF);
+    gpio_set_pin_function(AT86_IRQ, AT86_IRQ_PINMUX);
+
+    // Note to Alex: big c told me this is what I needed to do for config. Seems reasonable but idrk.
+    hri_mclk_set_APBAMASK_EIC_bit(MCLK);
+
+    hri_eic_clear_CTRLA_ENABLE_bit(EIC);
+    hri_eic_write_CONFIG_SENSE3_bf(EIC, 1, EIC_CONFIG_SENSE3_RISE_Val);
+    hri_eic_set_ASYNCH_ASYNCH_bf(EIC, 1u << AT86_IRQ_LINE);
+
+    hri_eic_clear_INTFLAG_reg(EIC, 1u << AT86_IRQ_LINE);
+    hri_eic_set_INTEN_reg(EIC, 1u << AT86_IRQ_LINE);
+    hri_eic_set_CTRLA_ENABLE_bit(EIC);
+
+    NVIC_ClearPendingIRQ(AT86_IRQ_NVIC);
+    NVIC_SetPriority(AT86_IRQ_NVIC, 5);
+    NVIC_EnableIRQ(AT86_IRQ_NVIC);
+}
 
 /**
  * Wakes radio task that then reads IRQ registers with uhf_read_irqs().
@@ -159,19 +185,23 @@ bool uhf_tx_process() {
 /**
  * Sends cmd=RX and checks for either state transition to RX or TRANSITION
  * states.
+ *
+ * \return 0 on success or negative error code
  */
-void uhf_go_rx() {
+int uhf_go_rx() {
     int ret = at86rf215_set_cmd(&at86_dev, AT86RF215_CMD_RF_RX, AT86RF215_RF09);
     if (ret) {
         warning("Radio: failed to request RX (%d)\n", ret);
-        return;
+        return ret;
     }
 
     at86rf215_rf_state_t state = AT86RF215_STATE_RF_TRANSITION;
     ret = at86rf215_get_state(&at86_dev, &state, AT86RF215_RF09);
     if (ret || (state != AT86RF215_STATE_RF_RX && state != AT86RF215_STATE_RF_TRANSITION)) {
         warning("Radio: RX not reached (ret %d, state %d)\n", ret, state);
+        return ret ? ret : -AT86RF215_INVAL_CONF;
     }
+    return AT86RF215_OK;
 }
 
 /**
@@ -188,9 +218,6 @@ int at86_check_health(struct at86rf215 *h, at86_health_t *health) {
     if (h == NULL || health == NULL) {
         return -AT86RF215_INVAL_PARAM;
     }
-
-    // TODO: move to chip setup; nothing else enables SPI_UHF yet
-    spi_m_sync_enable(&SPI_UHF);
 
     int ret = at86rf215_reg_read_8(h, &health->part_number, REG_RF_PN);
     if (ret) {
@@ -296,6 +323,10 @@ int at86_send_frame(struct at86rf215 *h, const uint8_t *buf, size_t sz) {
  * PVDX-specific settings for PVDX
  */
 int at86_init_pvdx(struct at86rf215 *radio) {
+    // TODO(hardware): which front-end mode RF09 needs depends on how the board's PA/LNA switch is wired. The burn sequence's
+    // copy (at86_pvdx.c) uses FEMODE0, switches PADFE by hand between TX and RX, and clears AUXS.EXTLNABYP; this does none
+    // of that. Decide on hardware
+    // TODO(hardware): xo_fs/xo_trim are untrimmed, so the carrier may be off frequency until they're measured
     radio->clko_os = AT86RF215_RF_CLKO_OFF;
     radio->clk_drv = AT86RF215_RF_DRVCLKO2;
     radio->rf_femode_09 = AT86RF215_RF_FEMODE1;
@@ -313,7 +344,7 @@ int at86_init_pvdx(struct at86rf215 *radio) {
 
     // at86rf215_init() unmasks TXFE and TRXRDY on both radios. Unmask the RF09 IRQs that the task handles, and mask all
     // RF24/BBC1 IRQs: the task never reads their IRQS registers, so a pending one would hold the IRQ pin active
-    ret = at86rf215_set_bbc_irq_mask(radio, AT86RF215_RF09, AT86_BBC_IRQ_RXFE | AT86_BBC_IRQ_TXFE);
+    ret = at86rf215_set_bbc_irq_mask(radio, AT86RF215_RF09, AT86_BBC_IRQ_RXFS | AT86_BBC_IRQ_RXFE | AT86_BBC_IRQ_TXFE);
     if (!ret) {
         ret = at86rf215_set_radio_irq_mask(radio, AT86RF215_RF09, AT86_RF_IRQ_WAKEUP | AT86_RF_IRQ_TRXRDY | AT86_RF_IRQ_TRXERR);
     }
@@ -409,4 +440,72 @@ int change_at86_config(struct at86rf215 *h, at86_config_t config) {
         warning("AT86: baseband config %d failed (%d)\n", config, ret);
     }
     return ret;
+}
+
+#define UHF_SETUP_TRY(call)                                                                                                                \
+    do {                                                                                                                                   \
+        int setup_ret = (call);                                                                                                            \
+        if (setup_ret != AT86RF215_OK) {                                                                                                   \
+            warning("Radio: %s failed (%d)\n", #call, setup_ret);                                                                          \
+            return false;                                                                                                                  \
+        }                                                                                                                                  \
+    } while (0)
+
+/**
+ * Polls until the radio reaches TXPREP, which is where the PLL locks.
+ *
+ * \return true if it got there within UHF_STATE_TIMEOUT_MS
+ */
+static bool uhf_wait_txprep(void) {
+    const TickType_t start = xTaskGetTickCount();
+    do {
+        at86rf215_rf_state_t state = AT86RF215_STATE_RF_TRANSITION;
+        if (at86rf215_get_state(&at86_dev, &state, AT86RF215_RF09) == AT86RF215_OK && state == AT86RF215_STATE_RF_TXPREP) {
+            return true;
+        }
+        vTaskDelay(1);
+    } while (xTaskGetTickCount() - start < pdMS_TO_TICKS(UHF_STATE_TIMEOUT_MS));
+    return false;
+}
+
+bool uhf_chip_setup(void) {
+    spi_m_sync_enable(&SPI_UHF);
+
+    UHF_SETUP_TRY(at86_init_pvdx(&at86_dev));
+    UHF_SETUP_TRY(at86rf215_conn_check(&at86_dev));
+    UHF_SETUP_TRY(at86rf215_set_mode(&at86_dev, AT86RF215_RF_MODE_BBRF));
+
+    const struct at86rf215_radio_conf radio_conf = {
+        .cm = AT86RF215_CM_FINE_RES_04, // Covers 389.5-510 MHz, and is the mode at86rf215_set_freq needs
+        .cs = 0,
+        .base_freq = 0,
+        .lbw = AT86RF215_PLL_LBW_DEFAULT,
+    };
+    UHF_SETUP_TRY(at86rf215_radio_conf(&at86_dev, AT86RF215_RF09, &radio_conf));
+
+    UHF_SETUP_TRY(change_at86_config(&at86_dev, UHF_PHY_CONFIG));
+    UHF_SETUP_TRY(at86rf215_bb_enable(&at86_dev, AT86RF215_RF09, 1));
+
+    UHF_SETUP_TRY(at86rf215_set_freq(&at86_dev, AT86RF215_RF09, UHF_FREQ_HZ));
+    UHF_SETUP_TRY(at86rf215_set_pac(&at86_dev, AT86RF215_RF09, AT86RF215_PACUR_NO_RED, UHF_TX_POWER));
+
+    UHF_SETUP_TRY(at86rf215_set_cmd(&at86_dev, AT86RF215_CMD_RF_TXPREP, AT86RF215_RF09));
+    if (!uhf_wait_txprep()) {
+        warning("Radio: did not reach TXPREP\n");
+        return false;
+    }
+
+    at86rf215_pll_ls_t pll = AT86RF215_PLL_UNLOCKED;
+    UHF_SETUP_TRY(at86rf215_get_pll_ls(&at86_dev, &pll, AT86RF215_RF09));
+    if (pll != AT86RF215_PLL_LOCKED) {
+        warning("Radio: PLL did not lock\n");
+        return false;
+    }
+
+    // Reaching TXPREP left TRXRDY pending, which holds the IRQ pin active
+    UHF_SETUP_TRY(at86rf215_irq_clear(&at86_dev));
+    UHF_SETUP_TRY(uhf_go_rx());
+
+    info("Radio: chip set up (%lu Hz, power %d), listening\n", (unsigned long)UHF_FREQ_HZ, UHF_TX_POWER);
+    return true;
 }

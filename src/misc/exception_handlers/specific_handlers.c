@@ -1,11 +1,11 @@
 /**
  * specific_handlers.c
- * 
- * This file provides implementations for various interrupt handlers 
- * for the Cortex-M4 core and peripheral modules. Each handler either 
- * invokes the default handler (`PVDX_default_handler`) or provides 
+ *
+ * This file provides implementations for various interrupt handlers
+ * for the Cortex-M4 core and peripheral modules. Each handler either
+ * invokes the default handler (`PVDX_default_handler`) or provides
  * a placeholder for future customization of specific interrupt logic.
- * 
+ *
  * Created: April 5, 2024
  * Modified: November 9, 2025
  * Author: Oren Kohavi, Alexander Thaep
@@ -13,6 +13,7 @@
 
 #include "default_handler.h"
 #include "logging.h"
+#include "uhf_radio/uhf_radio_task.h"
 
 // Implementation of Cortex-M4 core handlers
 void NonMaskableInt_Handler(void) {
@@ -126,7 +127,8 @@ void EIC_10_Handler(void) {
     PVDX_default_handler();
 }
 void EIC_11_Handler(void) {
-    PVDX_default_handler();
+    EIC->INTFLAG.reg = EIC_INTFLAG_EXTINT(1u << 11);
+    uhf_radio_irq_handler();
 }
 void EIC_12_Handler(void) {
     PVDX_default_handler();

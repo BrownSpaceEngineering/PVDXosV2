@@ -16,6 +16,15 @@
 // Maximum wait for an event response
 #define UHF_RADIO_WAIT_MS 1000
 
+// TODO(temp): placeholder RF settings, copied from the burn sequence except for the PHY (the burn sequence uses its own
+// link config, which the radio task doesn't have). All three must match the ground station and be confirmed on hardware
+#define UHF_FREQ_HZ 437765000UL
+#define UHF_TX_POWER 10 // RF09_PAC.TXPWR, 0-31 in 1 dB steps. Not yet related to the real output power of the board
+#define UHF_PHY_CONFIG AT86_MR_FSK
+
+#define UHF_STATE_TIMEOUT_MS 50 // How long uhf_chip_setup() waits for the radio to change state
+#define UHF_SETUP_RETRY_MS 5000 // How long to wait before retrying a failed uhf_chip_setup(). Less than the watchdog timeout
+
 #define RADIO_DOWNLINK_QUEUE_LENGTH 4 // TODO: How long should queue be?
 #define RADIO_UPLINK_QUEUE_LENGTH 4
 #define RADIO_SCID CCSDS_SCID // Spacecraft id
@@ -60,6 +69,7 @@ extern QueueHandle_t downlink_queue;
 // Global memory and configuration
 extern uhf_radio_task_memory_t uhf_radio_mem;
 
+void at86_irq_setup(void);
 void uhf_radio_irq_handler(void);
 uhf_irqs_t uhf_read_irqs(void);
 uint32_t uhf_irqs_to_events(uhf_irqs_t irqs);
@@ -67,7 +77,15 @@ uint32_t uhf_irqs_to_events(uhf_irqs_t irqs);
 void uhf_rx_process();
 bool uhf_tx_process();
 
-void uhf_go_rx();
+/**
+ * Resets the chip and configures it for this task, leaving the radio listening. Needs the scheduler running, since the
+ * driver's delays use vTaskDelay. Can be called again to retry after a failure.
+ *
+ * \return true on success, false if the chip couldn't be set up (the reason is logged)
+ */
+bool uhf_chip_setup(void);
+
+int uhf_go_rx();
 void uhf_go_txprep();
 
 /**

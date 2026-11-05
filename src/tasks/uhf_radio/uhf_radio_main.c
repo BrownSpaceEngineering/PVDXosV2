@@ -69,6 +69,18 @@ void main_uhf_radio(void *pvParameters) {
     // Cache the watchdog checkin command to avoid creating it every iteration
     command_t cmd_checkin = get_watchdog_checkin_command(current_task);
 
+    // Keep checking in while retrying, so that a dead radio doesn't get the whole satellite reset by the watchdog
+    while (!uhf_chip_setup()) {
+        warning("Radio: chip setup failed, retrying in %d ms\n", UHF_SETUP_RETRY_MS);
+        if (should_checkin(current_task)) {
+            enqueue_command(&cmd_checkin);
+            debug("Radio: Enqueued watchdog checkin command\n");
+        }
+        vTaskDelay(pdMS_TO_TICKS(UHF_SETUP_RETRY_MS));
+    }
+
+    at86_irq_setup();
+
     // event flags
     uint32_t events;
 
