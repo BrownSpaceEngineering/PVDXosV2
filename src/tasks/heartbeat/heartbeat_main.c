@@ -1,20 +1,20 @@
 /**
  * heartbeat_main.c
  *
- * Main loop of the Heartbeat task, which simply blinks an LED at a fixed rate to indicate that the
- * system is still running.
+ * Main loop of the Heartbeat task, which logs the time once a second and mocks the state machine inputs that
+ * nothing produces yet.
  *
  * Created: November 20, 2023
  * Authors: Oren Kohavi, Tanish Makadia
  */
 
+#include "cmd_dispatcher.h"
+#include "heartbeat_task.h"
 #include "logging.h"
 #include "os_delay.h"
-#include "heartbeat_task.h"
-#include "cmd_dispatcher.h"
 #include "state_machine.h"
 
-heartbeat_task_memory_t heartbeat_mem                                                                ;
+heartbeat_task_memory_t heartbeat_mem;
 
 /* ---------- EXAMPLE ONLY: MOCKED STATE MACHINE INPUTS ----------
  * The heartbeat task only runs in STATE_FAKE_HEARTBEAT. While it runs, it mocks the inputs that nothing produces yet,
@@ -30,7 +30,7 @@ heartbeat_task_memory_t heartbeat_mem                                           
 #define MOCK_INPUT_PERIOD_MS 20000
 static input_update_data_t mock_eclipse_inputs = {
     .input_update_bitmask = INPUT_UPDATE_BIT(SUNLIGHT_STATUS_UPDATE) | INPUT_UPDATE_BIT(IMAGE_READY_DISPLAY_UPDATE) |
-                            INPUT_UPDATE_BIT(PHOTO_READY_DOWNLINK_UPDATE),
+        INPUT_UPDATE_BIT(PHOTO_READY_DOWNLINK_UPDATE),
     .new_values = {.in_sunlight = false, .image_ready_to_display = true, .photo_taken_for_downlink = false},
 };
 
@@ -69,68 +69,30 @@ static void send_mock_inputs_if_due(void) {
  *
  * \warning should never return
  */
-void main_heartbeat(void *pvParameters)                                                              {
-    info("heartbeat: Task Started!\n")                                                               ;
+void main_heartbeat(void *pvParameters) {
+    info("heartbeat: Task Started!\n");
 
     // Obtain a pointer to the current task within the global task list
-    pvdx_task_t *const current_task = get_current_task()                                             ;
+    pvdx_task_t *const current_task = get_current_task();
     // Cache the watchdog checkin command to avoid creating it every iteration
-    command_t cmd_checkin = get_watchdog_checkin_command(current_task)                               ;
+    command_t cmd_checkin = get_watchdog_checkin_command(current_task);
 
-// NOTE: false is on for some reason on the orange LEDs
-// In release build, make sure orange LEDs are off
-#if defined(RELEASE)
-    gpio_set_pin_level(LED_ORANGE1, true)                                                            ;
-    gpio_set_pin_level(LED_ORANGE2, true)                                                            ;
-#endif
-
-    while (true)                                                                                     {
-        debug("\n---------- Heartbeat Task Loop ----------\n")                                       ;
+    while (true) {
+        debug("\n---------- Heartbeat Task Loop ----------\n");
 
         // Print the current time
-        debug("heartbeat: Current time is %d\n", xTaskGetTickCount())                                ;
+        debug("heartbeat: Current time is %d\n", xTaskGetTickCount());
 
         send_mock_inputs_if_due();
 
-// Devbuild heartbeat pattern (Smoothly turning on and off LEDs in a line)
-#if defined(DEVBUILD)
-        gpio_set_pin_level(LED_ORANGE1, false)                                                       ;
-        os_delay_ms(100)                                                                             ;
-        gpio_set_pin_level(LED_ORANGE2, false)                                                       ;
-        os_delay_ms(100)                                                                             ;
-        gpio_set_pin_level(LED_RED, true)                                                            ;
-        os_delay_ms(400)                                                                             ;
-        gpio_set_pin_level(LED_ORANGE1, true)                                                        ;
-        os_delay_ms(33)                                                                              ;
-        gpio_set_pin_level(LED_ORANGE2, true)                                                        ;
-        os_delay_ms(33)                                                                              ;
-        gpio_set_pin_level(LED_RED, false)                                                           ;
-        os_delay_ms(300)                                                                             ;
-#endif
-
-// Testing heartbeat pattern (Blinking LEDs in an oscillating pattern [ON/OFF/ON] -> [OFF/ON/OFF])
-#if defined(UNITTEST)
-        gpio_set_pin_level(LED_ORANGE1, false)                                                       ;
-        gpio_set_pin_level(LED_ORANGE2, true)                                                        ;
-        gpio_set_pin_level(LED_RED, true)                                                            ;
-        os_delay_ms(500)                                                                             ;
-        gpio_set_pin_level(LED_ORANGE1, true)                                                        ;
-        gpio_set_pin_level(LED_ORANGE2, false)                                                       ;
-        gpio_set_pin_level(LED_RED, false)                                                           ;
-        os_delay_ms(500)                                                                             ;
-#endif
-
-// Release heartbeat pattern (Red LED only, blinking at 1Hz)
-#if defined(RELEASE)
-        gpio_set_pin_level(LED_RED, true)                                                            ;
-        os_delay_ms(500)                                                                             ;
-        gpio_set_pin_level(LED_RED, false)                                                           ;
-        os_delay_ms(500)                                                                             ;
-#endif
+        os_delay_ms(1000);
 
         // Check in with the watchdog task
-        if (should_checkin(current_task))                                                            {
+        if (should_checkin(current_task)) {
             while (enqueue_command(&cmd_checkin) != SUCCESS) {
                 warning("heartbeat: Failed to enqueue watchdog checkin command\n");
             }
-            debug("heartbeat: Enqueued watchdog checkin command\n")                                  ;}}}
+            debug("heartbeat: Enqueued watchdog checkin command\n");
+        }
+    }
+}
