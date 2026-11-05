@@ -184,6 +184,10 @@ int main(void) {
 
     /* Initializes MCU, drivers and middleware */
     atmel_start_init();
+    // Turn all LEDs off: they light when high, and Atmel Start drives every LED pin high
+    gpio_set_pin_level(LED_ORANGE1, false);
+    gpio_set_pin_level(LED_ORANGE2, false);
+    gpio_set_pin_level(LED_RED, false);
     PVDX_init();
     // info_impl(RTT_CTRL_RESET RTT_CTRL_CLEAR); // Reset the terminal
     info("--- Atmel & Hardware Initialization Complete ---\n");
