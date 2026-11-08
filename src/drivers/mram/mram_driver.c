@@ -322,6 +322,14 @@ bool mram_write_bytes(uint32_t address, const uint8_t *data, uint32_t size) {
     return all_okay;
 }
 
+bool mram_read_chip(uint8_t mram, uint32_t address, uint8_t *data, uint32_t size) {
+    return mram >= 1 && mram <= 3 && read_bytes(mram, address, data, size);
+}
+
+bool mram_write_chip(uint8_t mram, uint32_t address, const uint8_t *data, uint32_t size) {
+    return mram >= 1 && mram <= 3 && write_bytes(mram, address, data, size);
+}
+
 // States from the last mram_init(), so that reads can pick a chip that initialized correctly
 static mram_status_t mram_states = 0;
 

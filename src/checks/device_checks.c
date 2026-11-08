@@ -18,7 +18,7 @@
 #include "drivers/at86rf215/regs.h"
 #include "drivers/fuel_gauge/fuel_gauge_driver.h"
 #include "drivers/gyro/gyro_driver.h"
-#include "drivers/mram/mram_driver.h"
+#include "drivers/mram/mram_map.h"
 #include "drivers/pmb/ina226.h"
 #include "drivers/pmb/mcp23017.h"
 #include "drivers/pmb/pmb_i2c.h"
@@ -132,9 +132,9 @@ bool check_gyro(void) {
     return init_gyro_hardware() == SUCCESS;
 }
 
-// Passes only if all three MRAM chips report MRAM_STATE_OK (triplicated storage, majority-voted reads).
+// Passes only if main.c's mram_map_init() found all three MRAM chips OK (every write goes to all three).
 bool check_mram(void) {
-    mram_status_t status = mram_init();
+    mram_status_t status = mram_map_status();
     bool all_okay = true;
     for (uint8_t mram = 1; mram <= 3; mram++) {
         uint8_t state = get_mram_state(status, mram);

@@ -26,7 +26,7 @@
 #include "display_driver.h"
 #include "burn/burn_uhf.h"
 #include "image_buffer_PVDX.h"
-#include "mram_driver.h"
+#include "mram_map.h"
 #include "watchdog_driver.h"
 #include "ccsds/ccsds.h"
 #include "cosmic_monkey_task.h"
@@ -43,11 +43,6 @@
 #define CAMERA_CAPTURE_ATTEMPTS 3
 cosmic_monkey_task_arguments_t cm_args = {0};
 
-// The burn record lives in the last 256-byte page of the 1 MB MRAM, clear of the bootloader's golden copy and the MRAM
-// hardware test region
-#define BURN_RECORD_MRAM_ADDRESS 0x000FFF00u
-// Marks the record as written by this code, so never-written MRAM starts from a fresh record instead of garbage
-#define BURN_RECORD_MAGIC        0xB12EC0DEu
 // How often the burn wait saves its progress to MRAM, so a reboot resumes the wait instead of restarting it
 #define BURN_RECORD_SAVE_PERIOD_S 60u
 
@@ -149,32 +144,28 @@ static status_t PVDX_init(void) {
 
 /* ---------- BURN WIRE STATE IN MRAM ---------- */
 
-// Persists across reboots
+// Persists across reboots, as an MRAM record at the start of its own region (see mram_map.h)
 typedef struct {
-    uint32_t magic;
     uint32_t boot_count;     // boots seen since the record was created
     uint32_t burned;         // nonzero once the burn wire has been fired
     uint32_t burn_attempts;  // incremented just before each burn, so a reboot mid-burn is visible
     uint32_t elapsed_wait_s; // seconds of the pre-burn wait completed so far
 } burn_record_t;
 
-// Reads the record (majority-voted across the three MRAM modules). A missing record is replaced by a fresh one,
+// Reads the record from the first MRAM module holding a valid copy. A missing record is replaced by a fresh one,
 // which means the full wait runs again: waiting too long is safer than burning too early.
 static burn_record_t load_burn_record(void) {
-    burn_record_t record = {0};
-    if (!mram_read_bytes(BURN_RECORD_MRAM_ADDRESS, (uint8_t *)&record, sizeof(record))) {
-        warning_impl("[!] Could not read the burn record from MRAM\n");
-    }
-    if (record.magic != BURN_RECORD_MAGIC) {
-        warning_impl("[!] No burn record in MRAM (magic: %lx); starting a fresh one\n", (unsigned long)record.magic);
-        record = (burn_record_t){.magic = BURN_RECORD_MAGIC};
+    burn_record_t record;
+    if (!mram_record_load(MRAM_REGION_BURN_RECORD, 0, &record, sizeof(record))) {
+        warning_impl("[!] No valid burn record in MRAM; starting a fresh one\n");
+        record = (burn_record_t){0};
     }
     return record;
 }
 
 // Writes the record to all three MRAM modules
 static void save_burn_record(const burn_record_t *const p_record) {
-    if (!mram_write_bytes(BURN_RECORD_MRAM_ADDRESS, (const uint8_t *)p_record, sizeof(*p_record))) {
+    if (!mram_record_save(MRAM_REGION_BURN_RECORD, 0, p_record, sizeof(*p_record))) {
         warning_impl("[!] Could not write the burn record to every MRAM chip\n");
     }
 }
@@ -200,7 +191,8 @@ int main(void) {
 
     // BURN SEQUENCE
 
-    mram_status_t mram_status = mram_init();
+    // The only mram_map_init() call; everything else uses mram_map_status()
+    mram_status_t mram_status = mram_map_init();
     for (uint8_t mram = 1; mram <= 3; mram++) {
         if (get_mram_state(mram_status, mram) != MRAM_STATE_OK) {
             warning_impl("[!] MRAM%u failed to initialize; the burn record relies on the other modules\n", mram);

@@ -10,6 +10,7 @@
 #include "arducam_driver.h"
 #include <string.h> // For memcpy
 #include "arducam_registers.h"
+#include "mram_map.h"
 #include "os_delay.h"
 #include "task_list.h"
 #include "watchdog_task.h"
@@ -19,6 +20,11 @@ uint8_t ardu_spi_rx_buffer[ARDUCAM_SPI_RX_BUF_SIZE] = {0x00};
 uint8_t camera_rtt_image_buffer[SEGGER_RTT_IMAGE_BUFFER_SIZE];
 uint8_t ardu_spi_tx_buffer[ARDUCAM_SPI_TX_BUF_SIZE] = {0x00};
 struct spi_xfer ardu_xfer = {.rxbuf = ardu_spi_rx_buffer, .txbuf = ardu_spi_tx_buffer, .size = 0};
+
+_Static_assert(OV2640_MAX_FIFO_SIZE <= ARDUCAM_MRAM_IMAGE_SIZE, "a capture must fit its MRAM buffer");
+_Static_assert(ARDUCAM_MRAM_IMAGE_INFO_OFFSET + MRAM_RECORD_OVERHEAD + sizeof(arducam_mram_image_t) <= ARDUCAM_MRAM_IMAGE_OFFSET,
+               "the image info record runs into the image");
+_Static_assert(ARDUCAM_MRAM_IMAGE_OFFSET + ARDUCAM_MRAM_IMAGE_SIZE <= MRAM_CAMERA_SIZE, "the image must fit its MRAM region");
 
 struct io_descriptor *arducam_i2c_io;
 struct io_descriptor *arducam_spi_io;
@@ -291,5 +297,101 @@ status_t capture_rtt(void) {
     // WARNING: If you edit the info() calls, then you must also update open_rtt_channels_arducam_debug()
     // within scripts/rtt_logs.py (specifically the regex parsing), otherwise things will break.
     info("IMG_END");
+    return SUCCESS;
+}
+
+/**
+ * \fn capture_mram
+ *
+ * \brief Captures a JPEG and streams it from the camera's FIFO into MRAM_REGION_CAMERA, replacing the last one. The
+ *      image's length is saved only once the whole image is in MRAM, so a failed capture leaves no image rather than
+ *      a partial one.
+ *
+ * \returns `status_t`, whether the operation was successful
+ */
+status_t capture_mram(void) {
+    // NOTE: In some versions of the official C++ ArduCam OV2640 driver, the FIFO_CLEAR_MASK is written twice,
+    // while in others, it is written once. This implementation emprically works, so currently it is written twice.
+    arducam_spi_write(ARDUCHIP_FIFO, FIFO_CLEAR_MASK); // Flush the FIFO
+    arducam_spi_write(ARDUCHIP_FIFO, FIFO_CLEAR_MASK); // Clear the capture done flag (uses same clear mask)
+    arducam_spi_write(ARDUCHIP_FIFO, FIFO_START_MASK); // Start capture
+    ret_err_status(wait_capture_done(), "Arducam capture failed");
+
+    // Read how many bytes were captured
+    size_t len = read_fifo_length();
+    if (len >= OV2640_MAX_FIFO_SIZE) {
+        info("Oversized!");
+        return ERROR_SANITY_CHECK_FAILED;
+    } else if (len == 0) {
+        info("Size is 0!");
+        return ERROR_SANITY_CHECK_FAILED;
+    }
+
+    // The old image is overwritten from here on
+    arducam_mram_image_t image = {.length = 0};
+    if (!mram_record_save(MRAM_REGION_CAMERA, ARDUCAM_MRAM_IMAGE_INFO_OFFSET, &image, sizeof(image))) {
+        warning("camera: Failed to clear the MRAM image info\n");
+        return ERROR_WRITE_FAILED;
+    }
+
+    // Select SPI peripheral device
+    gpio_set_pin_level(CAMERA_CS, 0);
+
+    // Start burst read. As in capture_rtt(), the next clocked byte is the first FIFO byte, so no dummy byte
+    uint8_t cmd = BURST_FIFO_READ;
+    io_write(arducam_spi_io, &cmd, 1);
+
+    // Iteratively transfer image bytes into our rx buffer, and from there into MRAM
+    ardu_xfer.txbuf = NULL;
+    ardu_xfer.rxbuf = ardu_spi_rx_buffer;
+
+    status_t status = SUCCESS;
+    for (size_t offset = 0; offset < len; offset += ardu_xfer.size) {
+        ardu_xfer.size = (len - offset < ARDUCAM_SPI_RX_BUF_SIZE) ? len - offset : ARDUCAM_SPI_RX_BUF_SIZE;
+        spi_m_sync_transfer(&SPI_CAMERA, &ardu_xfer);
+        if (!mram_region_write(MRAM_REGION_CAMERA, ARDUCAM_MRAM_IMAGE_OFFSET + offset, ardu_spi_rx_buffer, ardu_xfer.size)) {
+            status = ERROR_WRITE_FAILED;
+            break;
+        }
+#ifndef BURN_SEQUENCE
+        // Left out of the burn sequence: p_camera_task would pull the whole OS task list into that build
+        watchdog_checkin(p_camera_task);
+#endif
+    }
+
+    // Deselect SPI peripheral device
+    gpio_set_pin_level(CAMERA_CS, 1);
+
+    if (status != SUCCESS) {
+        warning("camera: Failed to write the image to MRAM\n");
+        return status;
+    }
+
+    image.length = len;
+    if (!mram_record_save(MRAM_REGION_CAMERA, ARDUCAM_MRAM_IMAGE_INFO_OFFSET, &image, sizeof(image))) {
+        warning("camera: Failed to save the MRAM image info\n");
+        return ERROR_WRITE_FAILED;
+    }
+    info("camera: %u-byte image saved to MRAM\n", (unsigned)len);
+    return SUCCESS;
+}
+
+/**
+ * \fn arducam_mram_image_length
+ *
+ * \brief Finds the length of the image capture_mram() last saved. Its bytes can be read with mram_region_read() from
+ *      MRAM_REGION_CAMERA, starting at ARDUCAM_MRAM_IMAGE_OFFSET.
+ *
+ * \param p_length set to the image's length in bytes
+ *
+ * \returns `status_t`, ERROR_READ_FAILED if there is no complete image in MRAM
+ */
+status_t arducam_mram_image_length(uint32_t *p_length) {
+    arducam_mram_image_t image;
+    if (!mram_record_load(MRAM_REGION_CAMERA, ARDUCAM_MRAM_IMAGE_INFO_OFFSET, &image, sizeof(image)) || image.length == 0 ||
+        image.length > ARDUCAM_MRAM_IMAGE_SIZE) {
+        return ERROR_READ_FAILED;
+    }
+    *p_length = image.length;
     return SUCCESS;
 }

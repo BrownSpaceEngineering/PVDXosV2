@@ -197,11 +197,6 @@ static void resolve_pending_tle(const bool body_saw_tle) {
 }
 
 void adcs_restore_state(void) {
-    if (!adcs_persist_init()) {
-        warning("adcs: MRAM unavailable; TLE and UTC won't survive a reboot\n");
-        return;
-    }
-
     // UTC has to come first, or the TLE would be propagated to the wrong time
     uint32_t saved_utc;
     if (!adcs_persist_load_utc(&saved_utc) || set_utc(saved_utc) != SUCCESS) {
