@@ -17,6 +17,7 @@
 #include "fuel_gauge_driver.h"
 
 #include "globals.h"
+#include "os_delay.h"
 
 // Largest downstream payload is a 2-byte register, so no large buffers needed.
 
@@ -27,7 +28,7 @@ static void fg_mux_release_reset(void) {
     gpio_set_pin_level(EPS_RST, true);
     gpio_set_pin_function(EPS_RST, GPIO_PIN_FUNCTION_OFF);
     gpio_set_pin_direction(EPS_RST, GPIO_DIRECTION_OUT);
-    delay_ms(1);
+    os_delay_ms(1);
 }
 
 // The mux has no internal register: a transaction is just a 1-byte control write (or

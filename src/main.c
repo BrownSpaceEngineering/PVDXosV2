@@ -21,6 +21,7 @@
 #include "globals.h" // defines BURN_SEQUENCE
 #include "logging.h"
 #include "mutexes.h"
+#include "os_delay.h"
 #include "arducam_driver.h"
 #include "display_driver.h"
 #include "burn/burn_uhf.h"
@@ -77,13 +78,13 @@ static status_t PVDX_init(void) {
     return SUCCESS;
 }
 
-// Busy-waits one second at a time (delay_ms is fine here: the scheduler never runs, so nothing else owns SysTick).
+// Waits one second at a time.
 // The watchdog task never runs either, so the hardware watchdog is normally off. It is fed every second anyway in
 // case it is still running from an earlier boot.
 [[maybe_unused]] static void wait_seconds_feeding_watchdog(uint32_t seconds) {
     for (uint32_t s = 0; s < seconds; s++) {
         watchdog_feed(WDT);
-        delay_ms(1000);
+        os_delay_ms(1000);
     }
 }
 
@@ -174,6 +175,10 @@ int main(void) {
 
     /* Initializes MCU, drivers and middleware */
     atmel_start_init();
+    // Turn all LEDs off: they light when high, and Atmel Start drives every LED pin high
+    gpio_set_pin_level(LED_ORANGE1, false);
+    gpio_set_pin_level(LED_ORANGE2, false);
+    gpio_set_pin_level(LED_RED, false);
     PVDX_init();
     // info_impl(RTT_CTRL_RESET RTT_CTRL_CLEAR); // Reset the terminal
     info("--- Atmel & Hardware Initialization Complete ---\n");

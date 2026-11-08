@@ -11,6 +11,7 @@
 #include "logging.h"
 #include "fuel_gauge_task.h"
 #include "cmd_dispatcher.h"
+#include "os_delay.h"
 #include "tasks/task_manager/state_machine.h"
 
 // Fuel gauge task memory structures
@@ -43,7 +44,7 @@ void main_fuel_gauge(void *pvParameters) {
     }
 
     // Kept below the watchdog timeout/2 so the task still checks in on time.
-    const TickType_t read_interval_ticks = pdMS_TO_TICKS(2000);
+    const uint32_t read_interval_ms = 2000;
 
     while (true) {
         debug("\n---------- Fuel Gauge Task Loop ----------\n");
@@ -100,6 +101,6 @@ void main_fuel_gauge(void *pvParameters) {
             }
         }
 
-        vTaskDelay(read_interval_ticks);
+        os_delay_ms(read_interval_ms);
     }
 }

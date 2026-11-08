@@ -16,6 +16,7 @@
 #include "drivers/pmb/ina226.h"
 #include "drivers/pmb/pvd_dac.h"
 #include "logging.h"
+#include "os_delay.h"
 #include "semphr.h"
 #include "state_machine.h"
 #include "task_list.h"
@@ -90,7 +91,7 @@ void perovskite_park_if_stopped(void) {
     xSemaphoreGive(stop_ack);
     // Never self-suspend: the manager could resume us just before a self-suspend.
     while (perovskite_stop_requested()) {
-        vTaskDelay(1);
+        os_delay_ms(1);
     }
 }
 
@@ -199,7 +200,7 @@ static status_t perovskite_measure_step(uint8_t pixel, uint32_t step, int16_t *p
     if (status != SUCCESS) {
         return status;
     }
-    vTaskDelay(pdMS_TO_TICKS(PEROVSKITE_SETTLE_MS));
+    os_delay_ms(PEROVSKITE_SETTLE_MS);
     if ((status = ina226_wait_for_fresh_conversion(PEROVSKITE_CONVERSION_TIMEOUT_MS)) != SUCCESS) {
         return status;
     }

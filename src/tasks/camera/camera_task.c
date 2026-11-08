@@ -5,6 +5,7 @@
 #include "display_task.h"
 #include "drivers/arducam/arducam_driver.h"
 #include "logging.h"
+#include "os_delay.h"
 #include "semphr.h"
 #include "task_list.h"
 
@@ -58,7 +59,7 @@ void camera_park_if_stopped(void) {
     xSemaphoreGive(stop_ack);
     // Never self-suspend: the manager could resume us just before a self-suspend.
     while (camera_stop_requested()) {
-        vTaskDelay(1);
+        os_delay_ms(1);
     }
 }
 

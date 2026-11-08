@@ -27,6 +27,7 @@
 #include "libraries/adcs/include/quat.h"
 #include "libraries/cmd_dispatcher/cmd_dispatcher.h"
 #include "logging.h"
+#include "os_delay.h"
 #include "state_machine.h"
 #include "task_list.h"
 #include "tasks/adcs/adcs_persist.h"
@@ -383,10 +384,10 @@ static status_t read_magnetometer_single(mag_data_t *const reading) {
         return result;
     }
 
-    vTaskDelay(pdMS_TO_TICKS(ADCS_MAG_CONVERSION_MS));
+    os_delay_ms(ADCS_MAG_CONVERSION_MS);
     result = magnetometer_read(NULL, reading);
     for (size_t i = 0; result == ERROR_NOT_READY && i < ADCS_MAG_MAX_EXTRA_CHECKS; i++) {
-        vTaskDelay(pdMS_TO_TICKS(1));
+        os_delay_ms(1);
         result = magnetometer_read(NULL, reading);
     }
     return result;

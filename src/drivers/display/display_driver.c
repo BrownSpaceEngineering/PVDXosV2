@@ -12,6 +12,7 @@
 #include "globals.h"
 
 #include "image_buffer_PVDX.h"
+#include "os_delay.h"
 
 // Buffer for SPI command transactions. The display is write-only, so nothing is received (the HAL discards
 // MISO when rxbuf is NULL), and display_update() sends display_buffer directly instead of copying it here.
@@ -155,17 +156,6 @@ status_t display_update(void) {
     return SUCCESS;
 }
 
-// Waits `ms` milliseconds. Before the scheduler starts (the startup device check runs init from main()),
-// vTaskDelay dereferences a NULL current task and hard faults, so busy-wait with delay_ms() there instead;
-// once the scheduler is running, delay_ms() would disturb SysTick, so yield with vTaskDelay.
-static void display_delay_ms(uint16_t ms) {
-    if (xTaskGetSchedulerState() == taskSCHEDULER_NOT_STARTED) {
-        delay_ms(ms);
-    } else {
-        vTaskDelay(pdMS_TO_TICKS(ms));
-    }
-}
-
 /**
  * \brief Put the display to sleep without clearing its image memory.
  *
@@ -192,11 +182,11 @@ status_t init_display_hardware(void) {
     // Reset the display by setting RST to low (it should be high during normal operation)
     // SSD1362 requires: >=1ms before asserting reset, >=100us reset pulse, >=50ms before first command
     RST_HIGH();
-    display_delay_ms(1);
+    os_delay_ms(1);
     RST_LOW();
-    display_delay_ms(1); // >=100us reset pulse
+    os_delay_ms(1); // >=100us reset pulse
     RST_HIGH();
-    display_delay_ms(RESET_WAIT_INTERVAL); // >=50ms before first command
+    os_delay_ms(RESET_WAIT_INTERVAL); // >=50ms before first command
 
     // Unlock command lock (just in case)
     xfer.size = 2;

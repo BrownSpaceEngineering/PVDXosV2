@@ -10,6 +10,7 @@
 
 #include "watchdog_task.h"
 #include "cmd_dispatcher.h"
+#include "os_delay.h"
 
 watchdog_task_memory_t watchdog_mem;
 QueueHandle_t watchdog_command_queue_handle;
@@ -79,6 +80,6 @@ void main_watchdog(void *pvParameters) {
         }
 
         // Guarantee other tasks get time to run
-        vTaskDelay(pdMS_TO_TICKS(100));
+        os_delay_ms(100);
     }
 }
