@@ -82,11 +82,15 @@ static bool region_address(mram_region_t region, uint32_t offset, uint32_t size,
     return true;
 }
 
+static mram_status_t init_status = 0;
+
 mram_status_t mram_map_init(void) {
-    bool locked = lock();
-    mram_status_t status = mram_init();
-    unlock(locked);
-    return status;
+    init_status = mram_init();
+    return init_status;
+}
+
+mram_status_t mram_map_status(void) {
+    return init_status;
 }
 
 bool mram_region_read(mram_region_t region, uint32_t offset, void *data, uint32_t size) {

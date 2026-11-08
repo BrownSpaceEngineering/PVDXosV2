@@ -186,6 +186,7 @@ int main(void) {
 
     // BURN SEQUENCE
 
+    // The only mram_map_init() call; everything else uses mram_map_status()
     mram_status_t mram_status = mram_map_init();
     for (uint8_t mram = 1; mram <= 3; mram++) {
         if (get_mram_state(mram_status, mram) != MRAM_STATE_OK) {

@@ -49,8 +49,10 @@ typedef enum {
 // Bytes of MRAM a record takes beyond its payload
 #define MRAM_RECORD_OVERHEAD (8u)
 
-// mram_init(), serialized with the other functions here. Works before and after the scheduler starts.
+// mram_init(). Called once, by main.c before the scheduler starts; nothing else may call it or mram_init().
 mram_status_t mram_map_init(void);
+// What mram_map_init() found, for anything that needs to know which chips work
+mram_status_t mram_map_status(void);
 
 // Read or write `size` bytes at `offset` within `region`. Return false if the range doesn't fit in the region or the
 // transfer fails. Reads come from the first chip mram_init() found working; writes go to all three, and return false

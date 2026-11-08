@@ -8,18 +8,6 @@
 #include "globals.h"
 
 /**
- * \fn adcs_persist_init
- *
- * \brief Brings up MRAM so that ADCS state can survive a reboot. If too few chips are working, the other
- *      `adcs_persist_*` functions do nothing and report that there is no saved state.
- *
- * \returns bool, whether a majority of the MRAM chips are working
- *
- * \warning blocks for at least 50 ms, so it must be called from a task
- */
-bool adcs_persist_init(void);
-
-/**
  * \fn adcs_persist_save_tle
  *
  * \brief Saves a TLE to MRAM
