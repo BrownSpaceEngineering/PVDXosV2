@@ -43,6 +43,16 @@ struct sensor_reg {
 #define OV2640_MAX_FIFO_SIZE	0x5FFFF
 #define ARDUCAM_CAPTURE_TIMEOUT_MS 2000 // well under the task's watchdog timeout
 
+// capture_mram() layout within MRAM_REGION_CAMERA (see mram_map.h): a record holding an arducam_mram_image_t, then the
+// JPEG itself
+#define ARDUCAM_MRAM_IMAGE_INFO_OFFSET 0x0
+#define ARDUCAM_MRAM_IMAGE_OFFSET 0x1000
+#define ARDUCAM_MRAM_IMAGE_SIZE 0x60000 // 384 KB, more than the FIFO can hold (OV2640_MAX_FIFO_SIZE)
+
+typedef struct {
+    uint32_t length; // Bytes of JPEG at ARDUCAM_MRAM_IMAGE_OFFSET; 0 while a capture is being written
+} arducam_mram_image_t;
+
 // SEGGER RTT up-channel used to stream captured images (configured by the arducam task).
 #define CAMERA_RTT_OUTPUT_CHANNEL   2
 #define SEGGER_RTT_IMAGE_BUFFER_SIZE 4096
@@ -67,6 +77,8 @@ int32_t arducam_spi_write(uint8_t addr, uint8_t data);
 uint8_t arducam_spi_read(uint8_t addr);
 status_t capture(void);
 status_t capture_rtt(void);
+status_t capture_mram(void);
+status_t arducam_mram_image_length(uint32_t *p_length);
 
 #endif // ARDUCAM_DRIVER_H
 
