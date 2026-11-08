@@ -79,6 +79,7 @@ typedef enum {
     GOLDEN_WRITTEN,      // A debugger requested it: flash was copied into MRAM
     GOLDEN_WRITE_FAILED, // A debugger requested it, but an MRAM write or read-back failed
     GOLDEN_UNREADABLE,   // No MRAM or no valid golden header, so flash was not checked
+    GOLDEN_DISABLED,     // Bootloader built with NO_MRAM: MRAM was never touched and flash was not checked
 } golden_state_t;
 
 typedef struct {

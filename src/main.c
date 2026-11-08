@@ -49,7 +49,7 @@ cosmic_monkey_task_arguments_t cm_args = {0};
 
 // Logs (and clears) the report stage 2 of the bootloader leaves in backup RAM about checking flash against MRAM
 static void log_boot_report(void) {
-    static const char *const golden_states[] = {"valid", "written from flash", "write failed", "unreadable"};
+    static const char *const golden_states[] = {"valid", "written from flash", "write failed", "unreadable", "disabled (NO_MRAM)"};
     volatile boot_report_t *report = (volatile boot_report_t *)BOOT_REPORT_ADDR;
     if (report->magic != BOOT_REPORT_MAGIC) {
         warning_impl("[!] No bootloader flash report\n");
