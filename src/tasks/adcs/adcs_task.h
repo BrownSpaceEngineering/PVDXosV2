@@ -273,4 +273,52 @@ void adcs_get_telemetry(tel_adcs_data_t *const telemetry);
  */
 void adcs_update_state_inputs(void);
 
+/* ---------- MOCK (make ADCS_MOCK=1) ---------- */
+
+#ifdef ADCS_MOCK
+/**
+ * \fn adcs_mock_init
+ *
+ * \brief Starts the adcs-c truth plant that stands in for the ADCS sensors and magnetorquers, and sets UTC to its
+ *      start time through the set UTC command
+ *
+ * \warning must be called after `body_reset()`
+ */
+void adcs_mock_init(void);
+
+/**
+ * \fn adcs_mock_sense
+ *
+ * \brief Samples the plant's simulated sensors in place of `adcs_read_sensors()`, and enqueues a set TLE command when
+ *      the plant's ground station uplinks one
+ *
+ * \param last_mag the plant's previous magnetometer sample (3 floats, T)
+ * \param mag see `adcs_read_magnetometer()`
+ * \param gyro see `adcs_read_gyro()`
+ * \param photodiodes see `adcs_read_photodiodes()`
+ * \param dt filled with the plant's fixed step, which the simulated physics advances by regardless of real time
+ */
+void adcs_mock_sense(float *const last_mag, float *const mag, float *const gyro, float *const photodiodes, float *const dt);
+
+/**
+ * \fn adcs_mock_get_time
+ *
+ * \brief The plant's simulated UTC, which `adcs_get_time()` returns in place of the RTC's
+ *
+ * \returns status_t SUCCESS, or ERROR_NOT_READY before `adcs_mock_init()`
+ */
+status_t adcs_mock_get_time(int *const unix_time, int *const jd_scalar, float *const jd_frac);
+
+/**
+ * \fn adcs_mock_step
+ *
+ * \brief Applies the currents to the plant's magnetorquers in place of `adcs_drive_magnetorquers()`, advances it one
+ *      tick, and periodically logs the ADCS performance against the plant's truth
+ *
+ * \param currents 3 magnetorquer currents in Amps (x, y, z)
+ * \param step_ticks how long this step's work took, for logging
+ */
+void adcs_mock_step(const float *const currents, const TickType_t step_ticks);
+#endif
+
 #endif // ADCS_H

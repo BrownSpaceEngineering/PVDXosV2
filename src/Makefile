@@ -35,6 +35,18 @@ include $(ADCS_MK)
 SRCS += $(ADCS_SRCS)
 CFLAGS += $(ADCS_CFLAGS)
 
+# `make dev ADCS_MOCK=1` (or `make test ADCS_MOCK=1`) runs the ADCS task against the adcs-c truth plant instead of its
+# sensors and magnetorquers (see src/tasks/adcs/adcs_mock.c). The plant's sources are ground-side only, so adcs.mk
+# leaves them out of normal builds.
+ifeq ($(ADCS_MOCK),1)
+    ifneq ($(filter release,$(MAKECMDGOALS)),)
+        $(error ADCS_MOCK can't be used for a release build)
+    endif
+    SRCS += $(ADCS_DIR)/src/plant.c $(ADCS_DIR)/src/tle_fit.c
+    CFLAGS += -DADCS_MOCK
+    MOCK_BUILD_TAG := adcs_mock
+endif
+
 # Map src/foo/bar.c -> build/foo/bar.o so artifacts don't clutter src
 export OBJS := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SRCS))
 
@@ -191,13 +203,14 @@ endef
 all: dev
 
 dev:
-	$(call ensure_build_type,dev)
+	$(call ensure_build_type,$(strip dev $(MOCK_BUILD_TAG)))
 	$(call child_build,dev, $(CFLAGS_DEV) $(CFLAGS))
 	$(call check_bin_size,dev)
 	@cp -f ../ASF/gcc/PVDXos.bin ./ \
 	&& cp -f ../ASF/gcc/PVDXos.elf ./ \
 	&& echo " --- Finished Building PVDXos --- " \
-	&& echo " ---  THIS IS THE DEV BUILD! --- "
+	&& echo " ---  THIS IS THE DEV BUILD! --- " \
+	&& $(if $(MOCK_BUILD_TAG),echo " ---  ADCS IS MOCKED (ADCS_MOCK=1)  --- ",true)
 
 release: clean #Might as well clean before compiling the release build
 	@echo "release" > $(BUILD_TYPE_FILE)
@@ -210,7 +223,7 @@ release: clean #Might as well clean before compiling the release build
 
 # The selected tests are part of the build type, so changing TESTS forces a rebuild
 test:
-	$(call ensure_build_type,$(strip test $(TEST_DEFINES)))
+	$(call ensure_build_type,$(strip test $(TEST_DEFINES) $(MOCK_BUILD_TAG)))
 	$(call child_build,test, $(CFLAGS_UNITTEST) $(CFLAGS))
 	$(call check_bin_size,test)
 	@cp -f ../ASF/gcc/PVDXos.elf ./ \

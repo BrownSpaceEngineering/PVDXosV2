@@ -66,6 +66,13 @@ void main_adcs(void *pvParameters) {
     // Each device check also initializes that sensor. These wait for up to a few hundred ms, so they run here rather
     // than before the scheduler. The magnetometer has to go before the gyro, since they share an SPI bus and
     // init_rm3100() sets the bus's mode, which only works before init_gyro_hardware() enables the bus.
+#ifdef ADCS_MOCK
+    // The adcs-c plant simulates the sensors and magnetorquers, so the real ones are never touched, and the coils stay
+    // off (init_adcs() leaves them off). Nothing is restored from MRAM, since the plant has its own orbit and clock.
+    warning("adcs: ADCS_MOCK build, running against the simulated plant instead of the sensors and magnetorquers\n");
+    body_reset();
+    adcs_mock_init();
+#else
     info("adcs: Initializing sensors\n");
     if (!check_device(MAGNETOMETER_ID)) {
         warning("adcs: magnetometer failed its device check\n");
@@ -80,6 +87,7 @@ void main_adcs(void *pvParameters) {
     // Start from the power-on filter / mode state, then bring back whatever orbit and time survived the last reboot
     body_reset();
     adcs_restore_state();
+#endif
 
     // Sensor readings handed to body(); last_mag holds the previous step's reading for B-dot
     float last_mag[3];
@@ -88,10 +96,12 @@ void main_adcs(void *pvParameters) {
     float photodiodes[NUM_DIODES];
     float currents[3];
 
+#ifndef ADCS_MOCK
     // seed last_mag so the first step sees no field change
     adcs_read_magnetometer(last_mag);
 
     TickType_t last_step_ticks = xTaskGetTickCount();
+#endif
 
     while (true) {
         debug("\n---------- ADCS Task Loop ----------\n");
@@ -100,10 +110,14 @@ void main_adcs(void *pvParameters) {
         // step takes this long plus its run time; dt is measured below so body() still sees the true step length
         os_delay_ms(ADCS_LOOP_PERIOD_MS);
 
-        // time since the last body() step, in seconds
         const TickType_t now_ticks = xTaskGetTickCount();
+#ifdef ADCS_MOCK
+        float dt; // the plant's fixed step, set by adcs_mock_sense() below
+#else
+        // time since the last body() step, in seconds
         const float dt = (float)(now_ticks - last_step_ticks) / configTICK_RATE_HZ;
         last_step_ticks = now_ticks;
+#endif
 
         // Empty the queue without blocking: this loop is paced by the delay above, not by commands
         while (xQueueReceive(p_adcs_task->command_queue, &cmd, 0) == pdPASS) {
@@ -111,6 +125,20 @@ void main_adcs(void *pvParameters) {
             exec_command_adcs(&cmd);
         }
 
+#ifdef ADCS_MOCK
+        // The plant gives its own last_mag, which carries its simulated sensor dropouts
+        adcs_mock_sense(last_mag, mag, gyro, photodiodes, &dt);
+
+        adcs_compute_currents(last_mag, mag, gyro, photodiodes, dt, currents);
+
+        // As on hardware, the coils stay off in low power idle
+        if (state_machine_get_current_state() == STATE_LOW_POWER_IDLE) {
+            memset(currents, 0, sizeof(currents));
+        }
+        adcs_publish_telemetry();
+        adcs_update_state_inputs();
+        adcs_mock_step(currents, xTaskGetTickCount() - now_ticks);
+#else
         // The coils' own field would corrupt the magnetometer reading (and with it B-dot's dB/dt), so they are off
         // from before the measurement starts until its result has been used
         mtq_stop_all();
@@ -130,6 +158,7 @@ void main_adcs(void *pvParameters) {
         adcs_save_state();
 
         memcpy(last_mag, mag, sizeof(mag));
+#endif
 
         // Check in with the watchdog task
         if (should_checkin(current_task)) {
