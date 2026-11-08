@@ -7,18 +7,20 @@ Adafruit Grand Central development board.
 
 ## Architecture and hardware
 
-- `bootloader/` contains three independently linked `0x3000`-byte bootloader
-  images at flash offsets `0x00000000`, `0x00003000`, and `0x00006000`.
-  `startup.c` validates checksums (stored at `0x0000E000`) and falls through to
-  the next copy if needed.
-  `bootloader.c` byte-wise majority-votes three back-to-back application
-  copies starting at `0x00010000`, copies the result to RAM at `0x20000000`,
-  sets VTOR, and jumps to it. Each copy's slot is the image size rounded up to
-  the 8 KB NVM erase block; the slot size is stored three times at `0x0000E00C`
-  and majority-voted by the bootloader.
-- `src/` is the application; `src/src_ram.ld` links it for RAM execution after
-  the bootloader copy. `src/main.c` initializes Atmel Start hardware, logging,
-  startup checks, tasks, and FreeRTOS.
+- `bootloader/src/preboot.c` is the stage-1 image at flash `0x00000000`. It
+  checksums eight independently linked `0x2000`-byte stage-2 copies in
+  `0x00002000` through `0x00012000` and falls through to the next valid copy.
+- `bootloader/src/bootloader.c` validates the image header and repairs damaged
+  8 KiB OS blocks from the voted MRAM golden copy, then runs the OS in place.
+  Flash has a reserved header row at `0x00080000`, the OS starts at
+  The versionless 8 KiB header block is part of the OS image at `0x00080000`;
+  executable code starts at `0x00082000`. The complete 512 KiB OS image,
+  including its header, is mirrored to MRAM at `0x00000000`; the bootloader
+  copy is at MRAM `0x00080000`. No header or checksums are stored in the unused
+  flash gap. If MRAM is unavailable, the bootloader continues from flash.
+- `src/` is the application; `src/src_flash.ld` links it for execution from
+  flash at `0x00082000`. `src/main.c` initializes Atmel Start hardware,
+  logging, startup checks, tasks, and FreeRTOS.
 - `ASF/` is generated Atmel Start/HAL/FreeRTOS support. Drivers are under
   `src/drivers/`, CCSDS protocols under `src/ccsds/`, and numerical routines
   under `src/linalg/`. Host-only utilities are under `scripts/`.
@@ -49,8 +51,9 @@ make clean
 ```
 
 `make dev`, `make release`, and `make test` rebuild the bootloader and run
-`scripts/create_flash_segment.py`, which assembles the three bootloader images,
-checksums, and three application copies into `flash.bin`. `src/Makefile` passes
+`scripts/create_flash_segment.py`, which assembles stage 1, eight stage-2 images,
+the OS image header, and the flash-resident application into `flash.bin`.
+`src/Makefile` passes
 exactly one of `DEVBUILD`, `RELEASE`, or `UNITTEST`; do not combine these
 manually. Tests are embedded firmware tests: `make test` calls `tests_run()` in
 `src/main.c` before FreeRTOS, with results emitted through SEGGER RTT. Current
@@ -58,7 +61,7 @@ test functions cover SPP, linear algebra matrix multiplication, and CFDP
 parsing. To build only some tests, pass their names, e.g.
 `make test TESTS="spp cfdp"` (defines `TEST_SPP`/`TEST_CFDP`; see `TEST_NAMES`
 in `src/Makefile` and `src/tests/test.h`); with no `TESTS`, all are built.
-Builds fail if `PVDXos.bin` exceeds 256 KB or the linker's RAM region
+Builds fail if `PVDXos.bin` exceeds the 504 KiB app slot or the linker region
 overflows.
 
 For hardware flashing, start a J-Link GDB server configured for
@@ -102,8 +105,8 @@ configuration, for example `clang-format -i path/to/file.c`.
   tabs, right-aligned pointer declarators (`int *p`), and a 140-column limit.
 - Linker scripts and flash offsets are part of the redundancy protocol.
   Coordinate any change to bootloader sizes, application addresses, or
-  checksum locations across the three bootloader linker scripts,
-  `src/src_ram.ld`, `bootloader/bootloader.c`, and
+  checksum locations across the generated stage-2 linker scripts,
+  `src/src_flash.ld`, `bootloader/src/image_format.h`, and
   `scripts/create_flash_segment.py`.
 
 Shared procedures with detailed build/flash or logic-analyzer workflows are

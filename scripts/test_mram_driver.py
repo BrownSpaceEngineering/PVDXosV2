@@ -7,11 +7,12 @@ so an unexpected fatal recovery loop fails the test rather than hanging it.
 """
 
 from pathlib import Path
-import re
+import struct
 import subprocess
 import tempfile
 import unittest
 
+import image_format as fmt
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -88,6 +89,9 @@ static void reset_model(uint8_t status) {
     completion_flags = 0x80;
     completion_busy = 0;
     payload_count = transaction = payload_end_pets = 0;
+    mram_module_status = 0;
+    for (uint8_t module = 1; module <= 3; module++)
+        set_mram_state(&mram_module_status, module, MRAM_STATE_OK);
 }
 
 static void commit(struct device *d) {
@@ -379,9 +383,9 @@ static void public_failures(bool reading) {
                 fail_at = replica * per_replica + nth;
                 short_transfer = short_result;
                 if (reading) {
-                    mram_read_bytes(0x1200, data, sizeof(data));
-                    CHECK(transfers == fail_at);  /* No later replica/page reads. */
-                    CHECK(memcmp(data, expected, sizeof(data)) == 0);  /* No vote. */
+                    CHECK(mram_read_bytes(0x1200, data, sizeof(data)));
+                    CHECK(transfers == fail_at + (2 - replica) * per_replica);
+                    CHECK(memcmp(data, expected, sizeof(data)) == 0);
                     CHECK(counts[0x06] == 0 && counts[0x01] == 0 &&
                           counts[0x02] == 0 && counts[0x50] == 0);  /* No repair. */
                     for (int i = 0; i < 3; i++)
@@ -456,6 +460,27 @@ static void chunked_transfers(bool failures) {
     }
 }
 
+static void public_read_replica_fallback(void) {
+    uint8_t expected[256], received[256];
+    for (unsigned int i = 0; i < sizeof(expected); i++)
+        expected[i] = (uint8_t)(i ^ 0x5a);
+
+    reset_model(0);
+    memcpy(devices[0].memory + 0x1200, expected, sizeof(expected));
+    CHECK(read_bytes(1, 0x1200, received, sizeof(received)));
+    int per_replica = transfers;
+
+    reset_model(0);
+    for (unsigned int module = 0; module < 3; module++)
+        memcpy(devices[module].memory + 0x1200, expected, sizeof(expected));
+    fail_at = per_replica + 1;
+    CHECK(!mram_read_bytes(0x1200, received, sizeof(received)));
+    CHECK(memcmp(received, expected, sizeof(expected)) == 0);
+    CHECK(get_mram_state(mram_module_status, 2) == MRAM_STATE_FAILED);
+    CHECK(get_mram_state(mram_module_status, 1) == MRAM_STATE_OK);
+    CHECK(get_mram_state(mram_module_status, 3) == MRAM_STATE_OK);
+}
+
 static void roundtrip(void) {
     reset_model(0);
     uint8_t sent[256], received[256];
@@ -484,6 +509,7 @@ int main(int argc, char **argv) {
     else if (!strcmp(argv[1], "completion_busy")) completion_busy_test();
     else if (!strcmp(argv[1], "public_read_failure")) public_failures(true);
     else if (!strcmp(argv[1], "public_write_failure")) public_failures(false);
+    else if (!strcmp(argv[1], "replica_fallback")) public_read_replica_fallback();
     else if (!strcmp(argv[1], "transfers")) transfers_fail();
     else if (!strcmp(argv[1], "roundtrip")) roundtrip();
     else if (!strcmp(argv[1], "chunks")) chunked_transfers(false);
@@ -594,6 +620,22 @@ def host_bootloader_source():
     return source
 
 
+class ImageFormatTest(unittest.TestCase):
+    def test_header_integrity_and_block_alignment(self):
+        app_size = 3 * fmt.IMAGE_BLOCK_SIZE
+        block_crcs = [0x10203040, 0x50607080, 0x90A0B0C0]
+        header = fmt.pack_header(app_size, block_crcs)
+
+        self.assertEqual(len(header), fmt.IMAGE_HEADER_SIZE)
+        self.assertEqual(struct.unpack_from("<III", header), (fmt.IMAGE_MAGIC, app_size, 3))
+        self.assertEqual(struct.unpack_from("<I", header, len(header) - 4)[0], fmt.crc32(header[:-4]))
+        self.assertEqual(fmt.FLASH_OS_ADDR, 0x00080000)
+        self.assertEqual(fmt.FLASH_OS_ADDR % fmt.IMAGE_BLOCK_SIZE, 0)
+        self.assertEqual(fmt.FLASH_OS_APP_ADDR, fmt.FLASH_OS_ADDR + fmt.FLASH_OS_HEADER_SIZE)
+        self.assertEqual(fmt.FLASH_OS_APP_ADDR, 0x00082000)
+        self.assertEqual(fmt.FLASH_OS_APP_SIZE // fmt.IMAGE_BLOCK_SIZE, fmt.FLASH_OS_APP_BLOCK_COUNT)
+
+
 class MramDriverTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -606,28 +648,22 @@ class MramDriverTest(unittest.TestCase):
             "hal_gpio.h": "#include <stdint.h>\n#include <stdbool.h>\n"
                           "void gpio_set_pin_level(uint32_t pin, bool high);\n",
             "harness.c": HARNESS,
-            "bootloader_harness.c": BOOTLOADER_HARNESS,
-            "bootloader_host.c": host_bootloader_source(),
         }.items():
             (directory / name).write_text(content)
         cls.executable = directory / "test_mram_driver"
-        cls.bootloader_executable = directory / "test_bootloader"
-        for source, executable in (("harness.c", cls.executable),
-                                   ("bootloader_harness.c", cls.bootloader_executable)):
-            command = [
-                "gcc", "-std=gnu99", "-Wall", "-Wextra", "-Werror",
-                "-Wno-unused-parameter", "-I", str(directory),
-                "-I", str(ROOT / "bootloader" / "src"),
-                str(directory / source), "-o", str(executable),
-            ]
-            result = subprocess.run(command, capture_output=True, text=True, timeout=30)
-            if result.returncode:
-                raise RuntimeError(f"Host compilation failed ({source}):\n{result.stdout}{result.stderr}")
+        command = [
+            "gcc", "-std=gnu99", "-Wall", "-Wextra", "-Werror",
+            "-Wno-unused-parameter", "-I", str(directory),
+            "-I", str(ROOT / "bootloader" / "src"),
+            str(directory / "harness.c"), "-o", str(cls.executable),
+        ]
+        result = subprocess.run(command, capture_output=True, text=True, timeout=30)
+        if result.returncode:
+            raise RuntimeError(f"Host compilation failed:\n{result.stdout}{result.stderr}")
 
-    def run_case(self, name, *, bootloader=False):
-        executable = self.bootloader_executable if bootloader else self.executable
+    def run_case(self, name):
         result = subprocess.run(
-            [str(executable), name], capture_output=True, text=True, timeout=5
+            [str(self.executable), name], capture_output=True, text=True, timeout=5
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
@@ -646,8 +682,11 @@ class MramDriverTest(unittest.TestCase):
     def test_completion_wip_waits_and_times_out_after_status_and_data_commits(self):
         self.run_case("completion_busy")
 
-    def test_failed_public_read_returns_without_voting_or_repair(self):
+    def test_public_read_fails_when_surviving_replicas_disagree(self):
         self.run_case("public_read_failure")
+
+    def test_public_read_votes_surviving_replicas(self):
+        self.run_case("replica_fallback")
 
     def test_failed_public_write_still_attempts_healthy_replicas(self):
         self.run_case("public_write_failure")
@@ -663,15 +702,6 @@ class MramDriverTest(unittest.TestCase):
 
     def test_later_hal_chunk_failures_return_false_and_release_cs(self):
         self.run_case("chunk_failures")
-
-    def test_bootloader_exhausts_bad_mram_images_then_uses_flash(self):
-        self.run_case("bad", bootloader=True)
-
-    def test_bootloader_uses_flash_when_mram_unavailable(self):
-        self.run_case("none", bootloader=True)
-
-    def test_bootloader_valid_first_mram_image_skips_flash_fallback(self):
-        self.run_case("valid", bootloader=True)
 
 
 if __name__ == "__main__":

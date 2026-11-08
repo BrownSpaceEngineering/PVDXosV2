@@ -2,18 +2,17 @@ OUTPUT_FORMAT("elf32-littlearm", "elf32-littlearm", "elf32-littlearm")
 OUTPUT_ARCH(arm)
 SEARCH_DIR(.)
 
-/* Memory Spaces Definitions */
+/* PVDXos executes from flash after the header row embedded at the OS image base. */
 MEMORY
 {
+    rom      (rx)  : ORIGIN = 0x00082000, LENGTH = 0x0007E000
   ram      (rwx) : ORIGIN = 0x20000000, LENGTH = 0x00040000
   bkupram  (rwx) : ORIGIN = 0x47000000, LENGTH = 0x00002000
   qspi     (rwx) : ORIGIN = 0x04000000, LENGTH = 0x01000000
 }
 
-/* The stack size used by the application. NOTE: you need to adjust according to your application. */
 STACK_SIZE = DEFINED(STACK_SIZE) ? STACK_SIZE : DEFINED(__stack_size__) ? __stack_size__ : 0x10000;
 
-/* Section Definitions */
 SECTIONS
 {
     .text :
@@ -26,8 +25,6 @@ SECTIONS
         *(.rodata .rodata* .gnu.linkonce.r.*)
         *(.ARM.extab* .gnu.linkonce.armextab.*)
 
-        /* Support C constructors, and C destructors in both user code
-           and the C library. This also provides support for C++ code. */
         . = ALIGN(4);
         KEEP(*(.init))
         . = ALIGN(4);
@@ -60,17 +57,15 @@ SECTIONS
         KEEP (*(EXCLUDE_FILE (*crtend.o) .dtors))
         KEEP (*(SORT(.dtors.*)))
         KEEP (*crtend.o(.dtors))
-
         . = ALIGN(4);
-        _efixed = .;            /* End of text section */
-    } > ram
+        _efixed = .;
+    } > rom
 
-    /* .ARM.exidx is sorted, so has to go in its own output section.  */
     PROVIDE_HIDDEN (__exidx_start = .);
     .ARM.exidx :
     {
       *(.ARM.exidx* .gnu.linkonce.armexidx.*)
-    } > ram
+    } > rom
     PROVIDE_HIDDEN (__exidx_end = .);
 
     . = ALIGN(4);
@@ -104,20 +99,18 @@ SECTIONS
         _eqspi = .;
     } > qspi
 
-    /* .bss section which is used for uninitialized data */
     .bss (NOLOAD) :
     {
         . = ALIGN(4);
-        _sbss = . ;
+        _sbss = .;
         _szero = .;
         *(.bss .bss.*)
         *(COMMON)
         . = ALIGN(4);
-        _ebss = . ;
+        _ebss = .;
         _ezero = .;
     } > ram
 
-    /* stack section */
     .stack (NOLOAD):
     {
         . = ALIGN(8);
@@ -128,5 +121,5 @@ SECTIONS
     } > ram
 
     . = ALIGN(4);
-    _end = . ;
+    _end = .;
 }

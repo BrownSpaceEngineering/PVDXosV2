@@ -15,6 +15,7 @@ export NUM_BOOTLOADERS := 8
 
 STAGE2_OBJS := \
 ../src/bootloader.o \
+../src/flash_driver.o \
 ../src/mram_driver.o \
 ../src/watchdog_driver.o
 

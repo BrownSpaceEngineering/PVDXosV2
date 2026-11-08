@@ -18,7 +18,6 @@ _|"""""|_|"""""|_|"""""|_|"""""|
  - using triplicated variables for important stuff
  - block protection?
  */
-
 #include "mram_driver.h"
 #include "watchdog_driver.h"
 
@@ -52,8 +51,9 @@ typedef enum {
     MRAM_INIT_FAIL_PERSIST = 1u << 3,        // Persistence mode not enabled
 } mram_init_status_t;
 
-// ---------------------- SPI Helpers ----------------------
+static mram_status_t mram_module_status;
 
+// ---------------------- SPI Helpers ----------------------
 /**
  * @brief Halts execution and waits for the watchdog to reboot the system.
  * @warning Should only be called when a reboot will definitely fix the fatal
@@ -344,30 +344,25 @@ mram_init_status_t set_persistent_mode(uint8_t mram) {
 }
 
 bool mram_write_bytes(uint32_t address, const uint8_t *data, uint32_t size) {
-    /** TODO: Consider only writing bytes to known-good modules. */
-    /** TODO: Implement paging. */
+    bool write_succeeded = false;
     for (uint8_t mram = 1; mram <= 3; mram++) {
+        uint8_t state = get_mram_state(mram_module_status, mram);
+        if (state != MRAM_STATE_OK && state != MRAM_STATE_DEGRADED) {
+            continue;
+        }
         bool succeeded = write_bytes(mram, address, data, size);
-        if (!succeeded) {
-            return true; // Write failed.
+        if (succeeded) {
+            write_succeeded = true;
+        } else {
+            set_mram_state(&mram_module_status, mram, MRAM_STATE_FAILED);
         }
     }
-    return false; // Write succeeded.
+    return !write_succeeded;
 }
 
 #define PAGE_SIZE 256
 
 bool mram_read_bytes(uint32_t address, uint8_t *data, uint32_t size) {
-    /**
-     * TODO: Consider if we want majority vote and implement fallbacks in
-     * case one or more MRAM modules are incapacitated.
-     */
-
-    /**
-     * TODO: Fix paging logic so that read-from address and read size do
-     * not need to be divisible by PAGE_SIZE.
-     */
-
     if (size % PAGE_SIZE != 0) {
         return true; // Read failed.
     }
@@ -375,22 +370,50 @@ bool mram_read_bytes(uint32_t address, uint8_t *data, uint32_t size) {
 
     uint8_t read_data[3][PAGE_SIZE];
     for (uint32_t page = 0; page < npages; page++) {
+        bool read_succeeded[3] = {false, false, false};
+        uint8_t read_count = 0;
         for (uint8_t mram_idx = 1; mram_idx <= 3; mram_idx++) {
-            if (!read_bytes(mram_idx, address + PAGE_SIZE * page, read_data[mram_idx - 1], PAGE_SIZE)) {
-                // Never majority-vote or repair from incomplete read buffers.
-                // The void API cannot report failure; a caller's checksum may still match stale RAM.
-                return true; // Read failed.
+            uint8_t state = get_mram_state(mram_module_status, mram_idx);
+            if (state != MRAM_STATE_OK && state != MRAM_STATE_DEGRADED) {
+                continue;
             }
+            if (!read_bytes(mram_idx, address + PAGE_SIZE * page, read_data[mram_idx - 1], PAGE_SIZE)) {
+                set_mram_state(&mram_module_status, mram_idx, MRAM_STATE_FAILED);
+                continue;
+            }
+            read_succeeded[mram_idx - 1] = true;
+            read_count++;
+        }
+        if (read_count == 0u) {
+            return true;
         }
 
         bool any_error = false;
         for (uint16_t read_idx = 0; read_idx < PAGE_SIZE; read_idx++) {
-            data[read_idx + PAGE_SIZE * page] = (read_data[0][read_idx] & read_data[1][read_idx]) |
-                (read_data[2][read_idx] & read_data[1][read_idx]) |
-                (read_data[0][read_idx] & read_data[2][read_idx]);
+            uint8_t values[3];
+            uint8_t value_count = 0;
+            for (uint8_t module_index = 0; module_index < 3; module_index++) {
+                if (read_succeeded[module_index]) {
+                    values[value_count++] = read_data[module_index][read_idx];
+                }
+            }
 
-            if (read_data[0][read_idx] != read_data[1][read_idx] || read_data[0][read_idx] != read_data[2][read_idx]) {
-                any_error = true;
+            uint8_t voted_value;
+            if (value_count == 1u) {
+                voted_value = values[0];
+            } else if (value_count == 2u) {
+                if (values[0] != values[1]) {
+                    return true;
+                }
+                voted_value = values[0];
+            } else {
+                voted_value = (values[0] & values[1]) | (values[1] & values[2]) | (values[0] & values[2]);
+            }
+            data[read_idx + PAGE_SIZE * page] = voted_value;
+            for (uint8_t module_index = 0; module_index < 3; module_index++) {
+                if (read_succeeded[module_index] && read_data[module_index][read_idx] != voted_value) {
+                    any_error = true;
+                }
             }
         }
 
@@ -458,6 +481,7 @@ mram_status_t mram_init(void) {
         }
     }
 
+    mram_module_status = status;
     return status;
 }
 

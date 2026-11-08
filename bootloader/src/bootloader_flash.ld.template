@@ -13,7 +13,7 @@ MEMORY
 __flash_address_zero = 0x00000000;
 
 /* The stack size used by the application. NOTE: you need to adjust according to your application. */
-STACK_SIZE = 0x2000;
+STACK_SIZE = 0x1800;
 
 /* Section Definitions */
 SECTIONS
