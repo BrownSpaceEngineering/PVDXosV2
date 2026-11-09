@@ -64,8 +64,7 @@ void main_adcs(void *pvParameters) {
     command_t cmd;
 
     // Each device check also initializes that sensor. These wait for up to a few hundred ms, so they run here rather
-    // than before the scheduler. The magnetometer has to go before the gyro, since they share an SPI bus and
-    // init_rm3100() sets the bus's mode, which only works before init_gyro_hardware() enables the bus.
+    // than before the scheduler.
     info("adcs: Initializing sensors\n");
     if (!check_device(MAGNETOMETER_ID)) {
         warning("adcs: magnetometer failed its device check\n");

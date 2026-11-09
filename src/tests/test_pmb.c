@@ -110,7 +110,6 @@ static int test_pmb_sanity(void) {
     test_log("--- pmb sanity checks ---\n");
 
     // I2C bus and device presence
-    PMB_CHECK(failures, pmb_i2c_init() == SUCCESS, "pmb i2c bus enable\n");
     test_pmb_scan_bus();
     PMB_CHECK(failures, pmb_i2c_probe(INA226_I2C_ADDR) == SUCCESS, "pmb ina226 acks at 0x40\n");
     PMB_CHECK(failures, pmb_i2c_probe(MCP23017_I2C_ADDR) == SUCCESS, "pmb mcp23017 acks at 0x20\n");

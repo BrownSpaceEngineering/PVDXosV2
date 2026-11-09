@@ -11,8 +11,8 @@
 
 #include "task_list.h"
 
-SemaphoreHandle_t i2c_camera_bus_mutex = NULL;
-StaticSemaphore_t i2c_camera_bus_mutex_buffer;
+SemaphoreHandle_t i2c_sensors_bus_mutex = NULL;
+StaticSemaphore_t i2c_sensors_bus_mutex_buffer;
 
 // Polls a mutex until it is available, then locks it
 void lock_mutex(SemaphoreHandle_t mutex) {

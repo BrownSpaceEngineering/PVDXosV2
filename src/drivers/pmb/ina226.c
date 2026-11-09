@@ -19,16 +19,11 @@ status_t ina226_read_reg(uint8_t reg, uint16_t *value) {
 }
 
 /**
- * Enables the I2C bus, verifies the device ID, resets it, then writes the default configuration and calibration.
+ * Verifies the device ID, resets it, then writes the default configuration and calibration.
  */
 status_t ina226_init(void) {
-    status_t status = pmb_i2c_init();
-    if (status != SUCCESS) {
-        return status;
-    }
-
     uint16_t mfg_id = 0;
-    status = ina226_read_reg(INA226_MANUFACTURER_ID, &mfg_id);
+    status_t status = ina226_read_reg(INA226_MANUFACTURER_ID, &mfg_id);
     if (status != SUCCESS) {
         warning("ina226: failed to read manufacturer ID\n");
         return status;

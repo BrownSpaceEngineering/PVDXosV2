@@ -17,6 +17,7 @@
 #include "fuel_gauge_driver.h"
 
 #include "globals.h"
+#include "mutexes.h"
 #include "os_delay.h"
 
 // Largest downstream payload is a 2-byte register, so no large buffers needed.
@@ -36,12 +37,12 @@ static void fg_mux_release_reset(void) {
 // cmd_write, which would prepend a register-address byte.
 static int32_t fg_mux_raw_write(uint8_t ctrl) {
     struct _i2c_m_msg msg = {.addr = FG_MUX_ADDR, .flags = I2C_M_STOP, .len = 1, .buffer = &ctrl};
-    return i2c_m_sync_transfer(&FG_I2C, &msg);
+    return i2c_m_sync_transfer(&I2C_SENSORS, &msg);
 }
 
 static int32_t fg_mux_raw_read(uint8_t *ctrl) {
     struct _i2c_m_msg msg = {.addr = FG_MUX_ADDR, .flags = I2C_M_STOP | I2C_M_RD, .len = 1, .buffer = ctrl};
-    return i2c_m_sync_transfer(&FG_I2C, &msg);
+    return i2c_m_sync_transfer(&I2C_SENSORS, &msg);
 }
 
 /**
@@ -114,8 +115,8 @@ static status_t fg_read_reg16(uint16_t reg, uint16_t *out) {
     uint8_t reg_byte = (uint8_t)(reg & 0xFF);
     uint8_t buf[2] = {0};
 
-    i2c_m_sync_set_slaveaddr(&FG_I2C, slave, I2C_M_SEVEN);
-    int32_t rc = i2c_m_sync_cmd_read(&FG_I2C, reg_byte, buf, 2);
+    i2c_m_sync_set_slaveaddr(&I2C_SENSORS, slave, I2C_M_SEVEN);
+    int32_t rc = i2c_m_sync_cmd_read(&I2C_SENSORS, reg_byte, buf, 2);
     if (rc != 0) {
         warning("fuel_gauge: read reg 0x%03x (slave 0x%02x) failed rc=%ld %s\n", reg, slave, (long)rc, fg_i2c_err_str(rc));
         return ERROR_I2C_FAILED;
@@ -144,9 +145,13 @@ static inline float fg_conv_current(uint16_t raw) {
 }
 
 // ---------------------- Public API ----------------------
+// Each public function holds i2c_sensors_bus_mutex for its whole mux-select -> read -> close sequence. The *_locked
+// helpers expect the caller to hold it.
+
+static status_t fg_read_pack_locked(uint8_t channel, fg_reading_t *out);
 
 #if FG_MUX_GAUGE_TEST
-status_t fg_mux_gauge_test(uint8_t channel, fg_reading_t *out, uint16_t *devname, uint16_t *status) {
+static status_t fg_mux_gauge_test_locked(uint8_t channel, fg_reading_t *out, uint16_t *devname, uint16_t *status) {
     if (out == NULL || devname == NULL || status == NULL || channel >= FG_NUM_PACKS) {
         return ERROR_BAD_TARGET;
     }
@@ -155,11 +160,6 @@ status_t fg_mux_gauge_test(uint8_t channel, fg_reading_t *out, uint16_t *devname
     *status = 0;
 
     fg_mux_release_reset();
-    int32_t rc = i2c_m_sync_enable(&FG_I2C);
-    if (rc != 0) {
-        warning("mux-gauge: I2C enable failed rc=%ld %s\n", (long)rc, fg_i2c_err_str(rc));
-        return ERROR_I2C_FAILED;
-    }
 
     status_t result = fg_mux_select(channel);
     if (result == SUCCESS) {
@@ -170,11 +170,11 @@ status_t fg_mux_gauge_test(uint8_t channel, fg_reading_t *out, uint16_t *devname
         result = fg_read_reg16(MAX17205_REG_STATUS, status);
     }
     if (result == SUCCESS) {
-        result = fg_read_pack(channel, out);
+        result = fg_read_pack_locked(channel, out);
     }
 
     // Isolate the downstream bus even when any of the gauge reads failed.
-    rc = fg_mux_raw_write(FG_MUX_CH_NONE);
+    int32_t rc = fg_mux_raw_write(FG_MUX_CH_NONE);
     uint8_t control = 0xFF;
     if (rc == 0) {
         rc = fg_mux_raw_read(&control);
@@ -187,17 +187,19 @@ status_t fg_mux_gauge_test(uint8_t channel, fg_reading_t *out, uint16_t *devname
     info("mux-gauge: all channels off/readback OK\n");
     return result;
 }
+
+status_t fg_mux_gauge_test(uint8_t channel, fg_reading_t *out, uint16_t *devname, uint16_t *status) {
+    lock_mutex(i2c_sensors_bus_mutex);
+    status_t result = fg_mux_gauge_test_locked(channel, out, devname, status);
+    unlock_mutex(i2c_sensors_bus_mutex);
+    return result;
+}
 #endif
 
 #if FG_MUX_ONLY_TEST
-status_t fg_mux_self_test(void) {
+static status_t fg_mux_self_test_locked(void) {
     fg_mux_release_reset();
     info("mux-only: /RESET=PB20 (EPS_RST) driven high\n");
-    int32_t enable_rc = i2c_m_sync_enable(&FG_I2C);
-    if (enable_rc != 0) {
-        warning("mux-only: I2C enable failed rc=%ld %s\n", (long)enable_rc, fg_i2c_err_str(enable_rc));
-        return ERROR_I2C_FAILED;
-    }
     const uint8_t controls[] = {FG_MUX_CH_NONE, FG_MUX_CH(0), FG_MUX_CH(1), FG_MUX_CH(2), FG_MUX_CH(3)};
     status_t result = SUCCESS;
 
@@ -211,7 +213,7 @@ status_t fg_mux_self_test(void) {
             for (uint8_t addr = 0x70; addr <= 0x77; addr++) {
                 uint8_t control = 0xFF;
                 struct _i2c_m_msg msg = {.addr = addr, .flags = I2C_M_STOP | I2C_M_RD, .len = 1, .buffer = &control};
-                if (i2c_m_sync_transfer(&FG_I2C, &msg) == 0) {
+                if (i2c_m_sync_transfer(&I2C_SENSORS, &msg) == 0) {
                     info("mux-only: discovery ACK addr=0x%02x control=0x%02x\n", addr, control);
                     found++;
                 }
@@ -253,6 +255,13 @@ status_t fg_mux_self_test(void) {
     info("mux-only: restore write=0x00 read=0x00 PASS (all channels off)\n");
     return result;
 }
+
+status_t fg_mux_self_test(void) {
+    lock_mutex(i2c_sensors_bus_mutex);
+    status_t result = fg_mux_self_test_locked();
+    unlock_mutex(i2c_sensors_bus_mutex);
+    return result;
+}
 #endif
 
 /**
@@ -266,10 +275,7 @@ status_t fg_mux_self_test(void) {
  */
 status_t init_fuel_gauges(void) {
     fg_mux_release_reset();
-    // Enable the SERCOM6 I2C peripheral. atmel_start_init() only *inits* it (leaves it
-    // disabled), so it must be enabled before any transfer (cf. the magnetometer driver's
-    // spi_m_sync_enable).
-    i2c_m_sync_enable(&FG_I2C);
+    lock_mutex(i2c_sensors_bus_mutex);
 
     // ALRT is a shared active-low open-drain line: input with a pull-up.
     gpio_set_pin_function(EPS_IRQ, GPIO_PIN_FUNCTION_OFF);
@@ -315,15 +321,11 @@ status_t init_fuel_gauges(void) {
     }
 
     fg_mux_disable();
+    unlock_mutex(i2c_sensors_bus_mutex);
     return result;
 }
 
-/**
- * \brief Reads SOC / pack voltage / current / temperature from one gauge.
- * \note Leaves the mux channel open; callers that are done should close it (fg_read_all
- *       does). The caller owns `out`.
- */
-status_t fg_read_pack(uint8_t channel, fg_reading_t *out) {
+static status_t fg_read_pack_locked(uint8_t channel, fg_reading_t *out) {
     if (out == NULL) {
         return ERROR_BAD_TARGET;
     }
@@ -346,6 +348,18 @@ status_t fg_read_pack(uint8_t channel, fg_reading_t *out) {
 }
 
 /**
+ * \brief Reads SOC / pack voltage / current / temperature from one gauge.
+ * \note Leaves the mux channel open; callers that are done should close it (fg_read_all
+ *       does). The caller owns `out`.
+ */
+status_t fg_read_pack(uint8_t channel, fg_reading_t *out) {
+    lock_mutex(i2c_sensors_bus_mutex);
+    status_t result = fg_read_pack_locked(channel, out);
+    unlock_mutex(i2c_sensors_bus_mutex);
+    return result;
+}
+
+/**
  * \brief Reads the configured packs. Failed entries are zeroed and marked invalid.
  *        Closes the mux when done.
  */
@@ -355,15 +369,17 @@ status_t fg_read_all(fg_reading_t out[FG_NUM_PACKS]) {
     }
 
     status_t result = SUCCESS;
+    lock_mutex(i2c_sensors_bus_mutex);
     for (uint8_t ch = 0; ch < FG_NUM_PACKS; ch++) {
         memset(&out[ch], 0, sizeof(out[ch]));
-        if (fg_read_pack(ch, &out[ch]) != SUCCESS) {
+        if (fg_read_pack_locked(ch, &out[ch]) != SUCCESS) {
             warning("fuel_gauge: read of pack %u failed\n", ch + 1);
             result = ERROR_I2C_FAILED;
         }
     }
 
     fg_mux_disable();
+    unlock_mutex(i2c_sensors_bus_mutex);
     return result;
 }
 
@@ -376,19 +392,20 @@ status_t fg_read_raw(uint8_t channel, uint16_t reg, uint16_t *out) {
         return ERROR_BAD_TARGET;
     }
 
+    lock_mutex(i2c_sensors_bus_mutex);
     status_t rc = fg_mux_select(channel);
-    if (rc != SUCCESS) {
-        return rc;
+    if (rc == SUCCESS) {
+        rc = fg_read_reg16(reg, out);
+        fg_mux_disable();
     }
-    rc = fg_read_reg16(reg, out);
-    fg_mux_disable();
+    unlock_mutex(i2c_sensors_bus_mutex);
     return rc;
 }
 
 // ---------------------- Bring-up diagnostic ----------------------
 
 void fg_i2c_scan(void) {
-    i2c_m_sync_enable(&FG_I2C);
+    lock_mutex(i2c_sensors_bus_mutex);
     info("fuel_gauge: I2C scan (SERCOM6)...\n");
 
     uint8_t found = 0;
@@ -403,12 +420,13 @@ void fg_i2c_scan(void) {
         // iff the address was ACKed.
         uint8_t reg = 0x00;
         struct _i2c_m_msg msg = {.addr = addr, .flags = I2C_M_STOP, .len = 1, .buffer = &reg};
-        if (i2c_m_sync_transfer(&FG_I2C, &msg) == 0) {
+        if (i2c_m_sync_transfer(&I2C_SENSORS, &msg) == 0) {
             info("fuel_gauge: ACK at 0x%02x\n", addr);
             found++;
         }
     }
 
+    unlock_mutex(i2c_sensors_bus_mutex);
     info("fuel_gauge: scan done (%u device(s) responded)\n", found);
 }
 
@@ -424,6 +442,7 @@ bool fg_alrt_asserted(void) {
  *        tripped gauge(s) can be identified. Closes the mux when done.
  */
 void fg_scan_alerts(void) {
+    lock_mutex(i2c_sensors_bus_mutex);
     for (uint8_t ch = 0; ch < FG_NUM_PACKS; ch++) {
         if (fg_mux_select(ch) != SUCCESS) {
             continue;
@@ -435,4 +454,5 @@ void fg_scan_alerts(void) {
         info("fuel_gauge: ALRT scan gauge %u Status=0x%04x\n", ch + 1, status);
     }
     fg_mux_disable();
+    unlock_mutex(i2c_sensors_bus_mutex);
 }
