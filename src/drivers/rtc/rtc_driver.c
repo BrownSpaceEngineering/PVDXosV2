@@ -32,7 +32,7 @@
 
 // Bounds the wait for the next RTC tick (31.25 ms nominal) in case the RTC has stopped
 #define TICK_EDGE_TIMEOUT_US 50000u
-#define TICK_EDGE_POLL_US 10u
+#define TICK_EDGE_TIMEOUT_CYCLES (TICK_EDGE_TIMEOUT_US * (CONF_CPU_FREQUENCY / 1000000u))
 
 static const void *rtc_hw;
 
@@ -91,11 +91,12 @@ static bool read_radio_counter(uint32_t *count) {
 // Waits for the RTC to tick and reads the radio counter straight after, so both counts mark the same instant to within
 // the SPI read rather than a whole RTC tick. The scheduler is suspended so no task runs in between.
 static bool sample_tick_edge(uint32_t *rtc_count, uint32_t *radio_count) {
+    // Times out on the cycle counter: ASF's delay_us() reprograms SysTick, which is the FreeRTOS tick
     vTaskSuspendAll();
     const uint32_t start = read_rtc_count();
+    const uint32_t start_cycles = DWT->CYCCNT;
     uint32_t now = start;
-    for (uint32_t waited_us = 0; now == start && waited_us < TICK_EDGE_TIMEOUT_US; waited_us += TICK_EDGE_POLL_US) {
-        delay_us(TICK_EDGE_POLL_US);
+    while (now == start && DWT->CYCCNT - start_cycles < TICK_EDGE_TIMEOUT_CYCLES) {
         now = read_rtc_count();
     }
     const bool ok = now != start && read_radio_counter(radio_count);
@@ -119,6 +120,10 @@ status_t init_rtc_hardware(void) {
     hri_rtcmode0_write_COUNT_reg(rtc_hw, 0);
     hri_rtcmode0_wait_for_sync(rtc_hw, RTC_MODE0_SYNCBUSY_COUNT);
     hri_rtcmode0_set_CTRLA_ENABLE_bit(rtc_hw);
+
+    // The cycle counter times out sample_tick_edge()
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
 
     base_count = 0;
     base_us = 0;
@@ -182,6 +187,13 @@ void calibrate_rtc(void) {
         radio_counter_on = false;
         return;
     }
+
+    // How far the time at the end of the window moves, against the time carried on at the previous rate. No critical
+    // section needed: only this function moves the base.
+    const int64_t correction_us = (int64_t)(window_us + (uint64_t)window_real_us) - (int64_t)count_to_us(rtc_count);
+    info("rtc: calibrated over %lu ticks: %lu.%03lu us per tick, time corrected by %ld us\n",
+         (unsigned long)(rtc_count - window_rtc_count), (unsigned long)measured_us_per_tick,
+         (unsigned long)((measured_us_per_tick - (double)(uint32_t)measured_us_per_tick) * 1000.0), (long)correction_us);
 
     taskENTER_CRITICAL();
     base_us = window_us + (uint64_t)window_real_us;
