@@ -145,15 +145,14 @@ bool check_mram(void) {
 }
 
 bool check_camera(void) {
-    if (init_arducam_hardware() != SUCCESS) {
-        return false;
-    }
+    bool okay = init_arducam_hardware() == SUCCESS;
 #if defined(BURN_SEQUENCE) && defined(BURN_SEQUENCE_CAMERA_CHECK_CAPTURE)
     // main.c configures RTT channel 2 before the device checks in the burn sequence
-    return capture_rtt() == SUCCESS;
-#else
-    return true;
+    okay = okay && capture_rtt() == SUCCESS;
 #endif
+    // Nothing uses the camera again until a capture, which wakes it
+    arducam_sleep();
+    return okay;
 }
 
 // S-band (STXG2): stxg2_init() powers the radio, waits for boot, checks the "STX2" ID and does a

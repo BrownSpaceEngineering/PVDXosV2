@@ -24,9 +24,39 @@ into the queue, so the caller's `cmd.result` is not updated. A successful framed
 END packet indicates stream completion; a general asynchronous command-result
 API is not implemented.
 
-The first request initializes the RTT image channel and camera hardware after
-the scheduler starts. Initialization and capture failures are returned to the
-command executor; subsequent requests retry initialization as needed.
+The first request initializes the RTT image channel after the scheduler starts.
+Every request initializes the camera hardware, captures, then puts the camera
+back to sleep with `arducam_sleep()`, whether or not the capture worked.
+Initialization and capture failures are returned to the command executor.
+
+## Low power
+
+The camera has no switchable supply, so it is put to sleep over SPI, through the
+ArduChip, in two ways at once:
+
+1. The sensor's PWDN pin: bit 1 of `0x05` (direction) and `0x06` (value). Under
+   15 µA for the sensor, per the OV2640 datasheet.
+2. The ArduChip's low-power mode: `0x03` bit 6, which also powers down the FIFO
+   memory. The ArduCAM datasheet gives 20 mA at 5 V for the whole module, against
+   70 mA running.
+
+Not the OV2640's software standby (`COM2` bit 4): on our board the sensor holds
+SDA low once it enters it, which takes down the whole shared I2C bus (fuel
+gauges, PMB) until the sensor is reset or power-cycled.
+
+`init_arducam_hardware()` wakes the camera if it was asleep (waiting
+`ARDUCAM_WAKE_DELAY_MS`, as the datasheet gives no wake time), reinitializes the
+sensor, then waits `ARDUCAM_EXPOSURE_SETTLE_MS` for auto-exposure, without which
+captures come out black. The startup check and the burn-sequence picture also
+put the camera to sleep when they finish, so it sleeps from boot onward, and
+because every capture ends asleep, disabling the task leaves it asleep. On
+hardware, sleeping and waking leaves the I2C bus working and captures normal
+800x600 JPEGs; the current savings have not been measured.
+
+The ArduChip and sensor keep their registers across MCU resets. If an
+experiment leaves them in a bad state (8-byte captures of zeros), only a power
+cycle, or pulsing the sensor power enable (`0x06` bit 2) and resetting the
+ArduChip (`0x07` = 0x80, then 0x00), brings them back.
 
 Captures are 1600x1200 (UXGA, the OV2640's maximum supported output resolution)
 JPEGs. They use the existing 4 KB transfer buffer rather than a full frame in

@@ -135,11 +135,13 @@ static status_t PVDX_init(void) {
         }
         if (status == SUCCESS) {
             info("camera: picture sent over RTT channel %d\n", CAMERA_RTT_OUTPUT_CHANNEL);
+            arducam_sleep();
             return;
         }
         warning("camera: attempt %lu/%d failed (status=%d)\n", (unsigned long)attempt, CAMERA_CAPTURE_ATTEMPTS, status);
     }
     warning("camera: giving up on the picture\n");
+    arducam_sleep();
 }
 
 /* ---------- BURN WIRE STATE IN MRAM ---------- */

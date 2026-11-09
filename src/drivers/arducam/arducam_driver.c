@@ -29,10 +29,22 @@ _Static_assert(ARDUCAM_MRAM_IMAGE_OFFSET + ARDUCAM_MRAM_IMAGE_SIZE <= MRAM_CAMER
 struct io_descriptor *arducam_i2c_io;
 struct io_descriptor *arducam_spi_io;
 
+// Undo arducam_sleep()'s ArduChip low-power mode and sensor PWDN
+static void arducam_wake(void) {
+    const uint8_t tim = arducam_spi_read(ARDUCHIP_TIM);
+    const uint8_t gpio = arducam_spi_read(ARDUCHIP_GPIO);
+    if (!(tim & LOW_POWER_MODE) && !(gpio & GPIO_PWDN_MASK)) {
+        return; // Not asleep, e.g. at power-up
+    }
+    arducam_spi_write(ARDUCHIP_TIM, (uint8_t)(tim & ~LOW_POWER_MODE));
+    arducam_spi_write(ARDUCHIP_GPIO, (uint8_t)(gpio & ~GPIO_PWDN_MASK));
+    os_delay_ms(ARDUCAM_WAKE_DELAY_MS);
+}
+
 /**
  * \fn init_arducam_hardware
  *
- * \brief Initializes the arducam hardware
+ * \brief Initializes the arducam hardware, waking it first if arducam_sleep() put it to sleep
  *
  * \returns `status_t`, whether the operation was successful
  */
@@ -50,6 +62,7 @@ status_t init_arducam_hardware(void) {
     spi_m_sync_set_baudrate(&SPI_CAMERA, 1000000);
     spi_m_sync_get_io_descriptor(&SPI_CAMERA, &arducam_spi_io);
     spi_m_sync_enable(&SPI_CAMERA);
+    arducam_wake(); // Before anything else, so that low-power mode can't make the checks below fail
     
     // Write and read a known test pattern (0x55) into ArduCHIP internal test register
     arducam_spi_write(ARDUCHIP_TEST1, 0x55);
@@ -68,9 +81,12 @@ status_t init_arducam_hardware(void) {
     arducam_i2c_write(0xFF, &data[1], 1);
     uint32_t temp1 = arducam_i2c_read(OV2640_CHIPID_HIGH, &vid, 1);
     uint32_t temp2 = arducam_i2c_read(OV2640_CHIPID_LOW, &pid, 1);
-    info("I2C read return values: temp1=%lu temp2=%lu", (unsigned long)temp1, (unsigned long)temp2);
-    (void)temp1; // only used by info(), which compiles out in RELEASE builds
-    (void)temp2;
+    if ((int32_t)temp1 < 0 || (int32_t)temp2 < 0) {
+        // Don't go on to write hundreds of registers into a bus that isn't answering: each write waits out the I2C
+        // timeout, and together they outlast the watchdog
+        warning("Camera I2C not answering (%ld, %ld)\n", (long)(int32_t)temp1, (long)(int32_t)temp2);
+        return ERROR_I2C_FAILED;
+    }
     
     if (vid != 0x26 || (pid != 0x41 && pid != 0x42)) {
         warning("Unexpected OV2640 ID: vid=0x%02X pid=0x%02X", vid, pid);
@@ -94,7 +110,31 @@ status_t init_arducam_hardware(void) {
     arducam_i2c_write(0x15, &data[0], 1);
     arducam_i2c_multi_write(OV2640_800x600_JPEG); // SVGA: sharper than 320x240, a quarter the size of full-res UXGA
 
+    // The soft reset above restarts auto-exposure: a capture right away comes out black (measured mean brightness
+    // 3/255), one ARDUCAM_EXPOSURE_SETTLE_MS later it's exposed normally (43/255)
+    os_delay_ms(ARDUCAM_EXPOSURE_SETTLE_MS);
+
     return SUCCESS;
+}
+
+/**
+ * \fn arducam_sleep
+ *
+ * \brief Puts the camera in its lowest-power state in two ways, since which ones work depends on the board revision:
+ *      the sensor's PWDN pin and the ArduChip's low-power mode. The FIFO contents are lost. init_arducam_hardware()
+ *      wakes it again.
+ *
+ * \warning Not the sensor's software standby (COM2 bit 4): on our board the sensor holds SDA low once it enters it,
+ *      which takes the whole shared I2C bus down until the sensor is reset.
+ */
+void arducam_sleep(void) {
+    // Hold PWDN high. Only bit 1: as outputs driven low, bits 0 and 2 would hold the sensor in reset or cut its power.
+    // The value goes first so the pin is already high when it becomes an output.
+    arducam_spi_write(ARDUCHIP_GPIO, arducam_spi_read(ARDUCHIP_GPIO) | GPIO_PWDN_MASK);
+    arducam_spi_write(ARDUCHIP_GPIO_DIR, arducam_spi_read(ARDUCHIP_GPIO_DIR) | GPIO_PWDN_MASK);
+
+    // Last, the ArduChip's own low-power mode, which the other bits of ARDUCHIP_TIM must survive
+    arducam_spi_write(ARDUCHIP_TIM, arducam_spi_read(ARDUCHIP_TIM) | LOW_POWER_MODE);
 }
 
 uint32_t arducam_i2c_write(uint8_t addr, uint8_t *data, uint16_t size) {

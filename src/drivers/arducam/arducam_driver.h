@@ -38,6 +38,15 @@ struct sensor_reg {
 #define SHUTTER_MASK       		0x02
 #define CAP_DONE_MASK      		0x08
 
+// Low-power controls, from the ArduCAM-M-2MP hardware application note
+#define ARDUCHIP_TIM            0x03  // Sensor interface timing
+#define LOW_POWER_MODE          0x40  // ARDUCHIP_TIM bit 6: power down the sensor and FIFO memory
+#define ARDUCHIP_GPIO_DIR       0x05  // Sensor GPIO direction, 1 = output
+#define ARDUCHIP_GPIO           0x06  // Sensor GPIO value
+#define GPIO_PWDN_MASK          0x02  // Bit 1 of both: the sensor's PWDN pin, active high
+#define ARDUCAM_WAKE_DELAY_MS   100   // The datasheet gives no wake time after PWDN; generous, since photos are rare
+#define ARDUCAM_EXPOSURE_SETTLE_MS 1000 // After init, before a capture is exposed properly
+
 #define ARDUCAM_SPI_RX_BUF_SIZE 0x1000
 #define ARDUCAM_SPI_TX_BUF_SIZE 0x40
 #define OV2640_MAX_FIFO_SIZE	0x5FFFF
@@ -70,6 +79,7 @@ extern struct spi_xfer ardu_xfer;
 
 // Function Prototypes
 status_t init_arducam_hardware(void);
+void arducam_sleep(void);
 uint32_t arducam_i2c_write(uint8_t addr, uint8_t *data, uint16_t size);
 uint32_t arducam_i2c_multi_write(const struct sensor_reg reglist[]);
 uint32_t arducam_i2c_read(uint8_t addr, uint8_t *readBuf, uint16_t size);
