@@ -67,68 +67,35 @@ No image is stored persistently on the satellite, no camera telemetry is
 published, and no photo-ready-for-downlink input is set. This RTT path remains
 a development transport, not flight image storage/downlink.
 
+## Restart markers
+
+The OV2640 doesn't put restart markers in its JPEGs (at least our unit,
+revision 0x42, doesn't, and no register setting turns them on), so a single
+lost downlink packet would corrupt the rest of the image. `capture_rtt()` and
+`capture_mram()` therefore pass every frame through `jpeg_add_restart_markers()`
+(`src/drivers/arducam/jpeg_restart.c`), which adds a restart marker after every
+MCU row (8 pixel rows for the OV2640's 4:2:2 JPEGs) as it streams the frame out
+of the FIFO. Only the DC coefficients are re-encoded, so the decoded image is
+unchanged; images grow by 1–3%. If a frame can't be converted, the capture
+fails, like any other capture error.
+
+On the ground, `scripts/jpeg_repair.py` rebuilds a decodable JPEG from an image
+with byte ranges missing: bands that arrived whole decode in place, and lost
+ones come out grey. On the bench, losing one 492-byte CFDP segment of an 800x600
+image greyed out 24 of 600 rows; without restart markers, everything after the
+loss was garbage. The header (the first ~620 bytes) has to arrive.
+
 ## Receive images
 
-The standard `scripts/rtt_logs.py` reader now drains log channel 1 **and** framed
-image channel 2 through the same J-Link connection. It saves only complete,
-checksummed JPEGs with SOF dimensions matching BEGIN to `logs/images/`; logs
-remain in `logs/`. It does not require `info()` messages or a development build
-to assemble images. Do not run another channel-2 reader concurrently: RTT reads
-consume bytes.
+`capture_rtt()` streams the JPEG on RTT channel 2, between `IMG_BEGIN` and
+`IMG_END len=<bytes>` lines on log channel 1. The length comes at the end, since
+it isn't known until the frame has been through the restart-marker conversion,
+and the ArduChip can't rewind its FIFO to read a frame twice.
+`scripts/rtt_logs.py` saves each image to `logs/<timestamp>_capture.jpg`. Don't
+run another channel-2 reader at the same time: RTT reads consume bytes.
 
-For a bounded capture session, from the repository root:
-
-```sh
-python3 scripts/rtt_logs.py --duration 30
-```
-
-Optional output path: `--images-dir logs/my-captures`. The existing
-`tools/rtt.sh start|stop|status|tail` background workflow also receives images,
-because it launches this reader. Python requires `pylink-square` and the SEGGER
-J-Link library; offline decoding and host tests need neither.
-
-The reader does not enable the camera task or issue capture commands. Enable
-and request captures through firmware/task-manager control separately.
-
-## PVIM v1 wire format
-
-This replaces the previous raw JPEG channel and log-based `IMG_BEGIN`/`IMG_END`
-framing. Custom receivers must be updated to use PVIM packets; the included
-`camera_stream.ImageDecoder` can decode arbitrary-sized chunks offline.
-
-Every channel-2 packet has a 28-byte, explicitly little-endian header, equivalent
-to Python `struct.Struct("<4sBBHIIIII")`:
-
-| Offset | Field                                      |
-| ------ | ------------------------------------------ |
-| 0      | Four-byte magic `PVIM`                     |
-| 4      | Version, `1` (u8)                          |
-| 5      | Type (u8): BEGIN=1, DATA=2, END=3, ABORT=4 |
-| 6      | Payload byte count (u16, maximum 4067)     |
-| 8      | Frame attempt ID (u32)                     |
-| 12     | JPEG byte offset (u32)                     |
-| 16     | Total JPEG byte count (u32)                |
-| 20     | CRC32 of payload (u32)                     |
-| 24     | CRC32 of the first 24 header bytes (u32)   |
-
-CRCs use IEEE CRC32, compatible with `zlib.crc32`. BEGIN carries width and height
-as two u16 values and offset zero. DATA carries contiguous JPEG bytes. END has
-offset equal to the total and carries the whole JPEG's CRC32 as one u32. ABORT
-carries a `status_t` value as a u32 and the accepted JPEG-byte offset. Frame IDs
-increment for each attempt; they can wrap or restart after a board reset.
-
-Packets are written atomically using `NO_BLOCK_SKIP` in every build. The driver
-retries a complete packet without rereading FIFO bytes, but returns
-`ERROR_WRITE_FAILED` if the host cannot accept it within 1 second
-(`ARDUCAM_RTT_TIMEOUT_MS`). This is a per-packet no-progress timeout, not a
-whole-image deadline: UXGA transfers can take several seconds at 1 MHz SPI.
-
-ABORT is best effort and may not fit if the host has stopped reading. A valid
-new BEGIN replaces any incomplete frame, including stale bytes still queued
-from an earlier attempt. The receiver validates packet CRCs, frame IDs, lengths,
-contiguous offsets, and the final JPEG CRC before saving anything. It also
-checks JPEG SOI/EOI and SOF dimensions, but does not decode/validate every pixel.
-The target never rewinds the host's RTT read pointer to discard stale bytes.
+The camera's SPI runs at 1 MHz (`ARDUCAM_SPI_HZ`). The transfer and conversion
+take about 1.2 s for 800x600 and 4.3 s for 1600x1200.
 
 ## Safe disable and shared hardware
 

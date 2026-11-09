@@ -14,6 +14,7 @@ struct sensor_reg {
 
 // Hardware Defines
 #define ARDUCAM_ADDR            0x60
+#define ARDUCAM_SPI_HZ          1000000
 #define SPI_ARDUCAM             0x00
 
 // Arducam Defines

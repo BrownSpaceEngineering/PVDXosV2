@@ -10,6 +10,7 @@
 #include "arducam_driver.h"
 #include <string.h> // For memcpy
 #include "arducam_registers.h"
+#include "jpeg_restart.h"
 #include "mram_map.h"
 #include "os_delay.h"
 #include "task_list.h"
@@ -74,7 +75,10 @@ status_t init_arducam_hardware(arducam_resolution_t resolution) {
     gpio_set_pin_direction(CAMERA_CS, GPIO_DIRECTION_OUT);
     gpio_set_pin_level(CAMERA_CS, 1);
 
-    spi_m_sync_set_baudrate(&SPI_CAMERA, 1000000);
+    // spi_m_sync_set_baudrate() takes the BAUD register value, not a frequency (SAMD51 datasheet 35.6.2.3), and only
+    // while the SPI is disabled
+    spi_m_sync_disable(&SPI_CAMERA);
+    spi_m_sync_set_baudrate(&SPI_CAMERA, CONF_GCLK_SERCOM2_CORE_FREQUENCY / (2 * ARDUCAM_SPI_HZ) - 1);
     spi_m_sync_get_io_descriptor(&SPI_CAMERA, &arducam_spi_io);
     spi_m_sync_enable(&SPI_CAMERA);
     arducam_wake(); // Before anything else, so that low-power mode can't make the checks below fail
@@ -294,7 +298,8 @@ status_t capture(void) {
     return SUCCESS;
 }
 
-status_t capture_rtt(void) {
+// Flushes the FIFO, captures one frame into it, and sets *p_len to its length in bytes
+static status_t capture_to_fifo(size_t *p_len) {
     // NOTE: In some versions of the official C++ ArduCam OV2640 driver, the FIFO_CLEAR_MASK is written twice,
     // while in others, it is written once. This implementation emprically works, so currently it is written twice.
     arducam_spi_write(ARDUCHIP_FIFO, FIFO_CLEAR_MASK); // Flush the FIFO
@@ -303,84 +308,123 @@ status_t capture_rtt(void) {
     ret_err_status(wait_capture_done(), "Arducam capture failed");
 
     // Read how many bytes were captured
-    size_t len = read_fifo_length();
-    if (len >= OV2640_MAX_FIFO_SIZE) {
+    *p_len = read_fifo_length();
+    if (*p_len >= OV2640_MAX_FIFO_SIZE) {
         info("Oversized!");
         return ERROR_SANITY_CHECK_FAILED;
-    } else if (len == 0 ){
+    } else if (*p_len == 0) {
         info("Size is 0!");
         return ERROR_SANITY_CHECK_FAILED;
     }
+    return SUCCESS;
+}
 
-    // WARNING: If you edit the info() calls, then you must also update open_rtt_channels_arducam_debug()
-    // within scripts/rtt_logs.py (specifically the regex parsing), otherwise things will break.
-    info("IMG_BEGIN len=%u", (unsigned)len);
+// Reads the captured frame from the FIFO in a burst. Only once: FIFO_RDPTR_RST_MASK doesn't rewind our ArduChip.
+typedef struct {
+    size_t remaining;
+} fifo_reader_t;
 
-    // Select SPI peripheral device
+static void fifo_read_begin(fifo_reader_t *p_reader, size_t len) {
+    p_reader->remaining = len;
     gpio_set_pin_level(CAMERA_CS, 0);
 
-    // Start burst read
-    uint8_t cmd = BURST_FIFO_READ;
-    io_write(arducam_spi_io, &cmd, 1);
-
-    // NOTE: Do NOT clock an extra dummy byte here. After the BURST_FIFO_READ
+    // NOTE: Do NOT clock an extra dummy byte after this. After the BURST_FIFO_READ
     // command, the very next clocked byte is the first FIFO byte (the JPEG's
     // leading 0xFF). An extra io_write() would clock that byte out and discard
     // it (io_write ignores MISO), shifting the whole image left by one and
-    // corrupting the SOI marker. The read loop below captures the first byte.
+    // corrupting the SOI marker.
+    uint8_t cmd = BURST_FIFO_READ;
+    io_write(arducam_spi_io, &cmd, 1);
+}
 
-    // Iteratively transfer image bytes into our rx buffer (and send over RTT)
-    const size_t bufferSize = ARDUCAM_SPI_RX_BUF_SIZE;
-    ardu_xfer.txbuf = NULL;
-    ardu_xfer.rxbuf = ardu_spi_rx_buffer;
+static void fifo_read_end(void) {
+    gpio_set_pin_level(CAMERA_CS, 1);
+}
 
-    while (len) {
-        size_t will_copy = (len < bufferSize) ? len : bufferSize;
-        ardu_xfer.size = will_copy;
+// A jpeg_restart_read_fn
+static size_t fifo_read(void *ctx, uint8_t *buf, size_t cap) {
+    fifo_reader_t *p_reader = ctx;
+    const size_t n = p_reader->remaining < cap ? p_reader->remaining : cap;
+    if (n) {
+        ardu_xfer.txbuf = NULL;
+        ardu_xfer.rxbuf = buf;
+        ardu_xfer.size = n;
         spi_m_sync_transfer(&SPI_CAMERA, &ardu_xfer);
-        SEGGER_RTT_Write(CAMERA_RTT_OUTPUT_CHANNEL, ardu_spi_rx_buffer, (unsigned)will_copy);
-        len -= will_copy;
+        p_reader->remaining -= n;
 #ifndef BURN_SEQUENCE
         // Left out of the burn sequence: p_camera_task would pull the whole OS task list into that build
         watchdog_checkin(p_camera_task);
 #endif
     }
+    return n;
+}
 
-    // Deselect SPI peripheral device
-    gpio_set_pin_level(CAMERA_CS, 1);
+// jpeg_restart_write_fns
+static bool write_rtt(void *ctx, const uint8_t *buf, size_t len) {
+    (void)ctx;
+    SEGGER_RTT_Write(CAMERA_RTT_OUTPUT_CHANNEL, buf, (unsigned)len);
+    return true;
+}
+
+typedef struct {
+    size_t offset;
+} mram_writer_t;
+
+static bool write_mram(void *ctx, const uint8_t *buf, size_t len) {
+    mram_writer_t *p_writer = ctx;
+    if (p_writer->offset + len > ARDUCAM_MRAM_IMAGE_SIZE ||
+        !mram_region_write(MRAM_REGION_CAMERA, ARDUCAM_MRAM_IMAGE_OFFSET + p_writer->offset, buf, len)) {
+        return false;
+    }
+    p_writer->offset += len;
+    return true;
+}
+
+/**
+ * \fn capture_rtt
+ *
+ * \brief Captures a JPEG and streams it over RTT channel CAMERA_RTT_OUTPUT_CHANNEL with restart markers added (see
+ *      jpeg_restart.h), framed by IMG_BEGIN and IMG_END log lines. The length comes at the end, in IMG_END, since it
+ *      isn't known until the whole frame has been through.
+ *
+ * \returns `status_t`, whether the operation was successful
+ */
+status_t capture_rtt(void) {
+    size_t len = 0;
+    ret_err_status(capture_to_fifo(&len), "Arducam capture failed");
 
     // WARNING: If you edit the info() calls, then you must also update open_rtt_channels_arducam_debug()
     // within scripts/rtt_logs.py (specifically the regex parsing), otherwise things will break.
-    info("IMG_END");
+    info("IMG_BEGIN");
+
+    fifo_reader_t reader;
+    size_t out_len = 0;
+    fifo_read_begin(&reader, len);
+    const jpeg_restart_result_t result = jpeg_add_restart_markers(fifo_read, &reader, write_rtt, NULL, &out_len);
+    fifo_read_end();
+
+    // WARNING: If you edit the info() calls, then you must also update open_rtt_channels_arducam_debug()
+    // within scripts/rtt_logs.py (specifically the regex parsing), otherwise things will break.
+    info("IMG_END len=%u", (unsigned)out_len);
+    if (result != JPEG_RESTART_OK) {
+        warning("camera: Couldn't add restart markers (%d); the image sent is incomplete\n", result);
+        return ERROR_SANITY_CHECK_FAILED;
+    }
     return SUCCESS;
 }
 
 /**
  * \fn capture_mram
  *
- * \brief Captures a JPEG and streams it from the camera's FIFO into MRAM_REGION_CAMERA, replacing the last one. The
- *      image's length is saved only once the whole image is in MRAM, so a failed capture leaves no image rather than
- *      a partial one.
+ * \brief Captures a JPEG and streams it from the camera's FIFO into MRAM_REGION_CAMERA with restart markers added (see
+ *      jpeg_restart.h), replacing the last one. The image's length is saved only once the whole image is in MRAM, so a
+ *      failed capture leaves no image rather than a partial one.
  *
  * \returns `status_t`, whether the operation was successful
  */
 status_t capture_mram(void) {
-    // NOTE: In some versions of the official C++ ArduCam OV2640 driver, the FIFO_CLEAR_MASK is written twice,
-    // while in others, it is written once. This implementation emprically works, so currently it is written twice.
-    arducam_spi_write(ARDUCHIP_FIFO, FIFO_CLEAR_MASK); // Flush the FIFO
-    arducam_spi_write(ARDUCHIP_FIFO, FIFO_CLEAR_MASK); // Clear the capture done flag (uses same clear mask)
-    arducam_spi_write(ARDUCHIP_FIFO, FIFO_START_MASK); // Start capture
-    ret_err_status(wait_capture_done(), "Arducam capture failed");
-
-    // Read how many bytes were captured
-    size_t len = read_fifo_length();
-    if (len >= OV2640_MAX_FIFO_SIZE) {
-        info("Oversized!");
-        return ERROR_SANITY_CHECK_FAILED;
-    } else if (len == 0) {
-        info("Size is 0!");
-        return ERROR_SANITY_CHECK_FAILED;
-    }
+    size_t len = 0;
+    ret_err_status(capture_to_fifo(&len), "Arducam capture failed");
 
     // The old image is overwritten from here on
     arducam_mram_image_t image = {.length = 0};
@@ -389,45 +433,26 @@ status_t capture_mram(void) {
         return ERROR_WRITE_FAILED;
     }
 
-    // Select SPI peripheral device
-    gpio_set_pin_level(CAMERA_CS, 0);
-
-    // Start burst read. As in capture_rtt(), the next clocked byte is the first FIFO byte, so no dummy byte
-    uint8_t cmd = BURST_FIFO_READ;
-    io_write(arducam_spi_io, &cmd, 1);
-
-    // Iteratively transfer image bytes into our rx buffer, and from there into MRAM
-    ardu_xfer.txbuf = NULL;
-    ardu_xfer.rxbuf = ardu_spi_rx_buffer;
-
-    status_t status = SUCCESS;
-    for (size_t offset = 0; offset < len; offset += ardu_xfer.size) {
-        ardu_xfer.size = (len - offset < ARDUCAM_SPI_RX_BUF_SIZE) ? len - offset : ARDUCAM_SPI_RX_BUF_SIZE;
-        spi_m_sync_transfer(&SPI_CAMERA, &ardu_xfer);
-        if (!mram_region_write(MRAM_REGION_CAMERA, ARDUCAM_MRAM_IMAGE_OFFSET + offset, ardu_spi_rx_buffer, ardu_xfer.size)) {
-            status = ERROR_WRITE_FAILED;
-            break;
-        }
-#ifndef BURN_SEQUENCE
-        // Left out of the burn sequence: p_camera_task would pull the whole OS task list into that build
-        watchdog_checkin(p_camera_task);
-#endif
-    }
-
-    // Deselect SPI peripheral device
-    gpio_set_pin_level(CAMERA_CS, 1);
-
-    if (status != SUCCESS) {
+    fifo_reader_t reader;
+    mram_writer_t writer = {.offset = 0};
+    size_t out_len = 0;
+    fifo_read_begin(&reader, len);
+    const jpeg_restart_result_t result = jpeg_add_restart_markers(fifo_read, &reader, write_mram, &writer, &out_len);
+    fifo_read_end();
+    if (result == JPEG_RESTART_WRITE_FAILED) {
         warning("camera: Failed to write the image to MRAM\n");
-        return status;
+        return ERROR_WRITE_FAILED;
+    } else if (result != JPEG_RESTART_OK) {
+        warning("camera: Couldn't add restart markers (%d)\n", result);
+        return ERROR_SANITY_CHECK_FAILED;
     }
 
-    image.length = len;
+    image.length = out_len;
     if (!mram_record_save(MRAM_REGION_CAMERA, ARDUCAM_MRAM_IMAGE_INFO_OFFSET, &image, sizeof(image))) {
         warning("camera: Failed to save the MRAM image info\n");
         return ERROR_WRITE_FAILED;
     }
-    info("camera: %u-byte image saved to MRAM\n", (unsigned)len);
+    info("camera: %u-byte image saved to MRAM\n", (unsigned)out_len);
     return SUCCESS;
 }
 
