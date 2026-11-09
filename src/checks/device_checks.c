@@ -145,7 +145,7 @@ bool check_mram(void) {
 }
 
 bool check_camera(void) {
-    bool okay = init_arducam_hardware() == SUCCESS;
+    bool okay = init_arducam_hardware(ARDUCAM_DEFAULT_RESOLUTION) == SUCCESS;
 #if defined(BURN_SEQUENCE) && defined(BURN_SEQUENCE_CAMERA_CHECK_CAPTURE)
     // main.c configures RTT channel 2 before the device checks in the burn sequence
     okay = okay && capture_rtt() == SUCCESS;

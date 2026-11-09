@@ -77,8 +77,25 @@ extern uint8_t camera_rtt_image_buffer[SEGGER_RTT_IMAGE_BUFFER_SIZE];
 extern uint8_t ardu_spi_tx_buffer[ARDUCAM_SPI_TX_BUF_SIZE];
 extern struct spi_xfer ardu_xfer;
 
+// Capture resolutions, one for each OV2640 size table in arducam_registers.c
+typedef enum {
+    ARDUCAM_160x120,
+    ARDUCAM_176x144,
+    ARDUCAM_320x240,
+    ARDUCAM_352x288,
+    ARDUCAM_640x480,
+    ARDUCAM_800x600,
+    ARDUCAM_1024x768,
+    ARDUCAM_1280x960,
+    ARDUCAM_1600x1200,
+    ARDUCAM_RESOLUTION_COUNT,
+} arducam_resolution_t;
+
+// SVGA: sharper than 320x240, a quarter the size of full-res UXGA
+#define ARDUCAM_DEFAULT_RESOLUTION ARDUCAM_800x600
+
 // Function Prototypes
-status_t init_arducam_hardware(void);
+status_t init_arducam_hardware(arducam_resolution_t resolution);
 void arducam_sleep(void);
 uint32_t arducam_i2c_write(uint8_t addr, uint8_t *data, uint16_t size);
 uint32_t arducam_i2c_multi_write(const struct sensor_reg reglist[]);

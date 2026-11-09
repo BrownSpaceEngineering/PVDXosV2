@@ -91,7 +91,7 @@ status_t camera_capture(void) {
         return ERROR_TASK_DISABLED;
     }
     // The camera sleeps between captures, and init_arducam_hardware() wakes it, so every capture starts with an init
-    status_t status = init_arducam_hardware();
+    status_t status = init_arducam_hardware(ARDUCAM_DEFAULT_RESOLUTION);
     if (status != SUCCESS) {
         warning("camera: Hardware initialization failed (status=%d)\n", status);
     } else if (!camera_stop_requested()) {

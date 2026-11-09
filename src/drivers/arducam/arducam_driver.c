@@ -41,14 +41,29 @@ static void arducam_wake(void) {
     os_delay_ms(ARDUCAM_WAKE_DELAY_MS);
 }
 
+static const struct sensor_reg *const resolution_tables[ARDUCAM_RESOLUTION_COUNT] = {
+    [ARDUCAM_160x120] = OV2640_160x120_JPEG,   [ARDUCAM_176x144] = OV2640_176x144_JPEG,
+    [ARDUCAM_320x240] = OV2640_320x240_JPEG,   [ARDUCAM_352x288] = OV2640_352x288_JPEG,
+    [ARDUCAM_640x480] = OV2640_640x480_JPEG,   [ARDUCAM_800x600] = OV2640_800x600_JPEG,
+    [ARDUCAM_1024x768] = OV2640_1024x768_JPEG, [ARDUCAM_1280x960] = OV2640_1280x960_JPEG,
+    [ARDUCAM_1600x1200] = OV2640_1600x1200_JPEG,
+};
+
 /**
  * \fn init_arducam_hardware
  *
  * \brief Initializes the arducam hardware, waking it first if arducam_sleep() put it to sleep
  *
- * \returns `status_t`, whether the operation was successful
+ * \param resolution the size of the JPEGs that captures produce until the next init
+ *
+ * \returns `status_t`, whether the operation was successful; ERROR_BAD_ARGS for an unknown resolution
  */
-status_t init_arducam_hardware(void) {
+status_t init_arducam_hardware(arducam_resolution_t resolution) {
+    if ((uint32_t)resolution >= ARDUCAM_RESOLUTION_COUNT) {
+        warning("Unknown camera resolution %d\n", (int)resolution);
+        return ERROR_BAD_ARGS;
+    }
+
     // Configure ASF I2C and SPI drivers for this device
     // Baud rates MUST match Atmel-Start config baudrates
     i2c_m_sync_set_baudrate(&I2C_CAMERA, 0, 100000);
@@ -108,7 +123,7 @@ status_t init_arducam_hardware(void) {
     arducam_i2c_multi_write(OV2640_JPEG);
     arducam_i2c_write(0xFF, &data[1], 1);
     arducam_i2c_write(0x15, &data[0], 1);
-    arducam_i2c_multi_write(OV2640_800x600_JPEG); // SVGA: sharper than 320x240, a quarter the size of full-res UXGA
+    arducam_i2c_multi_write(resolution_tables[resolution]);
 
     // The soft reset above restarts auto-exposure: a capture right away comes out black (measured mean brightness
     // 3/255), one ARDUCAM_EXPOSURE_SETTLE_MS later it's exposed normally (43/255)

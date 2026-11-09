@@ -129,7 +129,7 @@ static status_t PVDX_init(void) {
 [[maybe_unused]] static void send_picture_over_rtt(void) {
     for (uint32_t attempt = 1; attempt <= CAMERA_CAPTURE_ATTEMPTS; attempt++) {
         watchdog_feed(WDT);
-        status_t status = init_arducam_hardware();
+        status_t status = init_arducam_hardware(ARDUCAM_DEFAULT_RESOLUTION);
         if (status == SUCCESS) {
             status = capture_rtt();
         }

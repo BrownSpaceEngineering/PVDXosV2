@@ -58,9 +58,10 @@ experiment leaves them in a bad state (8-byte captures of zeros), only a power
 cycle, or pulsing the sensor power enable (`0x06` bit 2) and resetting the
 ArduChip (`0x07` = 0x80, then 0x00), brings them back.
 
-Captures are 1600x1200 (UXGA, the OV2640's maximum supported output resolution)
-JPEGs. They use the existing 4 KB transfer buffer rather than a full frame in
-MCU RAM. Frames at or above the driver's FIFO limit (`OV2640_MAX_FIFO_SIZE`,
+Captures are 800x600 JPEGs (`ARDUCAM_DEFAULT_RESOLUTION`). `init_arducam_hardware()`
+takes any `arducam_resolution_t`, from 160x120 up to 1600x1200 (UXGA, the
+OV2640's maximum); the size holds until the next init. Captures use the
+existing 4 KB transfer buffer rather than a full frame in MCU RAM. Frames at or above the driver's FIFO limit (`OV2640_MAX_FIFO_SIZE`,
 currently `0x5FFFF`) are rejected. JPEG size depends on the scene/compression.
 No image is stored persistently on the satellite, no camera telemetry is
 published, and no photo-ready-for-downlink input is set. This RTT path remains

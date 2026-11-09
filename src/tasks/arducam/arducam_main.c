@@ -57,7 +57,7 @@ void main_arducam(void *pvParameters) {
 
         if (!camera_ready) {
             // (Re)initialize the camera; only capture once it has come up, since capture_rtt() needs a working camera
-            status_t status = init_arducam_hardware();
+            status_t status = init_arducam_hardware(ARDUCAM_DEFAULT_RESOLUTION);
             if (status != SUCCESS) {
                 warning("arducam: init_arducam_hardware() failed (status=%d), retrying next cycle\n", status);
             } else {
