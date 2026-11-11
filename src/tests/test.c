@@ -9,7 +9,9 @@
 #include "cfdp/cfdp_pdu.h"
 #include "cfdp/cfdp_task.h"
 #include "cfdp/cfdp_utils.h"
+#include "cfdp/uplink_commands.h"
 #include "cfdp/uplink_parse.h"
+#include "checks/device_checks.h"
 #include "logging.h"
 #include "telemetry/telemetry.h"
 #include "tests/test_pmb.h"
@@ -26,6 +28,7 @@ void test_matrix_product(void);
 void test_cfdp(void);
 void test_uslp(void);
 void test_telemetry_downlink(void);
+void test_telemetry_setters(void);
 void test_uplink_parse(void);
 void test_float(void);
 
@@ -47,6 +50,7 @@ void tests_run(void) {
 #endif
 #ifdef TEST_TELEMETRY
     test_telemetry_downlink();
+    test_telemetry_setters();
 #endif
 #ifdef TEST_UPLINK
     test_uplink_parse();
@@ -855,7 +859,10 @@ void test_telemetry_downlink(void) {
     downlink.magnetometer.gain_adjusted_readings[2] = 0.15625f;
     downlink.sband.health = TEL_DEVICE_STATUS_BROKEN;
     downlink.sband.last_transmission_timestamp = 0xDEADBEEF;
-    downlink.command_timestamps[15] = 0xBEEF;
+    downlink.photodiode.raw_readings[17] = 0xABCD;
+    downlink.state_machine.transition_times[7] = 0x55667788;
+    downlink.command_timestamps[15] = 0xCAFEBABE;
+    downlink.mram.status = 0x39;
     downlink.os_errors.error_timestamps[7] = 0x11223344;
 
     // The expected bytes below were generated with Python's struct module, independently of telemetry.c.
@@ -876,12 +883,17 @@ void test_telemetry_downlink(void) {
     PVDX_ASSERT_MSG(memcmp(&buf[0], expected_timestamps, sizeof(expected_timestamps)) == 0, "downlink timestamps (no spp headers)\n");
     PVDX_ASSERT_MSG(buf[8] == 2, "downlink last bootloader\n");
     PVDX_ASSERT_MSG(memcmp(&buf[9], expected_mag, sizeof(expected_mag)) == 0, "downlink magnetometer bytes\n");
-    PVDX_ASSERT_MSG(memcmp(&buf[165], expected_sband, sizeof(expected_sband)) == 0, "downlink sband bytes\n");
-    PVDX_ASSERT_MSG(buf[375] == 0xBE && buf[376] == 0xEF, "downlink last command timestamp\n");
-    PVDX_ASSERT_MSG(buf[452] == 0x11 && buf[453] == 0x22 && buf[454] == 0x33 && buf[455] == 0x44, "downlink last os error timestamp\n");
+    PVDX_ASSERT_MSG(buf[81] == 0xAB && buf[82] == 0xCD, "downlink last photodiode (uint16)\n");
+    PVDX_ASSERT_MSG(memcmp(&buf[113], expected_sband, sizeof(expected_sband)) == 0, "downlink sband bytes\n");
+    PVDX_ASSERT_MSG(buf[218] == 0x55 && buf[219] == 0x66 && buf[220] == 0x77 && buf[221] == 0x88,
+                    "downlink last transition time (uint32)\n");
+    PVDX_ASSERT_MSG(buf[353] == 0xCA && buf[354] == 0xFE && buf[355] == 0xBA && buf[356] == 0xBE,
+                    "downlink last command timestamp (uint32)\n");
+    PVDX_ASSERT_MSG(buf[357] == 0x39, "downlink mram status (1 byte)\n");
+    PVDX_ASSERT_MSG(buf[430] == 0x11 && buf[431] == 0x22 && buf[432] == 0x33 && buf[433] == 0x44, "downlink last os error timestamp\n");
 
     bool spare_zeroed = true;
-    for (size_t i = 456; i < TELEMETRY_DOWNLINK_SIZE; i++) {
+    for (size_t i = 434; i < TELEMETRY_DOWNLINK_SIZE; i++) {
         spare_zeroed = spare_zeroed && buf[i] == 0;
     }
     PVDX_ASSERT_MSG(spare_zeroed, "downlink spare bytes zeroed\n");
@@ -891,6 +903,140 @@ void test_telemetry_downlink(void) {
     PVDX_ASSERT_MSG(telemetry_downlink_serialize(&downlink, buf, TELEMETRY_DOWNLINK_SIZE - 1), "too-small buffer rejected\n");
     PVDX_ASSERT_MSG(telemetry_downlink_serialize(NULL, buf, sizeof(buf)) && telemetry_downlink_serialize(&downlink, NULL, sizeof(buf)),
                     "NULL args\n");
+}
+
+    // Offsets of fields in a serialized downlink, from the order in telemetry_downlink_serialize()
+    #define TEL_OFF_LAST_BOOTLOADER 8
+    #define TEL_OFF_GYRO_RATE 95
+    #define TEL_OFF_GYRO_HEALTH 107
+    #define TEL_OFF_DISPLAY_HEALTH 111
+    #define TEL_OFF_UHF_HEALTH 112
+    #define TEL_OFF_EPS 118 // charge, voltage, current, temperature; 4 floats each
+    #define TEL_OFF_STATE_HISTORY 182
+    #define TEL_OFF_TRANSITION_TIMES 190
+    #define TEL_OFF_COMMANDS 293
+    #define TEL_OFF_MRAM 357 // status, reflash count, reflash timestamps
+
+// Whether the 4 bytes at p are value, big-endian
+static bool tel_be32_is(const uint8_t *p, uint32_t value) {
+    return p[0] == (uint8_t)(value >> 24) && p[1] == (uint8_t)(value >> 16) && p[2] == (uint8_t)(value >> 8) && p[3] == (uint8_t)value;
+}
+
+// Whether the 4 bytes at p are value's IEEE 754 bits, big-endian. Floats are compared bit for bit, never with ==
+static bool tel_be_float_is(const uint8_t *p, float value) {
+    uint32_t bits;
+    memcpy(&bits, &value, sizeof(bits));
+    return tel_be32_is(p, bits);
+}
+
+static void tel_collect_and_serialize(tel_downlink_t *downlink, uint8_t *buf) {
+    telemetry_collect(downlink);
+    PVDX_ASSERT_MSG(!telemetry_downlink_serialize(downlink, buf, TELEMETRY_DOWNLINK_SIZE), "setters: serialize\n");
+}
+
+// Every setter the firmware calls, through telemetry_collect() and into the serialized downlink, plus the call sites
+// that can run before the scheduler. Runs on the live telemetry cache, so it leaves test values in it
+void test_telemetry_setters(void) {
+    test_log("----- testing telemetry setters -----\n");
+
+    static tel_downlink_t downlink;
+    static uint8_t buf[TELEMETRY_DOWNLINK_SIZE];
+    bool ok;
+
+    test_log("telemetry setter tests:\n");
+    telemetry_update_last_bootloader(1);
+
+    // A good gyro read, then a failed one, which must mark it broken but keep the last good rates
+    SCH1_result_t gyro = {.Rate1 = {1.0f, -2.5f, 0.15625f}};
+    telemetry_update_gyro_data(&gyro);
+    telemetry_collect(&downlink);
+    PVDX_ASSERT_MSG(downlink.gyro.health == TEL_DEVICE_STATUS_OK, "gyro OK after a good read\n");
+    telemetry_update_gyro_data(NULL);
+
+    telemetry_update_display_data(TEL_DEVICE_STATUS_BROKEN);
+    telemetry_update_uhf_data(TEL_DEVICE_STATUS_OK);
+
+    // Each pack separately; pack 4 doesn't exist, so it must be dropped rather than written past the arrays
+    for (uint8_t pack = 0; pack < 4; pack++) {
+        telemetry_update_eps_data(pack, 25.0f * (pack + 1), 3.5f + pack, -0.25f * (pack + 1), 20.0f + pack);
+    }
+    telemetry_update_eps_data(4, 99.0f, 99.0f, 99.0f, 99.0f);
+
+    // 9 transitions into an 8-entry history: the first falls out, and the newest is first
+    for (uint8_t i = 0; i < 9; i++) {
+        telemetry_update_state(i, 1000u + i);
+    }
+
+    // 17 uplinks into a 16-entry history
+    for (uint32_t i = 0; i < 17; i++) {
+        telemetry_update_command(0xC0000000u + i);
+    }
+
+    tel_mram_data_t mram = {.status = 0x39, .reflash_count = 3};
+    mram.reflash_timestamps[7] = 0x01020304;
+    telemetry_update_mram_data(&mram);
+
+    tel_collect_and_serialize(&downlink, buf);
+
+    PVDX_ASSERT_MSG(buf[TEL_OFF_LAST_BOOTLOADER] == 1, "last bootloader\n");
+    PVDX_ASSERT_MSG(buf[TEL_OFF_GYRO_HEALTH] == TEL_DEVICE_STATUS_BROKEN, "gyro broken after a failed read\n");
+    PVDX_ASSERT_MSG(tel_be_float_is(&buf[TEL_OFF_GYRO_RATE], 1.0f) && tel_be_float_is(&buf[TEL_OFF_GYRO_RATE + 4], -2.5f) &&
+                        tel_be_float_is(&buf[TEL_OFF_GYRO_RATE + 8], 0.15625f),
+                    "gyro keeps the last good rates\n");
+    PVDX_ASSERT_MSG(buf[TEL_OFF_DISPLAY_HEALTH] == TEL_DEVICE_STATUS_BROKEN, "display health\n");
+    PVDX_ASSERT_MSG(buf[TEL_OFF_UHF_HEALTH] == TEL_DEVICE_STATUS_OK, "uhf health\n");
+
+    ok = true;
+    for (uint8_t pack = 0; pack < 4; pack++) {
+        ok = ok && tel_be_float_is(&buf[TEL_OFF_EPS + 4 * pack], 25.0f * (pack + 1)) &&
+            tel_be_float_is(&buf[TEL_OFF_EPS + 16 + 4 * pack], 3.5f + pack) &&
+            tel_be_float_is(&buf[TEL_OFF_EPS + 32 + 4 * pack], -0.25f * (pack + 1)) &&
+            tel_be_float_is(&buf[TEL_OFF_EPS + 48 + 4 * pack], 20.0f + pack);
+    }
+    PVDX_ASSERT_MSG(ok, "eps packs, and pack 4 dropped\n");
+
+    ok = true;
+    for (uint8_t i = 0; i < 8; i++) {
+        ok = ok && buf[TEL_OFF_STATE_HISTORY + i] == 8 - i && tel_be32_is(&buf[TEL_OFF_TRANSITION_TIMES + 4 * i], 1008u - i);
+    }
+    PVDX_ASSERT_MSG(ok, "state history, newest first\n");
+
+    ok = true;
+    for (uint8_t i = 0; i < 16; i++) {
+        ok = ok && tel_be32_is(&buf[TEL_OFF_COMMANDS + 4 * i], 0xC0000010u - i);
+    }
+    PVDX_ASSERT_MSG(ok, "command history, newest first\n");
+
+    PVDX_ASSERT_MSG(
+        buf[TEL_OFF_MRAM] == 0x39 && tel_be32_is(&buf[TEL_OFF_MRAM + 1], 3) && tel_be32_is(&buf[TEL_OFF_MRAM + 5 + 28], 0x01020304),
+        "mram data\n");
+
+    test_log("telemetry call site tests:\n");
+    // An uplink with no commands ("PVDXGS", message size 0, 0 commands, timestamp 0x0A0B0C0D) records its timestamp;
+    // one from another callsign doesn't. No commands, so nothing is enqueued before the scheduler starts
+    static uint8_t uplink[] = {'P', 'V', 'D', 'X', 'G', 'S', 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A, 0x0B, 0x0C, 0x0D};
+    cfdp_buff_header_t uplink_buff = {.buff = uplink};
+    uplink_commands_dispatch(&uplink_buff, sizeof(uplink));
+    uplink[0] = 'X';
+    uplink[15] = 0xFF;
+    uplink_commands_dispatch(&uplink_buff, sizeof(uplink));
+    tel_collect_and_serialize(&downlink, buf);
+    PVDX_ASSERT_MSG(tel_be32_is(&buf[TEL_OFF_COMMANDS], 0x0A0B0C0D) && tel_be32_is(&buf[TEL_OFF_COMMANDS + 4], 0xC0000010u),
+                    "uplink timestamp recorded, rejected uplink not\n");
+
+    // Re-running a device check publishes its result. Each starts from a value the check can never publish, so a check
+    // that didn't publish fails. UHF isn't re-checked: that would reset the radio after the burn sequence set it up
+    telemetry_update_mram_data(&(tel_mram_data_t){.status = 0xFF});
+    telemetry_update_display_data(TEL_DEVICE_STATUS_DISABLED);
+    uncheck_device(MRAM_ID);
+    bool mram_okay = check_device(MRAM_ID);
+    uncheck_device(DISPLAY_ID);
+    bool display_okay = check_device(DISPLAY_ID);
+    tel_collect_and_serialize(&downlink, buf);
+    // All three MRAMs OK is 0b010101: each chip's state in its own 2 bits
+    PVDX_ASSERT_MSG(buf[TEL_OFF_MRAM] != 0xFF && (buf[TEL_OFF_MRAM] == 0x15) == mram_okay, "mram check publishes status\n");
+    PVDX_ASSERT_MSG(buf[TEL_OFF_DISPLAY_HEALTH] == (display_okay ? TEL_DEVICE_STATUS_OK : TEL_DEVICE_STATUS_BROKEN),
+                    "display check publishes health\n");
 }
 
 #endif // TEST_TELEMETRY

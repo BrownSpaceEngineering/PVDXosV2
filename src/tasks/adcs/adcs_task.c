@@ -20,6 +20,7 @@
 #include "libraries/adcs/include/body.h"
 #include "libraries/adcs/include/photodiode_determination.h"
 #include "logging.h"
+#include "telemetry/telemetry.h"
 
 #define DEG_TO_RAD (3.14159265358979f / 180.0f)
 #define SECONDS_PER_DAY 86400
@@ -46,6 +47,7 @@ status_t adcs_read_gyro(float *const gyro_rad_s) {
 
     if (result != SUCCESS) {
         warning("adcs: gyro read failed\n");
+        telemetry_update_gyro_data(NULL);
         // uncheck device to force the check function to run again
         uncheck_device(GYROSCOPE_ID);
         if (!check_device(GYROSCOPE_ID)) {
@@ -57,6 +59,7 @@ status_t adcs_read_gyro(float *const gyro_rad_s) {
         }
         return result;
     }
+    telemetry_update_gyro_data(&reading);
 
     // TODO: the SCH16T reports rates about its own package axes, but body() expects the satellite body axes (the
     // PHOTODIODES / magnetorquer frame). Apply the fixed rotation R (omega_body = R * omega_sensor, usually a signed

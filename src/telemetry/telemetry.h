@@ -8,6 +8,8 @@
 #include "drivers/gyro/gyro_driver.h"
 #include "drivers/magnetometer/magnetometer_driver.h"
 #include "drivers/magnetorquer/magnetorquer_driver.h"
+#include "drivers/mram/mram_driver.h"
+#include "drivers/photodiode/photodiode_driver.h"
 
 // Reference: PVDX UHF Uplink/Downlink Summary 3/3/2026
 // (https://docs.google.com/spreadsheets/d/1XYJBU4V2vjlKj8QtCxaPuW247gf_tx6XY4dey5q0v0k/edit?usp=sharing)
@@ -42,7 +44,7 @@ typedef struct {
 } tel_magnetorquer_data_t;
 
 typedef struct {
-    float raw_readings[22];
+    uint16_t raw_readings[PHD_COUNT]; // raw ADC codes, indexed by PHD number. Sheet says 22 but only 18 photodiodes
 } tel_photodiode_data_t;
 
 typedef struct {
@@ -71,8 +73,8 @@ typedef struct {
 } tel_eps_data_t;
 
 typedef struct {
-    uint8_t state_history[8];  // last 8 states
-    float transition_times[8]; // timestamps of the last 8 transitions
+    uint8_t state_history[8];     // last 8 states
+    uint32_t transition_times[8]; // unix timestamps of the last 8 transitions
     uint8_t input_variables[3];
 } tel_state_machine_data_t;
 
@@ -84,7 +86,7 @@ typedef struct {
 } tel_adcs_data_t;
 
 typedef struct {
-    uint8_t status[3];
+    mram_status_t status; // 2 bits per MRAM chip (MRAM_STATE_*), packed as by set_mram_state()
     uint32_t reflash_count;
     uint32_t reflash_timestamps[8]; // last 8 reflashes
 } tel_mram_data_t;
@@ -95,7 +97,7 @@ typedef struct {
 } tel_os_error_data_t;
 
 typedef struct {
-    uint32_t timestamp;      // unix time
+    uint32_t timestamp;      // unix time. TODO: NOT SET YET: telemetry_collect() should stamp it
     uint32_t boot_timestamp; // unix time of the last boot
 
     uint8_t last_bootloader; // bootloader copy that we last booted from
@@ -110,7 +112,7 @@ typedef struct {
     tel_eps_data_t eps;
     tel_state_machine_data_t state_machine;
     tel_adcs_data_t adcs;
-    uint16_t command_timestamps[16]; // sent timestamps of received commands
+    uint32_t command_timestamps[16]; // sent timestamps of received commands
     tel_mram_data_t mram;
     tel_os_error_data_t os_errors;
 } tel_downlink_t;
@@ -137,6 +139,8 @@ void telemetry_collect(tel_downlink_t *downlink);
  * Updates the timestamp of last boot in the telemetry cache
  *
  * \param boot_timestamp - timstamp of last boot
+ *
+ * TODO: NOT CALLED YET: needs UTC, but the RTC only counts time since boot
  */
 void telemetry_update_boot_timestamp(uint32_t boot_timestamp);
 
@@ -152,6 +156,8 @@ void telemetry_update_last_bootloader(uint8_t bootloader);
  *
  * \param revid - revid register
  * \param bist - bist register
+ *
+ * TODO: NOT CALLED YET: nothing reads the RM3100 REVID/BIST registers after init_rm3100()
  */
 void telemetry_update_magnetometer_registers(uint8_t revid, uint8_t bist);
 
@@ -160,6 +166,8 @@ void telemetry_update_magnetometer_registers(uint8_t revid, uint8_t bist);
  *
  * \param raw - raw magnetometer data
  * \param gain_adjusted - gain adjusted magnetometer data
+ *
+ * TODO: NOT CALLED YET: adcs_read_magnetometer() is a stub; call this from it once it uses magnetometer_read()
  */
 void telemetry_update_magnetometer_readings(const mag_raw_reading_t *raw, const mag_data_t *gain_adjusted);
 
@@ -167,15 +175,19 @@ void telemetry_update_magnetometer_readings(const mag_raw_reading_t *raw, const 
  * Updates the magnetorquer data inside the telemetry cache
  *
  * \param mag_data - signed PWM duty of each magnetorquer, from -1.0 to 1.0
+ *
+ * TODO: NOT CALLED YET: adcs_drive_magnetorquers() doesn't drive the magnetorquers yet
  */
 void telemetry_update_magnetorquer_data(const mag_torque_input_t *mag_data);
 
 /**
  * Updates the photodiode data inside the telemetry cache
  *
- * \param photodiode_data - photodiode data to update
+ * \param photodiode_data - raw ADC codes, as from phd_read_all()
+ *
+ * TODO: NOT CALLED YET: adcs_read_photodiodes() is a stub; call this from it once it uses phd_read_all()
  */
-void telemetry_update_photodiode_data(const float photodiode_data[22]);
+void telemetry_update_photodiode_data(const uint16_t photodiode_data[PHD_COUNT]);
 
 /**
  * Updates the gyroscope data inside the telemetry cache
@@ -191,6 +203,8 @@ void telemetry_update_gyro_data(const SCH1_result_t *gyro_readings);
  * \param camera_status - status of the camera
  * \param last_capture_succeeded - whether the last capture succeeded
  * \param resolution - resolution of the camera
+ *
+ * TODO: NOT CALLED YET: nothing defines how resolution is encoded in its byte
  */
 void telemetry_update_camera_data(tel_device_status_t camera_status, bool last_capture_succeeded, uint8_t resolution);
 
@@ -213,6 +227,8 @@ void telemetry_update_uhf_data(tel_device_status_t uhf_status);
  *
  * \param sband_status - status of the sband
  * \param last_transmission_timestamp - timestamp of last sband transmission
+ *
+ * TODO: NOT CALLED YET: there is no S-band task
  */
 void telemetry_update_sband_data(tel_device_status_t sband_status, uint32_t last_transmission_timestamp);
 
@@ -220,6 +236,8 @@ void telemetry_update_sband_data(tel_device_status_t sband_status, uint32_t last
  * Updates the ADCS data inside the telemetry cache
  *
  * \param adcs_data - ADCS data to update
+ *
+ * TODO: NOT CALLED YET: adcs_publish_telemetry() is a TODO, and adcs-c has no position getter
  */
 void telemetry_update_adcs_data(const tel_adcs_data_t *adcs_data);
 
@@ -240,10 +258,9 @@ void telemetry_update_eps_data(uint8_t pack_number, float charge_percent, float 
  * TODO: Should input variables be included here? Where do those get recorded?
  *
  * \param state - current state
- * \param transition_time - time of state transition
+ * \param transition_time - unix time of state transition
  */
-
-void telemetry_update_state(uint8_t state, float transition_time);
+void telemetry_update_state(uint8_t state, uint32_t transition_time);
 
 /**
  * Updates the MRAM data inside the telemetry cache
@@ -257,6 +274,8 @@ void telemetry_update_mram_data(const tel_mram_data_t *mram_data);
  *
  * \param error_code - code of the OS error
  * \param error_timestamp - time of the OS error
+ *
+ * TODO: NOT CALLED YET: there is no one-byte error code scheme behind fatal()/warning()
  */
 void telemetry_update_os_error(uint8_t error_code, uint32_t error_timestamp);
 
@@ -265,6 +284,6 @@ void telemetry_update_os_error(uint8_t error_code, uint32_t error_timestamp);
  *
  * \param command_timestamp - sent timestamp of the received command
  */
-void telemetry_update_command(uint16_t command_timestamp);
+void telemetry_update_command(uint32_t command_timestamp);
 
 #endif

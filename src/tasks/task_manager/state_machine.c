@@ -10,6 +10,8 @@
 #include "state_machine.h"
 
 #include "logging.h"
+#include "tasks/adcs/adcs_task.h"
+#include "telemetry/telemetry.h"
 
 // Whether state_machine_init() has run; no transition is taken before then
 static bool state_machine_initialised = false;
@@ -83,6 +85,11 @@ static void enter_state(state_id_t next_state) {
     const state_id_t previous_state = current_state;
     current_state = next_state;
     inputs.last_transition_tick = xTaskGetTickCount();
+
+    // Same clock as the perovskite records; 0 if the RTC can't be read
+    int unix_time = 0, jd_scalar = 0;
+    float jd_frac = 0.0f;
+    telemetry_update_state((uint8_t)next_state, adcs_get_time(&unix_time, &jd_scalar, &jd_frac) == SUCCESS ? (uint32_t)unix_time : 0);
 
     if (mission_states[next_state].on_enter != NULL) {
         mission_states[next_state].on_enter(previous_state, &inputs);

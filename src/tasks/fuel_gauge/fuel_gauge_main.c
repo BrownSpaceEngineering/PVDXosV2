@@ -12,6 +12,7 @@
 #include "fuel_gauge_task.h"
 #include "cmd_dispatcher.h"
 #include "tasks/task_manager/state_machine.h"
+#include "telemetry/telemetry.h"
 
 // Fuel gauge task memory structures
 fuel_gauge_task_memory_t fuel_gauge_mem;
@@ -63,6 +64,7 @@ void main_fuel_gauge(void *pvParameters) {
                 warning("fuel_gauge: pack %u no data\n", ch);
                 continue;
             }
+            telemetry_update_eps_data(ch, p->soc_pct, p->pack_voltage, p->current_a, p->temp_c);
             info("fuel_gauge: pack %u SOC=%ld m%%  Vpack=%ld mV  I=%ld mA  T=%ld mC\n", ch,
                  (long)(p->soc_pct * 1000.0f), (long)(p->pack_voltage * 1000.0f),
                  (long)(p->current_a * 1000.0f), (long)(p->temp_c * 1000.0f));
