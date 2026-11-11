@@ -24,6 +24,7 @@
 void state_machine_init(void);
 void state_machine_apply_input_update(const input_update_data_t *const p_update);
 void state_machine_check_transition(void);
+state_id_t state_machine_get_current_state(void);
 
 /* ---------- Called by any task ---------- */
 

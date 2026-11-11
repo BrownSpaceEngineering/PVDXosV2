@@ -14,6 +14,7 @@ struct sensor_reg {
 
 // Hardware Defines
 #define ARDUCAM_ADDR            0x60
+#define ARDUCAM_SPI_HZ          1000000
 #define SPI_ARDUCAM             0x00
 
 // Arducam Defines
@@ -38,10 +39,29 @@ struct sensor_reg {
 #define SHUTTER_MASK       		0x02
 #define CAP_DONE_MASK      		0x08
 
+// Low-power controls, from the ArduCAM-M-2MP hardware application note
+#define ARDUCHIP_TIM            0x03  // Sensor interface timing
+#define LOW_POWER_MODE          0x40  // ARDUCHIP_TIM bit 6: power down the sensor and FIFO memory
+#define ARDUCHIP_GPIO_DIR       0x05  // Sensor GPIO direction, 1 = output
+#define ARDUCHIP_GPIO           0x06  // Sensor GPIO value
+#define GPIO_PWDN_MASK          0x02  // Bit 1 of both: the sensor's PWDN pin, active high
+#define ARDUCAM_WAKE_DELAY_MS   100   // The datasheet gives no wake time after PWDN; generous, since photos are rare
+#define ARDUCAM_EXPOSURE_SETTLE_MS 1000 // After init, before a capture is exposed properly
+
 #define ARDUCAM_SPI_RX_BUF_SIZE 0x1000
 #define ARDUCAM_SPI_TX_BUF_SIZE 0x40
 #define OV2640_MAX_FIFO_SIZE	0x5FFFF
 #define ARDUCAM_CAPTURE_TIMEOUT_MS 2000 // well under the task's watchdog timeout
+
+// capture_mram() layout within MRAM_REGION_CAMERA (see mram_map.h): a record holding an arducam_mram_image_t, then the
+// JPEG itself
+#define ARDUCAM_MRAM_IMAGE_INFO_OFFSET 0x0
+#define ARDUCAM_MRAM_IMAGE_OFFSET 0x1000
+#define ARDUCAM_MRAM_IMAGE_SIZE 0x60000 // 384 KB, more than the FIFO can hold (OV2640_MAX_FIFO_SIZE)
+
+typedef struct {
+    uint32_t length; // Bytes of JPEG at ARDUCAM_MRAM_IMAGE_OFFSET; 0 while a capture is being written
+} arducam_mram_image_t;
 
 // SEGGER RTT up-channel used to stream captured images (configured by the arducam task).
 #define CAMERA_RTT_OUTPUT_CHANNEL   2
@@ -53,11 +73,31 @@ extern struct io_descriptor *arducam_spi_io;
 
 // External SPI Buffers
 extern uint8_t ardu_spi_rx_buffer[ARDUCAM_SPI_RX_BUF_SIZE];
+// Backs the camera's RTT channel. main() configures the channel at boot, and the camera task reconfigures it for itself.
+extern uint8_t camera_rtt_image_buffer[SEGGER_RTT_IMAGE_BUFFER_SIZE];
 extern uint8_t ardu_spi_tx_buffer[ARDUCAM_SPI_TX_BUF_SIZE];
 extern struct spi_xfer ardu_xfer;
 
+// Capture resolutions, one for each OV2640 size table in arducam_registers.c
+typedef enum {
+    ARDUCAM_160x120,
+    ARDUCAM_176x144,
+    ARDUCAM_320x240,
+    ARDUCAM_352x288,
+    ARDUCAM_640x480,
+    ARDUCAM_800x600,
+    ARDUCAM_1024x768,
+    ARDUCAM_1280x960,
+    ARDUCAM_1600x1200,
+    ARDUCAM_RESOLUTION_COUNT,
+} arducam_resolution_t;
+
+// SVGA: sharper than 320x240, a quarter the size of full-res UXGA
+#define ARDUCAM_DEFAULT_RESOLUTION ARDUCAM_800x600
+
 // Function Prototypes
-status_t init_arducam_hardware(void);
+status_t init_arducam_hardware(arducam_resolution_t resolution);
+void arducam_sleep(void);
 uint32_t arducam_i2c_write(uint8_t addr, uint8_t *data, uint16_t size);
 uint32_t arducam_i2c_multi_write(const struct sensor_reg reglist[]);
 uint32_t arducam_i2c_read(uint8_t addr, uint8_t *readBuf, uint16_t size);
@@ -65,6 +105,8 @@ int32_t arducam_spi_write(uint8_t addr, uint8_t data);
 uint8_t arducam_spi_read(uint8_t addr);
 status_t capture(void);
 status_t capture_rtt(void);
+status_t capture_mram(void);
+status_t arducam_mram_image_length(uint32_t *p_length);
 
 #endif // ARDUCAM_DRIVER_H
 

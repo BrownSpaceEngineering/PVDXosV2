@@ -31,7 +31,7 @@ struct dac_sync_descriptor DAC_0;
 
 struct i2c_m_sync_desc I2C_SBAND;
 
-struct i2c_m_sync_desc I2C_CAMERA;
+struct i2c_m_sync_desc I2C_SENSORS;
 
 struct pwm_descriptor MAGNETORQUER_1;
 
@@ -538,7 +538,7 @@ void SPI_SBAND_init(void)
 	SPI_SBAND_PORT_init();
 }
 
-void I2C_CAMERA_PORT_init(void)
+void I2C_SENSORS_PORT_init(void)
 {
 
 	gpio_set_pin_pull_mode(CAMERA_SDA,
@@ -562,7 +562,7 @@ void I2C_CAMERA_PORT_init(void)
 	gpio_set_pin_function(CAMERA_SCL, PINMUX_PD08D_SERCOM6_PAD1);
 }
 
-void I2C_CAMERA_CLOCK_init(void)
+void I2C_SENSORS_CLOCK_init(void)
 {
 	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM6_GCLK_ID_CORE, CONF_GCLK_SERCOM6_CORE_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
 	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM6_GCLK_ID_SLOW, CONF_GCLK_SERCOM6_SLOW_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
@@ -570,11 +570,11 @@ void I2C_CAMERA_CLOCK_init(void)
 	hri_mclk_set_APBDMASK_SERCOM6_bit(MCLK);
 }
 
-void I2C_CAMERA_init(void)
+void I2C_SENSORS_init(void)
 {
-	I2C_CAMERA_CLOCK_init();
-	i2c_m_sync_init(&I2C_CAMERA, SERCOM6);
-	I2C_CAMERA_PORT_init();
+	I2C_SENSORS_CLOCK_init();
+	i2c_m_sync_init(&I2C_SENSORS, SERCOM6);
+	I2C_SENSORS_PORT_init();
 }
 
 void SPI_UHF_PORT_init(void)
@@ -1239,7 +1239,7 @@ void system_init(void)
 
 	SPI_SBAND_init();
 
-	I2C_CAMERA_init();
+	I2C_SENSORS_init();
 
 	SPI_UHF_init();
 

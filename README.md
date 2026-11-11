@@ -184,11 +184,8 @@ administrator-level PowerShell
 2. **Build, Connect and Run:**
    - Use `make clean all connect` to build the project, connect to the board and auto-flash/run the program. If you just want to connect without re-building, run `make connect`. If you just wish to build, run `make clean all`.
    - The code will automatically pause at the top of the 'main' function. Set any breakpoints you need, and then continue running the program with 'c'
-   - To connect to the PVDXos Shell, use Telnet to establish a connection to localhost:19021. `nc localhost 19021` to connect with netcat on a Mac/Linux terminal
-   - If using PuTTY, go to 'Terminal' and check the box for 'Implicit CR in every LF' so that line endings work correctly
    - Log output can be viewed by running `python3 scripts/rtt_logs.py` in a separate terminal window. This will also record logs to the `/logs` folder.
    - If the script fails to run, you may need to install 'pylink-square' (`pip install pylink-square`)
-   - Alternatively, you can try running `python3 scripts/rtt_splitscreen.py` for both the PVDXos Shell and log output in the same terminal window, but this might not work!
 
 
 ## Build Options

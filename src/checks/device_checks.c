@@ -18,7 +18,7 @@
 #include "drivers/at86rf215/regs.h"
 #include "drivers/fuel_gauge/fuel_gauge_driver.h"
 #include "drivers/gyro/gyro_driver.h"
-#include "drivers/mram/mram_driver.h"
+#include "drivers/mram/mram_map.h"
 #include "drivers/pmb/ina226.h"
 #include "drivers/pmb/mcp23017.h"
 #include "drivers/pmb/pmb_i2c.h"
@@ -132,9 +132,9 @@ bool check_gyro(void) {
     return init_gyro_hardware() == SUCCESS;
 }
 
-// Passes only if all three MRAM chips report MRAM_STATE_OK (triplicated storage, majority-voted reads).
+// Passes only if main.c's mram_map_init() found all three MRAM chips OK (every write goes to all three).
 bool check_mram(void) {
-    mram_status_t status = mram_init();
+    mram_status_t status = mram_map_status();
     bool all_okay = true;
     for (uint8_t mram = 1; mram <= 3; mram++) {
         uint8_t state = get_mram_state(status, mram);
@@ -145,15 +145,14 @@ bool check_mram(void) {
 }
 
 bool check_camera(void) {
-    if (init_arducam_hardware() != SUCCESS) {
-        return false;
-    }
+    bool okay = init_arducam_hardware(ARDUCAM_DEFAULT_RESOLUTION) == SUCCESS;
 #if defined(BURN_SEQUENCE) && defined(BURN_SEQUENCE_CAMERA_CHECK_CAPTURE)
     // main.c configures RTT channel 2 before the device checks in the burn sequence
-    return capture_rtt() == SUCCESS;
-#else
-    return true;
+    okay = okay && capture_rtt() == SUCCESS;
 #endif
+    // Nothing uses the camera again until a capture, which wakes it
+    arducam_sleep();
+    return okay;
 }
 
 // S-band (STXG2): stxg2_init() powers the radio, waits for boot, checks the "STX2" ID and does a
@@ -214,10 +213,6 @@ bool check_uhf(void) {
 // Perovskite measurement board: I2C bus, INA226 + MCP23017 present, INA226 manufacturer/die ID.
 // Read-only identity checks from pmb-driver-mock's test_pmb sanity checks (no DAC/ADG734 actuation).
 bool check_perovskite(void) {
-    if (pmb_i2c_init() != SUCCESS) {
-        warning("perovskite check: PMB I2C bus enable failed\n");
-        return false;
-    }
     if (pmb_i2c_probe(INA226_I2C_ADDR) != SUCCESS) {
         warning("perovskite check: INA226 did not ACK at 0x%02x\n", INA226_I2C_ADDR);
         return false;

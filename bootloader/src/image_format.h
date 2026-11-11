@@ -39,7 +39,7 @@ _Static_assert(FLASH_APP_ADDR >= BOOTPROT_MAX_SIZE, "PVDXos must start above eve
 #define MRAM_GOLDEN_HEADER_READ_SIZE (0x200u) // Covers sizeof(image_header_t)
 #define MRAM_GOLDEN_BOOT_ADDR (0x001000u) // Copy of the flash boot region
 #define MRAM_GOLDEN_APP_ADDR (0x011000u) // Copy of the PVDXos image
-#define MRAM_GOLDEN_APP_MAX_SIZE (0x06E000u) // Ends at 0x7F000, clear of the MRAM hardware test region at 0x800F0
+#define MRAM_GOLDEN_APP_MAX_SIZE (0x06E000u) // Ends at 0x7F000, below the PVDXos regions in src/drivers/mram/mram_map.h
 
 /* ---------- IMAGE HEADER ---------- */
 
@@ -79,6 +79,7 @@ typedef enum {
     GOLDEN_WRITTEN,      // A debugger requested it: flash was copied into MRAM
     GOLDEN_WRITE_FAILED, // A debugger requested it, but an MRAM write or read-back failed
     GOLDEN_UNREADABLE,   // No MRAM or no valid golden header, so flash was not checked
+    GOLDEN_DISABLED,     // Bootloader built with NO_MRAM: MRAM was never touched and flash was not checked
 } golden_state_t;
 
 typedef struct {

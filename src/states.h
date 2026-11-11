@@ -36,6 +36,8 @@ typedef struct { // preliminary contents; still under discussion
 	bool image_ready_to_display;
 	bool display_active;
 	bool photo_taken_for_downlink;
+	bool adcs_pointing;
+	bool adcs_sensor_fault;
 	bool perovskite_data_ready_for_downlink;
 	// Filled in by the task manager itself; never sent as an input update
 	TickType_t current_tick;
@@ -52,6 +54,8 @@ typedef enum { // preliminary contents; still under discussion
 	IMAGE_READY_DISPLAY_UPDATE,
 	DISPLAY_ACTIVE_UPDATE,
 	PHOTO_READY_DOWNLINK_UPDATE,
+	ADCS_POINTING_UPDATE,
+	ADCS_SENSOR_FAULT_UPDATE,
 	PEROVSKITE_READY_DOWNLINK_UPDATE,
 	SBAND_READY_TRANSMIT_UPDATE,
 	SAFE_DISABLE_RADIO_UPDATE,

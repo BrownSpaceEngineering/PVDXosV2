@@ -21,12 +21,13 @@
 #include "globals.h" // defines BURN_SEQUENCE
 #include "logging.h"
 #include "mutexes.h"
+#include "os_delay.h"
 #include "arducam_driver.h"
 #include "display_driver.h"
 #include "drivers/at86rf215/at86_irq.h"
 #include "burn/burn_uhf.h"
 #include "image_buffer_PVDX.h"
-#include "mram_driver.h"
+#include "mram_map.h"
 #include "watchdog_driver.h"
 #include "ccsds/ccsds.h"
 #include "cosmic_monkey_task.h"
@@ -43,18 +44,13 @@
 #define CAMERA_CAPTURE_ATTEMPTS 3
 cosmic_monkey_task_arguments_t cm_args = {0};
 
-// The burn record lives in the last 256-byte page of the 1 MB MRAM, clear of the bootloader's golden copy and the MRAM
-// hardware test region
-#define BURN_RECORD_MRAM_ADDRESS 0x000FFF00u
-// Marks the record as written by this code, so never-written MRAM starts from a fresh record instead of garbage
-#define BURN_RECORD_MAGIC        0xB12EC0DEu
 // How often the burn wait saves its progress to MRAM, so a reboot resumes the wait instead of restarting it
 #define BURN_RECORD_SAVE_PERIOD_S 60u
 
 
 // Logs (and clears) the report stage 2 of the bootloader leaves in backup RAM about checking flash against MRAM
 static void log_boot_report(void) {
-    static const char *const golden_states[] = {"valid", "written from flash", "write failed", "unreadable"};
+    static const char *const golden_states[] = {"valid", "written from flash", "write failed", "unreadable", "disabled (NO_MRAM)"};
     volatile boot_report_t *report = (volatile boot_report_t *)BOOT_REPORT_ADDR;
     if (report->magic != BOOT_REPORT_MAGIC) {
         warning_impl("[!] No bootloader flash report\n");
@@ -83,13 +79,13 @@ static status_t PVDX_init(void) {
     return SUCCESS;
 }
 
-// Busy-waits one second at a time (delay_ms is fine here: the scheduler never runs, so nothing else owns SysTick).
+// Waits one second at a time.
 // The watchdog task never runs either, so the hardware watchdog is normally off. It is fed every second anyway in
 // case it is still running from an earlier boot.
 [[maybe_unused]] static void wait_seconds_feeding_watchdog(uint32_t seconds) {
     for (uint32_t s = 0; s < seconds; s++) {
         watchdog_feed(WDT);
-        delay_ms(1000);
+        os_delay_ms(1000);
     }
 }
 
@@ -118,8 +114,6 @@ static status_t PVDX_init(void) {
 
 /* ---------- STEP 3: CAMERA PICTURE OVER RTT ---------- */
 
-static uint8_t camera_rtt_image_buffer[SEGGER_RTT_IMAGE_BUFFER_SIZE];
-
 // Called before the device checks, so that the camera check can capture too (BURN_SEQUENCE_CAMERA_CHECK_CAPTURE)
 [[maybe_unused]] static void configure_camera_rtt_channel(void) {
     #if defined(RELEASE)
@@ -136,47 +130,45 @@ static uint8_t camera_rtt_image_buffer[SEGGER_RTT_IMAGE_BUFFER_SIZE];
 [[maybe_unused]] static void send_picture_over_rtt(void) {
     for (uint32_t attempt = 1; attempt <= CAMERA_CAPTURE_ATTEMPTS; attempt++) {
         watchdog_feed(WDT);
-        status_t status = init_arducam_hardware();
+        status_t status = init_arducam_hardware(ARDUCAM_DEFAULT_RESOLUTION);
         if (status == SUCCESS) {
             status = capture_rtt();
         }
         if (status == SUCCESS) {
             info("camera: picture sent over RTT channel %d\n", CAMERA_RTT_OUTPUT_CHANNEL);
+            arducam_sleep();
             return;
         }
         warning("camera: attempt %lu/%d failed (status=%d)\n", (unsigned long)attempt, CAMERA_CAPTURE_ATTEMPTS, status);
     }
     warning("camera: giving up on the picture\n");
+    arducam_sleep();
 }
 
 /* ---------- BURN WIRE STATE IN MRAM ---------- */
 
-// Persists across reboots
+// Persists across reboots, as an MRAM record at the start of its own region (see mram_map.h)
 typedef struct {
-    uint32_t magic;
     uint32_t boot_count;     // boots seen since the record was created
     uint32_t burned;         // nonzero once the burn wire has been fired
     uint32_t burn_attempts;  // incremented just before each burn, so a reboot mid-burn is visible
     uint32_t elapsed_wait_s; // seconds of the pre-burn wait completed so far
 } burn_record_t;
 
-// Reads the record (majority-voted across the three MRAM modules). A missing record is replaced by a fresh one,
+// Reads the record from the first MRAM module holding a valid copy. A missing record is replaced by a fresh one,
 // which means the full wait runs again: waiting too long is safer than burning too early.
 static burn_record_t load_burn_record(void) {
-    burn_record_t record = {0};
-    if (!mram_read_bytes(BURN_RECORD_MRAM_ADDRESS, (uint8_t *)&record, sizeof(record))) {
-        warning_impl("[!] Could not read the burn record from MRAM\n");
-    }
-    if (record.magic != BURN_RECORD_MAGIC) {
-        warning_impl("[!] No burn record in MRAM (magic: %lx); starting a fresh one\n", (unsigned long)record.magic);
-        record = (burn_record_t){.magic = BURN_RECORD_MAGIC};
+    burn_record_t record;
+    if (!mram_record_load(MRAM_REGION_BURN_RECORD, 0, &record, sizeof(record))) {
+        warning_impl("[!] No valid burn record in MRAM; starting a fresh one\n");
+        record = (burn_record_t){0};
     }
     return record;
 }
 
 // Writes the record to all three MRAM modules
 static void save_burn_record(const burn_record_t *const p_record) {
-    if (!mram_write_bytes(BURN_RECORD_MRAM_ADDRESS, (const uint8_t *)p_record, sizeof(*p_record))) {
+    if (!mram_record_save(MRAM_REGION_BURN_RECORD, 0, p_record, sizeof(*p_record))) {
         warning_impl("[!] Could not write the burn record to every MRAM chip\n");
     }
 }
@@ -186,6 +178,10 @@ int main(void) {
 
     /* Initializes MCU, drivers and middleware */
     atmel_start_init();
+    // Turn all LEDs off: they light when high, and Atmel Start drives every LED pin high
+    gpio_set_pin_level(LED_ORANGE1, false);
+    gpio_set_pin_level(LED_ORANGE2, false);
+    gpio_set_pin_level(LED_RED, false);
     PVDX_init();
     // info_impl(RTT_CTRL_RESET RTT_CTRL_CLEAR); // Reset the terminal
     info("--- Atmel & Hardware Initialization Complete ---\n");
@@ -198,7 +194,8 @@ int main(void) {
 
     // BURN SEQUENCE
 
-    mram_status_t mram_status = mram_init();
+    // The only mram_map_init() call; everything else uses mram_map_status()
+    mram_status_t mram_status = mram_map_init();
     for (uint8_t mram = 1; mram <= 3; mram++) {
         if (get_mram_state(mram_status, mram) != MRAM_STATE_OK) {
             warning_impl("[!] MRAM%u failed to initialize; the burn record relies on the other modules\n", mram);
@@ -253,11 +250,17 @@ int main(void) {
     }
 
     // Initialize the mutex for the I2C bus shared by Arducam, fuel gauges, and PMB before startup checks/tests
-    i2c_camera_bus_mutex = xSemaphoreCreateMutexStatic(&i2c_camera_bus_mutex_buffer);
+    i2c_sensors_bus_mutex = xSemaphoreCreateMutexStatic(&i2c_sensors_bus_mutex_buffer);
 
-    if (i2c_camera_bus_mutex == NULL) {
-        fatal("Failed to create I2C_CAMERA bus mutex");
+    if (i2c_sensors_bus_mutex == NULL) {
+        fatal("Failed to create I2C_SENSORS bus mutex");
     }
+    // atmel_start_init() initializes the shared buses but leaves them disabled; the drivers on them assume they are
+    // enabled
+    if (i2c_m_sync_enable(&I2C_SENSORS) != 0) {
+        warning("Failed to enable the I2C_SENSORS bus\n");
+    }
+    spi_m_sync_enable(&SPI_MAGNETOMETER_GYRO);
 
     // The UHF radio's IRQ line stays disarmed until a task waits on it, so this is safe before the radio is set up
     at86_irq_init();
@@ -297,6 +300,8 @@ int main(void) {
     if (task_list_mutex == NULL) {
         fatal("Failed to create PVDX task list mutex");
     }
+
+    init_adc1_mutex();
 
     if (task_list[0] != p_watchdog_task) {
         fatal("Watchdog is not first in task_list!");

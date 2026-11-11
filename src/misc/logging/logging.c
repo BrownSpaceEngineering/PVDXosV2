@@ -14,6 +14,7 @@
 #include <stdlib.h>
 
 #include "SEGGER_RTT.h"
+#include "os_delay.h"
 #include "watchdog_task.h"
 
 // Macros for debugging functions so that file and line number info can be included
@@ -31,7 +32,7 @@ void fatal_impl(const char *string, ...) {
     warning_impl("FATAL ERROR OCCURRED! RESTARTING SYSTEM...\n");
     warning_impl("FATAL ERROR OCCURRED! RESTARTING SYSTEM...\n");
     warning_impl("FATAL ERROR OCCURRED! RESTARTING SYSTEM...\n");
-    vTaskDelay(pdMS_TO_TICKS(1000)); // Wait for the message to be printed
+    os_delay_ms(1000); // Wait for the message to be printed
 
     // Force reboot
     kick_watchdog();

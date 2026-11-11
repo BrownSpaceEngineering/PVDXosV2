@@ -5,15 +5,14 @@
 #include "display_task.h"
 #include "drivers/arducam/arducam_driver.h"
 #include "logging.h"
+#include "os_delay.h"
 #include "semphr.h"
 #include "task_list.h"
 
 static volatile bool stop_requested = false;
 static StaticSemaphore_t stop_ack_storage;
 static SemaphoreHandle_t stop_ack;
-static bool camera_ready = false;
 static bool image_channel_ready = false;
-static uint8_t camera_rtt_image_buffer[SEGGER_RTT_IMAGE_BUFFER_SIZE];
 
 QueueHandle_t init_camera(void) {
     stop_ack = xSemaphoreCreateBinaryStatic(&stop_ack_storage);
@@ -59,7 +58,7 @@ void camera_park_if_stopped(void) {
     xSemaphoreGive(stop_ack);
     // Never self-suspend: the manager could resume us just before a self-suspend.
     while (camera_stop_requested()) {
-        vTaskDelay(1);
+        os_delay_ms(1);
     }
 }
 
@@ -91,29 +90,18 @@ status_t camera_capture(void) {
     if (camera_stop_requested()) {
         return ERROR_TASK_DISABLED;
     }
-    if (!camera_ready) {
-        status_t status = init_arducam_hardware();
-        if (camera_stop_requested()) {
-            camera_ready = status == SUCCESS;
-            return ERROR_TASK_DISABLED;
-        }
-        if (status != SUCCESS) {
-            warning("camera: Hardware initialization failed (status=%d)\n", status);
-            return status;
-        }
-        camera_ready = true;
-    }
-
-    if (camera_stop_requested()) {
-        return ERROR_TASK_DISABLED;
-    }
-    status_t status = capture_rtt();
+    // The camera sleeps between captures, and init_arducam_hardware() wakes it, so every capture starts with an init
+    status_t status = init_arducam_hardware(ARDUCAM_DEFAULT_RESOLUTION);
     if (status != SUCCESS) {
-        if (status != ERROR_TASK_DISABLED) {
+        warning("camera: Hardware initialization failed (status=%d)\n", status);
+    } else if (!camera_stop_requested()) {
+        status = capture_rtt();
+        if (status != SUCCESS && status != ERROR_TASK_DISABLED) {
             warning("camera: Capture failed (status=%d)\n", status);
         }
-        camera_ready = false;
     }
+    // Asleep whenever this returns, so a disabled camera task leaves the camera asleep too
+    arducam_sleep();
     return camera_stop_requested() ? ERROR_TASK_DISABLED : status;
 }
 
