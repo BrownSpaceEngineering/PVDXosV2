@@ -10,14 +10,26 @@ Adafruit Grand Central development board.
 - `bootloader/src/preboot.c` is the stage-1 image at flash `0x00000000`. It
   checksums eight independently linked `0x2000`-byte stage-2 copies in
   `0x00002000` through `0x00012000` and falls through to the next valid copy.
-- `bootloader/src/bootloader.c` validates the image header and repairs damaged
-  8 KiB OS blocks from the voted MRAM golden copy, then runs the OS in place.
-  Flash has a reserved header row at `0x00080000`, the OS starts at
-  The versionless 8 KiB header block is part of the OS image at `0x00080000`;
-  executable code starts at `0x00082000`. The complete 512 KiB OS image,
-  including its header, is mirrored to MRAM at `0x00000000`; the bootloader
-  copy is at MRAM `0x00080000`. No header or checksums are stored in the unused
-  flash gap. If MRAM is unavailable, the bootloader continues from flash.
+  If all eight fail, it starts the OS at `0x00082000` directly (no MRAM
+  repair), or resets if the OS vector table is not plausible.
+- `bootloader/src/bootloader.c` (stage 2) treats MRAM as the authority in
+  flight: it checks each flash OS block against the voted MRAM golden header's
+  CRCs and reprograms only blocks that differ (MRAM is read only for those),
+  then runs the OS in place. The versionless 8 KiB header block is part of the
+  OS image at `0x00080000`; executable code starts at `0x00082000`. The golden
+  copy (header + app blocks) is at MRAM `0x00000000`; the bootloader copy is at
+  MRAM `0x00080000`. No header or checksums are stored in the unused flash gap.
+  If MRAM is unavailable, the bootloader continues from flash.
+- The flash-to-MRAM refresh is ground-only: `tools/mram_refresh.sh request`
+  sets a backup-RAM request word and resets. Stage 2 checks the flash image,
+  invalidates the MRAM header, copies the blocks, writes the header last, and
+  clears the request only on success (otherwise it retries next boot). After a
+  J-Link flash, run it, or stage 2 will restore the old MRAM image. It takes
+  minutes at the current 50 kHz MRAM SPI clock.
+- The last 64 bytes of backup RAM (`bootloader/src/boot_record.h`) hold the
+  boot record (what stage 1/2 did; logged by `src/main.c` at startup) and the
+  refresh request. Stage 2 logs over RTT channel 1 (one line per MRAM page
+  written); its RTT control block shares `0x20000000` with the OS's.
 - `src/` is the application; `src/src_flash.ld` links it for execution from
   flash at `0x00082000`. `src/main.c` initializes Atmel Start hardware,
   logging, startup checks, tasks, and FreeRTOS.
@@ -146,7 +158,9 @@ Several commands above are interactive or never terminate. Agents must NOT run `
 - Inspect the running target (safe, read-only): `tools/gdb.sh "bt" "rtos_current" "faults" "info threads"`
 - Catch a fault (board resets ~1 s after `fatal()`): `GDB_TIMEOUT=90 tools/gdb.sh wait_fault`
 - Build/flash: see the `build-and-flash-pvdxos` skill. Flashing uses `flash.jlink`, never GDB `load`
-  (the app is linked for RAM and copied there by the bootloader).
+  (`flash.bin` carries the stage-1/2 images and the OS image header, not just the app).
+- MRAM golden copy: `tools/mram_refresh.sh status` (read-only); `request` (writes backup RAM and
+  resets) and `cancel` (writes backup RAM) need user approval like any other write/reset.
 
 Rules:
 

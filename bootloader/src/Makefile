@@ -15,6 +15,7 @@ export NUM_BOOTLOADERS := 8
 
 STAGE2_OBJS := \
 ../src/bootloader.o \
+../src/boot_log.o \
 ../src/flash_driver.o \
 ../src/mram_driver.o \
 ../src/watchdog_driver.o
@@ -23,8 +24,10 @@ export OBJS := $(STAGE2_OBJS)
 
 ### ALL DIRECTORIES WITH SOURCE FILES MUST BE LISTED HERE ###
 ### THESE ARE WRITTEN RELATIVE TO THE ./ASF/gcc/Makefile FILE ###
+# src/misc/printf supplies SEGGER_RTT.h/SEGGER_RTT_Conf.h (control-block layout for boot_log.c).
 export EXTRA_VPATH := \
-../../src
+../../src \
+../../../src/misc/printf
 
 ###############################################################################
 ###############################################################################

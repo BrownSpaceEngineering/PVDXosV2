@@ -14,6 +14,7 @@
 #include "main.h"
 
 #include "SEGGER_RTT.h"
+#include "boot_record.h"
 #include "ccsds/ccsds.h"
 #include "checks/device_checks.h"
 #include "cosmic_monkey_task.h"
@@ -26,7 +27,81 @@
 
 cosmic_monkey_task_arguments_t cm_args = {0};
 
+__attribute__((unused)) static const char *mram_state_name(uint8_t state) { // Unused when logging compiles out
+
+    static const char *const names[] = {"off", "ok", "degraded", "failed"};
+    return names[state & 0x03u];
+}
+
+// Logs what stage 1 and stage 2 did this boot (bootloader/src/boot_record.h), then invalidates the record.
+static void log_boot_record(void) {
+    volatile boot_record_t *record = (volatile boot_record_t *)BOOT_RECORD_ADDR;
+    if (record->magic != BOOT_RECORD_MAGIC) {
+        warning("Boot: no boot record from stage 1/2 (magic %x)\n", (unsigned int)record->magic);
+        return;
+    }
+
+    if (record->stage2_slot == BOOT_STAGE2_SLOT_FALLBACK) {
+        warning("Boot: all stage-2 copies failed their CRC; stage 1 started the OS directly (no MRAM repair)\n");
+    } else if (record->stage2_slot == BOOT_STAGE2_SLOT_UNKNOWN) {
+        info("Boot: stage 2 entered without stage 1\n");
+    } else {
+        info("Boot: stage 2 copy %u\n", (unsigned int)record->stage2_slot);
+    }
+
+    if (record->stage2_slot != BOOT_STAGE2_SLOT_FALLBACK) {
+        info("Boot: MRAM modules at init %s/%s/%s, at handoff %s/%s/%s\n", mram_state_name(record->mram_status_init),
+             mram_state_name(record->mram_status_init >> 2), mram_state_name(record->mram_status_init >> 4),
+             mram_state_name(record->mram_status_final), mram_state_name(record->mram_status_final >> 2),
+             mram_state_name(record->mram_status_final >> 4));
+
+        switch (record->refresh) {
+            case BOOT_REFRESH_NOT_REQUESTED:
+                break;
+            case BOOT_REFRESH_OK:
+                info("Boot: MRAM refresh complete (%u blocks copied)\n", (unsigned int)record->refresh_blocks);
+                break;
+            case BOOT_REFRESH_NO_MRAM:
+                warning("Boot: MRAM refresh requested but no MRAM module is healthy; will retry next boot\n");
+                break;
+            case BOOT_REFRESH_BAD_FLASH:
+                warning("Boot: MRAM refresh refused: flash image fails its own header/CRCs; will retry next boot\n");
+                break;
+            default:
+                warning("Boot: MRAM refresh FAILED at MRAM %x after %u blocks; golden copy invalid, will retry next boot\n",
+                        (unsigned int)record->refresh_fail_addr, (unsigned int)record->refresh_blocks);
+                break;
+        }
+
+        switch (record->repair) {
+            case BOOT_REPAIR_DONE:
+                info("Boot: flash checked against MRAM: %u blocks, %u repaired, %u with unusable MRAM copy, %u program "
+                     "failures%s\n",
+                     (unsigned int)record->blocks_checked, (unsigned int)record->blocks_repaired,
+                     (unsigned int)record->blocks_bad_mram, (unsigned int)record->blocks_program_failed,
+                     record->header_rewritten ? ", header row rewritten" : "");
+                break;
+            case BOOT_REPAIR_NO_MRAM:
+                warning("Boot: flash repair skipped: no healthy MRAM module\n");
+                break;
+            case BOOT_REPAIR_HEADER_READ_FAILED:
+                warning("Boot: flash repair skipped: MRAM header read failed\n");
+                break;
+            case BOOT_REPAIR_NO_IMAGE:
+                warning("Boot: flash repair skipped: MRAM holds no valid golden image\n");
+                break;
+            default:
+                warning("Boot: stage 2 did not record a repair result\n");
+                break;
+        }
+    }
+    record->magic = 0u;
+}
+
 static status_t PVDX_init(void) {
+    // The RTT control block is pinned to the start of RAM and shared with stage 2, so it is not zeroed at startup:
+    // re-create it before anything logs (otherwise RTT would keep using stage 2's buffer pointers).
+    SEGGER_RTT_Init();
     // Segger Buffer 0 is pre-configured at compile time according to segger documentation
     // Config the logging output channel (assuming it's not zero)
     if (LOGGING_RTT_OUTPUT_CHANNEL != 0) {
@@ -50,15 +125,7 @@ int main(void) {
     info("[+] Built from branch: %s\n", GIT_BRANCH_NAME);
     info("[+] Built from commit: %s\n", GIT_COMMIT_HASH);
 
-    // Bootloader sets a magic number in backup RAM to indicate that it has run successfully
-    uint32_t *p_magic_number = (uint32_t *)BOOTLOADER_MAGIC_NUMBER_ADDRESS;
-    uint32_t magic_number = *p_magic_number;
-    *p_magic_number = 0; // Clear the magic number so that this value doesn't linger
-    if (magic_number == BOOTLOADER_MAGIC_NUMBER_VALUE) {
-        info_impl("[+] Bootloader executed normally\n");
-    } else {
-        warning_impl("[!] Abnormal bootloader behavior (Magic Number: %x)\n", magic_number);
-    }
+    log_boot_record();
 
     /* ---------- INIT WATCHDOG, COMMAND_DISPATCHER, TASK_MANAGER TASKS (in that order) ---------- */
 

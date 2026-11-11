@@ -7,7 +7,10 @@ MEMORY
 {
   rom      (rx)  : ORIGIN = $BL_START, LENGTH = 0x00001FFC
   ram      (rwx) : ORIGIN = 0x2003B000, LENGTH = 0x00004000
-  bkupram  (rwx) : ORIGIN = 0x47000000, LENGTH = 0x00002000
+  /* SEGGER RTT control block only: same address as the OS's (src/src_flash.ld) so one host session follows both */
+  rtt      (rw)  : ORIGIN = 0x20000000, LENGTH = 0x00000100
+  /* The last 0x40 bytes of backup RAM are the boot record / MRAM refresh request (boot_record.h) */
+  bkupram  (rwx) : ORIGIN = 0x47000000, LENGTH = 0x00001FC0
   qspi     (rwx) : ORIGIN = 0x04000000, LENGTH = 0x01000000
 }
 __flash_address_zero = 0x00000000;
@@ -113,6 +116,7 @@ SECTIONS
         _sbss = . ;
         _szero = .;
         *(.bss .bss.*)
+        *(.segger_rtt_buf)
         *(COMMON)
         . = ALIGN(4);
         _ebss = . ;
@@ -129,6 +133,14 @@ SECTIONS
         _estack = .;
     } > ram
 
+    .segger_rtt (NOLOAD):
+    {
+        KEEP(*(.segger_rtt))
+    } > rtt
+
     . = ALIGN(4);
     _end = . ;
 }
+
+/* Stage 1 (preboot) links with this template too but has no RTT, hence the DEFINED guard. */
+ASSERT(DEFINED(_SEGGER_RTT) ? _SEGGER_RTT == ORIGIN(rtt) : 1, "SEGGER RTT control block must sit at the shared RAM address")

@@ -48,6 +48,9 @@ static inline uint8_t get_mram_state(mram_status_t status, uint8_t mram) {
 
 mram_status_t mram_init(void);
 
+/** @brief Current module states, including modules marked failed by reads/writes since `mram_init`. */
+mram_status_t mram_get_status(void);
+
 /**
  * @brief Reads majority-vote data from MRAM modules.
  * @param address Address to read from.
@@ -59,13 +62,26 @@ mram_status_t mram_init(void);
 bool mram_read_bytes(uint32_t address, uint8_t *data, uint32_t size);
 
 /**
- * @brief Writes data to all MRAM modules.
- * @param address Destination address.
+ * @brief Writes data to all healthy MRAM modules.
+ * @param address Destination address (any alignment).
  * @param data Data to be written.
- * @param size Size of data to be written, in bytes.
- * @return `false` if write succeeded; `true` otherwise.
+ * @param size Size of data to be written, in bytes (any length).
+ * @return `false` if every page reached at least one module; `true` otherwise.
+ * @note Data is split at 256-byte device page boundaries; each page is a separate WRITE transaction and is written
+ *       to every healthy module before the next page. A module whose write fails is marked failed and skipped for
+ *       the remaining pages. On failure, earlier pages may already have been written.
  */
 bool mram_write_bytes(uint32_t address, const uint8_t *data, uint32_t size);
+
+/**
+ * @brief Called by `mram_write_bytes` after each page, for progress logging.
+ * @param address First MRAM address of the page chunk.
+ * @param size Bytes in the chunk (at most 256).
+ * @param written Bitmask of modules that accepted the chunk (bit 0 = MRAM1).
+ * @param failed Bitmask of modules that failed it (and are now marked failed).
+ * @note The driver's default is a weak no-op; stage 2 overrides it to log over RTT.
+ */
+void mram_write_page_hook(uint32_t address, uint32_t size, uint8_t written, uint8_t failed);
 uint32_t crc32(const uint8_t *block, uint32_t size);
 
 #endif

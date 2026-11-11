@@ -68,7 +68,7 @@ static int completion_busy;
 struct payload_transfer {
     uint32_t size, address;
     unsigned int position, pets, transaction;
-    int transfer;
+    int transfer, device;
 };
 static struct payload_transfer payloads[1000];
 static unsigned int payload_count, transaction, payload_end_pets;
@@ -209,7 +209,8 @@ int32_t spi_m_sync_transfer(struct spi_m_sync_descriptor *spi, const struct spi_
         CHECK(payload_count < sizeof(payloads) / sizeof(payloads[0]));
         payloads[payload_count++] = (struct payload_transfer){
             .size = xfer->size, .address = address, .position = position,
-            .pets = pets, .transaction = transaction, .transfer = transfers
+            .pets = pets, .transaction = transaction, .transfer = transfers,
+            .device = selected
         };
     }
     uint32_t accepted = xfer->size;
@@ -500,6 +501,111 @@ static void roundtrip(void) {
     CHECK(selected == 0);
 }
 
+enum { PAGED_LENGTH = 1057, PAGED_BASE = 0x12345 };
+/* 0x12345 + 1057 spans a 187-byte head, three whole pages and a 102-byte tail. */
+static const uint32_t paged_sizes[] = {187, 256, 256, 256, 102};
+#define PAGED_PAGES (sizeof(paged_sizes) / sizeof(paged_sizes[0]))
+
+static void paged_setup(uint8_t *expected) {
+    reset_model(0);
+    for (unsigned int i = 0; i < PAGED_LENGTH; i++)
+        expected[i] = (uint8_t)((i * 37) ^ (i >> 8) ^ 0xa7);
+    for (int i = 0; i < 3; i++)
+        memset(devices[i].memory, 0x5a, sizeof(devices[i].memory));
+}
+
+/* Checks device `module` (0-based) holds expected data for pages [0, pages) and 0x5a elsewhere. */
+static void paged_check_device(int module, const uint8_t *expected, unsigned int pages) {
+    unsigned int written = 0;
+    for (unsigned int page = 0; page < pages; page++) written += paged_sizes[page];
+    CHECK(devices[module].memory[PAGED_BASE - 1] == 0x5a);
+    CHECK(devices[module].memory[PAGED_BASE + PAGED_LENGTH] == 0x5a);
+    for (unsigned int i = 0; i < PAGED_LENGTH; i++)
+        CHECK(devices[module].memory[PAGED_BASE + i] == (i < written ? expected[i] : 0x5a));
+}
+
+static void paged_write(void) {
+    uint8_t expected[PAGED_LENGTH];
+    paged_setup(expected);
+    CHECK(!mram_write_bytes(PAGED_BASE, expected, PAGED_LENGTH));
+    CHECK(selected == 0 && counts[0x02] == PAGED_PAGES * 3 && payload_count == PAGED_PAGES * 3);
+    uint32_t offset = 0;
+    for (unsigned int page = 0; page < PAGED_PAGES; page++) {
+        for (unsigned int module = 0; module < 3; module++) {
+            const struct payload_transfer *p = &payloads[page * 3 + module];
+            /* Page-major order, one WRITE transaction per page per replica, never crossing a page. */
+            CHECK(p->device == (int)module + 1);
+            CHECK(p->size == paged_sizes[page] && p->address == PAGED_BASE + offset && p->position == 4);
+            CHECK((p->address % 256) + p->size <= 256);
+            CHECK(page * 3 + module == 0 || p->transaction != payloads[page * 3 + module - 1].transaction);
+        }
+        offset += paged_sizes[page];
+    }
+    for (int module = 0; module < 3; module++) paged_check_device(module, expected, PAGED_PAGES);
+    for (uint8_t module = 1; module <= 3; module++)
+        CHECK(get_mram_state(mram_module_status, module) == MRAM_STATE_OK);
+
+    /* Page-aligned whole pages and a zero-length write. */
+    reset_model(0);
+    CHECK(!mram_write_bytes(0x1000, expected, 512));
+    CHECK(payload_count == 6 && payloads[0].size == 256 && payloads[3].address == 0x1100);
+    for (int module = 0; module < 3; module++)
+        CHECK(memcmp(devices[module].memory + 0x1000, expected, 512) == 0);
+    reset_model(0);
+    CHECK(!mram_write_bytes(0x1000, expected, 0));
+    CHECK(transfers == 0);
+}
+
+static void paged_write_failure(void) {
+    uint8_t expected[PAGED_LENGTH];
+    for (int short_result = 0; short_result <= 1; short_result++) {
+        /* One replica fails on page 2: it is marked failed and skipped; the others get every page. */
+        paged_setup(expected);
+        CHECK(!mram_write_bytes(PAGED_BASE, expected, PAGED_LENGTH));
+        int failing = payloads[2 * 3 + 1].transfer;
+        paged_setup(expected);
+        fail_at = failing;
+        short_transfer = short_result;
+        CHECK(!mram_write_bytes(PAGED_BASE, expected, PAGED_LENGTH));
+        CHECK(selected == 0);
+        CHECK(get_mram_state(mram_module_status, 1) == MRAM_STATE_OK);
+        CHECK(get_mram_state(mram_module_status, 2) == MRAM_STATE_FAILED);
+        CHECK(get_mram_state(mram_module_status, 3) == MRAM_STATE_OK);
+        CHECK(payload_count == PAGED_PAGES * 3 - 2);
+        for (unsigned int i = 2 * 3 + 2; i < payload_count; i++) CHECK(payloads[i].device != 2);
+        paged_check_device(0, expected, PAGED_PAGES);
+        paged_check_device(2, expected, PAGED_PAGES);
+        /* Pages 0-1 landed; nothing after the failed page was written (a short page may leave a partial prefix). */
+        for (unsigned int i = 0; i < 187 + 256; i++) CHECK(devices[1].memory[PAGED_BASE + i] == expected[i]);
+        for (unsigned int i = 187 + 512; i < PAGED_LENGTH; i++) CHECK(devices[1].memory[PAGED_BASE + i] == 0x5a);
+
+        /* The only healthy replica fails on page 1: report failure and write nothing further. */
+        paged_setup(expected);
+        set_mram_state(&mram_module_status, 1, MRAM_STATE_FAILED);
+        set_mram_state(&mram_module_status, 3, MRAM_STATE_FAILED);
+        CHECK(!mram_write_bytes(PAGED_BASE, expected, PAGED_LENGTH));
+        failing = payloads[1].transfer;
+        paged_setup(expected);
+        set_mram_state(&mram_module_status, 1, MRAM_STATE_FAILED);
+        set_mram_state(&mram_module_status, 3, MRAM_STATE_FAILED);
+        fail_at = failing;
+        short_transfer = short_result;
+        CHECK(mram_write_bytes(PAGED_BASE, expected, PAGED_LENGTH));
+        CHECK(selected == 0 && payload_count == 2 && counts[0x02] == 2);
+        CHECK(get_mram_state(mram_module_status, 2) == MRAM_STATE_FAILED);
+        for (unsigned int i = 0; i < 187; i++) CHECK(devices[1].memory[PAGED_BASE + i] == expected[i]);
+        for (unsigned int i = 187 + 256; i < PAGED_LENGTH; i++) CHECK(devices[1].memory[PAGED_BASE + i] == 0x5a);
+        paged_check_device(0, expected, 0);
+        paged_check_device(2, expected, 0);
+
+        /* No healthy replica at all. */
+        paged_setup(expected);
+        mram_module_status = 0;
+        CHECK(mram_write_bytes(PAGED_BASE, expected, PAGED_LENGTH));
+        CHECK(transfers == 0);
+    }
+}
+
 int main(int argc, char **argv) {
     CHECK(argc == 2);
     if (!strcmp(argv[1], "protection")) protection();
@@ -514,110 +620,12 @@ int main(int argc, char **argv) {
     else if (!strcmp(argv[1], "roundtrip")) roundtrip();
     else if (!strcmp(argv[1], "chunks")) chunked_transfers(false);
     else if (!strcmp(argv[1], "chunk_failures")) chunked_transfers(true);
+    else if (!strcmp(argv[1], "paged_write")) paged_write();
+    else if (!strcmp(argv[1], "paged_write_failure")) paged_write_failure();
     else CHECK(false);
     return 0;
 }
 """
-
-
-BOOTLOADER_HARNESS = r"""
-#include <setjmp.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "mram_driver.h"
-#include "watchdog_driver.h"
-#define CHECK(expr) do { if (!(expr)) { \
-    fprintf(stderr, "%s:%d: %s\n", __func__, __LINE__, #expr); exit(1); \
-} } while (0)
-static uint8_t host_ram[MRAM_OS_SIZE], host_flash[3 * MRAM_OS_SIZE];
-static jmp_buf app_jump;
-static bool available, valid_first;
-static unsigned int reads, writes, checksums, setups, inits;
-const volatile uint8_t __flash_address_zero = 0x5a;
-#include "bootloader_host.c"
-
-void watchdog_setup(void) { setups++; }
-void watchdog_pet(void) {}
-mram_status_t mram_init(void) {
-    inits++;
-    return available ? MRAM_STATE_OK : MRAM_STATE_FAILED;
-}
-void mram_write_bytes(uint32_t address, const uint8_t *data, uint32_t size) {
-    /* Development flash staging stays enabled; never dereference address 1. */
-    CHECK(address == MRAM_FLASH_BASE_ADDRESS + (writes ? 1u : 0u));
-    CHECK(size == (writes ? MRAM_FLASH_SIZE - 1 : 1));
-    CHECK(data != NULL && writes < 2);
-    writes++;
-}
-void mram_read_bytes(uint32_t address, uint8_t *data, uint32_t size) {
-    CHECK(available && reads < 3 && data == host_ram && size == MRAM_OS_SIZE);
-    CHECK(address == MRAM_OS_BASE_ADDRESS + reads * MRAM_OS_SIZE);
-    memset(data, 0x6d + reads, size);
-    const uint8_t checksum[] = {0x78, 0x56, 0x34, 0x12};
-    memset(data + size - 4, 0, 4);
-    if (valid_first && reads == 0) memcpy(data + size - 4, checksum, 4);
-    reads++;
-}
-uint32_t crc32(const uint8_t *data, uint32_t size) {
-    CHECK(data == host_ram && size == MRAM_OS_SIZE - 4);
-    checksums++;
-    return 0x12345678;
-}
-
-int main(int argc, char **argv) {
-    CHECK(argc == 2);
-    CHECK(!strcmp(argv[1], "bad") || !strcmp(argv[1], "none") || !strcmp(argv[1], "valid"));
-    available = strcmp(argv[1], "none") != 0;
-    valid_first = !strcmp(argv[1], "valid");
-    memset(host_ram, 0xee, sizeof(host_ram));
-    for (unsigned int i = 0; i < MRAM_OS_SIZE; i++) {
-        uint8_t expected = (uint8_t)((i * 37) ^ 0xa5);
-        /* Independent single-bit errors: every replica differs, majority is expected. */
-        for (unsigned int replica = 0; replica < 3; replica++)
-            host_flash[replica * MRAM_OS_SIZE + i] = expected ^ (1u << replica);
-    }
-    if (setjmp(app_jump) == 0) {
-        bootloader_main();
-        CHECK(false);  /* Handoff must use go_to_app, not return. */
-    }
-    CHECK(setups == 1 && inits == 1);
-    CHECK(reads == (valid_first ? 1u : available ? 3u : 0u));
-    CHECK(checksums == reads && writes == (available ? 2u : 0u));
-    for (unsigned int i = 0; i < MRAM_OS_SIZE; i++) {
-        uint8_t expected = (uint8_t)((i * 37) ^ 0xa5);
-        if (valid_first) {
-            const uint8_t checksum[] = {0x78, 0x56, 0x34, 0x12};
-            expected = i < MRAM_OS_SIZE - 4 ? 0x6d : checksum[i - (MRAM_OS_SIZE - 4)];
-        }
-        CHECK(host_ram[i] == expected);
-    }
-    return 0;
-}
-"""
-
-
-def host_bootloader_source():
-    """Adapt hardware boundaries only; keep the boot/checksum control flow real."""
-    source = (ROOT / "bootloader" / "src" / "bootloader.c").read_text()
-    for old, new, count in (
-        ("#define FLASH_OS_BASE_ADDRESS (0x020000)",
-         "#define FLASH_OS_BASE_ADDRESS (host_flash)", 1),
-        ("#define RAM_OS_BASE_ADDRESS (0x20000000)",
-         "#define RAM_OS_BASE_ADDRESS (host_ram)", 1),
-        ("int main(void)", "int bootloader_main(void)", 2),
-    ):
-        if source.count(old) != count:
-            raise RuntimeError(f"Bootloader host adaptation needs review: {old}")
-        source = source.replace(old, new)
-    source, count = re.subn(
-        r"void go_to_app\(void\) \{.*\}\s*\Z",
-        "void go_to_app(void) { longjmp(app_jump, 1); }\n",
-        source, flags=re.DOTALL,
-    )
-    if count != 1:
-        raise RuntimeError("Could not isolate the ARM go_to_app definition")
-    return source
 
 
 class ImageFormatTest(unittest.TestCase):
@@ -702,6 +710,12 @@ class MramDriverTest(unittest.TestCase):
 
     def test_later_hal_chunk_failures_return_false_and_release_cs(self):
         self.run_case("chunk_failures")
+
+    def test_public_write_is_split_at_pages_and_interleaved_across_replicas(self):
+        self.run_case("paged_write")
+
+    def test_paged_write_skips_failed_replica_and_stops_when_none_remain(self):
+        self.run_case("paged_write_failure")
 
 
 if __name__ == "__main__":

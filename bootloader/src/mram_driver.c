@@ -41,8 +41,12 @@ _|"""""|_|"""""|_|"""""|_|"""""|
 #define MRAM_FLAG_ERRORS 0x3Au
 #define MRAM_READY_TIMEOUT_MS 20u
 #define MRAM_SPI_CHUNK_SIZE 512u
+// Device page: in NOR page mode a WRITE wraps within one, so public writes never cross a page boundary.
+// Also the unit of majority voting in mram_read_bytes.
+#define MRAM_PAGE_SIZE 256u
 
 #define PMM_REG     8       // Persistent Memory Mode register
+#define PMM_WRITE_MODE 0x01u // Register 8 bit 0: 1 = persistent memory mode (bit 1 is RPE, unrelated)
 
 typedef enum {
     MRAM_INIT_OK = 0,                        // No issues
@@ -329,13 +333,13 @@ mram_init_status_t disable_block_protection(uint8_t mram) {
 mram_init_status_t set_persistent_mode(uint8_t mram) {
     uint8_t reg_val = read_nonvol_reg(mram, PMM_REG);
 
-    if (!(reg_val & 0x03)) {
-        reg_val |= 0x03;
+    if (!(reg_val & PMM_WRITE_MODE)) {
+        reg_val |= PMM_WRITE_MODE;
         write_vol_reg(mram, PMM_REG, reg_val);
     }
 
     reg_val = read_vol_reg(mram, PMM_REG);
-    if (!(reg_val & 0x03)) {
+    if (!(reg_val & PMM_WRITE_MODE)) {
         // persistent mode not enabled
         return MRAM_INIT_FAIL_PERSIST;
     } else {
@@ -343,32 +347,55 @@ mram_init_status_t set_persistent_mode(uint8_t mram) {
     }
 }
 
-bool mram_write_bytes(uint32_t address, const uint8_t *data, uint32_t size) {
-    bool write_succeeded = false;
-    for (uint8_t mram = 1; mram <= 3; mram++) {
-        uint8_t state = get_mram_state(mram_module_status, mram);
-        if (state != MRAM_STATE_OK && state != MRAM_STATE_DEGRADED) {
-            continue;
-        }
-        bool succeeded = write_bytes(mram, address, data, size);
-        if (succeeded) {
-            write_succeeded = true;
-        } else {
-            set_mram_state(&mram_module_status, mram, MRAM_STATE_FAILED);
-        }
-    }
-    return !write_succeeded;
+__attribute__((weak)) void mram_write_page_hook(uint32_t address, uint32_t size, uint8_t written, uint8_t failed) {
+    (void)address;
+    (void)size;
+    (void)written;
+    (void)failed;
 }
 
-#define PAGE_SIZE 256
+bool mram_write_bytes(uint32_t address, const uint8_t *data, uint32_t size) {
+    // Split at device page boundaries (partial head, whole pages, partial tail) and write each page to every
+    // healthy replica before moving on, so an interrupted write leaves the replicas differing by at most one page.
+    while (size > 0u) {
+        uint32_t chunk = MRAM_PAGE_SIZE - (address % MRAM_PAGE_SIZE);
+        if (chunk > size) {
+            chunk = size;
+        }
+
+        uint8_t written = 0u;
+        uint8_t failed = 0u;
+        for (uint8_t mram = 1; mram <= 3; mram++) {
+            uint8_t state = get_mram_state(mram_module_status, mram);
+            if (state != MRAM_STATE_OK && state != MRAM_STATE_DEGRADED) {
+                continue;
+            }
+            if (write_bytes(mram, address, data, chunk)) {
+                written |= (uint8_t)(1u << (mram - 1u));
+            } else {
+                failed |= (uint8_t)(1u << (mram - 1u));
+                set_mram_state(&mram_module_status, mram, MRAM_STATE_FAILED);
+            }
+        }
+        mram_write_page_hook(address, chunk, written, failed);
+        if (written == 0u) {
+            return true; // No replica accepted this page.
+        }
+
+        address += chunk;
+        data += chunk;
+        size -= chunk;
+    }
+    return false;
+}
 
 bool mram_read_bytes(uint32_t address, uint8_t *data, uint32_t size) {
-    if (size % PAGE_SIZE != 0) {
+    if (size % MRAM_PAGE_SIZE != 0) {
         return true; // Read failed.
     }
-    uint32_t npages = size / PAGE_SIZE;
+    uint32_t npages = size / MRAM_PAGE_SIZE;
 
-    uint8_t read_data[3][PAGE_SIZE];
+    uint8_t read_data[3][MRAM_PAGE_SIZE];
     for (uint32_t page = 0; page < npages; page++) {
         bool read_succeeded[3] = {false, false, false};
         uint8_t read_count = 0;
@@ -377,7 +404,7 @@ bool mram_read_bytes(uint32_t address, uint8_t *data, uint32_t size) {
             if (state != MRAM_STATE_OK && state != MRAM_STATE_DEGRADED) {
                 continue;
             }
-            if (!read_bytes(mram_idx, address + PAGE_SIZE * page, read_data[mram_idx - 1], PAGE_SIZE)) {
+            if (!read_bytes(mram_idx, address + MRAM_PAGE_SIZE * page, read_data[mram_idx - 1], MRAM_PAGE_SIZE)) {
                 set_mram_state(&mram_module_status, mram_idx, MRAM_STATE_FAILED);
                 continue;
             }
@@ -389,7 +416,7 @@ bool mram_read_bytes(uint32_t address, uint8_t *data, uint32_t size) {
         }
 
         bool any_error = false;
-        for (uint16_t read_idx = 0; read_idx < PAGE_SIZE; read_idx++) {
+        for (uint16_t read_idx = 0; read_idx < MRAM_PAGE_SIZE; read_idx++) {
             uint8_t values[3];
             uint8_t value_count = 0;
             for (uint8_t module_index = 0; module_index < 3; module_index++) {
@@ -409,7 +436,7 @@ bool mram_read_bytes(uint32_t address, uint8_t *data, uint32_t size) {
             } else {
                 voted_value = (values[0] & values[1]) | (values[1] & values[2]) | (values[0] & values[2]);
             }
-            data[read_idx + PAGE_SIZE * page] = voted_value;
+            data[read_idx + MRAM_PAGE_SIZE * page] = voted_value;
             for (uint8_t module_index = 0; module_index < 3; module_index++) {
                 if (read_succeeded[module_index] && read_data[module_index][read_idx] != voted_value) {
                     any_error = true;
@@ -418,7 +445,7 @@ bool mram_read_bytes(uint32_t address, uint8_t *data, uint32_t size) {
         }
 
         if (any_error) {
-            mram_write_bytes(address + PAGE_SIZE * page, data + PAGE_SIZE * page, PAGE_SIZE);
+            mram_write_bytes(address + MRAM_PAGE_SIZE * page, data + MRAM_PAGE_SIZE * page, MRAM_PAGE_SIZE);
         }
     }
     return false; // Read succeeded.
@@ -484,6 +511,8 @@ mram_status_t mram_init(void) {
     mram_module_status = status;
     return status;
 }
+
+mram_status_t mram_get_status(void) { return mram_module_status; }
 
 #if defined(UNITTEST) && defined(TEST_MRAM)
 #include <string.h>

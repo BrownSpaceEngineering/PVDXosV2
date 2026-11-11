@@ -7,7 +7,8 @@ MEMORY
 {
     rom      (rx)  : ORIGIN = 0x00082000, LENGTH = 0x0007E000
   ram      (rwx) : ORIGIN = 0x20000000, LENGTH = 0x00040000
-  bkupram  (rwx) : ORIGIN = 0x47000000, LENGTH = 0x00002000
+  /* The last 0x40 bytes of backup RAM are the boot record / MRAM refresh request (bootloader/src/boot_record.h) */
+  bkupram  (rwx) : ORIGIN = 0x47000000, LENGTH = 0x00001FC0
   qspi     (rwx) : ORIGIN = 0x04000000, LENGTH = 0x01000000
 }
 
@@ -71,6 +72,13 @@ SECTIONS
     . = ALIGN(4);
     _etext = .;
 
+    /* SEGGER RTT control block, first in RAM: stage 2 uses the same address so one host session follows the boot.
+       Not zeroed at startup; main() calls SEGGER_RTT_Init() before any logging. */
+    .segger_rtt (NOLOAD) :
+    {
+        KEEP(*(.segger_rtt))
+    } > ram
+
     .relocate : AT (_etext)
     {
         . = ALIGN(4);
@@ -105,6 +113,7 @@ SECTIONS
         _sbss = .;
         _szero = .;
         *(.bss .bss.*)
+        *(.segger_rtt_buf)
         *(COMMON)
         . = ALIGN(4);
         _ebss = .;
@@ -123,3 +132,5 @@ SECTIONS
     . = ALIGN(4);
     _end = .;
 }
+
+ASSERT(_SEGGER_RTT == ORIGIN(ram), "SEGGER RTT control block must sit at the shared RAM address")
