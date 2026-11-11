@@ -23,6 +23,7 @@
 #include "mutexes.h"
 #include "arducam_driver.h"
 #include "display_driver.h"
+#include "drivers/at86rf215/at86_irq.h"
 #include "burn/burn_uhf.h"
 #include "image_buffer_PVDX.h"
 #include "mram_driver.h"
@@ -257,6 +258,10 @@ int main(void) {
     if (i2c_camera_bus_mutex == NULL) {
         fatal("Failed to create I2C_CAMERA bus mutex");
     }
+
+    // The UHF radio's IRQ line stays disarmed until a task waits on it, so this is safe before the radio is set up
+    at86_irq_init();
+
     log_boot_report();
 
     /* ---------- DEVICE CHECKS ---------- */

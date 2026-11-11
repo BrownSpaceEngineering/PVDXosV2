@@ -2349,6 +2349,13 @@ pads:
     mode: Digital output
     user_label: CAMERA_SCK
     configuration: null
+  UHF_IRQ:
+    name: PA27
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA27
+    mode: Digital input
+    user_label: UHF_IRQ
+    configuration:
+      pad_pull_config: Pull-down
   EPS_IRQ:
     name: PB28
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB28

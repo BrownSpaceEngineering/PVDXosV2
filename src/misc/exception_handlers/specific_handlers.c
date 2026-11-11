@@ -125,9 +125,7 @@ void EIC_9_Handler(void) {
 void EIC_10_Handler(void) {
     PVDX_default_handler();
 }
-void EIC_11_Handler(void) {
-    PVDX_default_handler();
-}
+// EIC_11_Handler is the UHF radio's IRQ, in drivers/at86rf215/at86_irq.c
 void EIC_12_Handler(void) {
     PVDX_default_handler();
 }
