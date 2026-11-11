@@ -12,6 +12,7 @@
 #include "arducam_registers.h"
 #include "jpeg_restart.h"
 #include "mram_map.h"
+#include "mutexes.h"
 #include "os_delay.h"
 #include "task_list.h"
 #include "watchdog_task.h"
@@ -65,12 +66,8 @@ status_t init_arducam_hardware(arducam_resolution_t resolution) {
         return ERROR_BAD_ARGS;
     }
 
-    // Configure ASF I2C and SPI drivers for this device
-    // Baud rates MUST match Atmel-Start config baudrates
-    i2c_m_sync_set_baudrate(&I2C_CAMERA, 0, 100000);
-    i2c_m_sync_get_io_descriptor(&I2C_CAMERA, &arducam_i2c_io);
-    i2c_m_sync_enable(&I2C_CAMERA);
-    i2c_m_sync_set_slaveaddr(&I2C_CAMERA, ARDUCAM_ADDR >> 1, I2C_M_SEVEN);
+    // main() enables I2C_SENSORS; this only needs its io descriptor
+    i2c_m_sync_get_io_descriptor(&I2C_SENSORS, &arducam_i2c_io);
 
     gpio_set_pin_direction(CAMERA_CS, GPIO_DIRECTION_OUT);
     gpio_set_pin_level(CAMERA_CS, 1);
@@ -161,7 +158,12 @@ uint32_t arducam_i2c_write(uint8_t addr, uint8_t *data, uint16_t size) {
     writeBuf[0] = addr;
     memcpy(writeBuf + 1, data, size);
     int32_t rv;
-    if ((rv = io_write(arducam_i2c_io, writeBuf, size + 1)) < 0) {
+    lock_mutex(i2c_sensors_bus_mutex);
+    // The slave address is per descriptor, and the other drivers on this bus change it
+    i2c_m_sync_set_slaveaddr(&I2C_SENSORS, ARDUCAM_ADDR >> 1, I2C_M_SEVEN);
+    rv = io_write(arducam_i2c_io, writeBuf, size + 1);
+    unlock_mutex(i2c_sensors_bus_mutex);
+    if (rv < 0) {
         warning("Error in Arducam Write");
     }
 	return rv;
@@ -183,12 +185,16 @@ uint32_t arducam_i2c_multi_write(const struct sensor_reg reglist[]) {
 uint32_t arducam_i2c_read(uint8_t addr, uint8_t *readBuf, uint16_t size) {
     uint8_t writeBuf[1] = { addr };
     int32_t rv;
+    // Held across the address write and the read so no other transfer lands between them
+    lock_mutex(i2c_sensors_bus_mutex);
+    i2c_m_sync_set_slaveaddr(&I2C_SENSORS, ARDUCAM_ADDR >> 1, I2C_M_SEVEN);
     if ((rv = io_write(arducam_i2c_io, writeBuf, 1)) < 0) {
         warning("Error in Arducam Write");
     }
     if ((rv = io_read(arducam_i2c_io, readBuf, size)) < 0) {
         warning("Error in Arducam Read");
     }
+    unlock_mutex(i2c_sensors_bus_mutex);
     return rv;
 }
 

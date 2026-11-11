@@ -119,8 +119,8 @@ The synchronous ASF HAL can still stall inside a hardware transfer; in that
 case timeout/watchdog recovery is necessary. The manager reports a fatal safe
 stop timeout rather than suspending a task that may own hardware resources.
 
-`SPI_CAMERA` is camera-owned. `I2C_CAMERA` is shared with fuel gauges and PMB;
-all three drivers use `i2c_camera_bus_mutex`. The mutex is created before startup
+`SPI_CAMERA` is camera-owned. `I2C_SENSORS` is shared with fuel gauges and PMB;
+all three drivers use `i2c_sensors_bus_mutex`. The mutex is created before startup
 checks/tests. Camera initialization preserves generated 100 kHz I2C timing and
 sets 1 MHz SPI using the ASF BAUD-divider API.
 

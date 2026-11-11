@@ -249,10 +249,18 @@ int main(void) {
     }
 
     // Initialize the mutex for the I2C bus shared by Arducam, fuel gauges, and PMB before startup checks/tests
-    i2c_camera_bus_mutex = xSemaphoreCreateMutexStatic(&i2c_camera_bus_mutex_buffer);
+    i2c_sensors_bus_mutex = xSemaphoreCreateMutexStatic(&i2c_sensors_bus_mutex_buffer);
 
-    if (i2c_camera_bus_mutex == NULL) {
-        fatal("Failed to create I2C_CAMERA bus mutex");
+    if (i2c_sensors_bus_mutex == NULL) {
+        fatal("Failed to create I2C_SENSORS bus mutex");
+    }
+    // atmel_start_init() initializes the shared buses but leaves them disabled; the drivers on them assume they are
+    // enabled
+    if (i2c_m_sync_enable(&I2C_SENSORS) != 0) {
+        warning("Failed to enable the I2C_SENSORS bus\n");
+    }
+    if (spi_m_sync_enable(&SPI_MAGNETOMETER_GYRO) != 0) {
+        warning("Failed to enable the SPI_MAGNETOMETER_GYRO bus\n");
     }
     log_boot_report();
 

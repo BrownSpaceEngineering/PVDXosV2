@@ -789,8 +789,6 @@ static status_t gyro_configure(void) {
  *       so that a transient fault gets a second attempt rather than failing the whole init.
  */
 status_t init_gyro_hardware(void) {
-    spi_m_sync_enable(&SPI_MAGNETOMETER_GYRO); // if you forget this line, every transfer returns -20
-
     GYRO_CS_HIGH(); // leave the gyro deselected until a transfer wants it
     gyro_reset();
 

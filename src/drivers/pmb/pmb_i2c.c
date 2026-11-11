@@ -7,33 +7,11 @@
 
 #include "pmb_i2c.h"
 
-#include <stdbool.h>
 #include <string.h>
 
 #include "hal_i2c_m_sync.h"
 #include "logging.h"
 #include "mutexes.h"
-
-static bool pmb_i2c_enabled = false;
-
-/**
- * Enables the SERCOM; system_init() initializes it but leaves it disabled. Safe to call more than once.
- */
-status_t pmb_i2c_init(void) {
-    lock_mutex(i2c_camera_bus_mutex);
-    if (pmb_i2c_enabled) {
-        unlock_mutex(i2c_camera_bus_mutex);
-        return SUCCESS;
-    }
-    if (i2c_m_sync_enable(&PMB_I2C) != 0) {
-        unlock_mutex(i2c_camera_bus_mutex);
-        warning("pmb_i2c: failed to enable bus\n");
-        return ERROR_I2C_FAILED;
-    }
-    pmb_i2c_enabled = true;
-    unlock_mutex(i2c_camera_bus_mutex);
-    return SUCCESS;
-}
 
 status_t pmb_i2c_write_reg(uint8_t addr, uint8_t reg, const uint8_t *data, uint8_t len) {
     if (len > PMB_I2C_MAX_WRITE_LEN) {
@@ -49,9 +27,9 @@ status_t pmb_i2c_write_reg(uint8_t addr, uint8_t reg, const uint8_t *data, uint8
         .buffer = buf,
         .flags = I2C_M_SEVEN | I2C_M_STOP,
     };
-    lock_mutex(i2c_camera_bus_mutex);
-    int32_t rc = _i2c_m_sync_transfer(&PMB_I2C.device, &msg);
-    unlock_mutex(i2c_camera_bus_mutex);
+    lock_mutex(i2c_sensors_bus_mutex);
+    int32_t rc = _i2c_m_sync_transfer(&I2C_SENSORS.device, &msg);
+    unlock_mutex(i2c_sensors_bus_mutex);
     if (rc != 0) {
         return ERROR_I2C_FAILED;
     }
@@ -71,13 +49,13 @@ status_t pmb_i2c_read_reg(uint8_t addr, uint8_t reg, uint8_t *data, uint8_t len)
         .buffer = data,
         .flags = I2C_M_SEVEN | I2C_M_RD | I2C_M_STOP,
     };
-    lock_mutex(i2c_camera_bus_mutex);
-    if (_i2c_m_sync_transfer(&PMB_I2C.device, &wr) != 0) {
-        unlock_mutex(i2c_camera_bus_mutex);
+    lock_mutex(i2c_sensors_bus_mutex);
+    if (_i2c_m_sync_transfer(&I2C_SENSORS.device, &wr) != 0) {
+        unlock_mutex(i2c_sensors_bus_mutex);
         return ERROR_I2C_FAILED;
     }
-    int32_t rc = _i2c_m_sync_transfer(&PMB_I2C.device, &rd);
-    unlock_mutex(i2c_camera_bus_mutex);
+    int32_t rc = _i2c_m_sync_transfer(&I2C_SENSORS.device, &rd);
+    unlock_mutex(i2c_sensors_bus_mutex);
     if (rc != 0) {
         return ERROR_I2C_FAILED;
     }
@@ -95,9 +73,9 @@ status_t pmb_i2c_probe(uint8_t addr) {
         .buffer = &byte,
         .flags = I2C_M_SEVEN | I2C_M_RD | I2C_M_STOP,
     };
-    lock_mutex(i2c_camera_bus_mutex);
-    int32_t rc = _i2c_m_sync_transfer(&PMB_I2C.device, &rd);
-    unlock_mutex(i2c_camera_bus_mutex);
+    lock_mutex(i2c_sensors_bus_mutex);
+    int32_t rc = _i2c_m_sync_transfer(&I2C_SENSORS.device, &rd);
+    unlock_mutex(i2c_sensors_bus_mutex);
     if (rc != 0) {
         return ERROR_I2C_FAILED;
     }
