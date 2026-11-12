@@ -2,6 +2,9 @@
 
 #include <string.h>
 
+#include "FreeRTOS.h"
+#include "task.h"
+
 #define TEL_ARRAY_LEN(a) (sizeof(a) / sizeof((a)[0]))
 
 /* ---------- WRITING ---------- */
@@ -74,6 +77,12 @@ static void put_floats(tel_writer_t *w, const float *values, size_t n) {
     }
 }
 
+static void put_uint16s(tel_writer_t *w, const uint16_t *values, size_t n) {
+    for (size_t i = 0; i < n; i++) {
+        put_uint16(w, values[i]);
+    }
+}
+
 static void put_int32s(tel_writer_t *w, const int32_t *values, size_t n) {
     for (size_t i = 0; i < n; i++) {
         put_uint32(w, (uint32_t)values[i]);
@@ -125,7 +134,7 @@ static void serialize_eps(tel_writer_t *w, const tel_eps_data_t *eps) {
 
 static void serialize_state_machine(tel_writer_t *w, const tel_state_machine_data_t *sm) {
     put_bytes(w, sm->state_history, sizeof(sm->state_history));
-    put_floats(w, sm->transition_times, TEL_ARRAY_LEN(sm->transition_times));
+    put_uint32s(w, sm->transition_times, TEL_ARRAY_LEN(sm->transition_times));
     put_bytes(w, sm->input_variables, sizeof(sm->input_variables));
 }
 
@@ -137,7 +146,7 @@ static void serialize_adcs(tel_writer_t *w, const tel_adcs_data_t *adcs) {
 }
 
 static void serialize_mram(tel_writer_t *w, const tel_mram_data_t *mram) {
-    put_bytes(w, mram->status, sizeof(mram->status));
+    put_uint8(w, mram->status);
     put_uint32(w, mram->reflash_count);
     put_uint32s(w, mram->reflash_timestamps, TEL_ARRAY_LEN(mram->reflash_timestamps));
 }
@@ -148,90 +157,117 @@ static void serialize_os_errors(tel_writer_t *w, const tel_os_error_data_t *os) 
 }
 
 void telemetry_collect(tel_downlink_t *downlink) {
-    // TODO: Do we need some kid of mutex here to prevent half of the data from being written?
+    taskENTER_CRITICAL();
     *downlink = tel_cache;
+    taskEXIT_CRITICAL();
 }
 
 void telemetry_update_boot_timestamp(uint32_t boot_timestamp) {
+    taskENTER_CRITICAL();
     tel_cache.boot_timestamp = boot_timestamp;
+    taskEXIT_CRITICAL();
 }
 
 void telemetry_update_last_bootloader(uint8_t bootloader) {
+    taskENTER_CRITICAL();
     tel_cache.last_bootloader = bootloader;
+    taskEXIT_CRITICAL();
 }
 
 void telemetry_update_magnetometer_registers(uint8_t revid, uint8_t bist) {
+    taskENTER_CRITICAL();
     tel_cache.magnetometer.revid_register = revid;
     tel_cache.magnetometer.bist_register = bist;
+    taskEXIT_CRITICAL();
 }
 
 void telemetry_update_magnetometer_readings(const mag_raw_reading_t *raw, const mag_data_t *gain_adjusted) {
+    taskENTER_CRITICAL();
     tel_cache.magnetometer.raw_readings[0] = raw->x;
     tel_cache.magnetometer.raw_readings[1] = raw->y;
     tel_cache.magnetometer.raw_readings[2] = raw->z;
     tel_cache.magnetometer.gain_adjusted_readings[0] = gain_adjusted->x;
     tel_cache.magnetometer.gain_adjusted_readings[1] = gain_adjusted->y;
     tel_cache.magnetometer.gain_adjusted_readings[2] = gain_adjusted->z;
+    taskEXIT_CRITICAL();
 }
 
 void telemetry_update_magnetorquer_data(const mag_torque_input_t *mag_data) {
+    taskENTER_CRITICAL();
     tel_cache.magnetorquer.duty[0] = mag_data->x;
     tel_cache.magnetorquer.duty[1] = mag_data->y;
     tel_cache.magnetorquer.duty[2] = mag_data->z;
+    taskEXIT_CRITICAL();
 }
 
-void telemetry_update_photodiode_data(const float photodiode_data[22]) {
+void telemetry_update_photodiode_data(const uint16_t photodiode_data[PHD_COUNT]) {
+    taskENTER_CRITICAL();
     memcpy(tel_cache.photodiode.raw_readings, photodiode_data, sizeof(tel_cache.photodiode.raw_readings));
+    taskEXIT_CRITICAL();
 }
 
 void telemetry_update_gyro_data(const SCH1_result_t *gyro_readings) {
+    taskENTER_CRITICAL();
     if (gyro_readings == NULL) {
         tel_cache.gyro.health = TEL_DEVICE_STATUS_BROKEN;
-        return;
+    } else {
+        for (size_t i = 0; i < 3; i++) {
+            tel_cache.gyro.rate[i] = gyro_readings->Rate1[i];
+        }
+        tel_cache.gyro.health = TEL_DEVICE_STATUS_OK;
     }
-
-    for (size_t i = 0; i < 3; i++) {
-        tel_cache.gyro.rate[i] = gyro_readings->Rate1[i];
-    }
-    tel_cache.gyro.health = TEL_DEVICE_STATUS_OK;
+    taskEXIT_CRITICAL();
 }
 
 void telemetry_update_camera_data(tel_device_status_t camera_status, bool last_capture_succeeded, uint8_t resolution) {
+    taskENTER_CRITICAL();
     tel_cache.camera.health = camera_status;
     tel_cache.camera.last_capture_succeeded = last_capture_succeeded;
     tel_cache.camera.resolution = resolution;
+    taskEXIT_CRITICAL();
 }
 
 void telemetry_update_display_data(tel_device_status_t display_status) {
+    taskENTER_CRITICAL();
     tel_cache.display_health = display_status;
+    taskEXIT_CRITICAL();
 }
 
 void telemetry_update_uhf_data(tel_device_status_t uhf_status) {
+    taskENTER_CRITICAL();
     tel_cache.uhf_health = uhf_status;
+    taskEXIT_CRITICAL();
 }
 
 void telemetry_update_sband_data(tel_device_status_t sband_status, uint32_t last_transmission_timestamp) {
+    taskENTER_CRITICAL();
     tel_cache.sband.health = sband_status;
     tel_cache.sband.last_transmission_timestamp = last_transmission_timestamp;
+    taskEXIT_CRITICAL();
 }
 
 void telemetry_update_adcs_data(const tel_adcs_data_t *adcs_data) {
+    taskENTER_CRITICAL();
     tel_cache.adcs = *adcs_data;
+    taskEXIT_CRITICAL();
 }
 
 void telemetry_update_eps_data(uint8_t pack_number, float charge_percent, float voltage, float current, float temperature) {
     // 4 battery packs
     if (pack_number < 4) {
+        taskENTER_CRITICAL();
         tel_cache.eps.charge_percent[pack_number] = charge_percent;
         tel_cache.eps.voltage[pack_number] = voltage;
         tel_cache.eps.current[pack_number] = current;
         tel_cache.eps.temperature[pack_number] = temperature;
+        taskEXIT_CRITICAL();
     }
 }
 
-void telemetry_update_state(uint8_t state, float transition_time) {
+void telemetry_update_state(uint8_t state, uint32_t transition_time) {
     tel_state_machine_data_t *sm = &tel_cache.state_machine;
 
+    taskENTER_CRITICAL();
     for (size_t i = 7; i > 0; i--) {
         sm->state_history[i] = sm->state_history[i - 1];
         sm->transition_times[i] = sm->transition_times[i - 1];
@@ -239,15 +275,19 @@ void telemetry_update_state(uint8_t state, float transition_time) {
 
     sm->state_history[0] = state;
     sm->transition_times[0] = transition_time;
+    taskEXIT_CRITICAL();
 }
 
 void telemetry_update_mram_data(const tel_mram_data_t *mram_data) {
+    taskENTER_CRITICAL();
     tel_cache.mram = *mram_data;
+    taskEXIT_CRITICAL();
 }
 
 void telemetry_update_os_error(uint8_t error_code, uint32_t error_timestamp) {
     tel_os_error_data_t *os = &tel_cache.os_errors;
 
+    taskENTER_CRITICAL();
     for (size_t i = 7; i > 0; i--) {
         os->error_codes[i] = os->error_codes[i - 1];
         os->error_timestamps[i] = os->error_timestamps[i - 1];
@@ -255,14 +295,17 @@ void telemetry_update_os_error(uint8_t error_code, uint32_t error_timestamp) {
 
     os->error_codes[0] = error_code;
     os->error_timestamps[0] = error_timestamp;
+    taskEXIT_CRITICAL();
 }
 
-void telemetry_update_command(uint16_t command_timestamp) {
+void telemetry_update_command(uint32_t command_timestamp) {
+    taskENTER_CRITICAL();
     for (size_t i = 15; i > 0; i--) {
         tel_cache.command_timestamps[i] = tel_cache.command_timestamps[i - 1];
     }
 
     tel_cache.command_timestamps[0] = command_timestamp;
+    taskEXIT_CRITICAL();
 }
 
 bool telemetry_downlink_serialize(const tel_downlink_t *downlink, uint8_t *buf, size_t buf_size) {
@@ -279,7 +322,7 @@ bool telemetry_downlink_serialize(const tel_downlink_t *downlink, uint8_t *buf, 
     put_uint8(&w, downlink->last_bootloader);
     serialize_magnetometer(&w, &downlink->magnetometer);
     put_floats(&w, downlink->magnetorquer.duty, TEL_ARRAY_LEN(downlink->magnetorquer.duty));
-    put_floats(&w, downlink->photodiode.raw_readings, TEL_ARRAY_LEN(downlink->photodiode.raw_readings));
+    put_uint16s(&w, downlink->photodiode.raw_readings, TEL_ARRAY_LEN(downlink->photodiode.raw_readings));
     serialize_gyro(&w, &downlink->gyro);
     put_status(&w, downlink->camera.health);
     put_bool(&w, downlink->camera.last_capture_succeeded);
@@ -291,9 +334,7 @@ bool telemetry_downlink_serialize(const tel_downlink_t *downlink, uint8_t *buf, 
     serialize_eps(&w, &downlink->eps);
     serialize_state_machine(&w, &downlink->state_machine);
     serialize_adcs(&w, &downlink->adcs);
-    for (size_t i = 0; i < TEL_ARRAY_LEN(downlink->command_timestamps); i++) {
-        put_uint16(&w, downlink->command_timestamps[i]);
-    }
+    put_uint32s(&w, downlink->command_timestamps, TEL_ARRAY_LEN(downlink->command_timestamps));
     serialize_mram(&w, &downlink->mram);
     serialize_os_errors(&w, &downlink->os_errors);
 

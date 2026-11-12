@@ -32,6 +32,7 @@
 #include "rtos_start.h"
 #include "task_list.h"
 #include "tasks/task_manager/task_manager_task.h"
+#include "telemetry/telemetry.h"
 #include "tests/test.h"
 
 
@@ -62,6 +63,7 @@ static void log_boot_report(void) {
     const char *golden = report->golden_state < sizeof(golden_states) / sizeof(golden_states[0])
                              ? golden_states[report->golden_state]
                              : "unknown";
+    telemetry_update_last_bootloader(report->stage2_index);
     info_impl("[+] Bootloader (stage 2 copy %u): golden copy %s, MRAM status 0x%02x\n", report->stage2_index, golden,
               report->mram_status);
     info_impl("[+] Bootloader blocks: %u checked, %u repaired, %u failed\n", report->blocks_checked, report->blocks_repaired,

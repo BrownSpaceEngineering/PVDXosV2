@@ -28,6 +28,7 @@
 #include "logging.h"
 #include "magnetometer_driver.h"
 #include "photodiode_driver.h"
+#include "telemetry/telemetry.h"
 
 // forward declarations of check functions
 bool check_magnetometer(void);
@@ -99,6 +100,12 @@ bool check_device(device_id_t device_id) {
     if (!device_states[device_id].checked) {
         device_states[device_id].valid = device_check_functions[device_id]();
         device_states[device_id].checked = true;
+        const tel_device_status_t health = device_states[device_id].valid ? TEL_DEVICE_STATUS_OK : TEL_DEVICE_STATUS_BROKEN;
+        if (device_id == DISPLAY_ID) {
+            telemetry_update_display_data(health);
+        } else if (device_id == UHF_ID) {
+            telemetry_update_uhf_data(health);
+        }
     }
     return device_states[device_id].valid;
 }
@@ -135,6 +142,8 @@ bool check_gyro(void) {
 // Passes only if all three MRAM chips report MRAM_STATE_OK (triplicated storage, majority-voted reads).
 bool check_mram(void) {
     mram_status_t status = mram_init();
+    // TODO: reflash count and timestamps aren't tracked anywhere yet, so they stay 0
+    telemetry_update_mram_data(&(tel_mram_data_t){.status = status});
     bool all_okay = true;
     for (uint8_t mram = 1; mram <= 3; mram++) {
         uint8_t state = get_mram_state(status, mram);

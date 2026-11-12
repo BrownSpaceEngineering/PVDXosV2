@@ -6,6 +6,7 @@
 #include "libraries/cmd_dispatcher/cmd_dispatcher.h"
 #include "logging.h"
 #include "task_list.h"
+#include "telemetry/telemetry.h"
 
 void uplink_commands_dispatch(cfdp_buff_header_t *buff, size_t n) {
     if (buff == NULL) {
@@ -17,7 +18,7 @@ void uplink_commands_dispatch(cfdp_buff_header_t *buff, size_t n) {
         warning("uplink: rejected malformed uplink of %lu bytes\n", n);
         return;
     }
-    // TODO: push packet.timestamp to wherever we store this for telemetry.
+    telemetry_update_command(packet.timestamp);
 
     for (uint16_t i = 0; i < packet.n_cmds; i++) {
         const uplink_parsed_cmd_t *parsed = &packet.cmds[i];
