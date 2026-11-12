@@ -6,11 +6,9 @@
 #include "cfdp_task.h"
 #include "cfdp_timer.h"
 #include "globals.h"
-#include "libraries/cmd_dispatcher/cmd_dispatcher.h"
 #include "logging.h"
 #include "mutexes.h"
 #include "rtos_start.h"
-#include "spp.h"
 #include "uhf_radio/uhf_radio_task.h"
 
 uint32_t next_seq_num(void) {
@@ -25,42 +23,20 @@ int cfdp_send(void *buff, size_t sz, radio_stream_t stream) {
     (void)stream;
     return 0;
 #endif
-    if (sz == 0 || sz > RADIO_DOWNLINK_MAX_SIZE - SPP_PRIMARY_HEADER_SIZE - SPP_SECONDARY_HEADER_SIZE) {
+    if (sz == 0 || sz > RADIO_PAYLOAD_MAX_SIZE) {
         return -1; // PDU doesn't fit
     }
 
-    static uint16_t spp_seq_count = 0;
-
-    spp_primary_packet_header_t primary_header = {
-        .version_number = SPP_VERSION_NUMBER,
-        .packet_type = SPP_PACKET_TYPE_REPORTING,
-        .secondary_header_flag = SPP_SECONDARY_HEADER_PRESENT,
-        .application_process_id = CFDP_APID,
-        .sequence_flags = SPP_SEQ_FLAG_UNSEGMENTED_DATA,
-        .sequence_count = spp_seq_count & 0x3FFF,
-    };
-
-    // TODO(temp): placeholder timestamps and callsign. Transmitting on UHF needs the real callsign before flight
-    spp_secondary_packet_header_t secondary_header = {
-        .timestamp = 0,                             // TODO(temp): unix time
-        .boot_timestamp = 0,                        // TODO(temp): unix time of last boot
-        .callsign = {'B', 'S', 'E', 'B', 'S', 'E'}, // TODO(temp): real callsign
-    };
-
+    // The radio task wraps the PDU in an SPP packet when it sends it
     radio_queue_item_t item;
-
-    size_t packet_len = 0;
-    if (spp_packet_serialize(&primary_header, &secondary_header, buff, sz, item.data, sizeof(item.data), &packet_len)) {
-        return -1;
-    }
-    item.len = packet_len;
+    item.len = (uint16_t)sz;
+    item.apid = CCSDS_APID_CFDP;
+    memcpy(item.data, buff, sz);
 
     TickType_t wait = (stream == RADIO_STREAM_CFDP_REPLY) ? CFDP_SEND_REPLY_WAIT : CFDP_SEND_NO_WAIT;
     if (radio_route_send(stream, &item, wait)) {
         return -1; // queue full, caller retries later
     }
-
-    spp_seq_count++;
 
     return 0;
 }
@@ -74,47 +50,21 @@ int cfdp_recv(void *buff, size_t sz, uint8_t *vcid) {
         return 0; // queue empty, nothing to recieve.
     }
 
+    // The radio task has already checked the SPP headers and stripped them, so data is the PDU
     radio_queue_item_t *item = (radio_queue_item_t *)buff;
     *vcid = item->vcid;
 
-    spp_packet_view_t packet_view;
-    if (spp_packet_parse(&packet_view, item->data, item->len)) {
-        return -1; // spp parse failed
+    if (item->apid != CCSDS_APID_CFDP) {
+        return -1; // not a CFDP packet
     }
 
-    if (packet_view.header.application_process_id != CFDP_APID || packet_view.header.packet_type != SPP_PACKET_TYPE_REQUESTING) {
-        return -1; // not a CFDP telecommand
-    }
-
-    // data_length also counts the secondary header, which spp_packet_parse has already checked fits in the packet
-    size_t len = (size_t)packet_view.header.data_length + 1;
-    if (packet_view.header.secondary_header_flag) {
-        len -= SPP_SECONDARY_HEADER_SIZE;
-
-        char callsign[7];
-        memcpy(callsign, packet_view.secondary_header.callsign, 6);
-        callsign[6] = '\0';
-
-        if (strcmp(callsign, "bsegnd") != 0) {
-            warning("spp: recieved packet with non-ground station callsign!\n");
-            return -1;
-        }
-
-        // Only trust the time once the packet is known to be from the ground station
-        command_t cmd = (command_t){.target = p_adcs_task,
-                                    .data = {.timestamp = packet_view.secondary_header.timestamp},
-                                    .data_type = CMD_DATA_TIMESTAMP,
-                                    .operation = OPERATION_SET_UNIX_TIME,
-                                    .result = SUCCESS};
-        enqueue_command(&cmd);
-    }
-
-    if (len == 0) {
+    size_t len = item->len;
+    if (len == 0 || len > sizeof(item->data)) {
         return -1; // no PDU, and 0 is reserved for an empty queue
     }
 
-    // packet_view.data points into buff, so the two overlap
-    memmove(buff, packet_view.data, len);
+    // item->data is inside buff, so the two overlap
+    memmove(buff, item->data, len);
 
     return (int)len;
 }

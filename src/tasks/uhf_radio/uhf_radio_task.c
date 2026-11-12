@@ -6,7 +6,9 @@
 #include "ccsds/radio_routing.h"
 #include "ccsds/uslp.h"
 #include "hal_gpio.h"
+#include "libraries/cmd_dispatcher/cmd_dispatcher.h"
 #include "logging.h"
+#include "pusp.h"
 #include "regs.h"
 #include "task_list.h"
 
@@ -32,6 +34,77 @@ static struct at86rf215 at86_dev;
 
 // local uplink/downlink_queue item
 radio_queue_item_t item;
+
+// A whole space packet, between the queue item and the USLP frame
+static uint8_t spp_buffer[RADIO_DOWNLINK_MAX_SIZE];
+
+// Ground station callsign, checked against the SPP secondary header of every uplinked packet that has one
+static const uint8_t ground_callsign[SPP_SECONDARY_HEADER_CALLSIGN_SIZE] = {'b', 's', 'e', 'g', 'n', 'd'};
+
+/**
+ * The next SPP sequence count for apid. CCSDS counts packets separately for each APID (SPP Blue Book 4.1.3.4.3)
+ */
+static uint16_t spp_next_seq_count(uint16_t apid) {
+    static uint16_t cfdp_count = 0;
+    static uint16_t pusp_count = 0;
+    static uint16_t other_count = 0;
+
+    uint16_t *count;
+    switch (apid) {
+        case CCSDS_APID_CFDP:
+            count = &cfdp_count;
+            break;
+        case CCSDS_APID_PUSP:
+            count = &pusp_count;
+            break;
+        default:
+            count = &other_count;
+            break;
+    }
+    uint16_t ret = *count & 0x3FFF;
+    *count = (uint16_t)((*count + 1) & 0x3FFF);
+    return ret;
+}
+
+/**
+ * Wraps a queue item's payload in an SPP packet, written to buf
+ *
+ * \return true on failure, else false
+ */
+static bool spp_wrap(const radio_queue_item_t *it, uint8_t *buf, size_t buf_size, size_t *packet_len) {
+    spp_primary_packet_header_t primary_header = {
+        .version_number = SPP_VERSION_NUMBER,
+        .packet_type = SPP_PACKET_TYPE_REPORTING,
+        .secondary_header_flag = SPP_SECONDARY_HEADER_PRESENT,
+        .application_process_id = it->apid,
+        .sequence_flags = SPP_SEQ_FLAG_UNSEGMENTED_DATA,
+        .sequence_count = spp_next_seq_count(it->apid),
+    };
+
+    // TODO(temp): placeholder timestamps and callsign. Transmitting on UHF needs the real callsign before flight
+    spp_secondary_packet_header_t secondary_header = {
+        .timestamp = 0,                             // TODO(temp): unix time
+        .boot_timestamp = 0,                        // TODO(temp): unix time of last boot
+        .callsign = {'B', 'S', 'E', 'B', 'S', 'E'}, // TODO(temp): real callsign
+    };
+
+    return spp_packet_serialize(&primary_header, &secondary_header, it->data, it->len, buf, buf_size, packet_len);
+}
+
+/**
+ * Handles a PUSP packet received from the ground
+ *
+ * TODO: drive the UHF sync state machine (uhf_state_t / uhf_transition_state_t) from here
+ */
+static void uhf_pusp_rx(const uint8_t *data, size_t len) {
+    if (len < sizeof(pusp_packet_t)) {
+        warning("Radio: dropping %u byte PUSP packet\n", len);
+        return;
+    }
+    pusp_packet_t pkt;
+    memcpy(&pkt, data, sizeof(pkt));
+    debug("Radio: received PUSP directive %u\n", pkt.dir);
+}
 
 /**
  * Sets up IRQs for the At86
@@ -99,7 +172,8 @@ uint32_t uhf_irqs_to_events(uhf_irqs_t irqs) {
 }
 
 /**
- * Reads a received frame from the BBC0 RX buffer and puts its space packet on the uplink queue.
+ * Reads a received frame from the BBC0 RX buffer, checks its space packet, and hands the packet's data to whatever
+ * handles its APID (CFDP PDUs go on the uplink queue, PUSP packets are handled by this task).
  */
 void uhf_rx_process() {
     uint8_t pc = 0;
@@ -147,17 +221,57 @@ void uhf_rx_process() {
         return;
     }
 
-    if (tframe_view.datafield_len == 0 || tframe_view.datafield_len > sizeof(item.data)) {
-        warning("Radio: dropping USLP frame with a %u byte data field\n", tframe_view.datafield_len);
+    spp_packet_view_t packet_view;
+    if (spp_packet_parse(&packet_view, tframe_view.datafield, tframe_view.datafield_len)) {
+        warning("Radio: dropping malformed space packet\n");
         return;
     }
 
-    item.len = tframe_view.datafield_len;
-    item.vcid = tframe_view.primary_header.virtual_channel_id;
-    memcpy(item.data, tframe_view.datafield, tframe_view.datafield_len);
+    if (packet_view.header.packet_type != SPP_PACKET_TYPE_REQUESTING) {
+        warning("Radio: dropping space packet that isn't a telecommand\n");
+        return;
+    }
 
-    if (xQueueSend(uplink_queue, &item, 0) != pdPASS) {
-        warning("Radio: uplink queue full, dropping packet\n");
+    // data_length also counts the secondary header, which spp_packet_parse has already checked fits in the packet
+    size_t len = (size_t)packet_view.header.data_length + 1;
+    if (packet_view.header.secondary_header_flag) {
+        len -= SPP_SECONDARY_HEADER_SIZE;
+
+        if (memcmp(packet_view.secondary_header.callsign, ground_callsign, sizeof(ground_callsign)) != 0) {
+            warning("Radio: dropping space packet with non-ground station callsign\n");
+            return;
+        }
+
+        // Only trust the time once the packet is known to be from the ground station
+        command_t cmd = (command_t){.target = p_adcs_task,
+                                    .data = {.timestamp = packet_view.secondary_header.timestamp},
+                                    .data_type = CMD_DATA_TIMESTAMP,
+                                    .operation = OPERATION_SET_UNIX_TIME,
+                                    .result = SUCCESS};
+        enqueue_command(&cmd);
+    }
+
+    if (len == 0 || len > sizeof(item.data)) {
+        warning("Radio: dropping space packet with a %u byte data field\n", len);
+        return;
+    }
+
+    switch (packet_view.header.application_process_id) {
+        case CCSDS_APID_CFDP:
+            item.len = (uint16_t)len;
+            item.apid = CCSDS_APID_CFDP;
+            item.vcid = tframe_view.primary_header.virtual_channel_id;
+            memcpy(item.data, packet_view.data, len);
+            if (xQueueSend(uplink_queue, &item, 0) != pdPASS) {
+                warning("Radio: uplink queue full, dropping packet\n");
+            }
+            break;
+        case CCSDS_APID_PUSP:
+            uhf_pusp_rx(packet_view.data, len);
+            break;
+        default:
+            warning("Radio: dropping space packet with unknown APID 0x%x\n", packet_view.header.application_process_id);
+            break;
     }
 }
 
@@ -167,9 +281,12 @@ void uhf_rx_process() {
  */
 bool uhf_tx_process() {
     if (xQueueReceive(downlink_queue, &item, 0) == pdPASS) {
+        size_t packet_len = 0;
         size_t frame_sz = AT86RF215_MAX_PDU;
-        if (uslp_mapp_request(at86_buffer, &frame_sz, item.data, item.len, RADIO_GMAP_ID(item.vcid), SPP_VERSION_NUMBER, RADIO_SDU_ID,
-                              USLP_QOS_EXPEDITED)) {
+        if (spp_wrap(&item, spp_buffer, sizeof(spp_buffer), &packet_len)) {
+            warning("SPP: failed to wrap %u byte packet for APID 0x%x\n", item.len, item.apid);
+        } else if (uslp_mapp_request(at86_buffer, &frame_sz, spp_buffer, (uint16_t)packet_len, RADIO_GMAP_ID(item.vcid), SPP_VERSION_NUMBER,
+                                     RADIO_SDU_ID, USLP_QOS_EXPEDITED)) {
             warning("USLP: failed to prepare frame\n");
         } else {
             int ret = at86_send_frame(&at86_dev, at86_buffer, frame_sz);

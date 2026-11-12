@@ -15,6 +15,11 @@
 
 #define CCSDS_SCID 0x0001
 
+// SPP Application Process IDs (APIDs), 11 bits each. SPP_APID_IDLE_PACKET (0x7FF) is reserved, see spp.h
+// TODO: confirm these values with the ground station
+#define CCSDS_APID_CFDP 0x02 // CFDP PDUs
+#define CCSDS_APID_PUSP 0x03 // PVDX UHF Synchronization Protocol packets, see tasks/uhf_radio/pusp.h
+
 /// initializes all ccsds utilities
 /// - should be called once, on boot and before the task loop begins
 static inline void ccsds_init(void) {

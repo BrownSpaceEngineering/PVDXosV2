@@ -89,6 +89,10 @@ void main_uhf_radio(void *pvParameters) {
     while (true) {
         xTaskNotifyWait(0, UINT32_MAX, &events, portMAX_DELAY);
 
+        if (events & UHF_EVENT_IRQ) {
+            events |= uhf_irqs_to_events(uhf_read_irqs());
+        }
+
         if (events & UHF_EVENT_DOWNLINK) {
             needs_downlink = true;
             uhf_go_txprep();

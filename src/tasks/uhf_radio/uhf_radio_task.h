@@ -11,7 +11,8 @@
 #include "queue.h"
 
 #define UHF_RADIO_TASK_STACK_SIZE 1024 // Size of the stack in words (multiply by 4 to get bytes)
-#define RADIO_DOWNLINK_MAX_SIZE (SPP_PRIMARY_HEADER_SIZE + SPP_SECONDARY_HEADER_SIZE + 512)
+#define RADIO_PAYLOAD_MAX_SIZE 512     // Largest SPP user data field (e.g. one CFDP PDU) the radio task sends or receives
+#define RADIO_DOWNLINK_MAX_SIZE (SPP_PRIMARY_HEADER_SIZE + SPP_SECONDARY_HEADER_SIZE + RADIO_PAYLOAD_MAX_SIZE) // Whole space packet
 
 // Maximum wait for an event response
 #define UHF_RADIO_WAIT_MS 1000
@@ -43,11 +44,28 @@ typedef struct {
     uint8_t bbc; // BBC0_IRQS
 } uhf_irqs_t;
 
+// The radio task adds the SPP headers on downlink and strips them on uplink, so data is only the SPP user data field
 typedef struct {
     uint16_t len;
-    uint8_t vcid;                          // USLP virtual channel the packet is sent or was received on, see radio_routing.h
-    uint8_t data[RADIO_DOWNLINK_MAX_SIZE]; // SPP header followed by the CFDP PDU
+    uint16_t apid;                        // SPP APID of the packet, see CCSDS_APID_* in ccsds.h
+    uint8_t vcid;                         // USLP virtual channel the packet is sent or was received on, see radio_routing.h
+    uint8_t data[RADIO_PAYLOAD_MAX_SIZE]; // SPP user data field, e.g. one CFDP PDU
 } radio_queue_item_t;
+
+typedef enum uhf_state {
+    TELEM = 0,
+    SYNC_SEND = 1,
+    SYNC_RECV = 2,
+} uhf_state_t;
+
+typedef enum uhf_transition_state {
+    NONE = 0,
+    HAS_SYN,
+    HAS_YLD,
+    SENT_YLD,
+    HAS_YLD_ACK,
+    SENT_SWC
+} uhf_transition_state_t;
 
 // Placed in a struct to ensure that the TCB is placed higher than the stack in memory
 //^ This ensures that stack overflows do not corrupt the TCB (since the stack grows downwards)
