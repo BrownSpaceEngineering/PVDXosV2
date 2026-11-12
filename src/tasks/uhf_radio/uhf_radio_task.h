@@ -53,19 +53,14 @@ typedef struct {
 } radio_queue_item_t;
 
 typedef enum uhf_state {
-    TELEM = 0,
-    SYNC_SEND = 1,
-    SYNC_RECV = 2,
+    BEACON = 0,
+    LISTEN = 1,
+    SYN_RECV = 2,
+    ESTABLISH_RECV = 3,
+    TRANS_TO_TX = 4,
+    ESTABLISH_SEND = 5,
+    TRANS_TO_RX = 6
 } uhf_state_t;
-
-typedef enum uhf_transition_state {
-    NONE = 0,
-    HAS_SYN,
-    HAS_YLD,
-    SENT_YLD,
-    HAS_YLD_ACK,
-    SENT_SWC
-} uhf_transition_state_t;
 
 // Placed in a struct to ensure that the TCB is placed higher than the stack in memory
 //^ This ensures that stack overflows do not corrupt the TCB (since the stack grows downwards)
@@ -86,6 +81,14 @@ extern QueueHandle_t downlink_queue;
 
 // Global memory and configuration
 extern uhf_radio_task_memory_t uhf_radio_mem;
+
+void beacon_proc(void);
+void listen_proc(void);
+void sys_recv_proc(void);
+void establish_recv_proc(void);
+void establish_send_proc(void);
+void transition_to_tx_proc(void);
+void transition_to_rx_proc(void);
 
 void at86_irq_setup(void);
 void uhf_radio_irq_handler(void);

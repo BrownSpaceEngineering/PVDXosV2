@@ -12,6 +12,7 @@
 #include "libraries/cmd_dispatcher/cmd_dispatcher.h"
 #include "logging.h"
 #include "portmacro.h"
+#include "projdefs.h"
 #include "rtos_start.h"
 #include "string.h"
 #include "uhf_radio_task.h"
@@ -87,7 +88,7 @@ void main_uhf_radio(void *pvParameters) {
     bool needs_downlink = false;
 
     while (true) {
-        xTaskNotifyWait(0, UINT32_MAX, &events, portMAX_DELAY);
+        xTaskNotifyWait(0, UINT32_MAX, &events, pdMS_TO_TICKS(UHF_RADIO_WAIT_MS));
 
         if (events & UHF_EVENT_IRQ) {
             events |= uhf_irqs_to_events(uhf_read_irqs());
