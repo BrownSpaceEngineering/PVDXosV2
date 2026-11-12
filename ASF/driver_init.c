@@ -740,6 +740,21 @@ void system_init(void)
 
 	gpio_set_pin_function(LED_RED, GPIO_PIN_FUNCTION_OFF);
 
+	// GPIO on PA27
+
+	// Set pin direction to input
+	gpio_set_pin_direction(UHF_IRQ, GPIO_DIRECTION_IN);
+
+	gpio_set_pin_pull_mode(UHF_IRQ,
+	                       // <y> Pull configuration
+	                       // <id> pad_pull_config
+	                       // <GPIO_PULL_OFF"> Off
+	                       // <GPIO_PULL_UP"> Pull-up
+	                       // <GPIO_PULL_DOWN"> Pull-down
+	                       GPIO_PULL_DOWN);
+
+	gpio_set_pin_function(UHF_IRQ, GPIO_PIN_FUNCTION_OFF);
+
 	// GPIO on PB10
 
 	gpio_set_pin_level(MRAM3_CS,

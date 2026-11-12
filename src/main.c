@@ -24,6 +24,7 @@
 #include "os_delay.h"
 #include "arducam_driver.h"
 #include "display_driver.h"
+#include "drivers/at86rf215/at86_irq.h"
 #include "burn/burn_uhf.h"
 #include "image_buffer_PVDX.h"
 #include "mram_map.h"
@@ -259,9 +260,11 @@ int main(void) {
     if (i2c_m_sync_enable(&I2C_SENSORS) != 0) {
         warning("Failed to enable the I2C_SENSORS bus\n");
     }
-    if (spi_m_sync_enable(&SPI_MAGNETOMETER_GYRO) != 0) {
-        warning("Failed to enable the SPI_MAGNETOMETER_GYRO bus\n");
-    }
+    spi_m_sync_enable(&SPI_MAGNETOMETER_GYRO);
+
+    // The UHF radio's IRQ line stays disarmed until a task waits on it, so this is safe before the radio is set up
+    at86_irq_init();
+
     log_boot_report();
 
     /* ---------- DEVICE CHECKS ---------- */

@@ -13,7 +13,6 @@
 
 #include "checks/device_checks.h"
 #include "drivers/magnetorquer/magnetorquer_driver.h"
-#include "drivers/rtc/rtc_driver.h"
 #include "globals.h"
 #include "libraries/adcs/include/body.h"
 #include "libraries/adcs/include/photodiode_determination.h"
@@ -36,16 +35,9 @@ QueueHandle_t init_adcs(void) {
         fatal("Failed to create adcs command queue!\n");
     }
 
-    // Initialize RTC timer hardware
-    info("Initializing RTC timer\n");
-    status_t result = init_rtc_hardware();
-    if (result != SUCCESS) {
-        warning("rtc timer: Hardware initialization failed\n");
-    }
-
     // Leaves the coils off until the control loop drives them
     info("Initializing magnetorquers\n");
-    result = init_magnetorquers();
+    status_t result = init_magnetorquers();
     if (result != SUCCESS) {
         warning("magnetorquers: Hardware initialization failed\n");
     }
