@@ -117,6 +117,7 @@ void at86_irq_setup(void) {
 
     // Note to Alex: big c told me this is what I needed to do for config. Seems reasonable but idrk.
     hri_mclk_set_APBAMASK_EIC_bit(MCLK);
+    hri_gclk_write_PCHCTRL_reg(GLCK, EIC_GCLK_ID, GCLK_PCHCTRL_GEN_GCLK0 | GCLK_PCHCTRL_CHEN);
 
     hri_eic_clear_CTRLA_ENABLE_bit(EIC);
     hri_eic_write_CONFIG_SENSE3_bf(EIC, 1, EIC_CONFIG_SENSE3_RISE_Val);
