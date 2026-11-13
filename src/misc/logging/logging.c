@@ -10,10 +10,12 @@
 
 #include "logging.h"
 
+#include <FreeRTOS.h>
 #include <stdarg.h>
 #include <stdlib.h>
 
 #include "SEGGER_RTT.h"
+#include "hal_delay.h"
 #include "os_delay.h"
 #include "watchdog_task.h"
 
@@ -32,7 +34,14 @@ void fatal_impl(const char *string, ...) {
     warning_impl("FATAL ERROR OCCURRED! RESTARTING SYSTEM...\n");
     warning_impl("FATAL ERROR OCCURRED! RESTARTING SYSTEM...\n");
     warning_impl("FATAL ERROR OCCURRED! RESTARTING SYSTEM...\n");
-    os_delay_ms(1000); // Wait for the message to be printed
+    // Wait for the message to be printed. Fault and RAM ECC handlers call fatal() too, and os_delay_ms() blocks with
+    // vTaskDelay() once the scheduler runs, which FreeRTOS asserts against in an interrupt (hanging until the hardware
+    // watchdog resets the board), so busy-wait there. delay_ms() reprograms SysTick, but the board resets next anyway.
+    if (xPortIsInsideInterrupt()) {
+        delay_ms(1000);
+    } else {
+        os_delay_ms(1000);
+    }
 
     // Force reboot
     kick_watchdog();
