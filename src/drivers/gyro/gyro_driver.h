@@ -21,11 +21,12 @@
 #include "logging.h"
 
 /* ---------- SENSOR CONFIGURATION ---------- */
-// These are the settings the SCH16T Arduino prototype was validated against.
+// These are the settings the SCH16T Arduino prototype was validated against, except the filters, which were 30 Hz there.
+// 13 Hz cuts noise to about 0.66x and lets less through to alias down to the ADCS loop's ~9 Hz sample rate.
 
-#define SCH16T_FILTER_RATE12 30 // Hz, LPF1 cut-off (-3dB) for Rate_XYZ1/2. Valid: 13, 30, 68, 235, 280, 370
-#define SCH16T_FILTER_ACC12 30  // Hz, LPF1 cut-off (-3dB) for Acc_XYZ1/2
-#define SCH16T_FILTER_ACC3 30   // Hz, LPF1 cut-off (-3dB) for Acc_XYZ3
+#define SCH16T_FILTER_RATE12 13 // Hz, LPF1 cut-off (-3dB) for Rate_XYZ1/2. Valid: 13, 30, 68, 235, 280, 370
+#define SCH16T_FILTER_ACC12 13  // Hz, LPF1 cut-off (-3dB) for Acc_XYZ1/2
+#define SCH16T_FILTER_ACC3 13   // Hz, LPF1 cut-off (-3dB) for Acc_XYZ3
 
 #define SCH16T_SENSITIVITY_RATE1 1600 // LSB/dps for Rate_XYZ1 (20-bit data). Valid: 1600, 3200, 6400
 #define SCH16T_SENSITIVITY_RATE2 1600 // LSB/dps for Rate_XYZ2

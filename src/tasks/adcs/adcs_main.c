@@ -91,6 +91,40 @@ void main_adcs(void *pvParameters) {
         // step takes this long plus its run time; dt is measured below so body() still sees the true step length
         os_delay_ms(ADCS_LOOP_PERIOD_MS);
 
+        // The following example is provided for later because ADCS wants to average gyro 
+        // readings over 100 ms, which is better done in the adcs task loop:
+
+        // EXAMPLE (disabled): average the gyro over the coil-drive window instead of taking one sample per step. To use
+        // it, replace the os_delay_ms() above with this, and after adcs_read_sensors() below copy gyro_avg into gyro.
+        // The gyro is MEMS, so the coils being on doesn't disturb it. With the 13 Hz filter, samples closer than ~40 ms
+        // are mostly correlated, so ~10 samples at 10 ms already gets nearly all of the noise reduction, and the 100 ms
+        // boxcar (nulls at 10 Hz and multiples) stops noise above ~5 Hz aliasing into the ~9 Hz step rate. Samples that
+        // fail or that the sensor flags come back as NAN from adcs_read_gyro() and are skipped; with none good, body()
+        // gets NAN and bails as it does today.
+        // NOTE: adcs_read_gyro() calls handle_read_failure() on every bad sample, and adcs_read_sensors() clears
+        // sensor_fault at its start, so a fault seen only during this window is logged but doesn't stick.
+        // NAN needs <math.h>, which this file doesn't include yet.
+        //
+        // #define ADCS_GYRO_AVG_SAMPLES 10
+        // float gyro_avg[3] = {0.0f, 0.0f, 0.0f};
+        // uint32_t gyro_good = 0;
+        // for (uint32_t s = 0; s < ADCS_GYRO_AVG_SAMPLES; s++) {
+        //     os_delay_ms(ADCS_LOOP_PERIOD_MS / ADCS_GYRO_AVG_SAMPLES);
+        //     float sample[3];
+        //     if (adcs_read_gyro(sample) == SUCCESS) {
+        //         for (size_t i = 0; i < 3; i++) {
+        //             gyro_avg[i] += sample[i];
+        //         }
+        //         gyro_good++;
+        //     }
+        // }
+        // for (size_t i = 0; i < 3; i++) {
+        //     gyro_avg[i] = (gyro_good > 0) ? gyro_avg[i] / (float)gyro_good : NAN;
+        // }
+        //
+        // ...then after adcs_read_sensors(mag, gyro, photodiodes):
+        //     memcpy(gyro, gyro_avg, sizeof(gyro));
+
         // time since the last body() step, in seconds
         const TickType_t now_ticks = xTaskGetTickCount();
         const float dt = (float)(now_ticks - last_step_ticks) / configTICK_RATE_HZ;
