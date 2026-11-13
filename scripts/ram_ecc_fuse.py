@@ -29,7 +29,7 @@ CMD_EP = 0x00  # Erase page (user and AUX pages only)
 CMD_WQW = 0x04  # Write quad word
 CMD_PBC = 0x15  # Page buffer clear
 CMDEX_KEY = 0xA5 << 8
-INTFLAG_ERRORS = 0x2E  # NVME, LOCKE, PROGE, ADDRE
+INTFLAG_ERRORS = 0x4E  # NVME, LOCKE, PROGE, ADDRE (not ECCDE, a flash ECC error logged by some read)
 
 DSU_STATUSB = 0x41002000 + 0x102
 RAMECC_STATUS = 0x41020000 + 0x03
