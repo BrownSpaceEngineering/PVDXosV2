@@ -21,11 +21,12 @@
 #include "logging.h"
 
 /* ---------- SENSOR CONFIGURATION ---------- */
-// These are the settings the SCH16T Arduino prototype was validated against.
+// These are the settings the SCH16T Arduino prototype was validated against, except the filters, which were 30 Hz there.
+// 13 Hz cuts noise to about 0.66x and lets less through to alias down to the ADCS loop's ~9 Hz sample rate.
 
-#define SCH16T_FILTER_RATE12 30 // Hz, LPF1 cut-off (-3dB) for Rate_XYZ1/2. Valid: 13, 30, 68, 235, 280, 370
-#define SCH16T_FILTER_ACC12 30  // Hz, LPF1 cut-off (-3dB) for Acc_XYZ1/2
-#define SCH16T_FILTER_ACC3 30   // Hz, LPF1 cut-off (-3dB) for Acc_XYZ3
+#define SCH16T_FILTER_RATE12 13 // Hz, LPF1 cut-off (-3dB) for Rate_XYZ1/2. Valid: 13, 30, 68, 235, 280, 370
+#define SCH16T_FILTER_ACC12 13  // Hz, LPF1 cut-off (-3dB) for Acc_XYZ1/2
+#define SCH16T_FILTER_ACC3 13   // Hz, LPF1 cut-off (-3dB) for Acc_XYZ3
 
 #define SCH16T_SENSITIVITY_RATE1 1600 // LSB/dps for Rate_XYZ1 (20-bit data). Valid: 1600, 3200, 6400
 #define SCH16T_SENSITIVITY_RATE2 1600 // LSB/dps for Rate_XYZ2
@@ -99,6 +100,7 @@
 #define SCH16T_REQ_READ_STAT_ACC_X 0x06C8000000F2ULL
 #define SCH16T_REQ_READ_STAT_ACC_Y 0x070800000069ULL
 #define SCH16T_REQ_READ_STAT_ACC_Z 0x07480000009EULL
+#define SCH16T_REQ_READ_STAT_INFO 0x07C80000005FULL // Low Power Mode indications
 
 // Temperature and traceability
 #define SCH16T_REQ_READ_TEMP 0x0408000000B1ULL
@@ -170,6 +172,9 @@
 
 #define SCH16T_MODE_EN_SENSOR 0x01 // Enables the sensor
 #define SCH16T_MODE_EOI_CTRL 0x02  // End Of Initialization; locks every R/W register but the soft reset
+
+// STAT_INFO bits that read 1 once the accelerometer, gyroscope and start-up state machine are in Low Power Mode
+#define SCH16T_STAT_INFO_LPM_OK 0x07
 
 #define SCH16T_USER_IF_DRY_POLARITY 0x40 // 0 = DRY active high, 1 = DRY active low
 #define SCH16T_USER_IF_DRY_ENABLE 0x20   // Enables the DRY pin
@@ -256,6 +261,7 @@ typedef struct {
 
 status_t init_gyro_hardware(void);
 void gyro_reset(void);
+status_t gyro_enter_lpm(void);
 status_t gyro_read(SCH1_result_t *const result);
 status_t gyro_get_status(SCH1_status_t *const p_status);
 bool gyro_status_ok(const SCH1_status_t *const p_status);

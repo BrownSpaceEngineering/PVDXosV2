@@ -24,6 +24,7 @@
 #include "os_delay.h"
 #include "arducam_driver.h"
 #include "display_driver.h"
+#include "drivers/at86rf215/at86_irq.h"
 #include "burn/burn_uhf.h"
 #include "image_buffer_PVDX.h"
 #include "mram_map.h"
@@ -129,17 +130,19 @@ static status_t PVDX_init(void) {
 [[maybe_unused]] static void send_picture_over_rtt(void) {
     for (uint32_t attempt = 1; attempt <= CAMERA_CAPTURE_ATTEMPTS; attempt++) {
         watchdog_feed(WDT);
-        status_t status = init_arducam_hardware();
+        status_t status = init_arducam_hardware(ARDUCAM_DEFAULT_RESOLUTION);
         if (status == SUCCESS) {
             status = capture_rtt();
         }
         if (status == SUCCESS) {
             info("camera: picture sent over RTT channel %d\n", CAMERA_RTT_OUTPUT_CHANNEL);
+            arducam_sleep();
             return;
         }
         warning("camera: attempt %lu/%d failed (status=%d)\n", (unsigned long)attempt, CAMERA_CAPTURE_ATTEMPTS, status);
     }
     warning("camera: giving up on the picture\n");
+    arducam_sleep();
 }
 
 /* ---------- BURN WIRE STATE IN MRAM ---------- */
@@ -247,11 +250,21 @@ int main(void) {
     }
 
     // Initialize the mutex for the I2C bus shared by Arducam, fuel gauges, and PMB before startup checks/tests
-    i2c_camera_bus_mutex = xSemaphoreCreateMutexStatic(&i2c_camera_bus_mutex_buffer);
+    i2c_sensors_bus_mutex = xSemaphoreCreateMutexStatic(&i2c_sensors_bus_mutex_buffer);
 
-    if (i2c_camera_bus_mutex == NULL) {
-        fatal("Failed to create I2C_CAMERA bus mutex");
+    if (i2c_sensors_bus_mutex == NULL) {
+        fatal("Failed to create I2C_SENSORS bus mutex");
     }
+    // atmel_start_init() initializes the shared buses but leaves them disabled; the drivers on them assume they are
+    // enabled
+    if (i2c_m_sync_enable(&I2C_SENSORS) != 0) {
+        warning("Failed to enable the I2C_SENSORS bus\n");
+    }
+    spi_m_sync_enable(&SPI_MAGNETOMETER_GYRO);
+
+    // The UHF radio's IRQ line stays disarmed until a task waits on it, so this is safe before the radio is set up
+    at86_irq_init();
+
     log_boot_report();
 
     /* ---------- DEVICE CHECKS ---------- */

@@ -38,10 +38,6 @@
 #define UNIX_EPOCH_JD_SCALAR 2440587 // The Unix epoch is JD 2440587.5
 #define UNIX_EPOCH_JD_FRAC 0.5f
 
-// The RTC counts at 32768 Hz (2^15), so one wrap of its 32-bit counter is 2^17 seconds, or about 36 hours
-#define RTC_COUNTS_PER_SECOND_SHIFT 15
-#define RTC_WRAP_SECONDS_SHIFT 17
-
 // A UTC earlier than this can't be real (2026-01-01T00:00:00Z)
 #define ADCS_MIN_VALID_UNIX_TIME 1767225600u
 // How often UTC is saved to MRAM. A reboot loses up to this much time, plus however long the reboot takes.
@@ -76,8 +72,6 @@ static bool sensor_fault = false; // whether a sensor failed its device check du
 
 static bool utc_valid = false;
 static uint32_t utc_at_rtc_zero = 0; // UTC when the RTC read zero
-static uint32_t last_rtc_count = 0;  // for detecting when the RTC wraps
-static uint32_t rtc_wraps = 0;       //
 static uint32_t last_utc_save_time = 0;
 
 static adcs_tle_t pending_tle; // a TLE waiting for body() to accept it; only valid if tle_pending is set
@@ -89,7 +83,7 @@ static tel_adcs_data_t telemetry_snapshot;
 
 /* ---------- ORBIT AND TIME ---------- */
 
-// Fails only if the RTC can't be read. Must be called at least once per RTC wrap, which the control loop does.
+// Fails only if the RTC can't be read. The RTC driver's seconds are calibrated against the UHF radio and don't wrap.
 static status_t get_uptime_seconds(uint32_t *const uptime_s) {
     rtc_data_t rtc;
     const status_t result = get_rtc_values(&rtc);
@@ -98,12 +92,7 @@ static status_t get_uptime_seconds(uint32_t *const uptime_s) {
         return result;
     }
 
-    if (rtc.rtc_count < last_rtc_count) {
-        rtc_wraps++;
-    }
-    last_rtc_count = rtc.rtc_count;
-
-    *uptime_s = (rtc_wraps << RTC_WRAP_SECONDS_SHIFT) + (rtc.rtc_count >> RTC_COUNTS_PER_SECOND_SHIFT);
+    *uptime_s = rtc.seconds_count;
     return SUCCESS;
 }
 

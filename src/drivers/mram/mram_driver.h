@@ -11,6 +11,9 @@
 
 typedef uint8_t mram_status_t;
 
+// SPI clock for all three chips, set by mram_init() in both the bootloader and PVDXos
+#define MRAM_SPI_HZ 1000000
+
 #define MRAM_STATE_OFF (0x00)      // MRAM module powered off.
 #define MRAM_STATE_OK (0x01)       // MRAM module functioning as expected.
 #define MRAM_STATE_DEGRADED (0x02) // MRAM module appears mostly functional but may not be 100% reliable.

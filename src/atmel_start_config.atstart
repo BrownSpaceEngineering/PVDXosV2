@@ -1631,8 +1631,8 @@ drivers:
         configuration:
           core_gclk_selection: Generic clock generator 0
           slow_gclk_selection: Generic clock generator 3
-  I2C_CAMERA:
-    user_label: I2C_CAMERA
+  I2C_SENSORS:
+    user_label: I2C_SENSORS
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::SERCOM6::driver_config_definition::I2C.Master.Standard~2FFast-mode::HAL:Driver:I2C.Master.Sync
     functionality: I2C
     api: HAL:Driver:I2C_Master_Sync
@@ -2402,6 +2402,13 @@ pads:
     mode: Digital output
     user_label: CAMERA_SCK
     configuration: null
+  UHF_IRQ:
+    name: PA27
+    definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PA27
+    mode: Digital input
+    user_label: UHF_IRQ
+    configuration:
+      pad_pull_config: Pull-down
   EPS_IRQ:
     name: PB28
     definition: Atmel:SAMD51_Drivers:0.0.1::SAMD51P20A-AF::pad::PB28

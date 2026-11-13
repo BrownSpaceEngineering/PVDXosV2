@@ -21,6 +21,8 @@ _|"""""|_|"""""|_|"""""|_|"""""|
 
 #include "mram_driver.h"
 
+#include "peripheral_clk_config.h" // CONF_GCLK_SERCOM0_CORE_FREQUENCY, from whichever ASF project is building
+
 // MRAM Command Bytes
 #define CMD_WREN    0x06    // Write Enable
 #define CMD_RDSR    0x05    // Read Status Register
@@ -346,6 +348,10 @@ bool mram_read_bytes(uint32_t address, uint8_t *data, uint32_t size) {
 // ---------------------- Main ----------------------
 
 mram_status_t mram_init(void) {
+    // Overrides the generated ASF configuration, which differs between the bootloader and PVDXos.
+    // spi_m_sync_set_baudrate() takes the BAUD register value, not a frequency, and only while the SPI is disabled.
+    spi_m_sync_disable(&SPI_MRAM);
+    spi_m_sync_set_baudrate(&SPI_MRAM, CONF_GCLK_SERCOM0_CORE_FREQUENCY / (2 * MRAM_SPI_HZ) - 1);
     spi_m_sync_enable(&SPI_MRAM);
     gpio_set_pin_level(MRAM1_CS, true);
     gpio_set_pin_level(MRAM2_CS, true);

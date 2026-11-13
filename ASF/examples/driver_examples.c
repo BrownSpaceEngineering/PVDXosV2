@@ -159,14 +159,14 @@ void SPI_SBAND_example(void)
 	io_write(io, example_SPI_SBAND, 12);
 }
 
-void I2C_CAMERA_example(void)
+void I2C_SENSORS_example(void)
 {
-	struct io_descriptor *I2C_CAMERA_io;
+	struct io_descriptor *I2C_SENSORS_io;
 
-	i2c_m_sync_get_io_descriptor(&I2C_CAMERA, &I2C_CAMERA_io);
-	i2c_m_sync_enable(&I2C_CAMERA);
-	i2c_m_sync_set_slaveaddr(&I2C_CAMERA, 0x12, I2C_M_SEVEN);
-	io_write(I2C_CAMERA_io, (uint8_t *)"Hello World!", 12);
+	i2c_m_sync_get_io_descriptor(&I2C_SENSORS, &I2C_SENSORS_io);
+	i2c_m_sync_enable(&I2C_SENSORS);
+	i2c_m_sync_set_slaveaddr(&I2C_SENSORS, 0x12, I2C_M_SEVEN);
+	io_write(I2C_SENSORS_io, (uint8_t *)"Hello World!", 12);
 }
 
 /**
