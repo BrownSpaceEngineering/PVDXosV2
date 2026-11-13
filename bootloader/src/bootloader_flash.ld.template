@@ -6,7 +6,7 @@ SEARCH_DIR(.)
 MEMORY
 {
   rom      (rx)  : ORIGIN = $BL_START, LENGTH = $BL_LENGTH
-  ram      (rwx) : ORIGIN = 0x20030000, LENGTH = 0x00010000 /* PVDXos owns all of RAM once the bootloader jumps */
+  ram      (rwx) : ORIGIN = 0x20010000, LENGTH = 0x00010000 /* Below the top 128 KB, which RAM ECC takes; PVDXos owns RAM once the bootloader jumps */
   bkupram  (rwx) : ORIGIN = 0x47000000, LENGTH = 0x00002000
   qspi     (rwx) : ORIGIN = 0x04000000, LENGTH = 0x01000000
 }

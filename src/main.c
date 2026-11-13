@@ -28,6 +28,7 @@
 #include "burn/burn_uhf.h"
 #include "image_buffer_PVDX.h"
 #include "mram_map.h"
+#include "ram_ecc.h"
 #include "watchdog_driver.h"
 #include "ccsds/ccsds.h"
 #include "cosmic_monkey_task.h"
@@ -191,6 +192,7 @@ int main(void) {
     info("[+] Built from branch: %s\n", GIT_BRANCH_NAME);
     info("[+] Built from commit: %s\n", GIT_COMMIT_HASH);
 
+    ram_ecc_init();
 
     // BURN SEQUENCE
 

@@ -4,12 +4,12 @@ SEARCH_DIR(.)
 
 /* Memory Spaces Definitions */
 /* PVDXos runs in place from flash, above the largest BOOTPROT region, and is limited to its 440 KB MRAM golden-copy slot (see
-   bootloader/src/image_format.h). The bootloader is finished by the time PVDXos starts, so all 256 KB of RAM belongs to
-   PVDXos. */
+   bootloader/src/image_format.h). The bootloader is finished by the time PVDXos starts, so PVDXos gets the bottom 128 KB
+   of RAM. The top 128 KB holds the RAM ECC check bits when the RAM ECCDIS fuse is cleared (see misc/ram_ecc/ram_ecc.c). */
 MEMORY
 {
   rom      (rx)  : ORIGIN = 0x0001E000, LENGTH = 0x0006E000
-  ram      (rwx) : ORIGIN = 0x20000000, LENGTH = 0x00040000
+  ram      (rwx) : ORIGIN = 0x20000000, LENGTH = 0x00020000
   bkupram  (rwx) : ORIGIN = 0x47000000, LENGTH = 0x00002000
   qspi     (rwx) : ORIGIN = 0x04000000, LENGTH = 0x01000000
 }

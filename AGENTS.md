@@ -20,6 +20,9 @@ Adafruit Grand Central development board.
   in the metadata block at `0x0000E000`.
 - `src/` is the application; `src/src_flash.ld` links it to run in place from
   flash at `0x0001E000`, above any `BOOTPROT` region (RAM holds only data, bss and stacks).
+  PVDXos and the bootloader only use the bottom 128 KB of RAM: the top half holds
+  the RAM ECC check bits once the RAM ECCDIS fuse (user row bit 39) is cleared, and
+  `src/misc/ram_ecc/` reports ECC errors.
   `src/main.c` initializes Atmel Start hardware, logging, logs the bootloader's
   boot report, runs startup checks, tasks, and FreeRTOS.
 - `ASF/` is generated Atmel Start/HAL/FreeRTOS support. Drivers are under

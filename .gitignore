@@ -64,3 +64,6 @@ bootloader/src/stage1_flash.ld
 
 # Python bytecode from scripts/
 __pycache__/
+
+# User row backups from scripts/ram_ecc_fuse.py
+user_row_*.bin

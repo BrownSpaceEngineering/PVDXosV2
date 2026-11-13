@@ -210,7 +210,7 @@ There are 3 build types. Each one rebuilds the bootloader and creates `flash.bin
 
   Each name becomes a `-DTEST_<NAME>` flag. For example, some tests to choose from are `SPP`, `LINALG`, `CFDP` and `USLP`. When adding a new test, wrap it in `#ifdef TEST_<NAME>` and add its name to `TEST_NAMES` in `src/Makefile` and to the default list in `src/tests/test.h`.
 
-> **Note:** The bootloader copies PVDXos into the SAMD51's 256 KB of RAM and runs it from there, so the build fails if the image doesn't fit. If a test build is too big, use `TESTS` to build fewer tests.
+> **Note:** PVDXos runs from flash but only gets the bottom 128 KB of the SAMD51's RAM, since RAM ECC keeps its check bits in the top half. The build fails if its data, bss and stacks don't fit. If a test build is too big, use `TESTS` to build fewer tests.
 
 > **Note:** If you for some reason need to build the OS with the old pin-config for use with the old Grand Central devboard, rename the `ASF_grand_central` dir to `ASF` after first temporarily name the normal `ASF` dir to something else (maybe `ASF_new`), but never commit/push any name changes to main.
 
@@ -229,6 +229,15 @@ The Grand Central runs on an Atmel SAMD51P20A, which has a `BOOTPROT` fuse prote
    - At the bottom of the window, click `Program` and then `Verify` to make sure the fuse has been set correctly.
 
 That should be it. The J-Link GDB Server should now work as expected. Congrats on setting up your brand-new devboard!
+
+### Turning on RAM ECC
+
+RAM ECC corrects single-bit RAM errors and detects dual-bit ones. It's off until the RAM ECCDIS fuse (bit 39 of the NVM user row) is cleared, and then takes the top 128 KB of RAM for its check bits. With a J-Link connected:
+
+1. Flash a build that only uses the bottom 128 KB of RAM with `make flash_to_mram`, so the MRAM golden copy has it too. Older builds' bootloaders keep their RAM in the top half.
+2. Run `python3 scripts/ram_ecc_fuse.py enable`. It saves a backup of the user row, clears only bit 39, checks the result and resets the board. `status` shows the fuse, `disable` sets it again, and `restore <backup.bin>` writes a backup back.
+
+The boot log then shows `[+] RAM ECC is on`.
 
 ---
 
