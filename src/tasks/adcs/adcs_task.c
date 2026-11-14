@@ -4,7 +4,7 @@
  * Sensor, timing and actuator glue between PVDXos and the adcs-c `body()` step
  *
  * Created: September 20, 2025
- * Modified: October 30, 2026
+ * Modified: November 13, 2026
  * Authors: Avinash Patel, Yi Lyo, Alexander Thaep, Zach Mahan, Siddharta Laloux
  */
 
@@ -18,7 +18,6 @@
 #include "drivers/magnetometer/magnetometer_driver.h"
 #include "drivers/magnetorquer/magnetorquer_driver.h"
 #include "drivers/photodiode/photodiode_driver.h"
-#include "drivers/rtc/rtc_driver.h"
 #include "globals.h"
 #include "libraries/adcs/include/bdot.h"
 #include "libraries/adcs/include/body.h"
@@ -31,15 +30,13 @@
 #include "state_machine.h"
 #include "task_list.h"
 #include "tasks/adcs/adcs_persist.h"
+#include "utc.h"
 
 #define DEG_TO_RAD (3.14159265358979f / 180.0f)
 #define MICROTESLA_TO_TESLA 1e-6f
-#define SECONDS_PER_DAY 86400
-#define UNIX_EPOCH_JD_SCALAR 2440587 // The Unix epoch is JD 2440587.5
-#define UNIX_EPOCH_JD_FRAC 0.5f
+#define SECONDS_PER_DAY 86400.0
+#define UNIX_EPOCH_JD 2440587.5
 
-// A UTC earlier than this can't be real (2026-01-01T00:00:00Z)
-#define ADCS_MIN_VALID_UNIX_TIME 1767225600u
 // How often UTC is saved to MRAM. A reboot loses up to this much time, plus however long the reboot takes.
 #define ADCS_UTC_SAVE_PERIOD_S 60u
 // A saved TLE older than this is not restored, since SGP4's error grows by around a km per day
@@ -47,6 +44,9 @@
 // body() checks a TLE as soon as the sensors let it get that far, so a TLE that fails this many times is bad. It has
 // to be dropped: body() gives up on any step where it is handed a bad TLE, which would stop pointing for good.
 #define ADCS_TLE_MAX_ATTEMPTS 3
+// The photodiodes have to agree on sunlight or eclipse for this many steps in a row (about 1 s) before it is reported,
+// so that noise near the terminator doesn't flip the state machine's input back and forth
+#define ADCS_SUNLIGHT_DEBOUNCE_STEPS 10
 
 // The RM3100 takes about 7 ms to measure all three axes at a cycle count of 200 (see its user manual), so this will
 // usually be enough on the first check
@@ -60,9 +60,10 @@ static const float MTQ_FULL_DUTY_CURRENT_A[3] = {0.156f, 0.156f, 0.104f};
 static const float BODY_FROM_MAG[3][3] = {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}};
 static const float BODY_FROM_GYRO[3][3] = {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}};
 
+// The same values as the uplinked and downlinked tel_adcs_opmode_t
 typedef enum {
-    ADCS_MODE_DO_POINT,      // body() whenever possible, B-dot whenever it is not pointing
-    ADCS_MODE_DETUMBLE_ONLY, // B-dot only; body() is not called
+    ADCS_MODE_DO_POINT = TEL_ADCS_OPMODE_POINT,              // body() whenever possible, B-dot whenever it is not pointing
+    ADCS_MODE_DETUMBLE_ONLY = TEL_ADCS_OPMODE_DETUMBLE_ONLY, // B-dot only; body() is not called
 } adcs_mode_t;
 
 // All of this is only touched by the ADCS task itself: commands reach it through its queue
@@ -70,8 +71,9 @@ static adcs_mode_t adcs_mode = ADCS_MODE_DO_POINT;
 
 static bool sensor_fault = false; // whether a sensor failed its device check during the current step
 
-static bool utc_valid = false;
-static uint32_t utc_at_rtc_zero = 0; // UTC when the RTC read zero
+static bool in_sunlight = false; // debounced; starts out matching the task manager's default
+static uint8_t sunlight_disagree_steps = 0;
+
 static uint32_t last_utc_save_time = 0;
 
 static adcs_tle_t pending_tle; // a TLE waiting for body() to accept it; only valid if tle_pending is set
@@ -83,61 +85,6 @@ static tel_adcs_data_t telemetry_snapshot;
 
 /* ---------- ORBIT AND TIME ---------- */
 
-// Fails only if the RTC can't be read. The RTC driver's seconds are calibrated against the UHF radio and don't wrap.
-static status_t get_uptime_seconds(uint32_t *const uptime_s) {
-    rtc_data_t rtc;
-    const status_t result = get_rtc_values(&rtc);
-    if (result != SUCCESS) {
-        warning("adcs: failed to read RTC\n");
-        return result;
-    }
-
-    *uptime_s = rtc.seconds_count;
-    return SUCCESS;
-}
-
-static void unix_to_jd(const uint32_t unix_time, int *const jd_scalar, float *const jd_frac) {
-    *jd_scalar = UNIX_EPOCH_JD_SCALAR + (int)(unix_time / SECONDS_PER_DAY);
-    *jd_frac = UNIX_EPOCH_JD_FRAC + (float)(unix_time % SECONDS_PER_DAY) / SECONDS_PER_DAY;
-    if (*jd_frac >= 1.0f) {
-        *jd_scalar += 1;
-        *jd_frac -= 1.0f;
-    }
-}
-
-static status_t set_utc(const uint32_t unix_time) {
-    if (unix_time < ADCS_MIN_VALID_UNIX_TIME) {
-        warning("adcs: rejected implausible UTC %lu\n", (unsigned long)unix_time);
-        return ERROR_BAD_ARGS;
-    }
-
-    uint32_t uptime_s;
-    const status_t result = get_uptime_seconds(&uptime_s);
-    if (result != SUCCESS) {
-        return result;
-    }
-
-    utc_at_rtc_zero = unix_time - uptime_s;
-    utc_valid = true;
-    return SUCCESS;
-}
-
-// TODO: move UTC out of ADCS once other tasks need it (e.g. telemetry timestamps)
-static status_t get_utc(uint32_t *const unix_time) {
-    if (!utc_valid) {
-        return ERROR_NOT_READY;
-    }
-
-    uint32_t uptime_s;
-    const status_t result = get_uptime_seconds(&uptime_s);
-    if (result != SUCCESS) {
-        return result;
-    }
-
-    *unix_time = utc_at_rtc_zero + uptime_s;
-    return SUCCESS;
-}
-
 status_t adcs_get_time(int *const unix_time, int *const jd_scalar, float *const jd_frac) {
 #ifdef ADCS_MOCK
     // body() has to see the plant's simulated time, which advances by a fixed step per tick rather than in real time
@@ -145,13 +92,13 @@ status_t adcs_get_time(int *const unix_time, int *const jd_scalar, float *const 
 #endif
 
     uint32_t utc;
-    const status_t result = get_utc(&utc);
+    const status_t result = utc_get(&utc);
     if (result != SUCCESS) {
         return result;
     }
 
     *unix_time = (int)utc;
-    unix_to_jd(utc, jd_scalar, jd_frac);
+    utc_to_jd(utc, jd_scalar, jd_frac);
     return SUCCESS;
 }
 
@@ -165,6 +112,18 @@ static status_t offer_tle(const adcs_tle_t *const tle) {
     tle_pending = true;
     tle_attempts = 0;
     return SUCCESS;
+}
+
+void adcs_tle_from_uplink(const tel_adcs_parameters_t *const params, adcs_tle_t *const tle) {
+    // body() takes the mean elements in a different order from TLE line 2, and in radians
+    tle->mean[0] = params->mean_motion;
+    tle->mean[1] = params->eccentricity;
+    tle->mean[2] = params->inclination * DEG_TO_RAD;
+    tle->mean[3] = params->raan * DEG_TO_RAD;
+    tle->mean[4] = params->argument_of_perigee * DEG_TO_RAD;
+    tle->mean[5] = params->mean_anomaly * DEG_TO_RAD;
+    tle->bstar = params->bstar;
+    tle->epoch_jd = params->epoch_jd;
 }
 
 const float *adcs_get_tle_update(void) {
@@ -193,7 +152,7 @@ static void resolve_pending_tle(const bool body_saw_tle) {
 void adcs_restore_state(void) {
     // UTC has to come first, or the TLE would be propagated to the wrong time
     uint32_t saved_utc;
-    if (!adcs_persist_load_utc(&saved_utc) || set_utc(saved_utc) != SUCCESS) {
+    if (!adcs_persist_load_utc(&saved_utc) || utc_set(saved_utc) != SUCCESS) {
         info("adcs: no saved UTC to restore\n");
         return;
     }
@@ -208,7 +167,7 @@ void adcs_restore_state(void) {
 
     int jd_scalar;
     float jd_frac;
-    unix_to_jd(saved_utc, &jd_scalar, &jd_frac);
+    utc_to_jd(saved_utc, &jd_scalar, &jd_frac);
     const double tle_age_days = fabs((double)jd_scalar + (double)jd_frac - saved_tle.epoch_jd);
     if (!(tle_age_days <= ADCS_TLE_MAX_RESTORE_AGE_DAYS)) {
         warning("adcs: saved TLE is too old to restore\n");
@@ -223,7 +182,7 @@ void adcs_restore_state(void) {
 
 void adcs_save_state(void) {
     uint32_t utc;
-    if (get_utc(&utc) == SUCCESS && utc - last_utc_save_time >= ADCS_UTC_SAVE_PERIOD_S) {
+    if (utc_get(&utc) == SUCCESS && utc - last_utc_save_time >= ADCS_UTC_SAVE_PERIOD_S) {
         adcs_persist_save_utc(utc);
         last_utc_save_time = utc;
     }
@@ -289,7 +248,7 @@ void exec_command_adcs(command_t *const p_cmd) {
             p_cmd->result = offer_tle(p_cmd->data.adcs_tle);
             break;
         case OPERATION_ADCS_SET_UTC:
-            p_cmd->result = set_utc(p_cmd->data.unix_time);
+            p_cmd->result = utc_set(p_cmd->data.unix_time);
             if (p_cmd->result == SUCCESS) {
                 info("adcs: UTC set to %lu\n", (unsigned long)p_cmd->data.unix_time);
                 adcs_persist_save_utc(p_cmd->data.unix_time);
@@ -438,11 +397,26 @@ status_t adcs_read_photodiodes(float *const photodiodes) {
     return SUCCESS;
 }
 
+// A failed read is all zeros, which would look like eclipse, so it restarts the count instead of counting towards one
+static void update_sunlight(const float *const photodiodes, const bool photodiodes_valid) {
+    float sun_vector[3];
+    if (!photodiodes_valid || get_vec_from_photodiode_readings(photodiodes, sun_vector) == in_sunlight) {
+        sunlight_disagree_steps = 0;
+        return;
+    }
+
+    if (++sunlight_disagree_steps >= ADCS_SUNLIGHT_DEBOUNCE_STEPS) {
+        in_sunlight = !in_sunlight;
+        sunlight_disagree_steps = 0;
+        info("adcs: %s\n", in_sunlight ? "entered sunlight" : "entered eclipse");
+    }
+}
+
 void adcs_read_sensors(float *const mag_tesla, float *const gyro_rad_s, float *const photodiodes) {
     sensor_fault = false;
     adcs_read_magnetometer(mag_tesla);
     adcs_read_gyro(gyro_rad_s);
-    adcs_read_photodiodes(photodiodes);
+    update_sunlight(photodiodes, adcs_read_photodiodes(photodiodes) == SUCCESS);
 }
 
 /* ---------- ACTUATORS, TELEMETRY AND STATE MACHINE ---------- */
@@ -466,12 +440,36 @@ void adcs_publish_telemetry(void) {
     const bool attitude_valid = body_get_attitude(q_body_to_eci);
     if (attitude_valid) {
         quat2rotationvec(q_body_to_eci, telemetry.attitude);
+        telemetry.flags |= TEL_ADCS_FLAG_ATTITUDE_VALID;
     }
-    if (!body_get_position(telemetry.position)) {
+    if (body_get_position(telemetry.position)) {
+        telemetry.flags |= TEL_ADCS_FLAG_POSITION_VALID;
+    } else {
         memset(telemetry.position, 0, sizeof(telemetry.position));
     }
-    // TODO(blocked on telemetry format): fill the rest of state[] and covariance[], which don't match the filter's shapes
-    body_get_gyro_bias(&telemetry.state[3]);
+    body_get_gyro_bias(telemetry.gyro_bias);
+    // TODO(blocked on adcs-c): fill covariance_diag once body.h exposes the filter covariance's diagonal
+
+    adcs_tle_t tle;
+    if (body_get_tle(tle.mean, &tle.bstar, &tle.epoch_jd)) {
+        telemetry.flags |= TEL_ADCS_FLAG_TLE_LOADED;
+        const double epoch_unix_time = (tle.epoch_jd - UNIX_EPOCH_JD) * SECONDS_PER_DAY;
+        telemetry.tle_epoch_unix_time = epoch_unix_time > 0.0 && epoch_unix_time < 4294967296.0 ? (uint32_t)epoch_unix_time : 0;
+    }
+
+    uint32_t utc;
+    if (utc_get(&utc) == SUCCESS) {
+        telemetry.flags |= TEL_ADCS_FLAG_UTC_VALID;
+    }
+    if (adcs_mode == ADCS_MODE_DO_POINT && body_is_pointing()) {
+        telemetry.flags |= TEL_ADCS_FLAG_POINTING;
+    }
+    if (in_sunlight) {
+        telemetry.flags |= TEL_ADCS_FLAG_IN_SUNLIGHT;
+    }
+    telemetry.opmode = (uint8_t)adcs_mode;
+    const int filter_resets = body_get_filter_resets();
+    telemetry.filter_resets = filter_resets > UINT16_MAX ? UINT16_MAX : (uint16_t)filter_resets;
 
     taskENTER_CRITICAL();
     telemetry_snapshot = telemetry;
@@ -488,24 +486,27 @@ void adcs_get_telemetry(tel_adcs_data_t *const telemetry) {
 }
 
 void adcs_update_state_inputs(void) {
-    // TODO(blocked on state table): report SUNLIGHT_STATUS_UPDATE once STATE_PEROVSKITE_CAPTURE exists; idle would flip to it and back
     static input_update_data_t adcs_inputs = {
-        .input_update_bitmask = INPUT_UPDATE_BIT(ADCS_POINTING_UPDATE) | INPUT_UPDATE_BIT(ADCS_SENSOR_FAULT_UPDATE),
+        .input_update_bitmask =
+            INPUT_UPDATE_BIT(ADCS_POINTING_UPDATE) | INPUT_UPDATE_BIT(ADCS_SENSOR_FAULT_UPDATE) | INPUT_UPDATE_BIT(SUNLIGHT_STATUS_UPDATE),
     };
     static bool sent_pointing = false;
     static bool sent_sensor_fault = false;
+    static bool sent_sunlight = false;
 
     const bool pointing = adcs_mode == ADCS_MODE_DO_POINT && body_is_pointing();
-    if (pointing == sent_pointing && sensor_fault == sent_sensor_fault) {
+    if (pointing == sent_pointing && sensor_fault == sent_sensor_fault && in_sunlight == sent_sunlight) {
         return;
     }
 
     adcs_inputs.new_values.adcs_pointing = pointing;
     adcs_inputs.new_values.adcs_sensor_fault = sensor_fault;
+    adcs_inputs.new_values.in_sunlight = in_sunlight;
     command_t cmd = get_state_input_update_command(&adcs_inputs);
     // If the task manager's queue is full, this tries again on the next step
     if (enqueue_command(&cmd) == SUCCESS) {
         sent_pointing = pointing;
         sent_sensor_fault = sensor_fault;
+        sent_sunlight = in_sunlight;
     }
 }

@@ -20,7 +20,7 @@
 #include "semphr.h"
 #include "state_machine.h"
 #include "task_list.h"
-#include "tasks/adcs/adcs_task.h"
+#include "utc.h"
 #include "watchdog_task.h"
 
 #define PEROVSKITE_SETTLE_MS 5U                                             // Opamp settling time after a DAC step
@@ -259,12 +259,11 @@ static status_t perovskite_sweep_pixel(uint8_t pixel, int16_t *p_samples) {
  * a stop or reboot partway leaves MRAM untouched.
  */
 static status_t perovskite_run_sweep(void) {
-    int unix_time = 0, jd_scalar = 0;
-    float jd_frac = 0.0f;
+    uint32_t unix_time = 0;
 
     memset(&sweep, 0, sizeof(sweep));
     sweep.sequence = next_sequence;
-    sweep.timestamp = adcs_get_time(&unix_time, &jd_scalar, &jd_frac) == SUCCESS ? (uint32_t)unix_time : 0;
+    sweep.timestamp = utc_get(&unix_time) == SUCCESS ? unix_time : 0;
     sweep.full_scale_mv = PVD_PIXEL_FULL_SCALE_MV;
 
     for (uint8_t pixel = 0; pixel < PEROVSKITE_PIXEL_COUNT; pixel++) {
