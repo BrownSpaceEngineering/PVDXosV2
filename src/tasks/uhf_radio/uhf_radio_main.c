@@ -6,6 +6,8 @@
  * Modified: October 7, 2026
  * Authors: Noah Shepard
  */
+#include <sys/types.h>
+
 #include "at86rf215.h"
 #include "ccsds/radio_routing.h"
 #include "ccsds/uslp.h"
@@ -82,44 +84,19 @@ void main_uhf_radio(void *pvParameters) {
 
     at86_irq_setup();
 
-    // event flags
-    uint32_t events;
-
-    bool needs_downlink = false;
+    const TickType_t start = xTaskGetTickCount();
+    uhf_ctx_t ctx = {.state = LISTEN, .last_rx = start, .next_beacon = start + pdMS_TO_TICKS(UHF_BEACON_PERIOD_MS)};
 
     while (true) {
-        xTaskNotifyWait(0, UINT32_MAX, &events, pdMS_TO_TICKS(UHF_RADIO_WAIT_MS));
+        uint32_t events = 0;
+        xTaskNotifyWait(0, UINT32_MAX, &events, uhf_ticks_until_wake(&ctx));
 
-        if (events & UHF_EVENT_IRQ) {
-            events |= uhf_irqs_to_events(uhf_read_irqs());
+        const uhf_rx_t rx = uhf_rx_poll(&ctx, events);
+        const uhf_state_t next = uhf_state_descs[ctx.state].proc(&ctx, &rx);
+        if (next != ctx.state) {
+            uhf_enter_state(&ctx, next);
         }
 
-        if (events & UHF_EVENT_DOWNLINK) {
-            needs_downlink = true;
-            uhf_go_txprep();
-        }
-
-        if (events & UHF_EVENT_RXFE) {
-            uhf_rx_process();
-            if (needs_downlink) {
-                needs_downlink = uhf_tx_process();
-            } else {
-                uhf_go_rx();
-            }
-        }
-
-        if (events & UHF_EVENT_TXFE || events & UHF_EVENT_TXRDY) {
-            if (needs_downlink) {
-                needs_downlink = uhf_tx_process();
-            } else {
-                uhf_go_rx();
-            }
-        }
-
-        // Check in with the watchdog task
-        if (should_checkin(current_task)) {
-            enqueue_command(&cmd_checkin);
-            debug("Radio: Enqueued watchdog checkin command\n");
-        }
+        uhf_watchdog_checkin();
     }
 }
