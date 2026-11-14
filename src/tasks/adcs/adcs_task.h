@@ -151,7 +151,8 @@ void adcs_compute_currents(const float *const last_mag, const float *const mag, 
 /**
  * \fn adcs_read_sensors
  *
- * \brief Reads all three ADCS sensors, and records whether any failed its device check for `adcs_update_state_inputs()`
+ * \brief Reads all three ADCS sensors, and records whether any failed its device check and whether we are in sunlight
+ *      for `adcs_update_state_inputs()`
  *
  * \param mag_tesla see `adcs_read_magnetometer()`
  * \param gyro_rad_s see `adcs_read_gyro()`
@@ -269,7 +270,7 @@ void adcs_get_telemetry(tel_adcs_data_t *const telemetry);
 /**
  * \fn adcs_update_state_inputs
  *
- * \brief Tells the task manager if the ADCS state machine inputs (pointing, sensor fault) have changed
+ * \brief Tells the task manager if the ADCS state machine inputs (pointing, sensor fault, sunlight) have changed
  */
 void adcs_update_state_inputs(void);
 
