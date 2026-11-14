@@ -20,7 +20,6 @@
 #include "logging.h"
 #include "rtc_driver.h"
 #include "task_list.h"
-#include "telemetry/telemetry.h"
 
 /* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command
  * dispatcher task) ---------- */
@@ -59,9 +58,8 @@ void cfdp_put_request(cfdp_put_data_t *put_data) {
     txn->file_offset = 0;
     txn->state = CFDP_SEND_STATE_METADATA_SEND;
     txn->direction = CFDP_SEND;
-    // Telemetry is sent unacknowledged (class 1), since most of it is sent with no ground station in view. Everything
-    // else is acknowledged (class 2)
-    txn->reliable_mode = (put_data->stream != RADIO_STREAM_TELEMETRY);
+    // Every file is sent acknowledged (class 2). Telemetry doesn't go through CFDP: the UHF task beacons it
+    txn->reliable_mode = true;
     txn->source_filename.length = 0;
     txn->source_filename.value = NULL;
     txn->dest_filename.length = 0;
@@ -92,29 +90,6 @@ void cfdp_put_request(cfdp_put_data_t *put_data) {
     info("cfdp put: complete\n");
 
     return;
-}
-
-// The serialized telemetry downlink being sent. Static, since it has to outlive the transaction that sends it
-static tel_downlink_t cfdp_telemetry;
-static uint8_t cfdp_telemetry_file[TELEMETRY_DOWNLINK_SIZE];
-
-void cfdp_put_telemetry(void) {
-    // Only one telemetry file is kept, so a cycle is skipped while the last one is still being sent
-    for (size_t i = 0; i < MAX_TRANSACTIONS; i++) {
-        if (cfdp_txn_store.active[i] && cfdp_txn_store.transactions[i].file_data == cfdp_telemetry_file) {
-            warning("cfdp telemetry: previous telemetry still being sent, skipping\n");
-            return;
-        }
-    }
-
-    telemetry_collect(&cfdp_telemetry);
-    if (telemetry_downlink_serialize(&cfdp_telemetry, cfdp_telemetry_file, sizeof(cfdp_telemetry_file))) {
-        warning("cfdp telemetry: failed to serialize telemetry\n");
-        return;
-    }
-
-    cfdp_put_data_t put_data = {.memory = cfdp_telemetry_file, .file_size = sizeof(cfdp_telemetry_file), .stream = RADIO_STREAM_TELEMETRY};
-    cfdp_put_request(&put_data);
 }
 
 void cfdp_cancel_request(uint32_t txn_id) {
@@ -175,9 +150,6 @@ void exec_command_cfdp_request(command_t *const p_cmd) {
             break;
         case OPERATION_CFDP_CANCEL:
             cfdp_cancel_request(p_cmd->data.cfdp_request->txn_id);
-            break;
-        case OPERATION_CFDP_PUT_TELEMETRY:
-            cfdp_put_telemetry();
             break;
         case OPERATION_CFDP_TIMEOUT_RETRANSMIT:
             retransmit_timer_timeout(&p_cmd->data.cfdp_timeout);

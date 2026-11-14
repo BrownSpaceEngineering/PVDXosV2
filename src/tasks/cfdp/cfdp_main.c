@@ -14,7 +14,6 @@
 #include "globals.h"
 #include "libraries/cmd_dispatcher/cmd_dispatcher.h"
 #include "logging.h"
-#include "telemetry/telemetry_timer.h"
 #include "uhf_radio/uhf_radio_task.h"
 #include "uplink_commands.h"
 #include "watchdog_task.h"
@@ -59,7 +58,6 @@ QueueHandle_t init_cfdp(void) {
     }
 
     init_cfdp_timers(&cfdp_mem);
-    init_telemetry_timer();
 
     for (size_t i = 0; i < CFDP_SMALL_BUFF_COUNT; i++) {
         init_cfdp_buff(&cfdp_small_buffs[i].header, cfdp_small_buffs[i].buff, false);
@@ -97,8 +95,6 @@ void main_cfdp(void *pvParameters) {
     for (size_t i = 0; i < MAX_TRANSACTIONS; ++i) {
         cfdp_txn_store.active[i] = false;
     }
-
-    start_telemetry_timer();
 
     while (true) {
         // Wait briefly for the first command, then drain the rest. Timer timeouts arrive as commands too, so the queue is

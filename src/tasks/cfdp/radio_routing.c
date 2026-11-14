@@ -17,13 +17,15 @@
 const radio_route_t radio_routes[RADIO_STREAM_COUNT] = {
     [RADIO_STREAM_PEROVSKITE] = {.vcid = 0, .radio = RADIO_SBAND}, // on request by uplink
     [RADIO_STREAM_IMAGE] = {.vcid = 1, .radio = RADIO_SBAND},      // on request by uplink
-    [RADIO_STREAM_TELEMETRY] = {.vcid = 2, .radio = RADIO_UHF},    // every ten minutes
+    [RADIO_STREAM_TELEMETRY] = {.vcid = 2, .radio = RADIO_UHF},    // UHF beacon bursts, without CFDP
     [RADIO_STREAM_CFDP_REPLY] = {.vcid = 3, .radio = RADIO_UHF},   // whenever CFDP sends an ACK/NAK/FIN
     [RADIO_STREAM_UPLINK_CMD] = {.vcid = 4, .radio = RADIO_UHF},   // when uplinked
+    [RADIO_STREAM_PUSP] = {.vcid = 5, .radio = RADIO_UHF},         // UHF link handshakes, both ways
 };
 
-// Streams the ground sends to us. Ground replies (ACK/NAK/FIN) to our downlinked files come in on the CFDP reply VC
-static const radio_stream_t uplink_streams[] = {RADIO_STREAM_CFDP_REPLY, RADIO_STREAM_UPLINK_CMD};
+// Streams the ground sends to us. Ground replies (ACK/NAK/FIN) to our downlinked files come in on the CFDP reply VC, and
+// the ground's PUSP directives on the PUSP VC
+static const radio_stream_t uplink_streams[] = {RADIO_STREAM_CFDP_REPLY, RADIO_STREAM_UPLINK_CMD, RADIO_STREAM_PUSP};
 
 int radio_route_send(radio_stream_t stream, radio_queue_item_t *item, TickType_t wait) {
     if (stream >= RADIO_STREAM_COUNT || item == NULL || item->len == 0 || item->len > sizeof(item->data)) {

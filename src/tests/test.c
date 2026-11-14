@@ -15,6 +15,7 @@
 #include "logging.h"
 #include "telemetry/telemetry.h"
 #include "tests/test_pmb.h"
+#include "tests/test_pusp.h"
 
 int tests_passed = 0;
 int tests_total = 0;
@@ -54,6 +55,9 @@ void tests_run(void) {
 #endif
 #ifdef TEST_UPLINK
     test_uplink_parse();
+#endif
+#ifdef TEST_PUSP
+    test_pusp();
 #endif
     test_log("test results: %d/%d passed", tests_passed, tests_total);
 }

@@ -5,8 +5,10 @@
  * main_uhf_radio() only waits, polls for a frame and dispatches; everything a state does lives in its handler.
  *
  * Radio model:
- * - Radio state changes (TXPREP, TX, RX) are polled and take a few ms, so transmits block. uhf_transmit_pusp() and
- *   uhf_transmit_beacon() always leave the radio in RX. ESTABLISH_SEND keeps it in TXPREP between data frames.
+ * - Radio state changes (TXPREP, TX, RX) are polled and take a few ms, so transmits block. uhf_transmit_pusp() always
+ *   leaves the radio in RX. BEACON and ESTABLISH_SEND keep it in TXPREP between frames.
+ * - DATASHEET(verify): after a frame is sent (TXFE) or received (RXFE) the radio goes to TXPREP by itself (AT86RF215
+ *   datasheet 5.2.7, 5.3.2.4). Radio behaviour taken from the datasheet is marked DATASHEET(verify) throughout.
  * - The only radio interrupt used is RXFE. uhf_rx_poll() reads the frame and puts the radio back in RX.
  *
  * Link states (every state but BEACON and LISTEN) start with uhf_link_check(), which handles a restart SYN and the
@@ -30,13 +32,20 @@ const uhf_state_desc_t uhf_state_descs[UHF_STATE_COUNT] = {
 };
 
 /**
- * Sends one beacon burst, then goes back to LISTEN. A SYN that arrives during the burst is missed, so the ground
- * re-sends it.
+ * Sends the beacon frame back to back until beacon_end (UHF_BEACON_BURST_MS after LISTEN started the burst), then goes
+ * back to LISTEN. One frame per iteration, so the main loop still checks in with the watchdog during the burst. The radio
+ * stays in TXPREP between frames, so a SYN sent during the burst is missed and the ground re-sends it.
  */
 uhf_state_t beacon_proc(uhf_ctx_t *ctx, const uhf_rx_t *rx) {
+    if (uhf_deadline_passed(ctx->beacon_end)) {
+        uhf_go_rx();
+        ctx->next_beacon = xTaskGetTickCount() + pdMS_TO_TICKS(UHF_BEACON_PERIOD_MS);
+        return LISTEN;
+    }
+
+    // A failed frame is logged and the burst carries on: the next frame is another try
     uhf_transmit_beacon();
-    ctx->next_beacon = xTaskGetTickCount() + pdMS_TO_TICKS(UHF_BEACON_PERIOD_MS);
-    return LISTEN;
+    return BEACON;
 }
 
 /**
@@ -45,8 +54,9 @@ uhf_state_t beacon_proc(uhf_ctx_t *ctx, const uhf_rx_t *rx) {
 uhf_state_t listen_proc(uhf_ctx_t *ctx, const uhf_rx_t *rx) {
     switch (rx->kind) {
         case UHF_RX_CFDP:
-            // TEMP DECISION: CFDP is accepted without a link. Drop it here instead if the link should be required
-            uhf_forward_cfdp(rx);
+            // Dropped: CFDP only runs over an established link, since replies to it can only go out in ESTABLISH_SEND and
+            // would otherwise back up the CFDP -> UHF downlink queue
+            warning("Radio: dropping CFDP PDU received in LISTEN, no link\n");
             return LISTEN;
         case UHF_RX_PUSP:
             if (rx->dir == SYN) {
@@ -59,7 +69,17 @@ uhf_state_t listen_proc(uhf_ctx_t *ctx, const uhf_rx_t *rx) {
             break;
     }
 
-    return uhf_deadline_passed(ctx->next_beacon) ? BEACON : LISTEN;
+    if (!uhf_deadline_passed(ctx->next_beacon)) {
+        return LISTEN;
+    }
+
+    // Start a beacon burst. Telemetry is collected once per burst, not per frame
+    if (!uhf_beacon_prepare()) {
+        ctx->next_beacon = xTaskGetTickCount() + pdMS_TO_TICKS(UHF_BEACON_PERIOD_MS);
+        return LISTEN;
+    }
+    ctx->beacon_end = xTaskGetTickCount() + pdMS_TO_TICKS(UHF_BEACON_BURST_MS);
+    return BEACON;
 }
 
 /**
@@ -140,11 +160,11 @@ uhf_state_t establish_send_proc(uhf_ctx_t *ctx, const uhf_rx_t *rx) {
         return link;
     }
 
-    uhf_go_txprep(); // Polled. Harmless if already in TXPREP
+    uhf_go_txprep(); // Polled. DATASHEET(verify): assumes CMD=TXPREP is harmless when already in TXPREP
 
     bool more = uxQueueMessagesWaiting(downlink_queue) != 0;
     while (more && !uhf_deadline_passed(ctx->yield_deadline)) {
-        more = uhf_tx_process(); // TODO: must block until the frame is out once TX is polled
+        more = uhf_tx_process(); // TODO: must block until the frame is out, polling TXFE like uhf_transmit_beacon()
         ctx->grace_armed = false;
         uhf_watchdog_checkin();
     }

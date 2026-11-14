@@ -15,8 +15,10 @@
 #define RADIO_PAYLOAD_MAX_SIZE 512     // Largest SPP user data field (e.g. one CFDP PDU) the radio task sends or receives
 #define RADIO_DOWNLINK_MAX_SIZE (SPP_PRIMARY_HEADER_SIZE + SPP_SECONDARY_HEADER_SIZE + RADIO_PAYLOAD_MAX_SIZE) // Whole space packet
 
-// Maximum wait for an event response
+// Longest the main loop blocks without an event or deadline, so watchdog check-ins stay on time
 #define UHF_RADIO_WAIT_MS 1000
+// Shortest time between watchdog check-ins. The radio task's watchdog timeout is in task_list.c
+#define UHF_CHECKIN_PERIOD_MS 1000
 
 // TODO(temp): placeholder RF settings, copied from the burn sequence except for the PHY (the burn sequence uses its own
 // link config, which the radio task doesn't have). All three must match the ground station and be confirmed on hardware
@@ -45,7 +47,11 @@
 #define UHF_MAX_RETRIES 5          // Re-sends before a handshake state gives up and goes back to LISTEN
 #define UHF_LINK_TIMEOUT_MS 30000  // A link with no valid packet from the ground for this long drops back to LISTEN
 #define UHF_TX_WINDOW_MS 10000     // Longest ESTABLISH_SEND keeps the turn before yielding
-#define UHF_BEACON_PERIOD_MS 60000 // How often LISTEN sends a beacon burst
+#define UHF_BEACON_PERIOD_MS 60000 // Time from the end of one beacon burst to the start of the next
+#define UHF_BEACON_BURST_MS 10000  // How long BEACON keeps re-sending the beacon frame
+// Longest a polled transmit waits for its frame to go out. DATASHEET(verify): assumes the MR-FSK config's RSC FEC is rate
+// 1/2, so a ~540 byte beacon frame at 50 ksym/s takes ~175 ms on air. Confirm the real airtime on hardware
+#define UHF_TX_TIMEOUT_MS 500
 // TEMP DECISION: ESTABLISH_SEND waits this long for more downlink data before yielding an empty turn
 #define UHF_YIELD_GRACE_MS 500
 _Static_assert(UHF_TX_WINDOW_MS < UHF_LINK_TIMEOUT_MS, "ESTABLISH_SEND receives nothing, so it must yield before the link times out");
@@ -114,6 +120,7 @@ struct uhf_ctx {
     uint8_t retries;           // Re-sends so far in this state, reset by uhf_enter_state()
     TickType_t last_rx;        // Tick of the last valid packet from the ground, for UHF_LINK_TIMEOUT_MS
     TickType_t next_beacon;    // Absolute tick at which LISTEN goes to BEACON
+    TickType_t beacon_end;     // Absolute tick at which BEACON stops sending and goes back to LISTEN, set by LISTEN
     TickType_t yield_deadline; // Absolute tick at which ESTABLISH_SEND yields, set on entering it
     TickType_t grace_deadline; // Absolute tick at which an idle ESTABLISH_SEND gives up waiting for data, if grace_armed
     bool grace_armed;          // Cleared by uhf_enter_state() and whenever ESTABLISH_SEND sends a frame
@@ -121,31 +128,59 @@ struct uhf_ctx {
 
 extern const uhf_state_desc_t uhf_state_descs[UHF_STATE_COUNT];
 
-// ---- PUSP helpers. TODO: declared for the state machine mockup, not implemented yet ----
+// ---- PUSP helpers. uhf_state.c, except where noted ----
 
 /**
  * If events has UHF_EVENT_IRQ, reads the radio IRQs. On RXFE, reads the frame from the BBC0 RX buffer, checks it like
- * uhf_rx_process() does, classifies it by SPP APID, puts the radio back in RX (RXFE leaves it in TXPREP) and, for a
+ * uhf_rx_process() does, classifies it by SPP APID, puts the radio back in RX and, for a
  * valid packet, sets ctx->last_rx. Unlike uhf_rx_process() it forwards nothing. Replaces uhf_rx_process().
+ *
+ * TODO: only a dummy that drops every frame (uhf_radio_task.c)
  *
  * \return the classified frame, kind UHF_RX_NONE if there was none or it was dropped (the reason is logged)
  */
+// DATASHEET(verify): RXFE moves the radio from RX to TXPREP by itself, without a TRXRDY IRQ (5.2.7, 5.3.2.4 IRQS.RXFE)
 uhf_rx_t uhf_rx_poll(uhf_ctx_t *ctx, uint32_t events);
 
-// True if rx is the PUSP directive dir
+// True if rx is the PUSP directive dir (uhf_radio_task.c)
 bool uhf_rx_is_pusp(const uhf_rx_t *rx, pusp_directive_t dir);
 
 // Puts the CFDP PDU in rx on the uplink queue, warning if the queue is full. Does nothing for other kinds
+// (uhf_radio_task.c)
 void uhf_forward_cfdp(const uhf_rx_t *rx);
 
 /**
- * Wraps a PUSP directive in SPP/USLP and sends it: TXPREP, send, poll until the frame is out, then back to RX.
+ * Wraps a PUSP directive in SPP (CCSDS_APID_PUSP) and USLP (RADIO_STREAM_PUSP's VC) and sends it: TXPREP, send, poll
+ * until the frame is out, then back to RX.
  *
  * \return true if the frame was sent (failures are logged). The radio is left in RX either way
+ *
+ * TODO: only a dummy that records dir in uhf_pusp_tx_last/uhf_pusp_tx_count and sends nothing (uhf_radio_task.c)
  */
 bool uhf_transmit_pusp(pusp_directive_t dir);
 
-// Sends one beacon burst built from the latest telemetry, the same way as uhf_transmit_pusp(). Leaves the radio in RX
+// The last directive uhf_transmit_pusp() was asked to send, and how many it has been asked to send since boot
+extern pusp_directive_t uhf_pusp_tx_last;
+extern uint32_t uhf_pusp_tx_count;
+
+/**
+ * Builds the beacon frame for the next burst: collects telemetry, serializes it and wraps it in SPP (APID
+ * CCSDS_APID_TELEMETRY) and USLP (the telemetry stream's VC). Every frame of a burst is this same frame.
+ *
+ * \return true on success, false if the frame couldn't be built (the reason is logged)
+ *
+ * (uhf_radio_task.c)
+ */
+bool uhf_beacon_prepare(void);
+
+/**
+ * Sends the frame built by uhf_beacon_prepare() once: TXPREP, send, poll until the frame is out. Leaves the radio in
+ * TXPREP, so the next beacon frame can go straight out; going back to RX is up to the caller.
+ *
+ * \return true if the frame was sent, false otherwise (the reason is logged)
+ *
+ * (uhf_radio_task.c)
+ */
 bool uhf_transmit_beacon(void);
 
 /**
@@ -182,11 +217,12 @@ bool uhf_deadline_passed(TickType_t deadline);
 /**
  * How long the main loop may block: until the earliest deadline that matters in ctx->state (retry_deadline, next_beacon
  * in LISTEN, yield/grace deadline in ESTABLISH_SEND, the link timeout in link states), capped so watchdog check-ins
- * still happen on time. 0 if a deadline has already passed.
+ * still happen on time. 0 if a deadline has already passed, and always 0 in BEACON, which sends back to back.
  */
 TickType_t uhf_ticks_until_wake(const uhf_ctx_t *ctx);
 
-// Checks in with the watchdog if due (should_checkin() + enqueue_command()). Safe to call as often as wanted
+// Checks in with the watchdog if the task is enabled and UHF_CHECKIN_PERIOD_MS has passed since the last check-in, so
+// it's safe to call as often as wanted (uhf_radio_main.c)
 void uhf_watchdog_checkin(void);
 
 // Placed in a struct to ensure that the TCB is placed higher than the stack in memory

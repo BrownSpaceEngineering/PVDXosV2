@@ -210,7 +210,6 @@ cfdp_result_t cfdp_transact(cfdp_transaction_t *txn);
 
 void cfdp_put_request(cfdp_put_data_t *put_data);
 void cfdp_cancel_request(uint32_t txn_id);
-void cfdp_put_telemetry(void);
 
 int cfdp_prepare_pdu_header(uint8_t *buff, cfdp_transaction_t *transaction, uint16_t pdu_len, cfdp_pdu_type_t pdu_type);
 int cfdp_send_metadata(cfdp_transaction_t *transaction);

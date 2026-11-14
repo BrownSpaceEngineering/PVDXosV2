@@ -11,6 +11,7 @@
 #include "pusp.h"
 #include "regs.h"
 #include "task_list.h"
+#include "telemetry/telemetry.h"
 
 #define AT86_RF_IRQ_WAKEUP (1u << 0)
 #define AT86_RF_IRQ_TRXRDY (1u << 1)
@@ -37,6 +38,10 @@ radio_queue_item_t item;
 
 // A whole space packet, between the queue item and the USLP frame
 static uint8_t spp_buffer[RADIO_DOWNLINK_MAX_SIZE];
+
+// BBC0 IRQs other than TXFE that uhf_take_txfe() read (and so cleared) while polling. uhf_read_irqs() hands them on.
+// DATASHEET(verify): reading an IRQS register clears all of its bits, not just the one being polled (5.3.1, 5.3.2.4)
+static uint8_t pending_bbc_irqs;
 
 // Ground station callsign, checked against the SPP secondary header of every uplinked packet that has one
 static const uint8_t ground_callsign[SPP_SECONDARY_HEADER_CALLSIGN_SIZE] = {'b', 's', 'e', 'g', 'n', 'd'};
@@ -147,6 +152,8 @@ uhf_irqs_t uhf_read_irqs(void) {
         warning("Radio: failed to read IRQ registers\n");
         irqs = (uhf_irqs_t){0};
     }
+    irqs.bbc |= pending_bbc_irqs;
+    pending_bbc_irqs = 0;
     return irqs;
 }
 
@@ -451,7 +458,9 @@ int at86_init_pvdx(struct at86rf215 *radio) {
     radio->rf_femode_24 = AT86RF215_RF_FEMODE0;
     radio->xo_fs = 0;
     radio->xo_trim = 0;
-    radio->irqmm = 0;
+    // DATASHEET(verify): with RF_CFG.IRQMM = 1, masked IRQ reasons still appear in the IRQS registers; with 0 they don't
+    // (4.3.1.1, 5.3.1, 5.3.2.5). Needed so TXFE can be polled while masked from the IRQ pin
+    radio->irqmm = 1;
     radio->irqp = 0;
     radio->pad_drv = AT86RF215_RF_DRV2;
     int ret = at86rf215_init(radio);
@@ -461,8 +470,10 @@ int at86_init_pvdx(struct at86rf215 *radio) {
     }
 
     // at86rf215_init() unmasks TXFE and TRXRDY on both radios. Unmask the RF09 IRQs that the task handles, and mask all
-    // RF24/BBC1 IRQs: the task never reads their IRQS registers, so a pending one would hold the IRQ pin active
-    ret = at86rf215_set_bbc_irq_mask(radio, AT86RF215_RF09, AT86_BBC_IRQ_RXFS | AT86_BBC_IRQ_RXFE | AT86_BBC_IRQ_TXFE);
+    // RF24/BBC1 IRQs: the task never reads their IRQS registers, so a pending one would hold the IRQ pin active.
+    // DATASHEET(verify): TXFE is masked from the pin and polled by uhf_take_txfe() instead, which relies on irqmm = 1
+    // above. TRXRDY is still unmasked though state changes are polled; it only causes spurious wakeups
+    ret = at86rf215_set_bbc_irq_mask(radio, AT86RF215_RF09, AT86_BBC_IRQ_RXFS | AT86_BBC_IRQ_RXFE);
     if (!ret) {
         ret = at86rf215_set_radio_irq_mask(radio, AT86RF215_RF09, AT86_RF_IRQ_WAKEUP | AT86_RF_IRQ_TRXRDY | AT86_RF_IRQ_TRXERR);
     }
@@ -572,9 +583,9 @@ int change_at86_config(struct at86rf215 *h, at86_config_t config) {
 /**
  * Polls until the radio reaches TXPREP, which is where the PLL locks.
  *
- * \return true if it got there within UHF_STATE_TIMEOUT_MS
+ * \return true if it got there within timeout_ms
  */
-static bool uhf_wait_txprep(void) {
+static bool uhf_wait_txprep(uint32_t timeout_ms) {
     const TickType_t start = xTaskGetTickCount();
     do {
         at86rf215_rf_state_t state = AT86RF215_STATE_RF_TRANSITION;
@@ -582,7 +593,42 @@ static bool uhf_wait_txprep(void) {
             return true;
         }
         vTaskDelay(1);
-    } while (xTaskGetTickCount() - start < pdMS_TO_TICKS(UHF_STATE_TIMEOUT_MS));
+    } while (xTaskGetTickCount() - start < pdMS_TO_TICKS(timeout_ms));
+    return false;
+}
+
+/**
+ * Reads BBC0_IRQS, which clears it. Any bits other than TXFE are kept for uhf_read_irqs(), and the task is notified so
+ * they get handled.
+ *
+ * \return true if TXFE was set: a frame finished sending since the last read
+ */
+static bool uhf_take_txfe(void) {
+    uint8_t bbc = 0;
+    if (at86rf215_reg_read_8(&at86_dev, &bbc, REG_BBC0_IRQS)) {
+        return false;
+    }
+    const uint8_t other = bbc & (uint8_t)~AT86_BBC_IRQ_TXFE;
+    if (other) {
+        pending_bbc_irqs |= other;
+        xTaskNotify(xTaskGetCurrentTaskHandle(), UHF_EVENT_IRQ, eSetBits);
+    }
+    return (bbc & AT86_BBC_IRQ_TXFE) != 0;
+}
+
+/**
+ * Polls BBC0_IRQS.TXFE until the frame being sent is out.
+ *
+ * \return true if it went out within timeout_ms
+ */
+static bool uhf_wait_txfe(uint32_t timeout_ms) {
+    const TickType_t start = xTaskGetTickCount();
+    do {
+        if (uhf_take_txfe()) {
+            return true;
+        }
+        vTaskDelay(1);
+    } while (xTaskGetTickCount() - start < pdMS_TO_TICKS(timeout_ms));
     return false;
 }
 
@@ -608,7 +654,7 @@ bool uhf_chip_setup(void) {
     UHF_SETUP_TRY(at86rf215_set_pac(&at86_dev, AT86RF215_RF09, AT86RF215_PACUR_NO_RED, UHF_TX_POWER));
 
     UHF_SETUP_TRY(at86rf215_set_cmd(&at86_dev, AT86RF215_CMD_RF_TXPREP, AT86RF215_RF09));
-    if (!uhf_wait_txprep()) {
+    if (!uhf_wait_txprep(UHF_STATE_TIMEOUT_MS)) {
         warning("Radio: did not reach TXPREP\n");
         return false;
     }
@@ -625,5 +671,124 @@ bool uhf_chip_setup(void) {
     UHF_SETUP_TRY(uhf_go_rx());
 
     info("Radio: chip set up (%lu Hz, power %d), listening\n", (unsigned long)UHF_FREQ_HZ, UHF_TX_POWER);
+    return true;
+}
+
+// With the asserts at the top of uhf_radio_main.c (a space packet fits in a USLP frame, a USLP frame fits in an AT86
+// frame), one telemetry downlink is one SPP packet, one USLP frame and one AT86 frame
+_Static_assert(TELEMETRY_DOWNLINK_SIZE <= RADIO_PAYLOAD_MAX_SIZE, "a telemetry downlink must fit in one space packet");
+
+// The frame every beacon of a burst sends, built once per burst by uhf_beacon_prepare(). 0 length until then
+static uint8_t beacon_frame[USLP_MAX_FRAME_SIZE];
+static size_t beacon_frame_len;
+
+bool uhf_beacon_prepare(void) {
+    // Static: both are too big for the task's stack
+    static tel_downlink_t downlink;
+    static radio_queue_item_t beacon_item;
+
+    beacon_frame_len = 0;
+
+    telemetry_collect(&downlink);
+    if (telemetry_downlink_serialize(&downlink, beacon_item.data, sizeof(beacon_item.data))) {
+        warning("Radio: failed to serialize beacon telemetry\n");
+        return false;
+    }
+    beacon_item.len = TELEMETRY_DOWNLINK_SIZE;
+    beacon_item.apid = CCSDS_APID_TELEMETRY;
+    beacon_item.vcid = radio_routes[RADIO_STREAM_TELEMETRY].vcid;
+
+    size_t packet_len = 0;
+    if (spp_wrap(&beacon_item, spp_buffer, sizeof(spp_buffer), &packet_len)) {
+        warning("SPP: failed to wrap beacon\n");
+        return false;
+    }
+
+    size_t frame_sz = sizeof(beacon_frame);
+    if (uslp_mapp_request(beacon_frame, &frame_sz, spp_buffer, (uint16_t)packet_len, RADIO_GMAP_ID(beacon_item.vcid), SPP_VERSION_NUMBER,
+                          RADIO_SDU_ID, USLP_QOS_EXPEDITED)) {
+        warning("USLP: failed to prepare beacon frame\n");
+        return false;
+    }
+
+    beacon_frame_len = frame_sz;
+    return true;
+}
+
+bool uhf_transmit_beacon(void) {
+    if (beacon_frame_len == 0) {
+        warning("Radio: no beacon frame prepared\n");
+        return false;
+    }
+
+    // DATASHEET(verify): assumes CMD=TXPREP while already in TXPREP (after the previous frame of the burst) is harmless
+    // and the state reads TXPREP straight away. The state diagram (5.2) doesn't show this transition explicitly
+    uhf_go_txprep();
+    if (!uhf_wait_txprep(UHF_STATE_TIMEOUT_MS)) {
+        warning("Radio: did not reach TXPREP for beacon\n");
+        return false;
+    }
+
+    // Clear a TXFE left over from an earlier frame, so it isn't taken for this one. DATASHEET(verify): assumes TXFE stays
+    // set in IRQS until read, so a stale one is possible (5.3.2.4)
+    uhf_take_txfe();
+
+    int ret = at86_send_frame(&at86_dev, beacon_frame, beacon_frame_len);
+    if (ret) {
+        warning("Radio: failed to send beacon (%d)\n", ret);
+        return false;
+    }
+
+    // DATASHEET(verify): in baseband mode TXFE is set when the frame is out and the radio goes from TX to TXPREP by
+    // itself, without a TRXRDY IRQ (5.2.7, 5.3.2.4 IRQS.TXFE)
+    if (!uhf_wait_txfe(UHF_TX_TIMEOUT_MS)) {
+        warning("Radio: beacon frame not sent within %d ms\n", UHF_TX_TIMEOUT_MS);
+        return false;
+    }
+    return true;
+}
+
+bool uhf_rx_is_pusp(const uhf_rx_t *rx, pusp_directive_t dir) {
+    return rx->kind == UHF_RX_PUSP && rx->dir == dir;
+}
+
+void uhf_forward_cfdp(const uhf_rx_t *rx) {
+    if (rx->kind != UHF_RX_CFDP || rx->item == NULL) {
+        return;
+    }
+    if (uplink_queue == NULL) {
+        warning("Radio: no uplink queue yet, dropping packet\n");
+        return;
+    }
+    if (xQueueSend(uplink_queue, rx->item, 0) != pdPASS) {
+        warning("Radio: uplink queue full, dropping packet\n");
+    }
+}
+
+// ---- Dummy versions. TODO: replace with the real ones, see the TODO list in uhf_radio_main.c ----
+
+pusp_directive_t uhf_pusp_tx_last;
+uint32_t uhf_pusp_tx_count;
+
+// TODO(dummy): reads the IRQs but drops every received frame, so no link can be set up yet. The real version refactors
+// uhf_rx_process() to classify the frame instead of forwarding it, and sets ctx->last_rx for a valid packet
+uhf_rx_t uhf_rx_poll(uhf_ctx_t *ctx, uint32_t events) {
+    const uhf_rx_t rx = {.kind = UHF_RX_NONE};
+    if (!(events & UHF_EVENT_IRQ)) {
+        return rx;
+    }
+    if (uhf_irqs_to_events(uhf_read_irqs()) & UHF_EVENT_RXFE) {
+        warning("Radio: dummy uhf_rx_poll() dropping a received frame\n");
+        uhf_go_rx(); // RXFE leaves the radio in TXPREP
+    }
+    return rx;
+}
+
+// TODO(dummy): records the directive without touching the radio. The real version wraps it in SPP/USLP, sends it, waits
+// for TXFE and goes back to RX. It will need a test seam, since the PUSP tests run before the radio is set up
+bool uhf_transmit_pusp(pusp_directive_t dir) {
+    uhf_pusp_tx_last = dir;
+    uhf_pusp_tx_count++;
+    debug("Radio: dummy uhf_transmit_pusp(%u), nothing sent\n", dir);
     return true;
 }

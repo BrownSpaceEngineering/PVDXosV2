@@ -31,9 +31,10 @@ typedef enum {
 typedef enum {
     RADIO_STREAM_PEROVSKITE = 0, // VC 0, SBAND: perovskite readings, on request by uplink
     RADIO_STREAM_IMAGE,          // VC 1, SBAND: images, on request by uplink
-    RADIO_STREAM_TELEMETRY,      // VC 2, UHF: telemetry, every ten minutes
+    RADIO_STREAM_TELEMETRY,      // VC 2, UHF: telemetry beacons, sent by the UHF task without CFDP
     RADIO_STREAM_CFDP_REPLY,     // VC 3, UHF: CFDP ACK/NAK/FIN, whenever CFDP sends them
     RADIO_STREAM_UPLINK_CMD,     // VC 4, UHF: uplinked commands
+    RADIO_STREAM_PUSP,           // VC 5, UHF: PUSP directives, both ways, sent by the UHF task without CFDP
     RADIO_STREAM_COUNT,          // not a stream
 } radio_stream_t;
 

@@ -14,7 +14,8 @@
 // Reference: PVDX UHF Uplink/Downlink Summary 3/3/2026
 // (https://docs.google.com/spreadsheets/d/1XYJBU4V2vjlKj8QtCxaPuW247gf_tx6XY4dey5q0v0k/edit?usp=sharing)
 // Every multi-byte value is sent most significant byte first, and floats are sent as their IEEE 754 bits
-// The downlink is a file sent with CFDP, which wraps each PDU in an SPP packet itself, so it has no SPP headers.
+// The downlink is sent without CFDP: one serialized downlink is the user data of one SPP packet (CCSDS_APID_TELEMETRY),
+// which fits in one USLP frame and one AT86 frame (see uhf_beacon_prepare()).
 // Uplinked commands are parsed in tasks/cfdp/uplink_parse.c
 
 #define TELEMETRY_FALSE 0x00
@@ -118,7 +119,7 @@ typedef struct {
 } tel_downlink_t;
 
 /**
- * Serializes a downlink file, to be sent with CFDP: every field of downlink, in order
+ * Serializes a downlink: every field of downlink, in order
  *
  * \param downlink - telemetry to send
  * \param buf - buffer to write into; exactly TELEMETRY_DOWNLINK_SIZE bytes are written on success
