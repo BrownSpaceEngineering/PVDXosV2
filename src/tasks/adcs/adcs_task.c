@@ -430,6 +430,11 @@ status_t adcs_read_photodiodes(float *const photodiodes) {
     for (size_t i = 0; i < NUM_DIODES; i++) {
         photodiodes[i] = (float)codes[i] / PHD_ADC_FS * PHD_VREF_V;
     }
+
+    // For the flatsat test rig (flatsat-hil/hil/tests/test_photodiodes.py), which compares it with the simulated sun
+    float sun_vector[3] = {0.0f, 0.0f, 0.0f};
+    const bool in_sun = get_vec_from_photodiode_readings(photodiodes, sun_vector);
+    debug("adcs: photodiode sun vector [%f,%f,%f], in sun: %d\n", sun_vector[0], sun_vector[1], sun_vector[2], in_sun);
     return SUCCESS;
 }
 
@@ -438,6 +443,8 @@ void adcs_read_sensors(float *const mag_tesla, float *const gyro_rad_s, float *c
     adcs_read_magnetometer(mag_tesla);
     adcs_read_gyro(gyro_rad_s);
     adcs_read_photodiodes(photodiodes);
+    debug("adcs: mag [%f,%f,%f] uT, gyro [%f,%f,%f] rad/s\n", mag_tesla[0] / MICROTESLA_TO_TESLA, mag_tesla[1] / MICROTESLA_TO_TESLA,
+          mag_tesla[2] / MICROTESLA_TO_TESLA, gyro_rad_s[0], gyro_rad_s[1], gyro_rad_s[2]);
 }
 
 /* ---------- ACTUATORS, TELEMETRY AND STATE MACHINE ---------- */

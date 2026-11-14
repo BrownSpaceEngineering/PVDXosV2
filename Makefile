@@ -58,6 +58,19 @@ flash_to_mram:
 list_files:
 	make -C src list_files
 
+# Flatsat test rig, in the flatsat-hil submodule (flatsat-hil/hil/README.md): the Grand Central tester's firmware,
+# flashing it through its own J-Link (JLINK_SERIAL=<serial> picks the probe when the flatsat's is plugged in too), and
+# the host test suite. Pass pytest arguments with HIL_ARGS, e.g. make hil HIL_ARGS="-m 'not slow'"
+.PHONY: tester tester_flash hil
+tester:
+	make -C flatsat-hil/tester
+
+tester_flash:
+	make -C flatsat-hil/tester flash JLINK_SERIAL=$(JLINK_SERIAL)
+
+hil:
+	cd flatsat-hil/hil && python3 -m pytest $(HIL_ARGS)
+
 # this command will start gdb from a breakpoint at main
 # use connect_bl to start from the beginning
 connect:

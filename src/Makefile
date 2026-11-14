@@ -121,6 +121,11 @@ ifneq ($(UNKNOWN_TESTS),)
 endif
 TEST_DEFINES := $(addprefix -DTEST_,$(SELECTED_TESTS))
 
+# `make dev DEFINES="BURN_SEQUENCE BURN_WAIT_MINUTES=1"` passes -DBURN_SEQUENCE -DBURN_WAIT_MINUTES=1 to every build type,
+# for builds the flatsat test rig (flatsat-hil/) needs without editing globals.h or main.c. Part of the build type.
+EXTRA_DEFINES := $(addprefix -D,$(DEFINES))
+CFLAGS += $(EXTRA_DEFINES)
+
 # Build-specific flags
 CFLAGS_DEV := -DDEVBUILD
 CFLAGS_UNITTEST := -DUNITTEST -DDEVBUILD -Wno-unused-variable $(TEST_DEFINES)
@@ -191,7 +196,7 @@ endef
 all: dev
 
 dev:
-	$(call ensure_build_type,dev)
+	$(call ensure_build_type,$(strip dev $(EXTRA_DEFINES)))
 	$(call child_build,dev, $(CFLAGS_DEV) $(CFLAGS))
 	$(call check_bin_size,dev)
 	@cp -f ../ASF/gcc/PVDXos.bin ./ \
@@ -208,9 +213,9 @@ release: clean #Might as well clean before compiling the release build
 	&& echo " ---  Finished Building PVDXos  --- " \
 	&& echo " --- THIS IS THE RELEASE BUILD! --- "
 
-# The selected tests are part of the build type, so changing TESTS forces a rebuild
+# The selected tests are part of the build type, so changing TESTS (or DEFINES) forces a rebuild
 test:
-	$(call ensure_build_type,$(strip test $(TEST_DEFINES)))
+	$(call ensure_build_type,$(strip test $(TEST_DEFINES) $(EXTRA_DEFINES)))
 	$(call child_build,test, $(CFLAGS_UNITTEST) $(CFLAGS))
 	$(call check_bin_size,test)
 	@cp -f ../ASF/gcc/PVDXos.elf ./ \

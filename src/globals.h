@@ -32,7 +32,9 @@
 #define BURN_UHF_MODE_BEACON 0
 #define BURN_UHF_MODE_LINK   1
 #define BURN_UHF_MODE_OFF    2
-#define BURN_SEQUENCE_UHF_MODE BURN_UHF_MODE_OFF
+#ifndef BURN_SEQUENCE_UHF_MODE // `make dev DEFINES=BURN_SEQUENCE_UHF_MODE=BURN_UHF_MODE_BEACON` for the test rig's UHF test
+    #define BURN_SEQUENCE_UHF_MODE BURN_UHF_MODE_OFF
+#endif
 
 // TEMPORARY: leaves out the CFDP receive buffers (about 8.7 KB) so that the image fits in RAM. Until this is removed,
 // CFDP rejects every incoming file. Sending is unaffected.

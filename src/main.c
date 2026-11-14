@@ -37,9 +37,16 @@
 #include "tests/test.h"
 
 
-#define BURN_WAIT_MINUTES      30
-#define BURN_ON_FOR_SECONDS 30
-#define POST_BURN_STEP_MINUTES 2 // wait before each post-burn step
+// Overridable (`make dev DEFINES="BURN_SEQUENCE BURN_WAIT_MINUTES=1"`) so the test rig can run the sequence quickly
+#ifndef BURN_WAIT_MINUTES
+    #define BURN_WAIT_MINUTES 30
+#endif
+#ifndef BURN_ON_FOR_SECONDS
+    #define BURN_ON_FOR_SECONDS 30
+#endif
+#ifndef POST_BURN_STEP_MINUTES
+    #define POST_BURN_STEP_MINUTES 2 // wait before each post-burn step
+#endif
 
 #define CAMERA_CAPTURE_ATTEMPTS 3
 cosmic_monkey_task_arguments_t cm_args = {0};

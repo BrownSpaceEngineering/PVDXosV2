@@ -4,3 +4,6 @@
 [submodule "adcs-c"]
 	path = src/libraries/adcs
 	url = git@github.com:BrownSpaceEngineering/adcs-c.git
+[submodule "flatsat-hil"]
+	path = flatsat-hil
+	url = git@github.com:BrownSpaceEngineering/PVDX-flatsat-hil.git
