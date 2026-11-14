@@ -22,7 +22,7 @@ static const uint32_t command_data_sizes[TEL_CMD_COUNT] = {
     [TEL_CMD_SET_KEPLER_COEFFICIENTS] = 4 * TELEMETRY_KEPLER_COEFFICIENTS,
     [TEL_CMD_SET_UNIX_TIME] = 4,
     [TEL_CMD_SET_ADCS_OPMODE] = 2,
-    [TEL_CMD_ADCS_UPDATE_PARAMETERS] = 4 + 4 * 6,
+    [TEL_CMD_ADCS_UPDATE_PARAMETERS] = 8 + 4 * 7,
     [TEL_CMD_SET_POWER_MODE] = 2,
 };
 
@@ -165,6 +165,14 @@ static float get_float(tel_reader_t *r) {
     return value;
 }
 
+static double get_double(tel_reader_t *r) {
+    const uint64_t high = get_uint32(r);
+    const uint64_t bits = (high << 32) | get_uint32(r);
+    double value;
+    memcpy(&value, &bits, sizeof(value));
+    return value;
+}
+
 /* ---------- DOWNLINK ---------- */
 
 /**
@@ -216,8 +224,12 @@ static void serialize_state_machine(tel_writer_t *w, const tel_state_machine_dat
 static void serialize_adcs(tel_writer_t *w, const tel_adcs_data_t *adcs) {
     put_floats(w, adcs->position, TEL_ARRAY_LEN(adcs->position));
     put_floats(w, adcs->attitude, TEL_ARRAY_LEN(adcs->attitude));
-    put_floats(w, adcs->state, TEL_ARRAY_LEN(adcs->state));
-    put_floats(w, adcs->covariance, TEL_ARRAY_LEN(adcs->covariance));
+    put_floats(w, adcs->gyro_bias, TEL_ARRAY_LEN(adcs->gyro_bias));
+    put_floats(w, adcs->covariance_diag, TEL_ARRAY_LEN(adcs->covariance_diag));
+    put_uint8(w, adcs->opmode);
+    put_uint8(w, adcs->flags);
+    put_uint16(w, adcs->filter_resets);
+    put_uint32(w, adcs->tle_epoch_unix_time);
 }
 
 static void serialize_mram(tel_writer_t *w, const tel_mram_data_t *mram) {
@@ -324,15 +336,19 @@ static bool parse_command(tel_reader_t *r, tel_command_t *cmd) {
             break;
         case TEL_CMD_SET_ADCS_OPMODE:
             cmd->args.adcs_opmode = get_uint16(&data);
+            if (cmd->args.adcs_opmode >= TEL_ADCS_OPMODE_COUNT) {
+                return true;
+            }
             break;
         case TEL_CMD_ADCS_UPDATE_PARAMETERS:
-            cmd->args.adcs_parameters.timestamp = get_uint32(&data);
+            cmd->args.adcs_parameters.epoch_jd = get_double(&data);
             cmd->args.adcs_parameters.inclination = get_float(&data);
             cmd->args.adcs_parameters.raan = get_float(&data);
             cmd->args.adcs_parameters.eccentricity = get_float(&data);
             cmd->args.adcs_parameters.argument_of_perigee = get_float(&data);
             cmd->args.adcs_parameters.mean_anomaly = get_float(&data);
             cmd->args.adcs_parameters.mean_motion = get_float(&data);
+            cmd->args.adcs_parameters.bstar = get_float(&data);
             break;
         case TEL_CMD_SET_POWER_MODE:
             cmd->args.power_mode = get_uint16(&data);

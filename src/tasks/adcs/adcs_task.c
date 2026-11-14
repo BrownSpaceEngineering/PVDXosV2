@@ -34,6 +34,8 @@
 
 #define DEG_TO_RAD (3.14159265358979f / 180.0f)
 #define MICROTESLA_TO_TESLA 1e-6f
+#define SECONDS_PER_DAY 86400.0
+#define UNIX_EPOCH_JD 2440587.5
 
 // How often UTC is saved to MRAM. A reboot loses up to this much time, plus however long the reboot takes.
 #define ADCS_UTC_SAVE_PERIOD_S 60u
@@ -58,9 +60,10 @@ static const float MTQ_FULL_DUTY_CURRENT_A[3] = {0.156f, 0.156f, 0.104f};
 static const float BODY_FROM_MAG[3][3] = {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}};
 static const float BODY_FROM_GYRO[3][3] = {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}};
 
+// The same values as the uplinked and downlinked tel_adcs_opmode_t
 typedef enum {
-    ADCS_MODE_DO_POINT,      // body() whenever possible, B-dot whenever it is not pointing
-    ADCS_MODE_DETUMBLE_ONLY, // B-dot only; body() is not called
+    ADCS_MODE_DO_POINT = TEL_ADCS_OPMODE_POINT,              // body() whenever possible, B-dot whenever it is not pointing
+    ADCS_MODE_DETUMBLE_ONLY = TEL_ADCS_OPMODE_DETUMBLE_ONLY, // B-dot only; body() is not called
 } adcs_mode_t;
 
 // All of this is only touched by the ADCS task itself: commands reach it through its queue
@@ -104,6 +107,18 @@ static status_t offer_tle(const adcs_tle_t *const tle) {
     tle_pending = true;
     tle_attempts = 0;
     return SUCCESS;
+}
+
+void adcs_tle_from_uplink(const tel_adcs_parameters_t *const params, adcs_tle_t *const tle) {
+    // body() takes the mean elements in a different order from TLE line 2, and in radians
+    tle->mean[0] = params->mean_motion;
+    tle->mean[1] = params->eccentricity;
+    tle->mean[2] = params->inclination * DEG_TO_RAD;
+    tle->mean[3] = params->raan * DEG_TO_RAD;
+    tle->mean[4] = params->argument_of_perigee * DEG_TO_RAD;
+    tle->mean[5] = params->mean_anomaly * DEG_TO_RAD;
+    tle->bstar = params->bstar;
+    tle->epoch_jd = params->epoch_jd;
 }
 
 const float *adcs_get_tle_update(void) {
@@ -420,12 +435,36 @@ void adcs_publish_telemetry(void) {
     const bool attitude_valid = body_get_attitude(q_body_to_eci);
     if (attitude_valid) {
         quat2rotationvec(q_body_to_eci, telemetry.attitude);
+        telemetry.flags |= TEL_ADCS_FLAG_ATTITUDE_VALID;
     }
-    if (!body_get_position(telemetry.position)) {
+    if (body_get_position(telemetry.position)) {
+        telemetry.flags |= TEL_ADCS_FLAG_POSITION_VALID;
+    } else {
         memset(telemetry.position, 0, sizeof(telemetry.position));
     }
-    // TODO(blocked on telemetry format): fill the rest of state[] and covariance[], which don't match the filter's shapes
-    body_get_gyro_bias(&telemetry.state[3]);
+    body_get_gyro_bias(telemetry.gyro_bias);
+    // TODO(blocked on adcs-c): fill covariance_diag once body.h exposes the filter covariance's diagonal
+
+    adcs_tle_t tle;
+    if (body_get_tle(tle.mean, &tle.bstar, &tle.epoch_jd)) {
+        telemetry.flags |= TEL_ADCS_FLAG_TLE_LOADED;
+        const double epoch_unix_time = (tle.epoch_jd - UNIX_EPOCH_JD) * SECONDS_PER_DAY;
+        telemetry.tle_epoch_unix_time = epoch_unix_time > 0.0 && epoch_unix_time < 4294967296.0 ? (uint32_t)epoch_unix_time : 0;
+    }
+
+    uint32_t utc;
+    if (utc_get(&utc) == SUCCESS) {
+        telemetry.flags |= TEL_ADCS_FLAG_UTC_VALID;
+    }
+    if (adcs_mode == ADCS_MODE_DO_POINT && body_is_pointing()) {
+        telemetry.flags |= TEL_ADCS_FLAG_POINTING;
+    }
+    if (in_sunlight) {
+        telemetry.flags |= TEL_ADCS_FLAG_IN_SUNLIGHT;
+    }
+    telemetry.opmode = (uint8_t)adcs_mode;
+    const int filter_resets = body_get_filter_resets();
+    telemetry.filter_resets = filter_resets > UINT16_MAX ? UINT16_MAX : (uint16_t)filter_resets;
 
     taskENTER_CRITICAL();
     telemetry_snapshot = telemetry;

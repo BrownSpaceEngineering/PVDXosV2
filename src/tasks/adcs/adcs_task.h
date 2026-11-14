@@ -73,7 +73,18 @@ void main_adcs(void *pvParameters);
 /* ---------- COMMANDS ---------- */
 
 // TODO(blocked on uplink dispatcher): send these for TEL_CMD_SET_ADCS_OPMODE, _SET_UNIX_TIME and _ADCS_UPDATE_PARAMETERS
-// TODO(blocked on uplink format): tel_adcs_parameters_t needs B* before it can become an adcs_tle_t
+// (the last through adcs_tle_from_uplink())
+
+/**
+ * \fn adcs_tle_from_uplink
+ *
+ * \brief Converts uplinked TEL_CMD_ADCS_UPDATE_PARAMETERS data into the TLE `get_adcs_set_tle_command()` takes. Doesn't
+ *      check it: that happens when the command runs, and then again in `body()`.
+ *
+ * \param params the uplinked parameters
+ * \param tle the TLE to fill
+ */
+void adcs_tle_from_uplink(const tel_adcs_parameters_t *const params, adcs_tle_t *const tle);
 
 /**
  * \fn get_adcs_do_point_command
