@@ -28,6 +28,7 @@
 #include "logging.h"
 #include "magnetometer_driver.h"
 #include "photodiode_driver.h"
+#include "watchdog_driver.h"
 
 // forward declarations of check functions
 bool check_magnetometer(void);
@@ -76,6 +77,11 @@ bool check_all_devices_on_startup(void) {
     info("CHECKING ALL DEVICES...\n");
     info("1 = OKAY / 0 = NOT OKAY...\n");
     for (device_id_t device_id = 0; device_id < NUM_DEVICES; device_id++) {
+        // These run before the scheduler, with the hardware watchdog (~16 s) still running from the bootloader and
+        // no watchdog task to feed it. With devices missing/failing, each check waits out its timeouts (S-band alone takes
+        // over 5 s), and together they outlast it. Feeding it before each check still resets the board if any one
+        // check hangs.
+        watchdog_feed(WDT);
         bool device_okay = check_device(device_id);
         at_least_one_failed = at_least_one_failed || !device_okay;
         info("%-20s: %d\n", device_name_of(device_id), device_okay);
