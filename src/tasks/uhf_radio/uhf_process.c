@@ -18,6 +18,7 @@
  * side only re-sends its reply when it gets a duplicate, and then calls uhf_rearm_retry() so the retry timer doesn't
  * re-send again straight after.
  */
+#include "ccsds/radio_routing.h"
 #include "logging.h"
 #include "uhf_radio_task.h"
 
@@ -165,19 +166,15 @@ uhf_state_t establish_send_proc(uhf_ctx_t *ctx, const uhf_rx_t *rx) {
     bool more = uxQueueMessagesWaiting(downlink_queue) != 0;
     while (more && !uhf_deadline_passed(ctx->yield_deadline)) {
         more = uhf_tx_process(); // TODO: must block until the frame is out, polling TXFE like uhf_transmit_beacon()
-        ctx->grace_armed = false;
         uhf_watchdog_checkin();
     }
 
-    // TEMP DECISION: with time left in the window, wait up to UHF_YIELD_GRACE_MS for more data before yielding, so we
-    // don't hand over turns with nothing in them. The main loop wakes on UHF_EVENT_DOWNLINK or the grace deadline
+    // Keep the turn until CFDP has nothing more to send, or the window runs out. CFDP queues its PDUs before saying
+    // it's done, so check done first: an empty queue after that means everything it had has gone out. The main loop
+    // wakes on UHF_EVENT_DOWNLINK and UHF_EVENT_CFDP_DONE
     if (!uhf_deadline_passed(ctx->yield_deadline)) {
-        if (!ctx->grace_armed) {
-            ctx->grace_deadline = xTaskGetTickCount() + pdMS_TO_TICKS(UHF_YIELD_GRACE_MS);
-            ctx->grace_armed = true;
-            return ESTABLISH_SEND;
-        }
-        if (!uhf_deadline_passed(ctx->grace_deadline)) {
+        const bool cfdp_done = radio_cfdp_turn_done();
+        if (!cfdp_done || uxQueueMessagesWaiting(downlink_queue) != 0) {
             return ESTABLISH_SEND;
         }
     }

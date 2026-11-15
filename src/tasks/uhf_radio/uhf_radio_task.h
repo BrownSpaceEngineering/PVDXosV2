@@ -37,23 +37,22 @@
 #define UHF_EVENT_DOWNLINK (1u << 0)
 #define UHF_EVENT_IRQ (1u << 1) // Set by uhf_radio_irq_handler(), the task then calls uhf_read_irqs()
 // Set by uhf_irqs_to_events(). After RXFE or TXFE the radio is in TXPREP
-#define UHF_EVENT_RXFE (1u << 2)  // A frame was received
-#define UHF_EVENT_TXFE (1u << 3)  // A frame was sent
-#define UHF_EVENT_TXRDY (1u << 4) // The radio reached TXPREP after uhf_go_txprep()
+#define UHF_EVENT_RXFE (1u << 2)      // A frame was received
+#define UHF_EVENT_TXFE (1u << 3)      // A frame was sent
+#define UHF_EVENT_TXRDY (1u << 4)     // The radio reached TXPREP after uhf_go_txprep()
+#define UHF_EVENT_CFDP_DONE (1u << 5) // CFDP has nothing more to send for now, see radio_cfdp_turn_done()
 
 // PUSP link timing. TODO: tune on hardware. The retry period must cover a whole round trip: our frame's airtime, the
 // ground station's RX/TX turnaround and its reply's airtime
 #define UHF_RETRY_MS 1000          // How long a handshake state waits for a reply before re-sending
 #define UHF_MAX_RETRIES 5          // Re-sends before a handshake state gives up and goes back to LISTEN
 #define UHF_LINK_TIMEOUT_MS 30000  // A link with no valid packet from the ground for this long drops back to LISTEN
-#define UHF_TX_WINDOW_MS 10000     // Longest ESTABLISH_SEND keeps the turn before yielding
+#define UHF_TX_WINDOW_MS 10000     // Longest ESTABLISH_SEND keeps the turn before yielding, if CFDP never says it's done
 #define UHF_BEACON_PERIOD_MS 60000 // Time from the end of one beacon burst to the start of the next
 #define UHF_BEACON_BURST_MS 10000  // How long BEACON keeps re-sending the beacon frame
 // Longest a polled transmit waits for its frame to go out. DATASHEET(verify): assumes the MR-FSK config's RSC FEC is rate
 // 1/2, so a ~540 byte beacon frame at 50 ksym/s takes ~175 ms on air. Confirm the real airtime on hardware
 #define UHF_TX_TIMEOUT_MS 500
-// TEMP DECISION: ESTABLISH_SEND waits this long for more downlink data before yielding an empty turn
-#define UHF_YIELD_GRACE_MS 500
 _Static_assert(UHF_TX_WINDOW_MS < UHF_LINK_TIMEOUT_MS, "ESTABLISH_SEND receives nothing, so it must yield before the link times out");
 
 // IRQ status of the sub-1 GHz radio and baseband core
@@ -122,8 +121,6 @@ struct uhf_ctx {
     TickType_t next_beacon;    // Absolute tick at which LISTEN goes to BEACON
     TickType_t beacon_end;     // Absolute tick at which BEACON stops sending and goes back to LISTEN, set by LISTEN
     TickType_t yield_deadline; // Absolute tick at which ESTABLISH_SEND yields, set on entering it
-    TickType_t grace_deadline; // Absolute tick at which an idle ESTABLISH_SEND gives up waiting for data, if grace_armed
-    bool grace_armed;          // Cleared by uhf_enter_state() and whenever ESTABLISH_SEND sends a frame
 };
 
 extern const uhf_state_desc_t uhf_state_descs[UHF_STATE_COUNT];
@@ -145,8 +142,8 @@ uhf_rx_t uhf_rx_poll(uhf_ctx_t *ctx, uint32_t events);
 // True if rx is the PUSP directive dir (uhf_radio_task.c)
 bool uhf_rx_is_pusp(const uhf_rx_t *rx, pusp_directive_t dir);
 
-// Puts the CFDP PDU in rx on the uplink queue, warning if the queue is full. Does nothing for other kinds
-// (uhf_radio_task.c)
+// Puts the CFDP PDU in rx on the uplink queue and counts it for radio_cfdp_turn_done(), warning if the queue is full.
+// Does nothing for other kinds (uhf_radio_task.c)
 void uhf_forward_cfdp(const uhf_rx_t *rx);
 
 /**
@@ -185,7 +182,7 @@ bool uhf_transmit_beacon(void);
 
 /**
  * Moves the task to next and logs it: resets retries, arms retry_deadline from uhf_state_descs[next] (if it has a
- * retry_ms), clears grace_armed and sets yield_deadline when entering ESTABLISH_SEND. Re-entering the current state
+ * retry_ms) and sets yield_deadline when entering ESTABLISH_SEND. Re-entering the current state
  * counts as a fresh entry.
  */
 void uhf_enter_state(uhf_ctx_t *ctx, uhf_state_t next);
@@ -216,7 +213,7 @@ bool uhf_deadline_passed(TickType_t deadline);
 
 /**
  * How long the main loop may block: until the earliest deadline that matters in ctx->state (retry_deadline, next_beacon
- * in LISTEN, yield/grace deadline in ESTABLISH_SEND, the link timeout in link states), capped so watchdog check-ins
+ * in LISTEN, yield_deadline in ESTABLISH_SEND, the link timeout in link states), capped so watchdog check-ins
  * still happen on time. 0 if a deadline has already passed, and always 0 in BEACON, which sends back to back.
  */
 TickType_t uhf_ticks_until_wake(const uhf_ctx_t *ctx);

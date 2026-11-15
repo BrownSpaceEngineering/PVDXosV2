@@ -53,9 +53,8 @@ static void test_pusp_timing(void) {
 
     uhf_ctx_t ctx = pusp_ctx(SYN_RECV);
     ctx.retries = 3;
-    ctx.grace_armed = true;
     uhf_enter_state(&ctx, TRANS_TO_TX);
-    PVDX_ASSERT_MSG(ctx.state == TRANS_TO_TX && ctx.retries == 0 && !ctx.grace_armed, "enter: resets the state's counters\n");
+    PVDX_ASSERT_MSG(ctx.state == TRANS_TO_TX && ctx.retries == 0, "enter: resets the state's counters\n");
     PVDX_ASSERT_MSG(ctx.retry_deadline == now + pdMS_TO_TICKS(UHF_RETRY_MS), "enter: arms the retry timer\n");
     uhf_enter_state(&ctx, ESTABLISH_SEND);
     PVDX_ASSERT_MSG(ctx.yield_deadline == now + pdMS_TO_TICKS(UHF_TX_WINDOW_MS), "enter: sets the yield deadline\n");

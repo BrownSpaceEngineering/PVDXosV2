@@ -762,7 +762,9 @@ void uhf_forward_cfdp(const uhf_rx_t *rx) {
     }
     if (xQueueSend(uplink_queue, rx->item, 0) != pdPASS) {
         warning("Radio: uplink queue full, dropping packet\n");
+        return;
     }
+    radio_cfdp_input_forwarded();
 }
 
 // ---- Dummy versions. TODO: replace with the real ones, see the TODO list in uhf_radio_main.c ----

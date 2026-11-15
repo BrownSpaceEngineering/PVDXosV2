@@ -4,6 +4,7 @@
  * State machine helpers for the UHF radio task: state entry, deadlines, retries and the checks shared by every link
  * state. The state handlers themselves are in uhf_process.c.
  */
+#include "ccsds/radio_routing.h"
 #include "logging.h"
 #include "uhf_radio_task.h"
 
@@ -18,12 +19,27 @@ bool uhf_deadline_passed(TickType_t deadline) {
     return (int32_t)(xTaskGetTickCount() - deadline) >= 0;
 }
 
+// BEACON and LISTEN have no link. Every other state is part of a pass
+static bool uhf_is_link_state(uhf_state_t state) {
+    return state != BEACON && state != LISTEN;
+}
+
 void uhf_enter_state(uhf_ctx_t *ctx, uhf_state_t next) {
     info("Radio: %s -> %s\n", uhf_state_names[ctx->state], uhf_state_names[next]);
 
+    // Tell CFDP about passes and our turns. A SYN restarting the link mid-pass (-> SYN_RECV) stays in the same pass
+    if (ctx->state == ESTABLISH_SEND) {
+        radio_turn_ended();
+    }
+    if (uhf_is_link_state(next) != uhf_is_link_state(ctx->state)) {
+        radio_link_set_up(uhf_is_link_state(next));
+    }
+    if (next == ESTABLISH_SEND) {
+        radio_turn_started();
+    }
+
     ctx->state = next;
     ctx->retries = 0;
-    ctx->grace_armed = false;
     uhf_rearm_retry(ctx);
     if (next == ESTABLISH_SEND) {
         ctx->yield_deadline = xTaskGetTickCount() + pdMS_TO_TICKS(UHF_TX_WINDOW_MS);
@@ -99,11 +115,7 @@ TickType_t uhf_ticks_until_wake(const uhf_ctx_t *ctx) {
         const TickType_t left = uhf_ticks_until(now, ctx->next_beacon);
         wait = left < wait ? left : wait;
     } else if (ctx->state == ESTABLISH_SEND) {
-        TickType_t left = uhf_ticks_until(now, ctx->yield_deadline);
-        if (ctx->grace_armed) {
-            const TickType_t grace_left = uhf_ticks_until(now, ctx->grace_deadline);
-            left = grace_left < left ? grace_left : left;
-        }
+        const TickType_t left = uhf_ticks_until(now, ctx->yield_deadline);
         wait = left < wait ? left : wait;
     }
 

@@ -143,47 +143,31 @@ fin_txn_t fin_txn_buf_pop(fin_txn_buf_t *buf) {
     return txn;
 }
 
-cfdp_transaction_t *cfdp_alloc_transaction(cfdp_transaction_store_t *txn_store) {
-    if (!txn_store->slot_free) {
+// Only the CFDP task calls these
+cfdp_transaction_t *cfdp_alloc_transaction(void) {
+    if (cfdp_txn_store.active) {
         return NULL;
     }
-    for (int i = 0; i < MAX_TRANSACTIONS; i++) {
-        if (!txn_store->active[i]) {
-            txn_store->active[i] = true;
-            memset(&txn_store->transactions[i], 0, sizeof(cfdp_transaction_t));
 
-            // Attach the pre-created static timer handles for this slot.
-            // Handles were created once in init_cfdp(); the timer IDs are set
-            // to the transaction pointer by the caller after full initialisation.
-            txn_store->transactions[i].inactivity_timer_handle = cfdp_mem.inactivity_timer_handles[i];
-            txn_store->transactions[i].retransmit_timer_handle = cfdp_mem.retransmit_timer_handles[i];
+    // The previous transaction's timers were stopped when it was freed, but one may have fired just before, so drop
+    // any timeout or cancel still pending for it
+    xTaskNotifyWait(0, CFDP_NOTIFY_ALL, NULL, 0);
 
-            txn_store->slot_free = false;
-            for (int j = 0; j < MAX_TRANSACTIONS; j++) {
-                if (!txn_store->active[j]) {
-                    txn_store->slot_free = true;
-                    break;
-                }
-            }
-            return &txn_store->transactions[i];
-        }
-    }
-    txn_store->slot_free = false;
-    warning("cfdp: mismatch between slot_free and txn store capacity");
-    return NULL;
+    cfdp_txn_store.active = true;
+    memset(&cfdp_txn_store.txn, 0, sizeof(cfdp_txn_store.txn));
+    cfdp_txn_store.txn.pass = radio_link_view().pass;
+    return &cfdp_txn_store.txn;
 }
 
-void cfdp_free_transaction(cfdp_transaction_store_t *txn_store, cfdp_transaction_t *txn) {
-    if (txn_store == NULL || txn == NULL) {
+void cfdp_free_transaction(void) {
+    if (!cfdp_txn_store.active) {
         return;
     }
-    // The slot's timers outlive the transaction, so stop them or they fire on whatever uses the slot next
-    if (txn->inactivity_timer_handle != NULL) {
-        stop_timer(txn->inactivity_timer_handle);
-    }
-    if (txn->retransmit_timer_handle != NULL) {
-        stop_timer(txn->retransmit_timer_handle);
-    }
+    cfdp_transaction_t *txn = &cfdp_txn_store.txn;
+
+    // The timer outlives the transaction, so stop it or it fires on the next one
+    stop_timer(cfdp_mem.inactivity_timer_handle);
+
     // Received files hold a CFDP buffer. Commands parsed out of it hold their own references, so this only drops
     // the transaction's
     if (txn->buff_header != NULL) {
@@ -191,21 +175,13 @@ void cfdp_free_transaction(cfdp_transaction_store_t *txn_store, cfdp_transaction
         txn->buff_header = NULL;
         txn->file_data = NULL;
     }
-    for (int i = 0; i < MAX_TRANSACTIONS; i++) {
-        if (&txn_store->transactions[i] == txn) {
-            txn_store->active[i] = false;
-            txn_store->slot_free = true;
-            return;
-        }
-    }
+    cfdp_txn_store.active = false;
 }
 
-cfdp_transaction_t *cfdp_find_transaction(cfdp_transaction_store_t *txn_store, uint32_t entity_id, uint32_t seq_num) {
-    for (int i = 0; i < MAX_TRANSACTIONS; i++) {
-        if (txn_store->active[i] && txn_store->transactions[i].transaction_id.entity_id == entity_id &&
-            txn_store->transactions[i].transaction_id.seq_num == seq_num) {
-            return &txn_store->transactions[i];
-        }
+cfdp_transaction_t *cfdp_find_transaction(uint32_t entity_id, uint32_t seq_num) {
+    cfdp_transaction_t *txn = &cfdp_txn_store.txn;
+    if (cfdp_txn_store.active && txn->transaction_id.entity_id == entity_id && txn->transaction_id.seq_num == seq_num) {
+        return txn;
     }
     return NULL;
 }

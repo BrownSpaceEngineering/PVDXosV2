@@ -21,10 +21,7 @@
  * - Update or delete radio_routing_plan.md, which still describes the removed telemetry timer
  *
  * TODO (CFDP task changes):
- * - radio_route_send() should notify this task with UHF_EVENT_DOWNLINK after queueing an item
- * - Yield the turn when CFDP marks an item as its terminal PDU, instead of on an empty queue after UHF_YIELD_GRACE_MS
- *   (replaces the grace logic in establish_send_proc()). BLOCKED: CFDP needs to add the flag to radio_queue_item_t
- * - Drop to one active CFDP transaction (MAX_TRANSACTIONS)
+ * - Make CFDP's retransmits turn-based: notify CFDP when we get the turn, instead of its wall-clock retransmit timer
  * - The downlink queue only drains in ESTABLISH_SEND: decide what CFDP does when it fills with no link up
  */
 #include <sys/types.h>

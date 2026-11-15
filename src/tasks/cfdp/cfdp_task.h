@@ -16,15 +16,11 @@
 // Memory for the CFDP task
 #define CFDP_TASK_STACK_SIZE 1024 // Size of the stack in words (multiply by 4 to get bytes)
 
-#define CFDP_MAX_ACTIVE_TRANSACTIONS 4
-
 #define MAX_FILE_SIZE 4096 // placeholder
 #define SEGMENT_SIZE 492   // (512 - 20)  // placeholder
 
 #define REQ_CLOSURE 0   // 1 : requested, 0 : not requested
 #define CHECKSUM_TYPE 0 // Default to 0 (Modular Checksum)
-
-#define MAX_TRANSACTIONS 4
 
 #define CFDP_MAX_SEGMENT_REQUESTS 16
 #define CFDP_MAX_SEGMENTS (MAX_FILE_SIZE / SEGMENT_SIZE) // 128 segments
@@ -41,17 +37,21 @@
 
 #define CFDP_MAX_PDU_SIZE 1024 // double what we expect so hmm.
 
-// How long the main loop waits for a command before servicing received PDUs and transactions
+// How long the main loop waits for a command (idle) or a notification (busy) before servicing received PDUs
 #define CFDP_POLL_MS 10
+
+// Task notification bits. The inactivity timeout and cancels can't go through the command queue, since it's only read
+// while no transaction is active
+#define CFDP_NOTIFY_INACTIVITY (1UL << 0)
+#define CFDP_NOTIFY_CANCEL (1UL << 1)
+#define CFDP_NOTIFY_ALL (CFDP_NOTIFY_INACTIVITY | CFDP_NOTIFY_CANCEL)
 // Placed in a struct to ensure that the TCB is placed higher than the stack in
 // memory
 //^ This ensures that stack overflows do not corrupt the TCB (since the stack
 // grows downwards)
 //
-// Static timer storage: two timers per transaction slot (retransmit +
-// inactivity). Kept here so that init_cfdp() can call xTimerCreateStatic() once
-// at startup, eliminating the xTimerCreateStatic() calls that previously ran
-// per-transaction.
+// The inactivity timer is created once by init_cfdp() and reused by every transaction. Retransmits are counted in link
+// turns instead (see radio_routing.h)
 typedef struct {
     StackType_t overflow_buffer[TASK_STACK_OVERFLOW_PADDING];
     StackType_t cfdp_task_stack[CFDP_TASK_STACK_SIZE];
@@ -59,14 +59,8 @@ typedef struct {
     StaticQueue_t cfdp_task_queue;
     StaticTask_t cfdp_task_tcb;
 
-    // One inactivity timer and one retransmit timer (shared ACK/NAK role) per
-    // slot. Handles are initialised once by init_cfdp() and wired into each
-    // transaction at cfdp_alloc_transaction() time -- no allocation occurs
-    // after startup.
-    StaticTimer_t inactivity_timer_mem[MAX_TRANSACTIONS];
-    StaticTimer_t retransmit_timer_mem[MAX_TRANSACTIONS];
-    TimerHandle_t inactivity_timer_handles[MAX_TRANSACTIONS];
-    TimerHandle_t retransmit_timer_handles[MAX_TRANSACTIONS];
+    StaticTimer_t inactivity_timer_mem;
+    TimerHandle_t inactivity_timer_handle;
 } cfdp_task_memory_t;
 
 typedef enum cfdp_state {
@@ -143,11 +137,13 @@ typedef struct cfdp_transaction {
     // RADIO_STREAM_CFDP_REPLY
     radio_stream_t stream;
 
-    StaticTimer_t inactivity_timer_mem;
-    StaticTimer_t retransmit_timer_mem;
+    // Pass the transaction started in. It's dropped when that pass ends
+    uint32_t pass;
 
-    TimerHandle_t inactivity_timer_handle;
-    TimerHandle_t retransmit_timer_handle; // covers both ACK-wait and NAK-wait roles
+    // Retransmit (EOF, FIN or NAK) at the start of our turn number retransmit_turn, if armed. Covers the ACK-wait and
+    // NAK-wait roles, see cfdp_turn_retransmit()
+    bool retransmit_armed;
+    uint32_t retransmit_turn;
 
     uint8_t ack_retransmit_counter;
     uint8_t nak_retransmit_counter;
@@ -177,22 +173,16 @@ typedef struct cfdp_transaction {
     cfdp_lv_t dest_filename;
 } cfdp_transaction_t;
 
+// CFDP runs one transaction at a time
 typedef struct {
-    cfdp_transaction_t transactions[MAX_TRANSACTIONS];
-    bool active[MAX_TRANSACTIONS];
-    bool slot_free;
+    cfdp_transaction_t txn;
+    bool active;
+
+    // Sequence number of the last incoming transfer accepted. An incoming transfer only overrides an active
+    // transaction if its sequence number is newer, so a delayed PDU from an old transfer can't
+    bool have_ground_seq;
+    uint32_t last_ground_seq;
 } cfdp_transaction_store_t;
-
-typedef struct {
-    void *memory;
-    size_t file_size;
-    radio_stream_t stream;
-} cfdp_put_data_t;
-
-typedef union cfdp_request_data {
-    uint32_t txn_id;          // for cancel req commands
-    cfdp_put_data_t put_data; // for put req commands
-} cfdp_request_data_t;
 
 extern cfdp_task_memory_t cfdp_mem;
 
@@ -208,8 +198,9 @@ cfdp_result_t cfdp_handle_send_state(cfdp_transaction_t *transaction);
 cfdp_result_t cfdp_handle_recv_state(cfdp_transaction_t *transaction);
 cfdp_result_t cfdp_transact(cfdp_transaction_t *txn);
 
-void cfdp_put_request(cfdp_put_data_t *put_data);
-void cfdp_cancel_request(uint32_t txn_id);
+void cfdp_put_request(const cfdp_put_t *put);
+void cfdp_cancel_request(void);
+void cfdp_cancel(void);
 
 int cfdp_prepare_pdu_header(uint8_t *buff, cfdp_transaction_t *transaction, uint16_t pdu_len, cfdp_pdu_type_t pdu_type);
 int cfdp_send_metadata(cfdp_transaction_t *transaction);

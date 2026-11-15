@@ -116,11 +116,7 @@ typedef enum {
     OPERATION_ADCS_UPDATE_PARAMS,
 
     // CFDP Operations
-    OPERATION_CFDP_PUT,    // p_data: cfdp_request_t* req
-    OPERATION_CFDP_CANCEL, // p_data: cfdp_request_t* req
-
-    OPERATION_CFDP_TIMEOUT_INACTIVITY, // p_data: cfdp_transaction_t* txn
-    OPERATION_CFDP_TIMEOUT_RETRANSMIT, // p_data: cfdp_transaction_t* txn
+    OPERATION_CFDP_PUT, // data: cfdp_put_t cfdp_put. Cancels and timeouts are task notifications (see cfdp_task.h)
 
     // State machine operations
     OPERATION_UPDATE_STATE_INPUTS,
@@ -215,8 +211,6 @@ typedef struct {
     void (*prepare_resume)(void);       // Optional nonblocking hook; called before the task is resumed
 } pvdx_task_t;
 
-typedef union cfdp_request_data cfdp_request_data_t;
-typedef struct cfdp_transaction cfdp_transaction_t;
 typedef struct input_update_data input_update_data_t;
 
 typedef struct cfdp_buff_header cfdp_buff_header_t;
@@ -226,20 +220,20 @@ typedef struct {
     cfdp_buff_header_t *header;
 } uplink_cmd_t;
 
-// A CFDP timer timeout. The slot's transaction may have been freed or replaced since the timer fired, so seq_num is
-// checked against the transaction now in the slot
+// A CFDP put request. It's stored in the command, so the sender doesn't have to keep it alive, but the file memory it
+// points at must stay valid until the transfer finishes. Packed to fit in the union without growing command_t
 typedef struct {
-    cfdp_transaction_t *txn;
-    uint32_t seq_num;
-} cfdp_timeout_t;
+    uint8_t *memory;
+    uint32_t file_size : 24;
+    uint32_t stream : 8; // radio_stream_t
+} cfdp_put_t;
 
 typedef union command_data {
     uplink_cmd_t uplink_cmd; // Can't be a pointer: Data has to live in the command queue -> must be in the command_t struct
     const uint8_t *display_data;
     TaskHandle_t *task_handle;
     pvdx_task_t *pvdx_task;
-    cfdp_request_data_t *cfdp_request;
-    cfdp_timeout_t cfdp_timeout; // By value, so it doesn't depend on the transaction outliving the command
+    cfdp_put_t cfdp_put;
     input_update_data_t *state_input_update_data;
     uint32_t timestamp;
 } command_data_t;
@@ -249,8 +243,7 @@ typedef enum {
     CMD_DATA_DISPLAY,
     CMD_DATA_TASK_HANDLE,
     CMD_DATA_PVDX_TASK,
-    CMD_CFDP_REQ,
-    CMD_CFDP_TIMEOUT,
+    CMD_CFDP_PUT,
     CMD_DATA_UPLINK,
     CMD_STATE_INPUT_UPDATE,
     CMD_DATA_TIMESTAMP

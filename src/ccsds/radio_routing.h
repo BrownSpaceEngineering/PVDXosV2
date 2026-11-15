@@ -71,4 +71,51 @@ int radio_route_send(radio_stream_t stream, radio_queue_item_t *item, TickType_t
  */
 bool radio_route_accepts_uplink(radio_id_t radio, uint8_t vcid);
 
+/* ---- UHF <-> CFDP link state ----
+ *
+ * Passes: a pass starts when the ground opens the link (LISTEN -> SYN_RECV) and ends when the UHF task goes back to
+ * LISTEN. CFDP drops any transaction still running when its pass ends and only starts new ones while the link is up.
+ *
+ * Turns: CFDP's retransmits are counted in our turns (ESTABLISH_SEND), not wall-clock time, since nothing can be sent
+ * or heard outside the matching turn.
+ *
+ * Yield: the UHF task yields its turn once CFDP has nothing more to send: its transaction is waiting on the ground
+ * (CFDP_RESULT_BLOCKED), or it has none and no put waiting. CFDP only counts as done once it has seen every PDU and turn
+ * start the UHF task gave it, so a "blocked" from before the ground's last PDUs can't end our turn before CFDP replies.
+ * UHF_EVENT_CFDP_DONE only wakes the UHF task: its main loop clears its bits on every wake-up, so the state lives here.
+ */
+
+typedef struct {
+    uint32_t inputs; // PDUs forwarded to CFDP plus turn starts, for radio_cfdp_set_done()
+    uint32_t turns;  // Turns we've had since boot
+    uint32_t pass;   // Passes since boot
+    bool link_up;
+} radio_link_view_t;
+
+// UHF task: the link came up (a new pass) or went down. A new pass empties the radio queues
+void radio_link_set_up(bool up);
+
+// UHF task: our turn started or ended
+void radio_turn_started(void);
+void radio_turn_ended(void);
+
+// UHF task: call after putting a PDU on the uplink queue
+void radio_cfdp_input_forwarded(void);
+
+// CFDP task: snapshot of the link. Take it before reading the uplink queue, and pass inputs to radio_cfdp_set_done()
+radio_link_view_t radio_link_view(void);
+
+// CFDP task: the first turn by the end of which the ground has had a full turn to answer a PDU queued now. That's the
+// next turn if we're in our turn, else the one after, since the PDU only goes out in our next turn
+uint32_t radio_retransmit_turn(void);
+
+// CFDP task: call before queueing PDUs that no input prompted (a put starting, a timeout, a cancel)
+void radio_cfdp_set_busy(void);
+
+// CFDP task: everything CFDP can send in reply to the inputs counted in inputs is queued. Wakes the UHF task
+void radio_cfdp_set_done(uint32_t inputs);
+
+// UHF task: whether CFDP is done and has seen every input given to it. Always true if the CFDP task is disabled
+bool radio_cfdp_turn_done(void);
+
 #endif // PVDX_RADIO_ROUTING_H
