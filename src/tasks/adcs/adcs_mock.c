@@ -1,7 +1,7 @@
 /**
  * adcs_mock.c
  *
- * Hardware-in-the-loop-free test of the ADCS integration, built with `make dev ADCS_MOCK=1`. The adcs-c truth plant
+ * Hardware-in-the-loop-free test of the ADCS integration, built with `make dev PLANT_SIM=1`. The adcs-c truth plant
  * (orbit, attitude dynamics, sensor noise, magnetorquers) stands in for the real sensors and coils, so the ADCS task
  * runs its normal control path (commands, TLE handling, `adcs_compute_currents()`, telemetry, state machine inputs)
  * under the scheduler, and its pointing is scored against the plant's truth over RTT.
@@ -10,7 +10,7 @@
  * Authors: Zach Mahan
  */
 
-#ifdef ADCS_MOCK
+#ifdef PLANT_SIM
 
     #include <math.h>
     #include <string.h>
@@ -221,4 +221,4 @@ void adcs_mock_step(const float *const currents, const TickType_t step_ticks) {
          (unsigned long)(step_ticks * 1000u / configTICK_RATE_HZ));
 }
 
-#endif // ADCS_MOCK
+#endif // PLANT_SIM

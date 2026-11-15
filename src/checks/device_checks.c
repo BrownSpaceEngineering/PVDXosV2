@@ -133,7 +133,12 @@ bool check_gyro(void) {
 }
 
 // Passes only if main.c's mram_map_init() found all three MRAM chips OK (every write goes to all three).
+// A NO_MRAM build never initializes MRAM, so it fails.
 bool check_mram(void) {
+#ifdef NO_MRAM
+    info("MRAM: compiled out (NO_MRAM build)\n");
+    return false;
+#else
     mram_status_t status = mram_map_status();
     bool all_okay = true;
     for (uint8_t mram = 1; mram <= 3; mram++) {
@@ -142,6 +147,7 @@ bool check_mram(void) {
         all_okay = all_okay && (state == MRAM_STATE_OK);
     }
     return all_okay;
+#endif
 }
 
 bool check_camera(void) {

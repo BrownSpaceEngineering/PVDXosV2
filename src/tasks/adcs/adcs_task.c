@@ -86,7 +86,7 @@ static tel_adcs_data_t telemetry_snapshot;
 /* ---------- ORBIT AND TIME ---------- */
 
 status_t adcs_get_time(int *const unix_time, int *const jd_scalar, float *const jd_frac) {
-#ifdef ADCS_MOCK
+#ifdef PLANT_SIM
     // body() has to see the plant's simulated time, which advances by a fixed step per tick rather than in real time
     return adcs_mock_get_time(unix_time, jd_scalar, jd_frac);
 #endif

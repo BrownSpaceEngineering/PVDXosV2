@@ -57,10 +57,10 @@ void main_adcs(void *pvParameters) {
 
     // Each device check also initializes that sensor. These wait for up to a few hundred ms, so they run here rather
     // than before the scheduler.
-#ifdef ADCS_MOCK
+#ifdef PLANT_SIM
     // The adcs-c plant simulates the sensors and magnetorquers, so the real ones are never touched, and the coils stay
     // off (init_adcs() leaves them off). Nothing is restored from MRAM, since the plant has its own orbit and clock.
-    warning("adcs: ADCS_MOCK build, running against the simulated plant instead of the sensors and magnetorquers\n");
+    warning("adcs: PLANT_SIM build, running against the simulated plant instead of the sensors and magnetorquers\n");
     body_reset();
     adcs_mock_init();
 #else
@@ -87,7 +87,7 @@ void main_adcs(void *pvParameters) {
     float photodiodes[NUM_DIODES];
     float currents[3];
 
-#ifndef ADCS_MOCK
+#ifndef PLANT_SIM
     // seed last_mag so the first step sees no field change
     adcs_read_magnetometer(last_mag);
 
@@ -136,7 +136,7 @@ void main_adcs(void *pvParameters) {
         //     memcpy(gyro, gyro_avg, sizeof(gyro));
 
         const TickType_t now_ticks = xTaskGetTickCount();
-#ifdef ADCS_MOCK
+#ifdef PLANT_SIM
         float dt; // the plant's fixed step, set by adcs_mock_sense() below
 #else
         // time since the last body() step, in seconds
@@ -150,7 +150,7 @@ void main_adcs(void *pvParameters) {
             exec_command_adcs(&cmd);
         }
 
-#ifdef ADCS_MOCK
+#ifdef PLANT_SIM
         // The plant gives its own last_mag, which carries its simulated sensor dropouts
         adcs_mock_sense(last_mag, mag, gyro, photodiodes, &dt);
 

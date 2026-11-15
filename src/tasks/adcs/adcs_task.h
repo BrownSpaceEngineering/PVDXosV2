@@ -285,9 +285,9 @@ void adcs_get_telemetry(tel_adcs_data_t *const telemetry);
  */
 void adcs_update_state_inputs(void);
 
-/* ---------- MOCK (make ADCS_MOCK=1) ---------- */
+/* ---------- MOCK (make PLANT_SIM=1) ---------- */
 
-#ifdef ADCS_MOCK
+#ifdef PLANT_SIM
 /**
  * \fn adcs_mock_init
  *

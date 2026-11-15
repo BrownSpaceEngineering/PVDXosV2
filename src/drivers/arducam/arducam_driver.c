@@ -372,6 +372,7 @@ static bool write_rtt(void *ctx, const uint8_t *buf, size_t len) {
     return true;
 }
 
+#ifndef NO_MRAM
 typedef struct {
     size_t offset;
 } mram_writer_t;
@@ -385,6 +386,7 @@ static bool write_mram(void *ctx, const uint8_t *buf, size_t len) {
     p_writer->offset += len;
     return true;
 }
+#endif
 
 /**
  * \fn capture_rtt
@@ -429,6 +431,10 @@ status_t capture_rtt(void) {
  * \returns `status_t`, whether the operation was successful
  */
 status_t capture_mram(void) {
+#ifdef NO_MRAM
+    warning("camera: NO_MRAM build, so there is nowhere to save the image\n");
+    return ERROR_WRITE_FAILED;
+#else
     size_t len = 0;
     ret_err_status(capture_to_fifo(&len), "Arducam capture failed");
 
@@ -460,6 +466,7 @@ status_t capture_mram(void) {
     }
     info("camera: %u-byte image saved to MRAM\n", (unsigned)out_len);
     return SUCCESS;
+#endif
 }
 
 /**
@@ -473,6 +480,10 @@ status_t capture_mram(void) {
  * \returns `status_t`, ERROR_READ_FAILED if there is no complete image in MRAM
  */
 status_t arducam_mram_image_length(uint32_t *p_length) {
+#ifdef NO_MRAM
+    (void)p_length;
+    return ERROR_READ_FAILED;
+#else
     arducam_mram_image_t image;
     if (!mram_record_load(MRAM_REGION_CAMERA, ARDUCAM_MRAM_IMAGE_INFO_OFFSET, &image, sizeof(image)) || image.length == 0 ||
         image.length > ARDUCAM_MRAM_IMAGE_SIZE) {
@@ -480,4 +491,5 @@ status_t arducam_mram_image_length(uint32_t *p_length) {
     }
     *p_length = image.length;
     return SUCCESS;
+#endif
 }
