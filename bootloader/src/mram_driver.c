@@ -441,6 +441,22 @@ mram_status_t mram_init(void) {
     return status;
 }
 
+mram_status_t mram_init_for_reads(void) {
+    gpio_set_pin_level(MRAM1_CS, true);
+    gpio_set_pin_level(MRAM2_CS, true);
+    gpio_set_pin_level(MRAM3_CS, true);
+    spi_m_sync_enable(&SPI_MRAM);
+    delay_ms(50);
+
+    mram_status_t status = 0;
+    for (uint8_t mram = 1; mram <= 3; mram++) {
+        bool available = check_device_id(mram) == MRAM_INIT_OK;
+        set_mram_state(&status, mram, available ? MRAM_STATE_OK : MRAM_STATE_FAILED);
+    }
+    mram_module_status = status;
+    return status;
+}
+
 mram_status_t mram_get_status(void) {
     return mram_module_status;
 }

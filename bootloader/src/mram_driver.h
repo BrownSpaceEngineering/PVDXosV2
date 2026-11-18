@@ -49,6 +49,9 @@ static inline uint8_t get_mram_state(mram_status_t status, uint8_t mram) {
 
 mram_status_t mram_init(void);
 
+/** Prepare reads once after board initialization; does not write MRAM configuration. */
+mram_status_t mram_init_for_reads(void);
+
 /** @brief Current module states, including modules marked failed by reads/writes since `mram_init`. */
 mram_status_t mram_get_status(void);
 

@@ -14,6 +14,11 @@ void flash_disable_caches(void);
 void flash_enable_caches(void);
 bool flash_program_block(uint32_t address, const uint8_t *data);
 
+// Limited to aligned slots 0..8. The read returns false on either ECC error type.
+// Serialize NVM access; programming must execute from bank B or RAM.
+bool flash_read_bootloader_block(uint32_t address, uint8_t *data);
+bool flash_program_bootloader_block(uint32_t address, const uint8_t *data);
+
 /**
  * \brief Reads the `ECCERR` register on flash, which automatically clears it.
  * \returns Refer to 25.8.11 in the SAMD51 data sheet.

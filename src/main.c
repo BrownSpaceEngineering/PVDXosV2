@@ -17,6 +17,7 @@
 #include "boot_record.h"
 #include "ccsds/ccsds.h"
 #include "checks/device_checks.h"
+#include "drivers/mram/mram_driver.h"
 #include "cosmic_monkey_task.h"
 #include "globals.h"
 #include "logging.h"
@@ -146,6 +147,7 @@ int main(void) {
     /* Initializes MCU, drivers and middleware */
     atmel_start_init();
     PVDX_init();
+    mram_init_for_reads();
     // info_impl(RTT_CTRL_RESET RTT_CTRL_CLEAR); // Reset the terminal
     info("--- Atmel & Hardware Initialization Complete ---\n");
     info("[+] Build Type: %s\n", BUILD_TYPE);
