@@ -9,7 +9,7 @@ void reflash_bootloaders(bool sched_running) {
 
 void main_reflash_task(void *pvParameters) {
     while (true) {
-        vTaskDelay(pdMS_TO_TICKS(1000 * 10)); // 1000 * 60 * 60 * 6
+        vTaskDelay(pdMS_TO_TICKS(1000 * 60 * 60 * 6)); // 6 hours
         reflash_bootloaders(true);
     }
 }

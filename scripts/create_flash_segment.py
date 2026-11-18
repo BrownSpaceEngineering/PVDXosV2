@@ -17,22 +17,29 @@ def place_segment(flash, address, path, size):
     flash[address:address + len(segment)] = segment
 
 
-def place_checksummed_stage2(flash, address, path):
+def place_checksummed_bootloader(flash, address, path, slot_size):
     segment = read_binary(path)
-    if len(segment) >= fmt.FLASH_STAGE2_SIZE:
-        raise ValueError(f"{path} leaves no room for its stage-2 checksum")
+    if len(segment) > slot_size - 4:
+        raise ValueError(f"{path} leaves no room for its checksum")
+
     flash[address:address + len(segment)] = segment
-    checksum_address = address + fmt.FLASH_STAGE2_SIZE - 4
+    checksum_address = address + slot_size - 4
     checksum = fmt.crc32(flash[address:checksum_address])
     flash[checksum_address:checksum_address + 4] = checksum.to_bytes(4, "little")
 
-
 flash = bytearray([0xFF] * fmt.FLASH_IMAGE_SIZE)
-place_segment(flash, fmt.FLASH_STAGE1_ADDR, "bootloader/src/preboot.bin", fmt.FLASH_STAGE1_SIZE)
+
+place_checksummed_bootloader(
+    flash, fmt.FLASH_STAGE1_ADDR,
+    "bootloader/src/preboot.bin", fmt.FLASH_STAGE1_SIZE,
+)
+
 for index in range(fmt.FLASH_STAGE2_COUNT):
     address = fmt.FLASH_STAGE2_BASE + index * fmt.FLASH_STAGE2_SIZE
     path = f"bootloader/src/bootloader{index + 1}.bin"
-    place_checksummed_stage2(flash, address, path)
+    place_checksummed_bootloader(
+        flash, address, path, fmt.FLASH_STAGE2_SIZE,
+    )
 
 app_binary = read_binary("src/PVDXos.bin")
 app_size = math.ceil(len(app_binary) / fmt.IMAGE_BLOCK_SIZE) * fmt.IMAGE_BLOCK_SIZE
