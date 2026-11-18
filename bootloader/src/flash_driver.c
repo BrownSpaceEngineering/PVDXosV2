@@ -86,7 +86,7 @@ void flash_enable_caches(void) {
 }
 
 bool flash_program_block(uint32_t address, const uint8_t *data) {
-    bool is_os_row = address >= FLASH_OS_ADDR && address + FLASH_REPAIR_BLOCK_SIZE <= FLASH_OS_ADDR + FLASH_OS_SIZE;
+    bool is_os_row = (address >= FLASH_OS_ADDR) && ((address + FLASH_REPAIR_BLOCK_SIZE) <= (FLASH_OS_ADDR + FLASH_OS_SIZE));
     if (!is_os_row || (address % FLASH_REPAIR_BLOCK_SIZE) != 0u || data == NULL ||
         !flash_unlock_address(address)) {
         return false;
@@ -109,4 +109,8 @@ bool flash_program_block(uint32_t address, const uint8_t *data) {
         }
     }
     return false;
+}
+
+uint32_t get_eccerr_status(void) {
+    (uint32_t)hri_nvmctrl_read_ECCERR_reg(NVMCTRL);
 }

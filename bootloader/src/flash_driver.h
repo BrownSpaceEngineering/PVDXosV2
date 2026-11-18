@@ -14,4 +14,11 @@ void flash_disable_caches(void);
 void flash_enable_caches(void);
 bool flash_program_block(uint32_t address, const uint8_t *data);
 
+/**
+ * \brief Reads the `ECCERR` register on flash, which automatically clears it.
+ * \returns Refer to 25.8.11 in the SAMD51 data sheet.
+ * \warning Reading the `ECCERR` register clears it.
+ */
+uint32_t get_eccerr_status(void);
+
 #endif
