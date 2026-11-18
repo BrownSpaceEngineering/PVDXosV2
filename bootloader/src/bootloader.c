@@ -17,20 +17,51 @@ static uint8_t block_buffer[FLASH_REPAIR_BLOCK_SIZE] __attribute__((aligned(4)))
 static volatile boot_record_t *const boot_record = (volatile boot_record_t *)BOOT_RECORD_ADDR;
 _Static_assert(FLASH_OS_APP_BLOCK_COUNT <= 64u, "boot record block masks hold 64 app blocks");
 
-static bool mram_is_available(mram_status_t status) {
-    for (uint8_t module = 1; module <= 3; module++) {
-        uint8_t module_state = get_mram_state(status, module);
-        if (module_state == MRAM_STATE_OK || module_state == MRAM_STATE_DEGRADED) {
-            return true;
-        }
-    }
-    return false;
-}
-
 static bool header_is_valid(const image_header_t *header) {
     return header->magic == IMAGE_MAGIC && header->app_block_count != 0u && header->app_block_count <= FLASH_OS_APP_BLOCK_COUNT &&
         header->app_size == header->app_block_count * IMAGE_BLOCK_SIZE &&
         crc32((const uint8_t *)header, offsetof(image_header_t, header_crc)) == header->header_crc;
+}
+
+// Checks for data read from MRAM into block_buffer.
+typedef bool (*mram_check_t)(uint32_t size, uint32_t arg);
+
+static bool block_buffer_crc_matches(uint32_t size, uint32_t expected_crc) {
+    return crc32(block_buffer, size) == expected_crc;
+}
+
+static bool block_buffer_header_valid(uint32_t size, uint32_t unused) {
+    (void)size;
+    (void)unused;
+    image_header_t header;
+    memcpy(&header, block_buffer, sizeof(header));
+    return header_is_valid(&header);
+}
+
+/*
+ * Reads MRAM into block_buffer and accepts it only once `check` passes. The voted read comes first; if it fails or
+ * does not pass, each module is tried on its own, so the check picks the good copy where a vote cannot (two modules
+ * that disagree, or the same bit flipped in two replicas). Accepted data that some replica disagreed with is written
+ * back to every module: the driver never writes back on its own, because an unchecked vote can be wrong.
+ */
+static bool mram_read_verified(uint32_t mram_address, uint32_t size, mram_check_t check, uint32_t arg) {
+    bool replicas_differ = false;
+    bool verified = !mram_read_bytes(mram_address, block_buffer, size, &replicas_differ) && check(size, arg);
+    for (uint8_t mram = 1; !verified && mram <= 3; mram++) {
+        replicas_differ = true; // The vote failed, so at least one replica is wrong (or unreadable).
+        if (mram_read_module(mram, mram_address, block_buffer, size)) {
+            continue; // Unreadable: the driver marked it failed.
+        }
+        verified = check(size, arg);
+        if (!verified) {
+            mram_mark_degraded(mram); // Readable, but its own copy is wrong.
+        }
+    }
+    if (verified && replicas_differ) {
+        boot_record->mram_scrubs++;
+        (void)mram_write_bytes(mram_address, block_buffer, size); // A failing module is marked failed by the driver.
+    }
+    return verified;
 }
 
 typedef enum {
@@ -75,8 +106,11 @@ static bool copy_flash_to_mram(uint32_t flash_address, uint32_t mram_address, ui
         }
         memcpy(block_buffer, (const void *)(flash_address + offset), chunk_size);
         uint32_t expected_crc = crc32(block_buffer, chunk_size);
+        // Every healthy replica must read back identical: a module that silently missed the write would differ.
+        bool replicas_differ = true;
         bool copied = !mram_write_bytes(mram_address + offset, block_buffer, chunk_size) &&
-            !mram_read_bytes(mram_address + offset, block_buffer, chunk_size) && crc32(block_buffer, chunk_size) == expected_crc;
+            !mram_read_bytes(mram_address + offset, block_buffer, chunk_size, &replicas_differ) && !replicas_differ &&
+            crc32(block_buffer, chunk_size) == expected_crc;
         if (!copied) {
             boot_record->refresh_fail_addr = mram_address + offset;
             return false;
@@ -90,8 +124,15 @@ static bool copy_flash_to_mram(uint32_t flash_address, uint32_t mram_address, ui
 /*
  * Ground-only: make the flash image the MRAM golden copy. The golden header is invalidated first and written last,
  * so an interrupted refresh leaves MRAM without a golden image (repair disabled) instead of a mixed one.
+ * A module that fails mid-refresh is only failed in RAM: next boot it is healthy again with stale data and votes.
+ * So the header is written only while at least 2 fresh copies remain (one fresh copy would be outvoted), and a
+ * refresh that lost any module keeps the request, so it reruns with every module.
  */
 static boot_refresh_t refresh_mram_from_flash(void) {
+    mram_status_t start_status = mram_get_status();
+    if (mram_healthy_count(start_status) < 2u) {
+        return BOOT_REFRESH_MODULE_LOST;
+    }
     image_header_t header;
     memcpy(&header, (const void *)FLASH_OS_ADDR, sizeof(header));
     if (!header_is_valid(&header)) {
@@ -115,24 +156,25 @@ static boot_refresh_t refresh_mram_from_flash(void) {
         boot_record->refresh_fail_addr = MRAM_OS_ADDR;
         return BOOT_REFRESH_WRITE_FAILED;
     }
-    if (!copy_flash_to_mram(FLASH_OS_APP_ADDR, MRAM_OS_ADDR + FLASH_OS_HEADER_SIZE, header.app_size) ||
-        !copy_flash_to_mram(FLASH_OS_ADDR, MRAM_OS_ADDR, FLASH_OS_HEADER_SIZE) ||
+    if (!copy_flash_to_mram(FLASH_OS_APP_ADDR, MRAM_OS_ADDR + FLASH_OS_HEADER_SIZE, header.app_size)) {
+        return BOOT_REFRESH_WRITE_FAILED;
+    }
+    if (mram_healthy_count(mram_get_status()) < 2u) {
+        return BOOT_REFRESH_MODULE_LOST; // Golden header stays invalid.
+    }
+    if (!copy_flash_to_mram(FLASH_OS_ADDR, MRAM_OS_ADDR, FLASH_OS_HEADER_SIZE) ||
         !copy_flash_to_mram(FLASH_STAGE1_ADDR, MRAM_BOOTLOADER_ADDR, MRAM_BOOTLOADER_SIZE)) {
         return BOOT_REFRESH_WRITE_FAILED;
     }
-    return BOOT_REFRESH_OK;
+    return mram_get_status() == start_status ? BOOT_REFRESH_OK : BOOT_REFRESH_MODULE_LOST;
 }
 
 static boot_repair_t repair_os_from_mram(void) {
-    if (mram_read_bytes(MRAM_OS_ADDR, block_buffer, IMAGE_HEADER_READ_SIZE)) {
-        return BOOT_REPAIR_HEADER_READ_FAILED;
+    if (!mram_read_verified(MRAM_OS_ADDR, IMAGE_HEADER_READ_SIZE, block_buffer_header_valid, 0u)) {
+        return mram_healthy_count(mram_get_status()) == 0u ? BOOT_REPAIR_HEADER_READ_FAILED : BOOT_REPAIR_NO_IMAGE;
     }
-
     image_header_t reference_header;
     memcpy(&reference_header, block_buffer, sizeof(reference_header));
-    if (!header_is_valid(&reference_header)) {
-        return BOOT_REPAIR_NO_IMAGE;
-    }
 
     // MRAM reads are slow (every replica is read for voting), so only fetch what flash gets wrong.
     // The header row holds the header in its first IMAGE_HEADER_READ_SIZE bytes; the rest is padding.
@@ -140,7 +182,7 @@ static boot_repair_t repair_os_from_mram(void) {
     (void)get_eccerr_status();
     bool header_differs = memcmp((const void *)FLASH_OS_ADDR, block_buffer, IMAGE_HEADER_READ_SIZE) != 0;
     if (flash_ecc_check(FLASH_OS_ADDR, IMAGE_HEADER_READ_SIZE) != FLASH_ECC_NONE || header_differs) {
-        if (mram_read_bytes(MRAM_OS_ADDR, block_buffer, IMAGE_BLOCK_SIZE)) {
+        if (!mram_read_verified(MRAM_OS_ADDR, IMAGE_BLOCK_SIZE, block_buffer_header_valid, 0u)) {
             return BOOT_REPAIR_HEADER_READ_FAILED;
         }
         boot_record->header_row = flash_program_block(FLASH_OS_ADDR, block_buffer) ? BOOT_HEADER_ROW_REWRITTEN : BOOT_HEADER_ROW_FAILED;
@@ -174,8 +216,7 @@ static boot_repair_t repair_os_from_mram(void) {
             }
             // Fall through to the MRAM copy (flash_program_block may have left the block erased).
         }
-        if (mram_read_bytes(mram_address, block_buffer, IMAGE_BLOCK_SIZE) ||
-            crc32(block_buffer, IMAGE_BLOCK_SIZE) != reference_header.app_block_crc[block]) {
+        if (!mram_read_verified(mram_address, IMAGE_BLOCK_SIZE, block_buffer_crc_matches, reference_header.app_block_crc[block])) {
             boot_record->blocks_bad_mram++;
             boot_record->blocks_unfixed |= block_bit;
             continue;
@@ -218,7 +259,7 @@ int main(void) {
     }
     mram_status_t mram_status = mram_init(); // Also runs atmel_start_init().
     boot_record->mram_status_init = mram_status;
-    bool mram_available = mram_is_available(mram_status);
+    bool mram_available = mram_healthy_count(mram_status) != 0u;
 
     flash_disable_caches();
     volatile uint32_t *request = (volatile uint32_t *)MRAM_REFRESH_REQUEST_ADDR;

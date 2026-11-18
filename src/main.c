@@ -68,6 +68,12 @@ static void log_boot_record(void) {
                 warning("Boot: MRAM refresh refused: flash image fails its own header/CRCs at %x; will retry next boot\n",
                         (unsigned int)record->refresh_fail_addr);
                 break;
+            case BOOT_REFRESH_MODULE_LOST:
+                warning(
+                    "Boot: MRAM refresh incomplete: fewer than 2 MRAM modules healthy, or one dropped out (%u blocks "
+                    "copied); will retry next boot\n",
+                    (unsigned int)record->refresh_blocks);
+                break;
             default:
                 warning("Boot: MRAM refresh FAILED at MRAM %x after %u blocks; golden copy invalid, will retry next boot\n",
                         (unsigned int)record->refresh_fail_addr, (unsigned int)record->refresh_blocks);
@@ -84,6 +90,10 @@ static void log_boot_record(void) {
                     record->header_row == BOOT_HEADER_ROW_REWRITTEN ? ", header row rewritten" : "");
                 if (record->header_row == BOOT_HEADER_ROW_FAILED) {
                     warning("Boot: flash header row differed from MRAM and reprogramming it FAILED\n");
+                }
+                if (record->mram_scrubs != 0u) {
+                    warning("Boot: MRAM replicas disagreed on %u reads; the verified data was written back to every module\n",
+                            (unsigned int)record->mram_scrubs);
                 }
                 if (record->blocks_flagged != 0u) {
                     // Bit n = app block n; printed as two 32-bit halves (high, low).

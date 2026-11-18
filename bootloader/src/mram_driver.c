@@ -58,31 +58,16 @@ typedef enum {
 
 static mram_status_t mram_module_status;
 
+static bool mram_module_usable(uint8_t mram) {
+    uint8_t state = get_mram_state(mram_module_status, mram);
+    return state == MRAM_STATE_OK || state == MRAM_STATE_DEGRADED;
+}
+
 // ---------------------- SPI Helpers ----------------------
-/**
- * @brief Halts execution and waits for the watchdog to reboot the system.
- * @warning Should only be called when a reboot will definitely fix the fatal
- *          state. If the fatal state is unrecoverable, use
- *          `mram_complete_fatal` instead.
- * TODO: consider if having this at all is risky; we might want to remove this entirely
- */
-void mram_recoverable_fatal(void) {
-    while (1);
-}
+// MRAM failure is reported per module through mram_status_t (MRAM_STATE_FAILED), never by halting: MRAM is optional
+// for booting, and a hang-until-watchdog-reset would boot-loop on a persistent MRAM fault.
 
-/**
- * @brief Sets the MRAM state to fatal to prevent functions from using MRAM
- *        inappropriately. Does not reboot the system.
- */
-void mram_complete_fatal(void) {
-    /**
-     * TODO: Figure out what to do in case of unrecoverable failure.
-     * Consider a function bool mram_is_fatal(void) that returns the status;
-     * every exposed function should call that function and only proceed if the
-     * result is false.
-     */
-}
-
+// Module numbers are always 1-3 (the driver's own loops); anything else selects nothing.
 static inline void mram_select(uint8_t mram) {
     if (mram == 1) {
         gpio_set_pin_level(MRAM1_CS, false);
@@ -90,8 +75,6 @@ static inline void mram_select(uint8_t mram) {
         gpio_set_pin_level(MRAM2_CS, false);
     } else if (mram == 3) {
         gpio_set_pin_level(MRAM3_CS, false);
-    } else {
-        mram_recoverable_fatal();
     }
 }
 
@@ -102,8 +85,6 @@ static inline void mram_deselect(uint8_t mram) {
         gpio_set_pin_level(MRAM2_CS, true);
     } else if (mram == 3) {
         gpio_set_pin_level(MRAM3_CS, true);
-    } else {
-        mram_recoverable_fatal();
     }
 }
 
@@ -138,18 +119,14 @@ bool spi_read(uint8_t *data, uint32_t len) {
 }
 
 // ---------------------- MRAM Commands ----------------------
+// spi_write, spi_read and write_enable stay external for src/tests/mram_factory_init.c; the rest are file-local
+// (this file is also linked into the OS, whose global namespace is shared with linalg/ADCS).
 
 static bool mram_read_register(uint8_t mram, uint8_t cmd, uint8_t *value) {
     mram_select(mram);
     bool success = spi_write(&cmd, 1) && spi_read(value, 1);
     mram_deselect(mram);
     return success;
-}
-
-uint8_t read_status(uint8_t mram) {
-    uint8_t status = 0xFF;
-    mram_read_register(mram, CMD_RDSR, &status);
-    return status;
 }
 
 static bool mram_wait_ready(uint8_t mram) {
@@ -189,7 +166,7 @@ bool write_enable(uint8_t mram) {
     return success && mram_read_register(mram, CMD_RDSR, &status) && (status & MRAM_STATUS_WEL) != 0u;
 }
 
-bool write_status(uint8_t mram, uint8_t value) {
+static bool write_status(uint8_t mram, uint8_t value) {
     uint8_t buf[2] = {CMD_WRSR, value};
     if (!mram_wait_ready(mram) || !mram_clear_flags(mram) || !write_enable(mram)) {
         return false;
@@ -200,7 +177,7 @@ bool write_status(uint8_t mram, uint8_t value) {
     return success && mram_operation_okay(mram);
 }
 
-bool read_bytes(uint8_t mram, uint32_t address, uint8_t *data, uint32_t size) {
+static bool read_bytes(uint8_t mram, uint32_t address, uint8_t *data, uint32_t size) {
     watchdog_pet();
     if (!mram_wait_ready(mram)) {
         return false;
@@ -215,7 +192,7 @@ bool read_bytes(uint8_t mram, uint32_t address, uint8_t *data, uint32_t size) {
     return success;
 }
 
-bool write_bytes(uint8_t mram, uint32_t address, const uint8_t *data, uint32_t size) {
+static bool write_bytes(uint8_t mram, uint32_t address, const uint8_t *data, uint32_t size) {
     watchdog_pet();
 
     uint8_t hdr[4] = {CMD_WRITE, (uint8_t)(address >> 16), (uint8_t)(address >> 8), (uint8_t)(address)};
@@ -231,7 +208,7 @@ bool write_bytes(uint8_t mram, uint32_t address, const uint8_t *data, uint32_t s
     return success;
 }
 
-uint8_t read_nonvol_reg(uint8_t mram, uint8_t reg) {
+static uint8_t read_nonvol_reg(uint8_t mram, uint8_t reg) {
     uint8_t cmd[4] = {CMD_RDNVOL, 0, 0, reg};
     uint8_t reg_val = 0;
     mram_select(mram);
@@ -241,7 +218,7 @@ uint8_t read_nonvol_reg(uint8_t mram, uint8_t reg) {
     return reg_val;
 }
 
-uint8_t read_vol_reg(uint8_t mram, uint8_t reg) {
+static uint8_t read_vol_reg(uint8_t mram, uint8_t reg) {
     uint8_t cmd[4] = {CMD_RDVOL, 0, 0, reg};
     uint8_t reg_val = 0;
     mram_select(mram);
@@ -251,7 +228,7 @@ uint8_t read_vol_reg(uint8_t mram, uint8_t reg) {
     return reg_val;
 }
 
-void write_vol_reg(uint8_t mram, uint8_t reg, uint8_t reg_val) {
+static void write_vol_reg(uint8_t mram, uint8_t reg, uint8_t reg_val) {
     uint8_t cmd[4] = {CMD_WRVOL, 0, 0, reg};
     write_enable(mram);
     mram_select(mram);
@@ -262,11 +239,7 @@ void write_vol_reg(uint8_t mram, uint8_t reg, uint8_t reg_val) {
 
 // ---------------------- Core Operations ----------------------
 
-void mram_init_report_err(uint8_t mram, mram_init_status_t status) {
-    /** TODO: figure out what to do when reporting an error. */
-}
-
-mram_init_status_t check_device_id(uint8_t mram) {
+static mram_init_status_t check_device_id(uint8_t mram) {
     uint8_t cmd = CMD_RDID;
     uint8_t id[3] = {0};
     mram_select(mram);
@@ -281,7 +254,7 @@ mram_init_status_t check_device_id(uint8_t mram) {
     }
 }
 
-mram_init_status_t disable_block_protection(uint8_t mram) {
+static mram_init_status_t disable_block_protection(uint8_t mram) {
     uint8_t status = 0;
     if (!mram_wait_ready(mram) || !mram_read_register(mram, CMD_RDSR, &status)) {
         return MRAM_INIT_FAIL_BLOCK_PROT;
@@ -298,7 +271,7 @@ mram_init_status_t disable_block_protection(uint8_t mram) {
     return MRAM_INIT_OK;
 }
 
-mram_init_status_t set_persistent_mode(uint8_t mram) {
+static mram_init_status_t set_persistent_mode(uint8_t mram) {
     uint8_t reg_val = read_nonvol_reg(mram, PMM_REG);
 
     if (!(reg_val & PMM_WRITE_MODE)) {
@@ -326,8 +299,7 @@ bool mram_write_bytes(uint32_t address, const uint8_t *data, uint32_t size) {
 
         bool written = false;
         for (uint8_t mram = 1; mram <= 3; mram++) {
-            uint8_t state = get_mram_state(mram_module_status, mram);
-            if (state != MRAM_STATE_OK && state != MRAM_STATE_DEGRADED) {
+            if (!mram_module_usable(mram)) {
                 continue;
             }
             if (write_bytes(mram, address, data, chunk)) {
@@ -347,7 +319,27 @@ bool mram_write_bytes(uint32_t address, const uint8_t *data, uint32_t size) {
     return false;
 }
 
-bool mram_read_bytes(uint32_t address, uint8_t *data, uint32_t size) {
+void mram_mark_degraded(uint8_t mram) {
+    if (mram >= 1u && mram <= 3u && get_mram_state(mram_module_status, mram) == MRAM_STATE_OK) {
+        set_mram_state(&mram_module_status, mram, MRAM_STATE_DEGRADED);
+    }
+}
+
+bool mram_read_module(uint8_t mram, uint32_t address, uint8_t *data, uint32_t size) {
+    if (mram < 1u || mram > 3u || !mram_module_usable(mram)) {
+        return true;
+    }
+    if (!read_bytes(mram, address, data, size)) {
+        set_mram_state(&mram_module_status, mram, MRAM_STATE_FAILED);
+        return true;
+    }
+    return false;
+}
+
+bool mram_read_bytes(uint32_t address, uint8_t *data, uint32_t size, bool *replicas_differ) {
+    if (replicas_differ != NULL) {
+        *replicas_differ = false;
+    }
     if (size % MRAM_PAGE_SIZE != 0) {
         return true; // Read failed.
     }
@@ -358,12 +350,7 @@ bool mram_read_bytes(uint32_t address, uint8_t *data, uint32_t size) {
         bool read_succeeded[3] = {false, false, false};
         uint8_t read_count = 0;
         for (uint8_t mram_idx = 1; mram_idx <= 3; mram_idx++) {
-            uint8_t state = get_mram_state(mram_module_status, mram_idx);
-            if (state != MRAM_STATE_OK && state != MRAM_STATE_DEGRADED) {
-                continue;
-            }
-            if (!read_bytes(mram_idx, address + MRAM_PAGE_SIZE * page, read_data[mram_idx - 1], MRAM_PAGE_SIZE)) {
-                set_mram_state(&mram_module_status, mram_idx, MRAM_STATE_FAILED);
+            if (mram_read_module(mram_idx, address + MRAM_PAGE_SIZE * page, read_data[mram_idx - 1], MRAM_PAGE_SIZE)) {
                 continue;
             }
             read_succeeded[mram_idx - 1] = true;
@@ -388,7 +375,10 @@ bool mram_read_bytes(uint32_t address, uint8_t *data, uint32_t size) {
                 voted_value = values[0];
             } else if (value_count == 2u) {
                 if (values[0] != values[1]) {
-                    return true;
+                    if (replicas_differ != NULL) {
+                        *replicas_differ = true;
+                    }
+                    return true; // Two copies cannot be voted on; the caller can pick one with mram_read_module.
                 }
                 voted_value = values[0];
             } else {
@@ -398,35 +388,18 @@ bool mram_read_bytes(uint32_t address, uint8_t *data, uint32_t size) {
             for (uint8_t module_index = 0; module_index < 3; module_index++) {
                 if (read_succeeded[module_index] && read_data[module_index][read_idx] != voted_value) {
                     any_error = true;
+                    mram_mark_degraded(module_index + 1u); // Outvoted (only possible with 3 replicas).
                 }
             }
         }
 
-        if (any_error) {
-            mram_write_bytes(address + MRAM_PAGE_SIZE * page, data + MRAM_PAGE_SIZE * page, MRAM_PAGE_SIZE);
+        // No write-back here: a bitwise vote is wrong when two replicas flipped the same bit, and writing that to
+        // every module would destroy the one good copy. The caller scrubs once the data passes its own check.
+        if (any_error && replicas_differ != NULL) {
+            *replicas_differ = true;
         }
     }
     return false; // Read succeeded.
-}
-
-// ---------------------- Test ----------------------
-
-void test_writes_reads(uint32_t addr, int salt) {
-    const uint32_t NUM_BYTES = 512;
-    uint8_t send_data[NUM_BYTES];
-    uint8_t recv_data[NUM_BYTES];
-
-    for (uint32_t i = 0; i < NUM_BYTES; i++) send_data[i] = (uint8_t)((i + salt) % 100);
-
-    mram_write_bytes(addr, send_data, NUM_BYTES);
-    mram_read_bytes(addr, recv_data, NUM_BYTES);
-
-    for (uint32_t i = 0; i < NUM_BYTES; i++) {
-        if (recv_data[i] != send_data[i]) {
-            // test failed
-            mram_recoverable_fatal();
-        }
-    }
 }
 
 // ---------------------- Main ----------------------
@@ -461,7 +434,6 @@ mram_status_t mram_init(void) {
             set_mram_state(&status, mram, MRAM_STATE_OK);
         } else {
             set_mram_state(&status, mram, MRAM_STATE_FAILED);
-            mram_init_report_err(mram, init_status);
         }
     }
 
@@ -482,6 +454,12 @@ mram_status_t mram_get_status(void) {
     // Outside the bootloader's development flash mirror; deliberately cross 256-byte boundaries.
     #define MRAM_HW_TEST_ADDRESS 0x000800F0u
     #define MRAM_HW_TEST_SIZE 512u
+
+static uint8_t read_status(uint8_t mram) {
+    uint8_t status = 0xFF;
+    mram_read_register(mram, CMD_RDSR, &status);
+    return status;
+}
 
 static bool mram_test_compare(uint8_t mram, const uint8_t *actual, const uint8_t *expected) {
     for (unsigned int i = 0; i < MRAM_HW_TEST_SIZE; i++) {
@@ -596,13 +574,18 @@ void test_mram(void) {
             all_okay = all_okay && injected;
         }
         memset(actual, 0, sizeof(actual));
-        mram_read_bytes(MRAM_HW_TEST_ADDRESS, actual, MRAM_HW_TEST_SIZE);
-        bool majority_okay = mram_test_compare(0, actual, expected);
-        PVDX_ASSERT_MSG(majority_okay, "MRAM hardware majority read\n");
+        bool replicas_differ = false;
+        bool majority_okay = !mram_read_bytes(MRAM_HW_TEST_ADDRESS, actual, MRAM_HW_TEST_SIZE, &replicas_differ) && replicas_differ &&
+            mram_test_compare(0, actual, expected);
+        PVDX_ASSERT_MSG(majority_okay, "MRAM hardware majority read (and replica disagreement reported)\n");
         all_okay = all_okay && majority_okay;
+        // The read no longer writes back; the caller scrubs with the verified data.
+        bool scrubbed = !mram_write_bytes(MRAM_HW_TEST_ADDRESS, actual, MRAM_HW_TEST_SIZE);
+        PVDX_ASSERT_MSG(scrubbed, "MRAM hardware scrub write\n");
+        all_okay = all_okay && scrubbed;
         for (uint8_t mram = 1; mram <= 3; mram++) {
             bool repaired = read_bytes(mram, MRAM_HW_TEST_ADDRESS, actual, MRAM_HW_TEST_SIZE) && mram_test_compare(mram, actual, expected);
-            info("MRAM HW chip %u public write / majority repair: %s\n", mram, repaired ? "PASS" : "FAIL");
+            info("MRAM HW chip %u public write / majority scrub: %s\n", mram, repaired ? "PASS" : "FAIL");
             PVDX_ASSERT_MSG(repaired, "MRAM hardware replica repair\n");
             all_okay = all_okay && repaired;
         }
@@ -630,7 +613,7 @@ void test_mram(void) {
 
 // ---------------------- CRC-32 ----------------------
 
-uint32_t crc32_table[256];
+static uint32_t crc32_table[256];
 
 uint32_t crc32(const uint8_t *block, uint32_t size) {
     for (uint32_t i = 0; i < 256; i++) {

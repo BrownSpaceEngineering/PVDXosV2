@@ -14,10 +14,12 @@
  */
 typedef uint8_t mram_status_t;
 
-#define MRAM_STATE_OFF (0x00)      // MRAM module powered off.
-#define MRAM_STATE_OK (0x01)       // MRAM module functioning as expected.
-#define MRAM_STATE_DEGRADED (0x02) // MRAM module appears mostly functional but may not be 100% reliable.
-#define MRAM_STATE_FAILED (0x03)   // MRAM module not functioning.
+#define MRAM_STATE_OFF (0x00) // Not initialized: the value before mram_init(). Nothing powers modules off.
+#define MRAM_STATE_OK (0x01)  // MRAM module functioning as expected.
+// Still read and written, but its data was wrong this boot: outvoted, or its own copy failed the caller's check.
+// Reporting only (boot_record->mram_status_final); mram_init() resets every module each boot.
+#define MRAM_STATE_DEGRADED (0x02)
+#define MRAM_STATE_FAILED (0x03) // Init, a read or a write failed; skipped for the rest of the boot.
 
 /**
  * @brief Sets the state of the specified MRAM module to the specified status.
@@ -51,14 +53,41 @@ mram_status_t mram_init(void);
 mram_status_t mram_get_status(void);
 
 /**
- * @brief Reads majority-vote data from MRAM modules.
+ * @brief Counts the modules in `status` that are usable (OK or degraded).
+ */
+static inline uint8_t mram_healthy_count(mram_status_t status) {
+    uint8_t count = 0;
+    for (uint8_t mram = 1; mram <= 3; mram++) {
+        uint8_t state = get_mram_state(status, mram);
+        count += (state == MRAM_STATE_OK || state == MRAM_STATE_DEGRADED) ? 1u : 0u;
+    }
+    return count;
+}
+
+/**
+ * @brief Reads majority-vote data from the healthy MRAM modules (bitwise vote per 256-byte page).
  * @param address Address to read from.
  * @param data Pointer to output.
  * @param size Size of data to be read, in bytes.
- * @return `false` if read succeeded; `true` otherwise.
+ * @param[out] replicas_differ Set to whether any healthy replica disagreed with the result (may be NULL).
+ * @return `false` if read succeeded; `true` otherwise (no module readable, or two modules that disagree).
+ * @note Never writes to MRAM. A vote is wrong if two replicas flipped the same bit, so the caller should check the
+ *       data (e.g. by CRC) and only then scrub with `mram_write_bytes`; on a failed check, `mram_read_module` lets
+ *       it try each copy on its own.
  * @warning `size` must be divisible by 256.
  */
-bool mram_read_bytes(uint32_t address, uint8_t *data, uint32_t size);
+bool mram_read_bytes(uint32_t address, uint8_t *data, uint32_t size, bool *replicas_differ);
+
+/**
+ * @brief Marks a healthy module (1-3) degraded: its data was found wrong. Leaves failed or degraded modules alone.
+ */
+void mram_mark_degraded(uint8_t mram);
+
+/**
+ * @brief Reads one module (1-3) without voting. A module whose read fails is marked failed.
+ * @return `false` if read succeeded; `true` if the module is not healthy or the read failed.
+ */
+bool mram_read_module(uint8_t mram, uint32_t address, uint8_t *data, uint32_t size);
 
 /**
  * @brief Writes data to all healthy MRAM modules.

@@ -88,7 +88,7 @@ status)
   echo "  stage-2 slot:          $(( w1 & 0xFF )) (255 = stage 1 fell back to the OS)"
   printf '  MRAM status:           init %02x, final %02x (2 bits per module, MRAM1 lowest: 1 ok, 2 degraded, 3 failed)\n' \
     $(( (w1 >> 8) & 0xFF )) $(( (w1 >> 16) & 0xFF ))
-  echo "  refresh result:        $(( (w1 >> 24) & 0xFF )) (0 none, 1 ok, 2 no MRAM, 3 bad flash, 4 write failed)"
+  echo "  refresh result:        $(( (w1 >> 24) & 0xFF )) (0 none, 1 ok, 2 no MRAM, 3 bad flash, 4 write failed, 5 module lost)"
   echo "  refresh blocks copied: $(( (w4 >> 16) & 0xFFFF ))"
   echo "  refresh fail address:  0x$(w 20) (flash address if 'bad flash', MRAM address if 'write failed')"
   echo "  repair result:         $(( w2 & 0xFF )) (0 not run, 1 no MRAM, 2 header read failed, 3 no golden image, 4 done)"
@@ -100,6 +100,7 @@ status)
        "last ECCERR 0x$(w 28) (ADDR bits 23:0, TYPEL 29:28, TYPEH 31:30; 1 single, 2 dual)"
   echo "  blocks flagged:        0x$(w 36)$(w 32) (bit n = app block n: bad CRC or ECC error)"
   echo "  blocks unfixed:        0x$(w 44)$(w 40) (bit n = app block n still wrong at OS start)"
+  echo "  MRAM scrubs:           $(( 16#$(w 48) & 0xFFFF )) (verified reads written back because a replica disagreed)"
   ;;
 *)
   echo "usage: $0 request|cancel|status"; exit 1 ;;

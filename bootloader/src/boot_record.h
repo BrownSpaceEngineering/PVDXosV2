@@ -29,6 +29,7 @@ typedef enum {
     BOOT_REFRESH_NO_MRAM = 2,      // Request kept: no healthy MRAM module.
     BOOT_REFRESH_BAD_FLASH = 3,    // Request kept: flash image fails its own header/CRCs, MRAM untouched.
     BOOT_REFRESH_WRITE_FAILED = 4, // Request kept: MRAM golden header left invalid until a refresh completes.
+    BOOT_REFRESH_MODULE_LOST = 5,  // Request kept: fewer than 2 modules healthy, or one dropped out mid-refresh.
 } boot_refresh_t;
 
 typedef enum {
@@ -68,6 +69,7 @@ typedef struct {
     uint32_t ecc_last_err;        // Raw NVMCTRL ECCERR of the last error stage 2 saw, in range or not (0 = none).
     uint64_t blocks_flagged;      // Blocks that failed their CRC or had an ECC error (whether or not they were fixed).
     uint64_t blocks_unfixed;      // Blocks still wrong when the OS started (MRAM copy bad, or programming failed).
+    uint16_t mram_scrubs;         // Verified MRAM reads written back to every module because a replica disagreed.
 } boot_record_t;
 
 _Static_assert(BOOT_RECORD_ADDR + sizeof(boot_record_t) <= MRAM_REFRESH_REQUEST_ADDR, "boot record overlaps request");
