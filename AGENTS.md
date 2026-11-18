@@ -28,8 +28,10 @@ Adafruit Grand Central development board.
   minutes at the current 50 kHz MRAM SPI clock.
 - The last 64 bytes of backup RAM (`bootloader/src/boot_record.h`) hold the
   boot record (what stage 1/2 did; logged by `src/main.c` at startup) and the
-  refresh request. Stage 2 logs over RTT channel 1 (one line per MRAM page
-  written); its RTT control block shares `0x20000000` with the OS's.
+  refresh request. Stage 2 has no log output (RTT needs a probe, so it is
+  useless in flight); the boot record is its only report. Read it with
+  `tools/mram_refresh.sh status` (also during a refresh: `refresh_blocks`
+  counts up live).
 - `src/` is the application; `src/src_flash.ld` links it for execution from
   flash at `0x00082000`. `src/main.c` initializes Atmel Start hardware,
   logging, startup checks, tasks, and FreeRTOS.

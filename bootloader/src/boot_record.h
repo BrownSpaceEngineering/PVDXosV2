@@ -39,6 +39,16 @@ typedef enum {
     BOOT_REPAIR_DONE = 4,
 } boot_repair_t;
 
+typedef enum {
+    BOOT_HEADER_ROW_OK = 0,        // Flash header row matched MRAM (or repair did not get that far).
+    BOOT_HEADER_ROW_REWRITTEN = 1, // Differed from MRAM (or had an ECC error) and was reprogrammed.
+    BOOT_HEADER_ROW_FAILED = 2,    // Reprogramming it failed.
+} boot_header_row_t;
+
+/*
+ * Stage 2 has no log output in flight (nothing reads RTT without a debug probe), so this record is its only report.
+ * Block masks: bit n is app block n (flash FLASH_OS_APP_ADDR + n * 8 KiB).
+ */
 typedef struct {
     uint32_t magic;
     uint8_t stage2_slot;       // 1-8, or BOOT_STAGE2_SLOT_*.
@@ -46,13 +56,18 @@ typedef struct {
     uint8_t mram_status_final; // mram_status_t when stage 2 handed over (modules may fail during the boot).
     uint8_t refresh;           // boot_refresh_t
     uint8_t repair;            // boot_repair_t
-    uint8_t header_rewritten;  // Flash header row differed from MRAM and was reprogrammed.
+    uint8_t header_row;        // boot_header_row_t
     uint16_t blocks_checked;   // App blocks compared against the golden CRCs.
     uint16_t blocks_repaired;  // Flash blocks reprogrammed from MRAM.
     uint16_t blocks_bad_mram;  // Flash block wrong, but MRAM copy unreadable or failed its CRC.
     uint16_t blocks_program_failed;
-    uint16_t refresh_blocks;    // 8 KiB blocks copied to MRAM by the refresh.
-    uint32_t refresh_fail_addr; // MRAM address of the block that failed to copy.
+    uint16_t refresh_blocks;      // 8 KiB blocks copied to MRAM by the refresh (counts up live during it).
+    uint32_t refresh_fail_addr;   // Where the refresh stopped: flash address (BAD_FLASH) or MRAM address (WRITE_FAILED).
+    uint16_t blocks_ecc_scrubbed; // CRC-good blocks rewritten because ECC corrected a single-bit error.
+    uint16_t blocks_ecc_dual;     // Blocks with an uncorrectable (dual) ECC error.
+    uint32_t ecc_last_err;        // Raw NVMCTRL ECCERR of the last error stage 2 saw, in range or not (0 = none).
+    uint64_t blocks_flagged;      // Blocks that failed their CRC or had an ECC error (whether or not they were fixed).
+    uint64_t blocks_unfixed;      // Blocks still wrong when the OS started (MRAM copy bad, or programming failed).
 } boot_record_t;
 
 _Static_assert(BOOT_RECORD_ADDR + sizeof(boot_record_t) <= MRAM_REFRESH_REQUEST_ADDR, "boot record overlaps request");

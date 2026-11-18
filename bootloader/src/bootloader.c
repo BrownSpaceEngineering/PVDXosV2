@@ -3,16 +3,19 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "boot_log.h"
 #include "boot_record.h"
 #include "flash_driver.h"
 #include "mram_driver.h"
 #include "watchdog_driver.h"
 
 #define SCB_VTOR (*(volatile uint32_t *)0xE000ED08u)
+// The OS's SEGGER RTT control block (rtt region in src/src_flash.ld); its first 16 bytes are the "SEGGER RTT" ID.
+#define RTT_CONTROL_BLOCK_ADDR (0x20000000u)
+#define RTT_CONTROL_BLOCK_ID_SIZE (16u)
 
 static uint8_t block_buffer[FLASH_REPAIR_BLOCK_SIZE] __attribute__((aligned(4)));
 static volatile boot_record_t *const boot_record = (volatile boot_record_t *)BOOT_RECORD_ADDR;
+_Static_assert(FLASH_OS_APP_BLOCK_COUNT <= 64u, "boot record block masks hold 64 app blocks");
 
 static bool mram_is_available(mram_status_t status) {
     for (uint8_t module = 1; module <= 3; module++) {
@@ -30,9 +33,38 @@ static bool header_is_valid(const image_header_t *header) {
         crc32((const uint8_t *)header, offsetof(image_header_t, header_crc)) == header->header_crc;
 }
 
-// Stage-2 override of the driver's weak hook: one line per MRAM page so a long refresh is visibly progressing.
-void mram_write_page_hook(uint32_t address, uint32_t size, uint8_t written, uint8_t failed) {
-    boot_log("MRAM wr %06x+%u ok%x fail%x\n", (unsigned int)address, (unsigned int)size, written, failed);
+typedef enum {
+    FLASH_ECC_NONE = 0,
+    FLASH_ECC_SINGLE = 1, // Corrected on read: the data is right, but a bit in flash is flipped.
+    FLASH_ECC_DUAL = 2,   // Uncorrectable: the data read back is wrong.
+} flash_ecc_t;
+
+/*
+ * Reads (and so clears) NVMCTRL ECCERR and classifies any error inside [address, address + size). ECCERR keeps only
+ * the first error since it was last read, and stage 2's own code fetches go through ECC too, so callers clear it with
+ * get_eccerr_status() just before reading the range. Every error is kept in boot_record->ecc_last_err (raw register:
+ * ADDR in bits 23:0, TYPEL 29:28, TYPEH 31:30), but only one inside the range is reported to the caller.
+ */
+static flash_ecc_t flash_ecc_check(uint32_t address, uint32_t size) {
+    uint32_t eccerr = get_eccerr_status();
+    if ((eccerr & (NVMCTRL_ECCERR_TYPEL_Msk | NVMCTRL_ECCERR_TYPEH_Msk)) == 0u) {
+        return FLASH_ECC_NONE;
+    }
+
+    boot_record->ecc_last_err = eccerr;
+    uint32_t error_address = (eccerr & NVMCTRL_ECCERR_ADDR_Msk) >> NVMCTRL_ECCERR_ADDR_Pos;
+    if (error_address - address >= size) { // Unsigned: also catches addresses below the range.
+        return FLASH_ECC_NONE;
+    }
+    return (eccerr & (NVMCTRL_ECCERR_TYPEL_DUAL | NVMCTRL_ECCERR_TYPEH_DUAL)) != 0u ? FLASH_ECC_DUAL : FLASH_ECC_SINGLE;
+}
+
+// CRC of a flash range, reporting any ECC error the read hit inside it.
+static uint32_t crc32_flash_ecc(uint32_t address, uint32_t size, flash_ecc_t *ecc) {
+    (void)get_eccerr_status();
+    uint32_t crc = crc32((const uint8_t *)address, size);
+    *ecc = flash_ecc_check(address, size);
+    return crc;
 }
 
 static bool copy_flash_to_mram(uint32_t flash_address, uint32_t mram_address, uint32_t size) {
@@ -45,13 +77,11 @@ static bool copy_flash_to_mram(uint32_t flash_address, uint32_t mram_address, ui
         uint32_t expected_crc = crc32(block_buffer, chunk_size);
         bool copied = !mram_write_bytes(mram_address + offset, block_buffer, chunk_size) &&
             !mram_read_bytes(mram_address + offset, block_buffer, chunk_size) && crc32(block_buffer, chunk_size) == expected_crc;
-        boot_log("Refresh %06x->%06x %s\n", (unsigned int)(flash_address + offset), (unsigned int)(mram_address + offset),
-                 copied ? "verified" : "FAILED");
         if (!copied) {
             boot_record->refresh_fail_addr = mram_address + offset;
             return false;
         }
-        boot_record->refresh_blocks++;
+        boot_record->refresh_blocks++; // Counts up live: tools/mram_refresh.sh status shows the progress.
         watchdog_pet();
     }
     return true;
@@ -65,17 +95,20 @@ static boot_refresh_t refresh_mram_from_flash(void) {
     image_header_t header;
     memcpy(&header, (const void *)FLASH_OS_ADDR, sizeof(header));
     if (!header_is_valid(&header)) {
-        boot_log("Refresh: bad flash header\n");
+        boot_record->refresh_fail_addr = FLASH_OS_ADDR;
         return BOOT_REFRESH_BAD_FLASH;
     }
     for (uint32_t block = 0; block < header.app_block_count; block++) {
         watchdog_pet();
-        if (crc32((const uint8_t *)(FLASH_OS_APP_ADDR + block * IMAGE_BLOCK_SIZE), IMAGE_BLOCK_SIZE) != header.app_block_crc[block]) {
-            boot_log("Refresh: bad flash block %u\n", (unsigned int)block);
+        uint32_t flash_address = FLASH_OS_APP_ADDR + block * IMAGE_BLOCK_SIZE;
+        flash_ecc_t ecc;
+        uint32_t crc = crc32_flash_ecc(flash_address, IMAGE_BLOCK_SIZE, &ecc);
+        // A dual ECC error means flash returned uncorrected data; never promote it to the golden copy.
+        if (crc != header.app_block_crc[block] || ecc == FLASH_ECC_DUAL) {
+            boot_record->refresh_fail_addr = flash_address;
             return BOOT_REFRESH_BAD_FLASH;
         }
     }
-    boot_log("Refresh: start, %u app blocks\n", (unsigned int)header.app_block_count);
 
     static const uint8_t invalid_magic[sizeof(header.magic)] = {0};
     if (mram_write_bytes(MRAM_OS_ADDR + offsetof(image_header_t, magic), invalid_magic, sizeof(invalid_magic))) {
@@ -103,13 +136,14 @@ static boot_repair_t repair_os_from_mram(void) {
 
     // MRAM reads are slow (every replica is read for voting), so only fetch what flash gets wrong.
     // The header row holds the header in its first IMAGE_HEADER_READ_SIZE bytes; the rest is padding.
-    if (memcmp((const void *)FLASH_OS_ADDR, block_buffer, IMAGE_HEADER_READ_SIZE) != 0) {
+    // Any ECC error in the header also forces a rewrite: a single error is a flipped bit that will not heal itself.
+    (void)get_eccerr_status();
+    bool header_differs = memcmp((const void *)FLASH_OS_ADDR, block_buffer, IMAGE_HEADER_READ_SIZE) != 0;
+    if (flash_ecc_check(FLASH_OS_ADDR, IMAGE_HEADER_READ_SIZE) != FLASH_ECC_NONE || header_differs) {
         if (mram_read_bytes(MRAM_OS_ADDR, block_buffer, IMAGE_BLOCK_SIZE)) {
             return BOOT_REPAIR_HEADER_READ_FAILED;
         }
-        bool programmed = flash_program_block(FLASH_OS_ADDR, block_buffer);
-        boot_record->header_rewritten = 1u;
-        boot_log("Repair: header row %s\n", programmed ? "fixed" : "FAILED");
+        boot_record->header_row = flash_program_block(FLASH_OS_ADDR, block_buffer) ? BOOT_HEADER_ROW_REWRITTEN : BOOT_HEADER_ROW_FAILED;
     }
 
     for (uint32_t block = 0; block < reference_header.app_block_count; block++) {
@@ -118,13 +152,32 @@ static boot_repair_t repair_os_from_mram(void) {
         watchdog_pet();
         boot_record->blocks_checked++;
 
-        if (crc32((const uint8_t *)flash_address, IMAGE_BLOCK_SIZE) == reference_header.app_block_crc[block]) {
+        flash_ecc_t ecc;
+        bool crc_ok = crc32_flash_ecc(flash_address, IMAGE_BLOCK_SIZE, &ecc) == reference_header.app_block_crc[block];
+        if (ecc == FLASH_ECC_DUAL) {
+            boot_record->blocks_ecc_dual++;
+        }
+        if (crc_ok && ecc == FLASH_ECC_NONE) {
             continue; // Flash already matches the golden copy.
+        }
+        uint64_t block_bit = (uint64_t)1u << block;
+        boot_record->blocks_flagged |= block_bit;
+        if (crc_ok && ecc == FLASH_ECC_SINGLE) {
+            // ECC corrected the read, so flash still yields the golden data: scrub the flipped bit from that data
+            // (re-checked against the golden CRC) instead of the slow MRAM read.
+            memcpy(block_buffer, (const void *)flash_address, IMAGE_BLOCK_SIZE);
+            bool scrubbed = crc32(block_buffer, IMAGE_BLOCK_SIZE) == reference_header.app_block_crc[block] &&
+                flash_program_block(flash_address, block_buffer);
+            if (scrubbed) {
+                boot_record->blocks_ecc_scrubbed++;
+                continue;
+            }
+            // Fall through to the MRAM copy (flash_program_block may have left the block erased).
         }
         if (mram_read_bytes(mram_address, block_buffer, IMAGE_BLOCK_SIZE) ||
             crc32(block_buffer, IMAGE_BLOCK_SIZE) != reference_header.app_block_crc[block]) {
             boot_record->blocks_bad_mram++;
-            boot_log("Repair: block %u MRAM bad\n", (unsigned int)block);
+            boot_record->blocks_unfixed |= block_bit;
             continue;
         }
         bool programmed = flash_program_block(flash_address, block_buffer);
@@ -132,17 +185,14 @@ static boot_repair_t repair_os_from_mram(void) {
             boot_record->blocks_repaired++;
         } else {
             boot_record->blocks_program_failed++;
+            boot_record->blocks_unfixed |= block_bit;
         }
-        boot_log("Repair: block %u %s\n", (unsigned int)block, programmed ? "fixed" : "FAILED");
     }
-    boot_log("Repair: %u checked, %u fixed\n", (unsigned int)boot_record->blocks_checked, (unsigned int)boot_record->blocks_repaired);
     return BOOT_REPAIR_DONE;
 }
 
 static void go_to_app(void) {
     watchdog_pet();
-    boot_log("Stage 2: start OS\n");
-    boot_log_shutdown();
     spi_m_sync_disable(&SPI_MRAM);
     NVIC_DisableIRQ(NVMCTRL_0_IRQn);
     NVIC_DisableIRQ(NVMCTRL_1_IRQn);
@@ -158,14 +208,15 @@ static void go_to_app(void) {
 
 int main(void) {
     watchdog_setup();
+    // RAM survives a reset, so the last OS's RTT control block is still there. Hide it until the OS rebuilds it, so an
+    // attached J-Link does not follow its buffer pointers into RAM that stage 2 is about to reuse.
+    memset((void *)RTT_CONTROL_BLOCK_ADDR, 0, RTT_CONTROL_BLOCK_ID_SIZE);
     if (boot_record->magic != BOOT_RECORD_MAGIC) {
         // Entered without stage 1 (e.g. a debugger): start a record so the OS still sees what stage 2 did.
         memset((void *)boot_record, 0, sizeof(*boot_record));
         boot_record->magic = BOOT_RECORD_MAGIC;
     }
-    mram_status_t mram_status = mram_init(); // Also runs atmel_start_init(), which delay_ms() needs.
-    boot_log_init();
-    boot_log("Stage 2 slot %u, MRAM %02x\n", (unsigned int)boot_record->stage2_slot, mram_status);
+    mram_status_t mram_status = mram_init(); // Also runs atmel_start_init().
     boot_record->mram_status_init = mram_status;
     bool mram_available = mram_is_available(mram_status);
 
@@ -176,9 +227,6 @@ int main(void) {
         boot_record->refresh = refresh;
         if (refresh == BOOT_REFRESH_OK) {
             *request = 0u; // Only a completed refresh retires the request; anything else is retried next boot.
-            boot_log("Refresh: done, request cleared\n");
-        } else {
-            boot_log("Refresh: incomplete (%u), retry next boot\n", (unsigned int)refresh);
         }
     }
 

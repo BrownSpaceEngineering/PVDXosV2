@@ -65,7 +65,8 @@ static void log_boot_record(void) {
                 warning("Boot: MRAM refresh requested but no MRAM module is healthy; will retry next boot\n");
                 break;
             case BOOT_REFRESH_BAD_FLASH:
-                warning("Boot: MRAM refresh refused: flash image fails its own header/CRCs; will retry next boot\n");
+                warning("Boot: MRAM refresh refused: flash image fails its own header/CRCs at %x; will retry next boot\n",
+                        (unsigned int)record->refresh_fail_addr);
                 break;
             default:
                 warning("Boot: MRAM refresh FAILED at MRAM %x after %u blocks; golden copy invalid, will retry next boot\n",
@@ -75,11 +76,29 @@ static void log_boot_record(void) {
 
         switch (record->repair) {
             case BOOT_REPAIR_DONE:
-                info("Boot: flash checked against MRAM: %u blocks, %u repaired, %u with unusable MRAM copy, %u program "
-                     "failures%s\n",
-                     (unsigned int)record->blocks_checked, (unsigned int)record->blocks_repaired,
-                     (unsigned int)record->blocks_bad_mram, (unsigned int)record->blocks_program_failed,
-                     record->header_rewritten ? ", header row rewritten" : "");
+                info(
+                    "Boot: flash checked against MRAM: %u blocks, %u repaired, %u with unusable MRAM copy, %u program "
+                    "failures%s\n",
+                    (unsigned int)record->blocks_checked, (unsigned int)record->blocks_repaired, (unsigned int)record->blocks_bad_mram,
+                    (unsigned int)record->blocks_program_failed,
+                    record->header_row == BOOT_HEADER_ROW_REWRITTEN ? ", header row rewritten" : "");
+                if (record->header_row == BOOT_HEADER_ROW_FAILED) {
+                    warning("Boot: flash header row differed from MRAM and reprogramming it FAILED\n");
+                }
+                if (record->blocks_flagged != 0u) {
+                    // Bit n = app block n; printed as two 32-bit halves (high, low).
+                    info("Boot: flash blocks flagged %08x%08x\n", (unsigned int)(record->blocks_flagged >> 32),
+                         (unsigned int)record->blocks_flagged);
+                }
+                if (record->blocks_unfixed != 0u) {
+                    warning("Boot: flash blocks still WRONG at OS start %08x%08x\n", (unsigned int)(record->blocks_unfixed >> 32),
+                            (unsigned int)record->blocks_unfixed);
+                }
+                if (record->blocks_ecc_scrubbed != 0u || record->blocks_ecc_dual != 0u || record->ecc_last_err != 0u) {
+                    warning("Boot: flash ECC: %u blocks scrubbed (single-bit), %u with dual-bit errors, last ECCERR %x\n",
+                            (unsigned int)record->blocks_ecc_scrubbed, (unsigned int)record->blocks_ecc_dual,
+                            (unsigned int)record->ecc_last_err);
+                }
                 break;
             case BOOT_REPAIR_NO_MRAM:
                 warning("Boot: flash repair skipped: no healthy MRAM module\n");
@@ -172,7 +191,7 @@ int main(void) {
     #if defined(UNITTEST)
     cm_args.frequency = 1;
     #endif
-    #if defined(DEVBUILD) // set to 0 for now for ease of debugging
+    #if defined(DEVBUILD)  // set to 0 for now for ease of debugging
     cm_args.frequency = 0; // Bitflips per second
     #endif
 

@@ -10,8 +10,9 @@
 #define FLASH_LOCK_REGION_COUNT (32u)
 #define FLASH_LOCK_REGION_SIZE (0x00008000u)
 #define FLASH_PROGRAM_ATTEMPTS (3u)
-#define NVM_ERROR_FLAGS (NVMCTRL_INTFLAG_ADDRE | NVMCTRL_INTFLAG_PROGE | NVMCTRL_INTFLAG_LOCKE | NVMCTRL_INTFLAG_ECCSE | \
-                         NVMCTRL_INTFLAG_NVME | NVMCTRL_INTFLAG_SEESOVF)
+#define NVM_ERROR_FLAGS                                                                                                                    \
+    (NVMCTRL_INTFLAG_ADDRE | NVMCTRL_INTFLAG_PROGE | NVMCTRL_INTFLAG_LOCKE | NVMCTRL_INTFLAG_ECCSE | NVMCTRL_INTFLAG_NVME |                \
+     NVMCTRL_INTFLAG_SEESOVF)
 
 static bool nvm_wait_ready(void) {
     while (!hri_nvmctrl_get_STATUS_READY_bit(NVMCTRL)) {
@@ -87,8 +88,7 @@ void flash_enable_caches(void) {
 
 bool flash_program_block(uint32_t address, const uint8_t *data) {
     bool is_os_row = (address >= FLASH_OS_ADDR) && ((address + FLASH_REPAIR_BLOCK_SIZE) <= (FLASH_OS_ADDR + FLASH_OS_SIZE));
-    if (!is_os_row || (address % FLASH_REPAIR_BLOCK_SIZE) != 0u || data == NULL ||
-        !flash_unlock_address(address)) {
+    if (!is_os_row || (address % FLASH_REPAIR_BLOCK_SIZE) != 0u || data == NULL || !flash_unlock_address(address)) {
         return false;
     }
 
@@ -112,5 +112,5 @@ bool flash_program_block(uint32_t address, const uint8_t *data) {
 }
 
 uint32_t get_eccerr_status(void) {
-    (uint32_t)hri_nvmctrl_read_ECCERR_reg(NVMCTRL);
+    return (uint32_t)hri_nvmctrl_read_ECCERR_reg(NVMCTRL);
 }

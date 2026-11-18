@@ -3,7 +3,8 @@
 # Usage: tools/mram_refresh.sh request|cancel|status
 #   request  write the refresh request word to backup RAM, verify it, then reset the board. Stage 2 copies the
 #            flash OS image (+ bootloaders) to MRAM and clears the request only once the copy completes; an
-#            interrupted or failed refresh is retried on the next boot. Watch progress with tools/rtt.sh.
+#            interrupted or failed refresh is retried on the next boot. Watch progress by re-running status
+#            (stage 2 has no log output; refresh_blocks in the boot record counts up live).
 #   cancel   clear the request word (no reset), e.g. to stop a refresh that keeps failing from retrying.
 #   status   read the request word and the boot record (refresh_blocks counts up live during a refresh).
 # request/cancel WRITE TARGET MEMORY (and request resets the board): agents need user approval to run them.
@@ -66,7 +67,7 @@ request)
     exit 1
   fi
   jlink r go > /dev/null || { echo "reset failed; the request is set and will run on the next reset" >&2; exit 1; }
-  echo "MRAM refresh requested and board reset. Follow it with: tools/rtt.sh start; tools/rtt.sh tail"
+  echo "MRAM refresh requested and board reset. Follow it with: $0 status (refresh blocks copied counts up)"
   ;;
 cancel)
   out=$(jlink "w4 $REQ_ADDR 0" "mem32 $REQ_ADDR 1") || { printf '%s\n' "$out" >&2; exit 1; }
@@ -89,10 +90,16 @@ status)
     $(( (w1 >> 8) & 0xFF )) $(( (w1 >> 16) & 0xFF ))
   echo "  refresh result:        $(( (w1 >> 24) & 0xFF )) (0 none, 1 ok, 2 no MRAM, 3 bad flash, 4 write failed)"
   echo "  refresh blocks copied: $(( (w4 >> 16) & 0xFFFF ))"
-  echo "  refresh fail address:  0x$(w 20)"
+  echo "  refresh fail address:  0x$(w 20) (flash address if 'bad flash', MRAM address if 'write failed')"
   echo "  repair result:         $(( w2 & 0xFF )) (0 not run, 1 no MRAM, 2 header read failed, 3 no golden image, 4 done)"
   echo "  repair blocks:         $(( (w2 >> 16) & 0xFFFF )) checked, $(( w3 & 0xFFFF )) repaired," \
-       "$(( (w3 >> 16) & 0xFFFF )) bad MRAM copy, $(( w4 & 0xFFFF )) program failures; header row rewritten: $(( (w2 >> 8) & 0xFF ))"
+       "$(( (w3 >> 16) & 0xFFFF )) bad MRAM copy, $(( w4 & 0xFFFF )) program failures"
+  echo "  header row:            $(( (w2 >> 8) & 0xFF )) (0 ok, 1 rewritten, 2 rewrite failed)"
+  w6=$((16#$(w 24)))
+  echo "  ECC:                   $(( w6 & 0xFFFF )) blocks scrubbed, $(( (w6 >> 16) & 0xFFFF )) dual-bit;" \
+       "last ECCERR 0x$(w 28) (ADDR bits 23:0, TYPEL 29:28, TYPEH 31:30; 1 single, 2 dual)"
+  echo "  blocks flagged:        0x$(w 36)$(w 32) (bit n = app block n: bad CRC or ECC error)"
+  echo "  blocks unfixed:        0x$(w 44)$(w 40) (bit n = app block n still wrong at OS start)"
   ;;
 *)
   echo "usage: $0 request|cancel|status"; exit 1 ;;

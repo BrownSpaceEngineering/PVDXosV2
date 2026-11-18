@@ -1,11 +1,10 @@
 #ifndef MRAM_H
 #define MRAM_H
 
-#include "image_format.h"
-
 #include "atmel_start.h"
 #include "hal_delay.h"
 #include "hal_gpio.h"
+#include "image_format.h"
 
 /**
  * @brief A type representing the current status of all MRAM modules.
@@ -73,15 +72,6 @@ bool mram_read_bytes(uint32_t address, uint8_t *data, uint32_t size);
  */
 bool mram_write_bytes(uint32_t address, const uint8_t *data, uint32_t size);
 
-/**
- * @brief Called by `mram_write_bytes` after each page, for progress logging.
- * @param address First MRAM address of the page chunk.
- * @param size Bytes in the chunk (at most 256).
- * @param written Bitmask of modules that accepted the chunk (bit 0 = MRAM1).
- * @param failed Bitmask of modules that failed it (and are now marked failed).
- * @note The driver's default is a weak no-op; stage 2 overrides it to log over RTT.
- */
-void mram_write_page_hook(uint32_t address, uint32_t size, uint8_t written, uint8_t failed);
 uint32_t crc32(const uint8_t *block, uint32_t size);
 
 #endif
