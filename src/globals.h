@@ -18,8 +18,9 @@
 
 /* ---------- BUILD MODE ---------- */
 
-// Comment out to build the normal OS instead of the burn sequence (device checks, 30 min wait, burn pin on, post-burn
-// steps, idle; see main.c). Defined here rather than in main.c so that drivers can see it too.
+// Comment out to build the normal OS instead of the burn sequence (device checks, 30 min wait, wait for battery
+// charge, burn pin on, post-burn steps, idle; see main.c). Defined here rather than in main.c so that drivers can see
+// it too.
 // #define BURN_SEQUENCE
 
 // Uncomment to let the burn sequence actually fire the burn wire once the wait is over. Left commented out, the wait and

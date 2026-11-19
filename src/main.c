@@ -25,6 +25,7 @@
 #include "arducam_driver.h"
 #include "display_driver.h"
 #include "drivers/at86rf215/at86_irq.h"
+#include "drivers/fuel_gauge/fuel_gauge_driver.h"
 #include "burn/burn_uhf.h"
 #include "image_buffer_PVDX.h"
 #include "mram_map.h"
@@ -46,6 +47,13 @@ cosmic_monkey_task_arguments_t cm_args = {0};
 
 // How often the burn wait saves its progress to MRAM, so a reboot resumes the wait instead of restarting it
 #define BURN_RECORD_SAVE_PERIOD_S 60u
+
+// After BURN_WAIT_MINUTES, the burn also waits for the lowest battery pack to reach BURN_MIN_SOC_PCT, so that it never
+// draws from a drained pack. It waits at most BURN_MAX_CHARGE_WAIT_MINUTES, the whole of it if no fuel gauge answers,
+// and then burns anyway, since never deploying would end the mission.
+// TODO(blocked on power team): the charge the burn needs, and the longest the packs could take to reach it
+#define BURN_MIN_SOC_PCT             50.0f
+#define BURN_MAX_CHARGE_WAIT_MINUTES (24u * 60u)
 
 
 // Logs (and clears) the report stage 2 of the bootloader leaves in backup RAM about checking flash against MRAM
@@ -153,6 +161,7 @@ typedef struct {
     uint32_t burned;         // nonzero once the burn wire has been fired
     uint32_t burn_attempts;  // incremented just before each burn, so a reboot mid-burn is visible
     uint32_t elapsed_wait_s; // seconds of the pre-burn wait completed so far
+    uint32_t charge_wait_s;  // seconds spent after that waiting for the packs to charge
 } burn_record_t;
 
 // Reads the record from the first MRAM module holding a valid copy. A missing record is replaced by a fresh one,
@@ -171,6 +180,20 @@ static void save_burn_record(const burn_record_t *const p_record) {
     if (!mram_record_save(MRAM_REGION_BURN_RECORD, 0, p_record, sizeof(*p_record))) {
         warning_impl("[!] Could not write the burn record to every MRAM chip\n");
     }
+}
+
+// Reads every battery pack and gives the lowest state of charge among those that read. False if none read.
+static bool read_lowest_pack_soc(float *const p_soc_pct) {
+    fg_reading_t packs[FG_NUM_PACKS];
+    (void)fg_read_all(packs); // warns about each pack that fails
+    bool any_valid = false;
+    for (uint8_t ch = 0; ch < FG_NUM_PACKS; ch++) {
+        if (packs[ch].valid && (!any_valid || packs[ch].soc_pct < *p_soc_pct)) {
+            *p_soc_pct = packs[ch].soc_pct;
+            any_valid = true;
+        }
+    }
+    return any_valid;
 }
 
 int main(void) {
@@ -192,6 +215,19 @@ int main(void) {
     info("[+] Built from commit: %s\n", GIT_COMMIT_HASH);
 
 
+    // Initialize the mutex for the I2C bus shared by Arducam, fuel gauges, and PMB before the burn sequence (which
+    // reads the fuel gauges) and the startup checks/tests
+    i2c_sensors_bus_mutex = xSemaphoreCreateMutexStatic(&i2c_sensors_bus_mutex_buffer);
+
+    if (i2c_sensors_bus_mutex == NULL) {
+        fatal("Failed to create I2C_SENSORS bus mutex");
+    }
+    // atmel_start_init() initializes the shared buses but leaves them disabled; the drivers on them assume they are
+    // enabled
+    if (i2c_m_sync_enable(&I2C_SENSORS) != 0) {
+        warning("Failed to enable the I2C_SENSORS bus\n");
+    }
+
     // BURN SEQUENCE
 
     // The only mram_map_init() call; everything else uses mram_map_status()
@@ -210,9 +246,10 @@ int main(void) {
 
     save_burn_record(&burn_record);
     // Called outside info(): in RELEASE builds info() compiles out, but this should always be printed
-    info_impl("[+] Boot %lu; burn wire %s (%lu attempts), %lu s of the burn wait done\n", (unsigned long)burn_record.boot_count,
-              burn_record.burned ? "burned" : "not burned", (unsigned long)burn_record.burn_attempts,
-              (unsigned long)burn_record.elapsed_wait_s);
+    info_impl("[+] Boot %lu; burn wire %s (%lu attempts), %lu s of the burn wait and %lu s of the charge wait done\n",
+              (unsigned long)burn_record.boot_count, burn_record.burned ? "burned" : "not burned",
+              (unsigned long)burn_record.burn_attempts, (unsigned long)burn_record.elapsed_wait_s,
+              (unsigned long)burn_record.charge_wait_s);
 
     if (!burn_record.burned) {
         // Wait out the rest of BURN_WAIT_MINUTES, saving progress every BURN_RECORD_SAVE_PERIOD_S so that a reboot
@@ -222,6 +259,34 @@ int main(void) {
             burn_record.elapsed_wait_s += BURN_RECORD_SAVE_PERIOD_S;
             save_burn_record(&burn_record);
             info("Burn wait: %lu/%lu s\n", (unsigned long)burn_record.elapsed_wait_s, (unsigned long)(BURN_WAIT_MINUTES * 60u));
+        }
+
+        // Then wait for the packs to charge, saving progress like the wait above
+        if (init_fuel_gauges() != SUCCESS) {
+            warning_impl("[!] Not every fuel gauge answered; the burn goes by the packs that read\n");
+        }
+        while (true) {
+            float soc_pct = 0.0f;
+            const bool soc_read = read_lowest_pack_soc(&soc_pct);
+            if (soc_read && soc_pct >= BURN_MIN_SOC_PCT) {
+                info_impl("[+] Lowest battery pack at %ld m%%: charged enough to burn\n", (long)(soc_pct * 1000.0f));
+                break;
+            }
+            if (burn_record.charge_wait_s >= BURN_MAX_CHARGE_WAIT_MINUTES * 60u) {
+                warning_impl("[!] Battery packs not charged to %ld%% after %u minutes; burning anyway\n", (long)BURN_MIN_SOC_PCT,
+                             BURN_MAX_CHARGE_WAIT_MINUTES);
+                break;
+            }
+            if (soc_read) {
+                info("Charge wait: lowest pack at %ld m%%, %lu/%lu s\n", (long)(soc_pct * 1000.0f),
+                     (unsigned long)burn_record.charge_wait_s, (unsigned long)(BURN_MAX_CHARGE_WAIT_MINUTES * 60u));
+            } else {
+                warning("Charge wait: no battery pack read, %lu/%lu s\n", (unsigned long)burn_record.charge_wait_s,
+                        (unsigned long)(BURN_MAX_CHARGE_WAIT_MINUTES * 60u));
+            }
+            wait_seconds_feeding_watchdog(BURN_RECORD_SAVE_PERIOD_S);
+            burn_record.charge_wait_s += BURN_RECORD_SAVE_PERIOD_S;
+            save_burn_record(&burn_record);
         }
 
         // Recorded before burning, so that a reboot mid-burn shows up as an attempt
@@ -249,17 +314,6 @@ int main(void) {
     #endif
     }
 
-    // Initialize the mutex for the I2C bus shared by Arducam, fuel gauges, and PMB before startup checks/tests
-    i2c_sensors_bus_mutex = xSemaphoreCreateMutexStatic(&i2c_sensors_bus_mutex_buffer);
-
-    if (i2c_sensors_bus_mutex == NULL) {
-        fatal("Failed to create I2C_SENSORS bus mutex");
-    }
-    // atmel_start_init() initializes the shared buses but leaves them disabled; the drivers on them assume they are
-    // enabled
-    if (i2c_m_sync_enable(&I2C_SENSORS) != 0) {
-        warning("Failed to enable the I2C_SENSORS bus\n");
-    }
     spi_m_sync_enable(&SPI_MAGNETOMETER_GYRO);
 
     // The UHF radio's IRQ line stays disarmed until a task waits on it, so this is safe before the radio is set up
