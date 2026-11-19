@@ -31,6 +31,12 @@ typedef float_3d_t mag_torque_input_t;
 
 #define MTQ_AXIS_COUNT 3
 
+// The coils' L/R time constant. 5 of them after a coil switches off, its current is under 1% of what it was.
+// TODO(blocked on hardware run): measure each coil's L and R. 2 ms is a placeholder that makes 5 tau the 10 ms ADCS
+// already waits before measuring.
+#define MTQ_COIL_TAU_MS 2u
+#define MTQ_DECAY_MS    (5u * MTQ_COIL_TAU_MS)
+
 status_t init_magnetorquers(void);
 
 // Commands a signed PWM duty on an axis. `duty` is clamped to [-1.0, 1.0]; sign selects the
@@ -44,5 +50,12 @@ void mtq_stop_all(void);
 
 // Last commanded duty for an axis (for logging/tests).
 float mtq_get_duty(mtq_axis_t axis);
+
+// Switches every coil off and blocks until the last coil to switch off has had MTQ_DECAY_MS to decay. Until each
+// mtq_quiet_begin() is matched by an mtq_quiet_end(), mtq_set() keeps the coils off whatever duty it is given, so ADCS
+// carries on but can't drive them. For the radio, which must not transmit while a coil's current is still changing.
+// Call from tasks only.
+void mtq_quiet_begin(void);
+void mtq_quiet_end(void);
 
 #endif // MAGNETORQUER_DRIVER_H

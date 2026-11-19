@@ -22,6 +22,24 @@ static input_update_data_t fuel_gauge_inputs = {
     .input_update_bitmask = INPUT_UPDATE_BIT(BATTERY_LEVEL_UPDATE),
 };
 
+// The latest mean pack temperature, for fuel_gauge_get_temperature(). Read by other tasks, so it only changes in
+// critical sections.
+static float latest_temp_c = 0.0f;
+static TickType_t latest_temp_tick = 0;
+static bool have_temp = false;
+
+bool fuel_gauge_get_temperature(float *const p_temp_c) {
+    taskENTER_CRITICAL();
+    const bool fresh = have_temp && (xTaskGetTickCount() - latest_temp_tick) <= pdMS_TO_TICKS(FUEL_GAUGE_TEMP_MAX_AGE_MS);
+    const float temp_c = latest_temp_c;
+    taskEXIT_CRITICAL();
+
+    if (fresh) {
+        *p_temp_c = temp_c;
+    }
+    return fresh;
+}
+
 /**
  * \fn main_fuel_gauge
  *
@@ -58,6 +76,8 @@ void main_fuel_gauge(void *pvParameters) {
         // The battery level for the state machine is the lowest state of charge among the packs that read
         bool any_valid = false;
         float min_soc_pct = 0.0f;
+        float temp_sum_c = 0.0f;
+        uint8_t temp_count = 0;
         for (uint8_t ch = 0; ch < FG_NUM_PACKS; ch++) {
             fg_reading_t *p = &packs[ch];
             if (!p->valid) {
@@ -71,6 +91,17 @@ void main_fuel_gauge(void *pvParameters) {
                 min_soc_pct = p->soc_pct;
             }
             any_valid = true;
+            if (p->temp_c >= FUEL_GAUGE_TEMP_MIN_C && p->temp_c <= FUEL_GAUGE_TEMP_MAX_C) {
+                temp_sum_c += p->temp_c;
+                temp_count++;
+            }
+        }
+        if (temp_count > 0) {
+            taskENTER_CRITICAL();
+            latest_temp_c = temp_sum_c / (float)temp_count;
+            latest_temp_tick = xTaskGetTickCount();
+            have_temp = true;
+            taskEXIT_CRITICAL();
         }
 
         // Report the battery level as a 0..1 fraction (the scale states.c uses). If no pack read, report full power

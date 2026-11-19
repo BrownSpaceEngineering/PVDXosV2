@@ -30,6 +30,7 @@
 #include "state_machine.h"
 #include "task_list.h"
 #include "tasks/adcs/adcs_persist.h"
+#include "tasks/fuel_gauge/fuel_gauge_task.h"
 #include "utc.h"
 
 #define DEG_TO_RAD (3.14159265358979f / 180.0f)
@@ -55,6 +56,11 @@
 
 // TODO(blocked on hardware team): confirm these are V/R (the current at 100% duty); lower safety limits would get exceeded
 static const float MTQ_FULL_DUTY_CURRENT_A[3] = {0.156f, 0.156f, 0.104f};
+// MTQ_FULL_DUTY_CURRENT_A holds at this coil temperature. Above it, the copper coils' resistance rises by
+// MTQ_COIL_TEMP_COEFF_PER_C of its value per degree, so a full duty drives less current.
+// TODO(blocked on hardware team): the temperature MTQ_FULL_DUTY_CURRENT_A was measured at
+#define MTQ_REFERENCE_TEMP_C      20.0f
+#define MTQ_COIL_TEMP_COEFF_PER_C 0.00393f
 
 // TODO(blocked on mechanical): set these sensor-to-body rotations from the PCB/CAD mounting (identity until then)
 static const float BODY_FROM_MAG[3][3] = {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}};
@@ -417,14 +423,19 @@ void adcs_read_sensors(float *const mag_tesla, float *const gyro_rad_s, float *c
 /* ---------- ACTUATORS, TELEMETRY AND STATE MACHINE ---------- */
 
 void adcs_drive_magnetorquers(const float *const currents) {
+    // The fuel gauges' pack temperature stands in for the coils'. Without it, the duty isn't corrected.
+    float temp_c = MTQ_REFERENCE_TEMP_C;
+    (void)fuel_gauge_get_temperature(&temp_c);
+    const float resistance_scale = 1.0f + MTQ_COIL_TEMP_COEFF_PER_C * (temp_c - MTQ_REFERENCE_TEMP_C);
+
     float duty[3];
     for (size_t i = 0; i < 3; i++) {
-        duty[i] = isfinite(currents[i]) ? currents[i] / MTQ_FULL_DUTY_CURRENT_A[i] : 0.0f;
+        duty[i] = isfinite(currents[i]) ? currents[i] * resistance_scale / MTQ_FULL_DUTY_CURRENT_A[i] : 0.0f;
     }
 
     // TODO(blocked on hardware team): confirm positive duty gives a positive moment; a reversed coil makes B-dot spin us up
     mtq_set_all(duty[0], duty[1], duty[2]);
-    debug("adcs: magnetorquer duty [x,y,z]: [%f,%f,%f]\n", duty[0], duty[1], duty[2]);
+    debug("adcs: magnetorquer duty [x,y,z]: [%f,%f,%f] at %ld mC\n", duty[0], duty[1], duty[2], (long)(temp_c * 1000.0f));
 }
 
 void adcs_publish_telemetry(void) {
