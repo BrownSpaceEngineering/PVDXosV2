@@ -22,11 +22,29 @@
 log_level_t LOG_LEVEL = DEFAULT_LOG_LEVEL;
 uint8_t SEGGER_RTT_LOG_BUFFER[SEGGER_RTT_LOG_BUFFER_SIZE];
 
+// Messages that didn't fit in the RTT buffer since the last "log lines dropped" notice
+static uint32_t dropped_lines = 0;
+
+/**
+ * Prints to the log channel. The channel skips whatever doesn't fit (SEGGER_RTT_MODE_NO_BLOCK_SKIP), so a message can
+ * be lost whole or cut short; each one is counted, and the next message that fits is preceded by a notice of how many
+ * were lost (on a new line, in case one was cut short). The flatsat test rig fails a test on that notice.
+ */
+static void log_vprintf(const char *string, va_list *args) {
+    uint32_t dropped = __atomic_exchange_n(&dropped_lines, 0, __ATOMIC_RELAXED);
+    if (dropped != 0 && SEGGER_RTT_printf(LOGGING_RTT_OUTPUT_CHANNEL, "\n[!] %lu log lines dropped\n", (unsigned long)dropped) < 0) {
+        __atomic_fetch_add(&dropped_lines, dropped, __ATOMIC_RELAXED);
+    }
+    if (SEGGER_RTT_vprintf(LOGGING_RTT_OUTPUT_CHANNEL, string, args) < 0) {
+        __atomic_fetch_add(&dropped_lines, 1, __ATOMIC_RELAXED);
+    }
+}
+
 void fatal_impl(const char *string, ...) {
     // No log level checking here, since fatal should always be printed
     va_list args;
     va_start(args, string);
-    SEGGER_RTT_vprintf(LOGGING_RTT_OUTPUT_CHANNEL, string, &args); // Use vprintf to print with variable arguments
+    log_vprintf(string, &args);
 
     // To make sure that the message is printed before the watchdog resets the system, print a few more.
     warning_impl("FATAL ERROR OCCURRED! RESTARTING SYSTEM...\n");
@@ -50,7 +68,7 @@ void warning_impl(const char *string, ...) {
     // No log level checking here, since warning should always be printed
     va_list args;
     va_start(args, string);
-    SEGGER_RTT_vprintf(LOGGING_RTT_OUTPUT_CHANNEL, string, &args); // Use vprintf to print with variable arguments
+    log_vprintf(string, &args);
 
     va_end(args);
 }
@@ -62,7 +80,7 @@ void event_impl(const char *string, ...) {
     }
     va_list args;
     va_start(args, string);
-    SEGGER_RTT_vprintf(LOGGING_RTT_OUTPUT_CHANNEL, string, &args); // Use vprintf to print with variable arguments
+    log_vprintf(string, &args);
     va_end(args);
 }
 
@@ -73,7 +91,7 @@ void info_impl(char *string, ...) {
     }
     va_list args;
     va_start(args, string);
-    SEGGER_RTT_vprintf(LOGGING_RTT_OUTPUT_CHANNEL, string, &args); // Use vprintf to print with variable arguments
+    log_vprintf(string, &args);
     va_end(args);
 }
 
@@ -84,7 +102,7 @@ void debug_impl(const char *string, ...) {
     }
     va_list args;
     va_start(args, string);
-    SEGGER_RTT_vprintf(LOGGING_RTT_OUTPUT_CHANNEL, string, &args); // Use vprintf to print with variable arguments
+    log_vprintf(string, &args);
     va_end(args);
 }
 

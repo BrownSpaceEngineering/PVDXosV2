@@ -472,7 +472,11 @@ int SEGGER_RTT_vprintf(unsigned BufferIndex, const char *sFormat, va_list *pPara
         // Write remaining data, if any
         //
         if (BufferDesc.Cnt != 0u) {
-            SEGGER_RTT_Write(BufferIndex, acBuffer, BufferDesc.Cnt);
+            // PVDX: report a skipped write (SEGGER_RTT_MODE_NO_BLOCK_SKIP) as an error, as _StoreChar() does, so
+            // logging.c can count lost messages
+            if (SEGGER_RTT_Write(BufferIndex, acBuffer, BufferDesc.Cnt) != BufferDesc.Cnt) {
+                return -1;
+            }
         }
         BufferDesc.ReturnValue += (int)BufferDesc.Cnt;
     }
