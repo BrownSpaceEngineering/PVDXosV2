@@ -210,11 +210,24 @@ bool check_uhf(void) {
     return check_uhf_cs_write("RF09", REG_RF09_CS) && check_uhf_cs_write("RF24", REG_RF24_CS);
 }
 
+// Logs every 7-bit address that ACKs on I2C_SENSORS (the camera is 0x30), to tell a missing board from a wrong address
+static void scan_i2c_sensors(void) {
+    uint8_t acked = 0;
+    for (uint8_t addr = 0x08; addr < 0x78; addr++) {
+        if (pmb_i2c_probe(addr) == SUCCESS) {
+            info("perovskite check: I2C_SENSORS scan: 0x%02x ACKed\n", addr);
+            acked++;
+        }
+    }
+    info("perovskite check: I2C_SENSORS scan: %u addresses ACKed\n", acked);
+}
+
 // Perovskite measurement board: I2C bus, INA226 + MCP23017 present, INA226 manufacturer/die ID.
 // Read-only identity checks from pmb-driver-mock's test_pmb sanity checks (no DAC/ADG734 actuation).
 bool check_perovskite(void) {
     if (pmb_i2c_probe(INA226_I2C_ADDR) != SUCCESS) {
         warning("perovskite check: INA226 did not ACK at 0x%02x\n", INA226_I2C_ADDR);
+        scan_i2c_sensors();
         return false;
     }
     if (pmb_i2c_probe(MCP23017_I2C_ADDR) != SUCCESS) {
