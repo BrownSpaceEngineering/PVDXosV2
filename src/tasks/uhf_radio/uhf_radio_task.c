@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "at86rf215.h"
+#include "ccsds.h"
 #include "ccsds/radio_routing.h"
 #include "ccsds/uslp.h"
 #include "hal_gpio.h"
@@ -10,6 +11,7 @@
 #include "logging.h"
 #include "pusp.h"
 #include "regs.h"
+#include "spp.h"
 #include "task_list.h"
 #include "telemetry/telemetry.h"
 
@@ -99,7 +101,7 @@ static bool spp_wrap(const radio_queue_item_t *it, uint8_t *buf, size_t buf_size
 /**
  * Handles a PUSP packet received from the ground
  *
- * TODO: drive the UHF sync state machine (uhf_state_t / uhf_transition_state_t) from here
+ * TODO: delete along with uhf_rx_process() once uhf_rx_poll() replaces them (the state machine is in uhf_process.c)
  */
 static void uhf_pusp_rx(const uint8_t *data, size_t len) {
     if (len < sizeof(pusp_packet_t)) {
@@ -780,9 +782,35 @@ uhf_rx_t uhf_rx_poll(uhf_ctx_t *ctx, uint32_t events) {
         return rx;
     }
     if (uhf_irqs_to_events(uhf_read_irqs()) & UHF_EVENT_RXFE) {
-        warning("Radio: dummy uhf_rx_poll() dropping a received frame\n");
+        at86rf215_rx_frame(&at86_dev, AT86RF215_RF09, at86_buffer, 2048);
+
+        uslp_transfer_frame_view_t uslp_view;
+
+        if (!uslp_transfer_frame_parse(&uslp_view, at86_buffer, 2048)) {
+            uhf_go_rx(); // RXFE leaves the radio in TXPREP
+            return rx;
+        }
+
+        spp_packet_view_t spp_view;
+
+        if (!spp_packet_parse(&spp_view, uslp_view.datafield, uslp_view.datafield_len)) {
+            uhf_go_rx();
+            return rx;
+        }
+
+        if (spp_view.header.application_process_id == CCSDS_APID_CFDP) {
+            // do what?
+        } else if (spp_view.header.application_process_id == CCSDS_APID_PUSP) {
+            // do what?
+        }
+
         uhf_go_rx(); // RXFE leaves the radio in TXPREP
+
+        return (uhf_rx_t) {
+            .c
+        }
     }
+
     return rx;
 }
 
@@ -792,5 +820,8 @@ bool uhf_transmit_pusp(pusp_directive_t dir) {
     uhf_pusp_tx_last = dir;
     uhf_pusp_tx_count++;
     debug("Radio: dummy uhf_transmit_pusp(%u), nothing sent\n", dir);
+
+    // we need to decide upon our packetization screen.
+
     return true;
 }

@@ -18,11 +18,9 @@
  * - Tune the PUSP timing constants in uhf_radio_task.h against the real ground station
  * - Confirm CCSDS_APID_TELEMETRY (0x04) and the one-byte PUSP payload format, both temporary
  * - Enable the task in task_list.c and settle its priority
- * - Update or delete radio_routing_plan.md, which still describes the removed telemetry timer
  *
  * TODO (CFDP task changes):
- * - Make CFDP's retransmits turn-based: notify CFDP when we get the turn, instead of its wall-clock retransmit timer
- * - The downlink queue only drains in ESTABLISH_SEND: decide what CFDP does when it fills with no link up
+ * - The downlink queue only drains in ESTABLISH_SEND: decide what CFDP does when it fills while the ground has the turn
  */
 #include <sys/types.h>
 

@@ -227,12 +227,3 @@ void main_cfdp(void* pvParameters);
 */
 
 #endif // CFDP_TASK_H
-
-/**
- * CFDP TODO
- * - Make sure we reject incoming files with large file flag set (might already
- * happen since we'll never have a buff that big)
- * - Make it so unacknowledged transaction are actually run in that mode
- * - Implement timers with rtc
- * - more ...
- */
