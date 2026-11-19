@@ -1,5 +1,8 @@
 #include "ina226.h"
 
+#include <FreeRTOS.h>
+#include <task.h>
+
 #include "os_delay.h"
 #include "pmb_i2c.h"
 
@@ -82,18 +85,32 @@ status_t ina226_conversion_ready(bool *ready) {
 }
 
 /**
+ * Whether timeout_ms has passed since start_ticks. Before the scheduler starts the tick count stands still, so each
+ * poll is counted as 1 ms instead, which only lengthens the wait (each poll is a 1 ms delay plus an I2C read).
+ */
+static bool ina226_timed_out(TickType_t start_ticks, uint32_t *polls, uint32_t timeout_ms) {
+    if (xTaskGetSchedulerState() == taskSCHEDULER_NOT_STARTED) {
+        return (*polls)++ >= timeout_ms;
+    }
+    return (xTaskGetTickCount() - start_ticks) >= pdMS_TO_TICKS(timeout_ms);
+}
+
+/**
  * Waits until a conversion that started after this call has completed, so the next read reflects the
  * current input. The conversion in flight when called may include samples taken before an input change,
- * so it is discarded and the following one is waited for. Polls in 1 ms steps.
+ * so it is discarded and the following one is waited for. Polls about every 1 ms, and gives up timeout_ms after
+ * the call.
  */
 status_t ina226_wait_for_fresh_conversion(uint32_t timeout_ms) {
+    const TickType_t start_ticks = xTaskGetTickCount();
+    uint32_t polls = 0;
     bool ready = false;
     status_t status = ina226_conversion_ready(&ready); // Clears any stale flag
     if (status != SUCCESS) {
         return status;
     }
     for (int completed = 0; completed < 2;) {
-        if (timeout_ms-- == 0) {
+        if (ina226_timed_out(start_ticks, &polls, timeout_ms)) {
             return ERROR_NOT_READY;
         }
         os_delay_ms(1);

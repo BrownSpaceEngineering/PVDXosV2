@@ -26,6 +26,7 @@
 #define PEROVSKITE_SETTLE_MS 5U                                             // Opamp settling time after a DAC step
 #define PEROVSKITE_CONVERSION_TIMEOUT_MS (4U * INA226_CONVERSION_PERIOD_MS) // Two conversions plus margin
 #define PEROVSKITE_CHECKIN_STEPS 16U                                        // Steps between watchdog check-ins (about 1.5 s)
+#define PEROVSKITE_MAX_FAILURES_IN_A_ROW 4U                                 // Failed steps after which the rest of the pixel is skipped
 
 _Static_assert(MRAM_RECORD_OVERHEAD + sizeof(perovskite_sweep_t) <= PEROVSKITE_SLOT_SIZE, "a sweep must fit its slot");
 _Static_assert(PEROVSKITE_SLOT_SIZE * PEROVSKITE_SLOT_COUNT <= MRAM_PEROVSKITE_SIZE, "sweeps must fit their MRAM region");
@@ -215,7 +216,9 @@ static status_t perovskite_measure_step(uint8_t pixel, uint32_t step, int16_t *p
 
 /**
  * Sweeps one pixel upward from 0 V into p_samples, and leaves the circuit idle whether or not it finished. A step that
- * fails is recorded as PEROVSKITE_SAMPLE_INVALID, and the sweep carries on.
+ * fails is recorded as PEROVSKITE_SAMPLE_INVALID, and the sweep carries on. After PEROVSKITE_MAX_FAILURES_IN_A_ROW
+ * failed steps the rest of the pixel is recorded as invalid without measuring it, so a dead INA226 (each step waits
+ * out PEROVSKITE_CONVERSION_TIMEOUT_MS) costs seconds rather than minutes.
  */
 static status_t perovskite_sweep_pixel(uint8_t pixel, int16_t *p_samples) {
     uint8_t selected = PMB_PIXEL_NONE;
@@ -230,6 +233,7 @@ static status_t perovskite_sweep_pixel(uint8_t pixel, int16_t *p_samples) {
     }
 
     status_t result = SUCCESS;
+    uint32_t failures_in_a_row = 0;
     for (uint32_t step = 0; step < PEROVSKITE_STEP_COUNT; step++) {
         if (perovskite_stop_requested()) {
             result = ERROR_TASK_DISABLED;
@@ -239,13 +243,19 @@ static status_t perovskite_sweep_pixel(uint8_t pixel, int16_t *p_samples) {
             perovskite_checkin();
         }
 
-        status = pixel_routed ? perovskite_measure_step(pixel, step, &p_samples[step]) : ERROR_NOT_READY;
-        if (status != SUCCESS) {
-            p_samples[step] = PEROVSKITE_SAMPLE_INVALID;
-            sweep.failed_steps++;
-            if (pixel_routed) {
-                warning("perovskite: px %u step %lu failed (status=%d)\n", pixel, (unsigned long)step, status);
-                hardware_ready = false;
+        const bool measure = pixel_routed && failures_in_a_row < PEROVSKITE_MAX_FAILURES_IN_A_ROW;
+        status = measure ? perovskite_measure_step(pixel, step, &p_samples[step]) : ERROR_NOT_READY;
+        if (status == SUCCESS) {
+            failures_in_a_row = 0;
+            continue;
+        }
+        p_samples[step] = PEROVSKITE_SAMPLE_INVALID;
+        sweep.failed_steps++;
+        if (measure) {
+            warning("perovskite: px %u step %lu failed (status=%d)\n", pixel, (unsigned long)step, status);
+            hardware_ready = false;
+            if (++failures_in_a_row == PEROVSKITE_MAX_FAILURES_IN_A_ROW) {
+                warning("perovskite: px %u: %u steps failed in a row, skipping the rest\n", pixel, PEROVSKITE_MAX_FAILURES_IN_A_ROW);
             }
         }
     }
