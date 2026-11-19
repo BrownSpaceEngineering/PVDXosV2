@@ -168,6 +168,9 @@ void cfdp_free_transaction(void) {
     // The timer outlives the transaction, so stop it or it fires on the next one
     stop_timer(cfdp_mem.inactivity_timer_handle);
 
+    // A transaction that ends before its EOF (error, cancel, pass dropped) would leave the S-band radio on
+    radio_sband_close();
+
     // Received files hold a CFDP buffer. Commands parsed out of it hold their own references, so this only drops
     // the transaction's
     if (txn->buff_header != NULL) {

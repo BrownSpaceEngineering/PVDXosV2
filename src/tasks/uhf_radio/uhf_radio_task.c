@@ -47,56 +47,6 @@ static uint8_t pending_bbc_irqs;
 static const uint8_t ground_callsign[SPP_SECONDARY_HEADER_CALLSIGN_SIZE] = {'b', 's', 'e', 'g', 'n', 'd'};
 
 /**
- * The next SPP sequence count for apid. CCSDS counts packets separately for each APID (SPP Blue Book 4.1.3.4.3)
- */
-static uint16_t spp_next_seq_count(uint16_t apid) {
-    static uint16_t cfdp_count = 0;
-    static uint16_t pusp_count = 0;
-    static uint16_t other_count = 0;
-
-    uint16_t *count;
-    switch (apid) {
-        case CCSDS_APID_CFDP:
-            count = &cfdp_count;
-            break;
-        case CCSDS_APID_PUSP:
-            count = &pusp_count;
-            break;
-        default:
-            count = &other_count;
-            break;
-    }
-    uint16_t ret = *count & 0x3FFF;
-    *count = (uint16_t)((*count + 1) & 0x3FFF);
-    return ret;
-}
-
-/**
- * Wraps a queue item's payload in an SPP packet, written to buf
- *
- * \return true on failure, else false
- */
-static bool spp_wrap(const radio_queue_item_t *it, uint8_t *buf, size_t buf_size, size_t *packet_len) {
-    spp_primary_packet_header_t primary_header = {
-        .version_number = SPP_VERSION_NUMBER,
-        .packet_type = SPP_PACKET_TYPE_REPORTING,
-        .secondary_header_flag = SPP_SECONDARY_HEADER_PRESENT,
-        .application_process_id = it->apid,
-        .sequence_flags = SPP_SEQ_FLAG_UNSEGMENTED_DATA,
-        .sequence_count = spp_next_seq_count(it->apid),
-    };
-
-    // TODO(temp): placeholder timestamps and callsign. Transmitting on UHF needs the real callsign before flight
-    spp_secondary_packet_header_t secondary_header = {
-        .timestamp = 0,                             // TODO(temp): unix time
-        .boot_timestamp = 0,                        // TODO(temp): unix time of last boot
-        .callsign = {'B', 'S', 'E', 'B', 'S', 'E'}, // TODO(temp): real callsign
-    };
-
-    return spp_packet_serialize(&primary_header, &secondary_header, it->data, it->len, buf, buf_size, packet_len);
-}
-
-/**
  * Handles a PUSP packet received from the ground
  *
  * TODO: drive the UHF sync state machine (uhf_state_t / uhf_transition_state_t) from here

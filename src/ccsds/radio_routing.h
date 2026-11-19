@@ -49,6 +49,7 @@ typedef enum {
     RADIO_ERR_INVAL,
     RADIO_ERR_QUEUE_FULL,
     RADIO_ERR_NOT_IMPL,
+    RADIO_ERR_SBAND_STORE, // stxg2_store() failed, e.g. no store session open
 } radio_err_t;
 
 extern const radio_route_t radio_routes[RADIO_STREAM_COUNT];
@@ -70,6 +71,13 @@ int radio_route_send(radio_stream_t stream, radio_queue_item_t *item, TickType_t
  * Whether frames received by radio on virtual channel vcid carry data the OS accepts
  */
 bool radio_route_accepts_uplink(radio_id_t radio, uint8_t vcid);
+
+/**
+ * Ends the S-band store session and powers the STXG2 off. The first S-band packet sent with radio_route_send() opens
+ * the session, so call this once the last packet of a file has been sent, and whenever a transaction ends. Does nothing
+ * if no session is open. CFDP task only
+ */
+void radio_sband_close(void);
 
 /* ---- UHF <-> CFDP link state ----
  *
@@ -117,5 +125,12 @@ void radio_cfdp_set_done(uint32_t inputs);
 
 // UHF task: whether CFDP is done and has seen every input given to it. Always true if the CFDP task is disabled
 bool radio_cfdp_turn_done(void);
+
+/**
+ * Wraps a queue item's payload in an SPP packet, written to buf
+ *
+ * \return true on failure, else false
+ */
+bool spp_wrap(const radio_queue_item_t *it, uint8_t *buf, size_t buf_size, size_t *packet_len);
 
 #endif // PVDX_RADIO_ROUTING_H
