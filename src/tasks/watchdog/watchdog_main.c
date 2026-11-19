@@ -35,8 +35,6 @@ void main_watchdog(void *pvParameters) {
     // Varible to hold commands popped off the queue
     command_t cmd;
     while (true) {
-        debug("\n---------- Watchdog Task Loop ----------\n");
-
         // Iterate through the running times and check if any tasks have not checked in within the allowed time
         const uint32_t current_time_ticks = xTaskGetTickCount();
 
@@ -52,8 +50,6 @@ void main_watchdog(void *pvParameters) {
                         "watchdog: %s task has not checked in within the allowed time! (time since last checkin: %d, allowed time: %d).\n",
                         task_list[i]->name, ticks_since_last_checkin, task_list[i]->watchdog_timeout_ms);
                 }
-            } else {
-                debug("watchdog: Task %d has not registered, skipping it ...\n", i);
             }
         }
 
@@ -62,11 +58,9 @@ void main_watchdog(void *pvParameters) {
         // Execute all commands contained in the queue
         if (xQueueReceive(watchdog_command_queue_handle, &cmd, queue_block_time_ticks) == pdPASS) {
             do {
-                debug("watchdog: Command popped off queue. Target: %d, Operation: %d\n", cmd.target, cmd.operation);
                 exec_command_watchdog(&cmd);
             } while (xQueueReceive(watchdog_command_queue_handle, &cmd, 0) == pdPASS);
         }
-        debug("watchdog: No more commands queued.\n");
 
         // if we get here, then all tasks have checked in within the allowed time
         pet_watchdog();
@@ -76,7 +70,6 @@ void main_watchdog(void *pvParameters) {
             while (enqueue_command(&cmd_checkin) != SUCCESS) {
                 warning("watchdog: Failed to enqueue watchdog checkin command\n");
             }
-            debug("watchdog: Enqueued watchdog checkin command\n");
         }
 
         // Guarantee other tasks get time to run

@@ -44,7 +44,6 @@ void watchdog_checkin(pvdx_task_t *const p_task) {
     p_task->last_checkin_time_ticks = xTaskGetTickCount();
 
     unlock_mutex(task_list_mutex);
-    debug("watchdog: %s task checked in\n", p_task->name);
 }
 
 /* ---------- NON-DISPATCHABLE FUNCTIONS (do not go through the command dispatcher) ---------- */
@@ -113,7 +112,6 @@ QueueHandle_t init_watchdog(void) {
  *        delaying the next timeout
  */
 void pet_watchdog(void) {
-    debug("hardware-watchdog: Petted\n");
     watchdog_feed(p_watchdog_timer);
 }
 

@@ -85,8 +85,6 @@ void main_adcs(void *pvParameters) {
     TickType_t last_step_ticks = xTaskGetTickCount();
 
     while (true) {
-        debug("\n---------- ADCS Task Loop ----------\n");
-
         // The coils are driven during this delay. vTaskDelayUntil is disabled in the ASF FreeRTOS config, so a whole
         // step takes this long plus its run time; dt is measured below so body() still sees the true step length
         os_delay_ms(ADCS_LOOP_PERIOD_MS);
@@ -98,7 +96,6 @@ void main_adcs(void *pvParameters) {
 
         // Empty the queue without blocking: this loop is paced by the delay above, not by commands
         while (xQueueReceive(p_adcs_task->command_queue, &cmd, 0) == pdPASS) {
-            debug("adcs: Command popped off queue. Target: %d, Operation: %d\n", cmd.target, cmd.operation);
             exec_command_adcs(&cmd);
         }
 
@@ -127,7 +124,6 @@ void main_adcs(void *pvParameters) {
             while (enqueue_command(&cmd_checkin) != SUCCESS) {
                 warning("adcs: Failed to enqueue watchdog checkin command\n");
             }
-            debug("adcs: Enqueued watchdog checkin command\n");
         }
     }
 }
