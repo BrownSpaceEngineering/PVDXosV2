@@ -727,6 +727,10 @@ cfdp_result_t cfdp_handle_send_state(cfdp_transaction_t *transaction) {
                 if (cfdp_send_eof(transaction) < 0) {
                     return CFDP_RESULT_DOWNLINK_FULL;
                 }
+                // EOF is the file's last packet, so the S-band radio can be powered off now
+                if (radio_routes[transaction->stream].radio == RADIO_SBAND) {
+                    radio_sband_close();
+                }
                 if (transaction->reliable_mode) {
                     transaction->state = CFDP_SEND_STATE_WAIT_ACK;
                     arm_retransmit(transaction);
