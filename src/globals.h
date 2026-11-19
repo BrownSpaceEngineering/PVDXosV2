@@ -40,10 +40,14 @@
 
 /* ---------- LOGGING CONSTANTS ---------- */
 
-#if defined(RELEASE)
-    #define DEFAULT_LOG_LEVEL INFO // The default log level for the system on release builds
-#else
-    #define DEFAULT_LOG_LEVEL DEBUG // The default log level for the system for debug and unit test builds
+// A build can set it, e.g. `make dev DEFINES="DEFAULT_LOG_LEVEL=INFO"` for a long soak run, where DEBUG fills the RTT
+// buffer faster than the host drains it
+#ifndef DEFAULT_LOG_LEVEL
+    #if defined(RELEASE)
+        #define DEFAULT_LOG_LEVEL INFO // The default log level for the system on release builds
+    #else
+        #define DEFAULT_LOG_LEVEL DEBUG // The default log level for the system for debug and unit test builds
+    #endif
 #endif
 
 #define SEGGER_RTT_LOG_BUFFER_SIZE 2048 // How big the RTT buffer is for logging (this buffer is flushed to the host regularly)

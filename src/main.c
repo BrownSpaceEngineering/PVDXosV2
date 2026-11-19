@@ -74,6 +74,29 @@ static void log_boot_report(void) {
     report->magic = 0; // So a stale report is never logged after a reset that skipped the bootloader
 }
 
+// Logs why the chip last reset (RSTC.RCAUSE, which the bootloader leaves alone). A long run tells resets it caused, like
+// a REBOOT command, from ones the satellite did on its own: the watchdog (also how fatal() resets), brown-outs, or a
+// debugger (SYST)
+static void log_reset_cause(void) {
+    static const struct {
+        uint8_t mask;
+        const char *name;
+    } CAUSES[] = {
+        {RSTC_RCAUSE_POR, "power-on"}, {RSTC_RCAUSE_BODCORE, "core brown-out"}, {RSTC_RCAUSE_BODVDD, "VDD brown-out"},
+        {RSTC_RCAUSE_NVM, "NVM"},      {RSTC_RCAUSE_EXT, "external (RESETN)"}, {RSTC_RCAUSE_WDT, "watchdog"},
+        {RSTC_RCAUSE_SYST, "system (software or debugger)"}, {RSTC_RCAUSE_BACKUP, "backup"},
+    };
+    const uint8_t rcause = RSTC->RCAUSE.reg;
+    const char *name = "unknown";
+    for (size_t i = 0; i < sizeof(CAUSES) / sizeof(CAUSES[0]); i++) {
+        if (rcause & CAUSES[i].mask) {
+            name = CAUSES[i].name;
+            break;
+        }
+    }
+    info_impl("[+] Reset cause: %s (RCAUSE 0x%02x)\n", name, rcause);
+}
+
 static status_t PVDX_init(void) {
     // Segger Buffer 0 is pre-configured at compile time according to segger documentation
     // Config the logging output channel (assuming it's not zero)
@@ -195,6 +218,7 @@ int main(void) {
     info("[+] Build Time: %s\n", BUILD_TIME);
     info("[+] Built from branch: %s\n", GIT_BRANCH_NAME);
     info("[+] Built from commit: %s\n", GIT_COMMIT_HASH);
+    log_reset_cause();
 
 
     // BURN SEQUENCE
