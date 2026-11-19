@@ -128,11 +128,10 @@ extern const uhf_state_desc_t uhf_state_descs[UHF_STATE_COUNT];
 // ---- PUSP helpers. uhf_state.c, except where noted ----
 
 /**
- * If events has UHF_EVENT_IRQ, reads the radio IRQs. On RXFE, reads the frame from the BBC0 RX buffer, checks it like
- * uhf_rx_process() does, classifies it by SPP APID, puts the radio back in RX and, for a
- * valid packet, sets ctx->last_rx. Unlike uhf_rx_process() it forwards nothing. Replaces uhf_rx_process().
- *
- * TODO: only a dummy that drops every frame (uhf_radio_task.c)
+ * If events has UHF_EVENT_IRQ, reads the radio IRQs. On RXFE, reads the frame from the BBC0 RX buffer, checks it (FCS,
+ * USLP frame, VC, telecommand, ground callsign, APID matches VC), classifies it by SPP APID, puts the radio back in RX
+ * and, for a valid packet, sets ctx->last_rx. Forwards nothing: the state handler decides (uhf_forward_cfdp()). A CFDP
+ * rx.item points at a static that the next call overwrites (uhf_radio_task.c)
  *
  * \return the classified frame, kind UHF_RX_NONE if there was none or it was dropped (the reason is logged)
  */
@@ -255,7 +254,6 @@ void uhf_radio_irq_handler(void);
 uhf_irqs_t uhf_read_irqs(void);
 uint32_t uhf_irqs_to_events(uhf_irqs_t irqs);
 
-void uhf_rx_process();
 bool uhf_tx_process();
 
 /**

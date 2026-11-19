@@ -20,4 +20,5 @@ typedef uint8_t pusp_directive_t;
 typedef struct pusp_packet {
     pusp_directive_t dir : 8;
 } pusp_packet_t;
+_Static_assert(sizeof(pusp_packet_t) == 1, "the PUSP payload is one byte");
 #endif // PUSP_H

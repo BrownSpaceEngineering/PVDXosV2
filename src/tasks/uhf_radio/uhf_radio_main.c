@@ -7,8 +7,6 @@
  * Authors: Noah Shepard
  *
  * TODO (UHF task):
- * - Replace the dummy uhf_rx_poll() (drops every frame) with a refactor of uhf_rx_process(), then delete
- *   uhf_rx_process() and uhf_pusp_rx(). Decide whether to drop packets whose APID doesn't match their VC
  * - Replace the dummy uhf_transmit_pusp() (sends nothing): APID CCSDS_APID_PUSP on RADIO_STREAM_PUSP's VC, wait for
  *   TXFE, back to RX. Give the PUSP tests a seam so they don't transmit (they run before the radio is set up)
  * - Make uhf_tx_process() block until TXFE, like uhf_transmit_beacon()

@@ -49,21 +49,6 @@ static uint8_t pending_bbc_irqs;
 static const uint8_t ground_callsign[SPP_SECONDARY_HEADER_CALLSIGN_SIZE] = {'b', 's', 'e', 'g', 'n', 'd'};
 
 /**
- * Handles a PUSP packet received from the ground
- *
- * TODO: delete along with uhf_rx_process() once uhf_rx_poll() replaces them (the state machine is in uhf_process.c)
- */
-static void uhf_pusp_rx(const uint8_t *data, size_t len) {
-    if (len < sizeof(pusp_packet_t)) {
-        warning("Radio: dropping %u byte PUSP packet\n", len);
-        return;
-    }
-    pusp_packet_t pkt;
-    memcpy(&pkt, data, sizeof(pkt));
-    debug("Radio: received PUSP directive %u\n", pkt.dir);
-}
-
-/**
  * Sets up IRQs for the At86
  */
 void at86_irq_setup(void) {
@@ -131,19 +116,21 @@ uint32_t uhf_irqs_to_events(uhf_irqs_t irqs) {
     return events;
 }
 
+// CFDP PDU from the last uhf_rx_poll(), valid until the next one. Separate from item, which uhf_tx_process() dequeues
+// into, so a transmit can't overwrite a PDU a state handler hasn't forwarded yet
+static radio_queue_item_t rx_item;
+
 /**
- * Reads a received frame from the BBC0 RX buffer, checks its space packet, and hands the packet's data to whatever
- * handles its APID (CFDP PDUs go on the uplink queue, PUSP packets are handled by this task).
+ * Reads the frame that set RXFE from the BBC0 RX buffer, checks it and its space packet, and classifies the packet by
+ * APID into out. Leaves out->kind UHF_RX_NONE if the frame is dropped (the reason is logged). Forwards nothing and
+ * doesn't touch the radio state.
  */
-void uhf_rx_process() {
+static void uhf_rx_classify(uhf_rx_t *out) {
     uint8_t pc = 0;
     if (at86rf215_reg_read_8(&at86_dev, &pc, REG_BBC0_PC) || !(pc & AT86_BBC_PC_FCSOK)) {
         warning("Radio: dropping frame with bad FCS\n");
         return;
     }
-
-    // TODO: Raise radio task priority
-    // Question: do we need to, or can it just always be highest priority that is otherwise blocked.
 
     uint8_t len_lo = 0;
     uint8_t len_hi = 0;
@@ -164,14 +151,16 @@ void uhf_rx_process() {
         return;
     }
 
+    // Both views point into at86_buffer, so everything needed is copied out before returning
     uslp_transfer_frame_view_t tframe_view;
     if (uslp_transfer_frame_parse(&tframe_view, at86_buffer, (uint32_t)sz)) {
         warning("Radio: dropping malformed USLP frame\n");
         return;
     }
 
-    if (!radio_route_accepts_uplink(RADIO_UHF, tframe_view.primary_header.virtual_channel_id)) {
-        warning("Radio: dropping USLP frame on unexpected VC %u\n", tframe_view.primary_header.virtual_channel_id);
+    const uint8_t vcid = tframe_view.primary_header.virtual_channel_id;
+    if (!radio_route_accepts_uplink(RADIO_UHF, vcid)) {
+        warning("Radio: dropping USLP frame on unexpected VC %u\n", vcid);
         return;
     }
 
@@ -211,28 +200,58 @@ void uhf_rx_process() {
         enqueue_command(&cmd);
     }
 
-    if (len == 0 || len > sizeof(item.data)) {
+    if (len == 0 || len > sizeof(rx_item.data)) {
         warning("Radio: dropping space packet with a %u byte data field\n", len);
         return;
     }
 
-    switch (packet_view.header.application_process_id) {
+    // PUSP packets only travel on the PUSP VC, and CFDP PDUs never do
+    const bool on_pusp_vc = vcid == radio_routes[RADIO_STREAM_PUSP].vcid;
+    const uint16_t apid = packet_view.header.application_process_id;
+    switch (apid) {
         case CCSDS_APID_CFDP:
-            item.len = (uint16_t)len;
-            item.apid = CCSDS_APID_CFDP;
-            item.vcid = tframe_view.primary_header.virtual_channel_id;
-            memcpy(item.data, packet_view.data, len);
-            if (xQueueSend(uplink_queue, &item, 0) != pdPASS) {
-                warning("Radio: uplink queue full, dropping packet\n");
+            if (on_pusp_vc) {
+                warning("Radio: dropping CFDP PDU on the PUSP VC\n");
+                return;
             }
-            break;
+            rx_item.len = (uint16_t)len;
+            rx_item.apid = CCSDS_APID_CFDP;
+            rx_item.vcid = vcid;
+            memcpy(rx_item.data, packet_view.data, len);
+            out->kind = UHF_RX_CFDP;
+            out->item = &rx_item;
+            return;
         case CCSDS_APID_PUSP:
-            uhf_pusp_rx(packet_view.data, len);
-            break;
+            if (!on_pusp_vc) {
+                warning("Radio: dropping PUSP packet on VC %u\n", vcid);
+                return;
+            }
+            out->kind = UHF_RX_PUSP;
+            out->dir = ((const uint8_t *)packet_view.data)[0]; // One-byte pusp_packet_t, len >= 1 checked above
+            debug("Radio: received PUSP directive %u\n", out->dir);
+            return;
         default:
-            warning("Radio: dropping space packet with unknown APID 0x%x\n", packet_view.header.application_process_id);
-            break;
+            warning("Radio: dropping space packet with unknown APID 0x%x\n", apid);
+            return;
     }
+}
+
+uhf_rx_t uhf_rx_poll(uhf_ctx_t *ctx, uint32_t events) {
+    uhf_rx_t rx = {.kind = UHF_RX_NONE};
+    if (!(events & UHF_EVENT_IRQ)) {
+        return rx;
+    }
+    if (!(uhf_irqs_to_events(uhf_read_irqs()) & UHF_EVENT_RXFE)) {
+        return rx;
+    }
+
+    uhf_rx_classify(&rx);
+    uhf_go_rx(); // RXFE leaves the radio in TXPREP, whether or not the frame was any good
+
+    if (rx.kind != UHF_RX_NONE) {
+        ctx->last_rx = xTaskGetTickCount();
+    }
+    return rx;
 }
 
 /**
@@ -719,50 +738,10 @@ void uhf_forward_cfdp(const uhf_rx_t *rx) {
     radio_cfdp_input_forwarded();
 }
 
-// ---- Dummy versions. TODO: replace with the real ones, see the TODO list in uhf_radio_main.c ----
+// ---- Dummy version. TODO: replace with the real one, see the TODO list in uhf_radio_main.c ----
 
 pusp_directive_t uhf_pusp_tx_last;
 uint32_t uhf_pusp_tx_count;
-
-// TODO(dummy): reads the IRQs but drops every received frame, so no link can be set up yet. The real version refactors
-// uhf_rx_process() to classify the frame instead of forwarding it, and sets ctx->last_rx for a valid packet
-uhf_rx_t uhf_rx_poll(uhf_ctx_t *ctx, uint32_t events) {
-    const uhf_rx_t rx = {.kind = UHF_RX_NONE};
-    if (!(events & UHF_EVENT_IRQ)) {
-        return rx;
-    }
-    if (uhf_irqs_to_events(uhf_read_irqs()) & UHF_EVENT_RXFE) {
-        at86rf215_rx_frame(&at86_dev, AT86RF215_RF09, at86_buffer, 2048);
-
-        uslp_transfer_frame_view_t uslp_view;
-
-        if (!uslp_transfer_frame_parse(&uslp_view, at86_buffer, 2048)) {
-            uhf_go_rx(); // RXFE leaves the radio in TXPREP
-            return rx;
-        }
-
-        spp_packet_view_t spp_view;
-
-        if (!spp_packet_parse(&spp_view, uslp_view.datafield, uslp_view.datafield_len)) {
-            uhf_go_rx();
-            return rx;
-        }
-
-        if (spp_view.header.application_process_id == CCSDS_APID_CFDP) {
-            // do what?
-        } else if (spp_view.header.application_process_id == CCSDS_APID_PUSP) {
-            // do what?
-        }
-
-        uhf_go_rx(); // RXFE leaves the radio in TXPREP
-
-        return (uhf_rx_t) {
-            .c
-        }
-    }
-
-    return rx;
-}
 
 // TODO(dummy): records the directive without touching the radio. The real version wraps it in SPP/USLP, sends it, waits
 // for TXFE and goes back to RX. It will need a test seam, since the PUSP tests run before the radio is set up
