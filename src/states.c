@@ -103,8 +103,8 @@ static void student_picture_capture_on_enter(state_id_t previous_state, const in
         return; // no point drawing on a display that will not be initialised
     }
 
-    // TODO: show the student's picture once there is a buffer for it; PVDX logo for now
-    command_t image_cmd = get_display_image_command(IMAGE_BUFFER_PVDX);
+    // The student's picture saved in MRAM (display_store_image()), or the PVDX logo if none has been saved
+    command_t image_cmd = get_display_stored_image_command();
     status = enqueue_command(&image_cmd);
     if (status != SUCCESS) {
         warning("states: failed to enqueue student picture display command (status %d)\n", status);
