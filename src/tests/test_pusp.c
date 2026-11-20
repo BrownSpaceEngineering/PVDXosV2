@@ -2,7 +2,8 @@
  * test_pusp.c
  *
  * Tests of the UHF task's PUSP state machine: the handlers in uhf_process.c and the helpers in uhf_state.c, driven
- * with made-up received frames. Directives are "sent" through the dummy uhf_transmit_pusp(), which only records them.
+ * with made-up received frames. Directives are "sent" through uhf_transmit_pusp(), which only records them, since the
+ * radio isn't set up yet when tests run.
  *
  * Tests run before the scheduler starts, so the tick count stays put: a deadline is expired by setting it to now.
  * BEACON and ESTABLISH_SEND's handlers, and LISTEN starting a beacon, use the radio and aren't tested here.

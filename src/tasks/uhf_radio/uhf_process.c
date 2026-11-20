@@ -161,11 +161,11 @@ uhf_state_t establish_send_proc(uhf_ctx_t *ctx, const uhf_rx_t *rx) {
         return link;
     }
 
-    uhf_go_txprep(); // Polled. DATASHEET(verify): assumes CMD=TXPREP is harmless when already in TXPREP
-
+    // One frame at a time, each sent before the next (uhf_tx_process() blocks until TXFE). Checks in between frames, since
+    // a full window of frames takes longer than the watchdog check-in period
     bool more = uxQueueMessagesWaiting(downlink_queue) != 0;
     while (more && !uhf_deadline_passed(ctx->yield_deadline)) {
-        more = uhf_tx_process(); // TODO: must block until the frame is out, polling TXFE like uhf_transmit_beacon()
+        more = uhf_tx_process();
         uhf_watchdog_checkin();
     }
 

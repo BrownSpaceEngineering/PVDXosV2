@@ -35,6 +35,10 @@ uint8_t at86_buffer[AT86RF215_MAX_PDU];
 // Set up by uhf_chip_setup()
 static struct at86rf215 at86_dev;
 
+// True once uhf_chip_setup() has succeeded. Until then uhf_transmit_pusp() doesn't touch the radio, which is also what
+// lets the PUSP tests (run before the radio is set up) drive the state machine
+static bool uhf_radio_ready;
+
 // local uplink/downlink_queue item
 radio_queue_item_t item;
 
@@ -44,6 +48,8 @@ static uint8_t spp_buffer[RADIO_DOWNLINK_MAX_SIZE];
 // BBC0 IRQs other than TXFE that uhf_take_txfe() read (and so cleared) while polling. uhf_read_irqs() hands them on.
 // DATASHEET(verify): reading an IRQS register clears all of its bits, not just the one being polled (5.3.1, 5.3.2.4)
 static uint8_t pending_bbc_irqs;
+
+static bool uhf_send_frame_blocking(const uint8_t *frame, size_t len, const char *what);
 
 // Ground station callsign, checked against the SPP secondary header of every uplinked packet that has one
 static const uint8_t ground_callsign[SPP_SECONDARY_HEADER_CALLSIGN_SIZE] = {'b', 's', 'e', 'g', 'n', 'd'};
@@ -255,8 +261,10 @@ uhf_rx_t uhf_rx_poll(uhf_ctx_t *ctx, uint32_t events) {
 }
 
 /**
- * Starts sending the next downlink packet. The radio must be in TXPREP.
- * Returns true if more packets are waiting.
+ * Sends the next downlink packet, if there is one, and waits for it to go out (see uhf_send_frame_blocking()). Leaves
+ * the radio in TXPREP. A packet that can't be wrapped or sent is dropped (logged); CFDP's own retransmission covers it.
+ *
+ * \return true if more packets are waiting
  */
 bool uhf_tx_process() {
     if (xQueueReceive(downlink_queue, &item, 0) == pdPASS) {
@@ -268,10 +276,7 @@ bool uhf_tx_process() {
                                      RADIO_SDU_ID, USLP_QOS_EXPEDITED)) {
             warning("USLP: failed to prepare frame\n");
         } else {
-            int ret = at86_send_frame(&at86_dev, at86_buffer, frame_sz);
-            if (ret) {
-                warning("Radio: failed to send frame (%d)\n", ret);
-            }
+            uhf_send_frame_blocking(at86_buffer, frame_sz, "downlink frame");
         }
     }
 
@@ -301,7 +306,10 @@ int uhf_go_rx() {
 }
 
 /**
- * Sends cmd=TXPREP, successful fires TXRDY IRQ
+ * Sends cmd=TXPREP. Doesn't wait: callers poll the state (uhf_wait_txprep()).
+ *
+ * ERRATA(#2, not handled): from TRXOFF, e.g. after a WAKEUP, this transition can hang in TRANSITION on v.1 silicon.
+ * The task normally only comes here from RX or TXPREP, which the erratum doesn't cover. See uhf_chip_setup()
  */
 void uhf_go_txprep() {
     int ret = at86rf215_set_cmd(&at86_dev, AT86RF215_CMD_RF_TXPREP, AT86RF215_RF09);
@@ -442,11 +450,11 @@ int at86_init_pvdx(struct at86rf215 *radio) {
 
     // at86rf215_init() unmasks TXFE and TRXRDY on both radios. Unmask the RF09 IRQs that the task handles, and mask all
     // RF24/BBC1 IRQs: the task never reads their IRQS registers, so a pending one would hold the IRQ pin active.
-    // DATASHEET(verify): TXFE is masked from the pin and polled by uhf_take_txfe() instead, which relies on irqmm = 1
-    // above. TRXRDY is still unmasked though state changes are polled; it only causes spurious wakeups
+    // DATASHEET(verify): TXFE and TRXRDY are masked from the pin, which relies on irqmm = 1 above. TXFE is polled by
+    // uhf_take_txfe(), and state changes by reading RF09_STATE, so on the pin they would only cause spurious wakeups
     ret = at86rf215_set_bbc_irq_mask(radio, AT86RF215_RF09, AT86_BBC_IRQ_RXFS | AT86_BBC_IRQ_RXFE);
     if (!ret) {
-        ret = at86rf215_set_radio_irq_mask(radio, AT86RF215_RF09, AT86_RF_IRQ_WAKEUP | AT86_RF_IRQ_TRXRDY | AT86_RF_IRQ_TRXERR);
+        ret = at86rf215_set_radio_irq_mask(radio, AT86RF215_RF09, AT86_RF_IRQ_WAKEUP | AT86_RF_IRQ_TRXERR);
     }
     if (!ret) {
         ret = at86rf215_set_bbc_irq_mask(radio, AT86RF215_RF24, 0);
@@ -604,6 +612,7 @@ static bool uhf_wait_txfe(uint32_t timeout_ms) {
 }
 
 bool uhf_chip_setup(void) {
+    uhf_radio_ready = false;
     spi_m_sync_enable(&SPI_UHF);
 
     UHF_SETUP_TRY(at86_init_pvdx(&at86_dev));
@@ -624,6 +633,9 @@ bool uhf_chip_setup(void) {
     UHF_SETUP_TRY(at86rf215_set_freq(&at86_dev, AT86RF215_RF09, UHF_FREQ_HZ));
     UHF_SETUP_TRY(at86rf215_set_pac(&at86_dev, AT86RF215_RF09, AT86RF215_PACUR_NO_RED, UHF_TX_POWER));
 
+    // ERRATA(#2, not handled): on v.1 silicon (RF_VN = 1) TRXOFF -> TXPREP can hang in TRANSITION. If it isn't
+    // reached within 200 us the workaround is RF09_PLL = 9, wait 20 us, RF09_PLL = 8, repeated until TXPREP (datasheet
+    // 15.2.2). Without it this times out, setup fails and main_uhf_radio() retries the whole setup UHF_SETUP_RETRY_MS later
     UHF_SETUP_TRY(at86rf215_set_cmd(&at86_dev, AT86RF215_CMD_RF_TXPREP, AT86RF215_RF09));
     if (!uhf_wait_txprep(UHF_STATE_TIMEOUT_MS)) {
         warning("Radio: did not reach TXPREP\n");
@@ -637,10 +649,12 @@ bool uhf_chip_setup(void) {
         return false;
     }
 
-    // Reaching TXPREP left TRXRDY pending, which holds the IRQ pin active
+    // Clear the IRQs setup left pending: TRXRDY from reaching TXPREP (masked now, but still in IRQS), and anything
+    // at86rf215_init() unmasked that fired before at86_init_pvdx() masked it again
     UHF_SETUP_TRY(at86rf215_irq_clear(&at86_dev));
     UHF_SETUP_TRY(uhf_go_rx());
 
+    uhf_radio_ready = true;
     info("Radio: chip set up (%lu Hz, power %d), listening\n", (unsigned long)UHF_FREQ_HZ, UHF_TX_POWER);
     return true;
 }
@@ -686,17 +700,18 @@ bool uhf_beacon_prepare(void) {
     return true;
 }
 
-bool uhf_transmit_beacon(void) {
-    if (beacon_frame_len == 0) {
-        warning("Radio: no beacon frame prepared\n");
-        return false;
-    }
-
-    // DATASHEET(verify): assumes CMD=TXPREP while already in TXPREP (after the previous frame of the burst) is harmless
-    // and the state reads TXPREP straight away. The state diagram (5.2) doesn't show this transition explicitly
+/**
+ * Sends one prepared frame: TXPREP, send, poll until the frame is out. Leaves the radio in TXPREP.
+ *
+ * \param what names the frame in warnings
+ * \return true if the frame was sent within UHF_TX_TIMEOUT_MS (failures are logged)
+ */
+static bool uhf_send_frame_blocking(const uint8_t *frame, size_t len, const char *what) {
+    // DATASHEET(verify): assumes CMD=TXPREP while already in TXPREP (e.g. after the previous frame of a burst) is
+    // harmless and the state reads TXPREP straight away. The state diagram (5.2) doesn't show this transition explicitly
     uhf_go_txprep();
     if (!uhf_wait_txprep(UHF_STATE_TIMEOUT_MS)) {
-        warning("Radio: did not reach TXPREP for beacon\n");
+        warning("Radio: did not reach TXPREP for %s\n", what);
         return false;
     }
 
@@ -704,19 +719,27 @@ bool uhf_transmit_beacon(void) {
     // set in IRQS until read, so a stale one is possible (5.3.2.4)
     uhf_take_txfe();
 
-    int ret = at86_send_frame(&at86_dev, beacon_frame, beacon_frame_len);
+    int ret = at86_send_frame(&at86_dev, frame, len);
     if (ret) {
-        warning("Radio: failed to send beacon (%d)\n", ret);
+        warning("Radio: failed to send %s (%d)\n", what, ret);
         return false;
     }
 
     // DATASHEET(verify): in baseband mode TXFE is set when the frame is out and the radio goes from TX to TXPREP by
     // itself, without a TRXRDY IRQ (5.2.7, 5.3.2.4 IRQS.TXFE)
     if (!uhf_wait_txfe(UHF_TX_TIMEOUT_MS)) {
-        warning("Radio: beacon frame not sent within %d ms\n", UHF_TX_TIMEOUT_MS);
+        warning("Radio: %s not sent within %d ms\n", what, UHF_TX_TIMEOUT_MS);
         return false;
     }
     return true;
+}
+
+bool uhf_transmit_beacon(void) {
+    if (beacon_frame_len == 0) {
+        warning("Radio: no beacon frame prepared\n");
+        return false;
+    }
+    return uhf_send_frame_blocking(beacon_frame, beacon_frame_len, "beacon");
 }
 
 bool uhf_rx_is_pusp(const uhf_rx_t *rx, pusp_directive_t dir) {
@@ -738,19 +761,45 @@ void uhf_forward_cfdp(const uhf_rx_t *rx) {
     radio_cfdp_input_forwarded();
 }
 
-// ---- Dummy version. TODO: replace with the real one, see the TODO list in uhf_radio_main.c ----
-
 pusp_directive_t uhf_pusp_tx_last;
 uint32_t uhf_pusp_tx_count;
 
-// TODO(dummy): records the directive without touching the radio. The real version wraps it in SPP/USLP, sends it, waits
-// for TXFE and goes back to RX. It will need a test seam, since the PUSP tests run before the radio is set up
 bool uhf_transmit_pusp(pusp_directive_t dir) {
+    // Recorded before anything can fail, so the PUSP tests see every directive the state machine asked for
     uhf_pusp_tx_last = dir;
     uhf_pusp_tx_count++;
-    debug("Radio: dummy uhf_transmit_pusp(%u), nothing sent\n", dir);
 
-    // we need to decide upon our packetization screen.
+    if (!uhf_radio_ready) {
+        debug("Radio: radio not set up, PUSP directive %u not sent\n", dir);
+        return false;
+    }
 
-    return true;
+    // Static: a queue item is too big for the task's stack
+    static radio_queue_item_t pusp_item;
+    const pusp_packet_t packet = {.dir = dir};
+    pusp_item.len = sizeof(packet);
+    pusp_item.apid = CCSDS_APID_PUSP;
+    pusp_item.vcid = radio_routes[RADIO_STREAM_PUSP].vcid;
+    memcpy(pusp_item.data, &packet, sizeof(packet));
+
+    // spp_buffer and at86_buffer are shared with the rest of the task. That's safe: everything runs on the radio task,
+    // and uhf_rx_classify() has copied everything it needs out of at86_buffer before a state handler gets here
+    bool sent = false;
+    size_t packet_len = 0;
+    size_t frame_sz = sizeof(at86_buffer);
+    if (spp_wrap(&pusp_item, spp_buffer, sizeof(spp_buffer), &packet_len)) {
+        warning("SPP: failed to wrap PUSP directive %u\n", dir);
+    } else if (uslp_mapp_request(at86_buffer, &frame_sz, spp_buffer, (uint16_t)packet_len, RADIO_GMAP_ID(pusp_item.vcid),
+                                 SPP_VERSION_NUMBER, RADIO_SDU_ID, USLP_QOS_EXPEDITED)) {
+        warning("USLP: failed to prepare PUSP frame\n");
+    } else {
+        sent = uhf_send_frame_blocking(at86_buffer, frame_sz, "PUSP directive");
+        if (sent) {
+            debug("Radio: sent PUSP directive %u\n", dir);
+        }
+    }
+
+    // Back to RX whether or not the frame went out, so the ground's reply (or its re-send) isn't missed
+    uhf_go_rx();
+    return sent;
 }

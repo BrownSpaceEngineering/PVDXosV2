@@ -3,22 +3,24 @@
  *
  *
  * Created: October 7, 2026
- * Modified: October 7, 2026
+ * Modified: November 20, 2026
  * Authors: Noah Shepard
  *
  * TODO (UHF task):
- * - Replace the dummy uhf_transmit_pusp() (sends nothing): APID CCSDS_APID_PUSP on RADIO_STREAM_PUSP's VC, wait for
- *   TXFE, back to RX. Give the PUSP tests a seam so they don't transmit (they run before the radio is set up)
- * - Make uhf_tx_process() block until TXFE, like uhf_transmit_beacon()
  * - Verify every DATASHEET(verify) tag and the UHF_TX_TIMEOUT_MS airtime estimate on hardware
- * - Add the datasheet Errata #2 workaround (RFn_PLL 9 -> 8) to uhf_chip_setup()'s TRXOFF -> TXPREP
- * - Mask TRXRDY from the IRQ pin (state changes are polled, so it only causes spurious wakeups)
+ * - Add the datasheet Errata #2 workaround (RFn_PLL 9 -> 8) where marked ERRATA(#2): uhf_chip_setup()'s TRXOFF -> TXPREP.
+ *   Only v.1 silicon (RF_VN = 1) needs it
  * - Tune the PUSP timing constants in uhf_radio_task.h against the real ground station
  * - Confirm CCSDS_APID_TELEMETRY (0x04) and the one-byte PUSP payload format, both temporary
+ * - Confirm the placeholder RF settings (UHF_FREQ_HZ, UHF_TX_POWER, UHF_PHY_CONFIG) with the ground station
+ * - Hardware: pick RF09's front-end mode (PA/LNA switch wiring) and trim xo_fs/xo_trim, see at86_init_pvdx()
  * - Enable the task in task_list.c and settle its priority
  *
- * TODO (CFDP task changes):
- * - The downlink queue only drains in ESTABLISH_SEND: decide what CFDP does when it fills while the ground has the turn
+ * TODO (SPP / CFDP):
+ * - spp_wrap() (radio_routing.c) sends a placeholder callsign and zero timestamps on every downlink, beacons and PUSP
+ *   directives included. Needs the real callsign before transmitting on UHF
+ * - implement finalized uplink command format
+ ** - implement reading from MRAM for CFDP send
  */
 #include <sys/types.h>
 

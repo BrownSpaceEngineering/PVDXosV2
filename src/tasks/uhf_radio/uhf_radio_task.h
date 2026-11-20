@@ -39,7 +39,7 @@
 // Set by uhf_irqs_to_events(). After RXFE or TXFE the radio is in TXPREP
 #define UHF_EVENT_RXFE (1u << 2)      // A frame was received
 #define UHF_EVENT_TXFE (1u << 3)      // A frame was sent
-#define UHF_EVENT_TXRDY (1u << 4)     // The radio reached TXPREP after uhf_go_txprep()
+#define UHF_EVENT_TXRDY (1u << 4)     // The radio reached TXPREP. Masked from the pin, so only seen alongside another IRQ
 #define UHF_EVENT_CFDP_DONE (1u << 5) // CFDP has nothing more to send for now, see radio_cfdp_turn_done()
 
 // PUSP link timing. TODO: tune on hardware. The retry period must cover a whole round trip: our frame's airtime, the
@@ -149,9 +149,10 @@ void uhf_forward_cfdp(const uhf_rx_t *rx);
  * Wraps a PUSP directive in SPP (CCSDS_APID_PUSP) and USLP (RADIO_STREAM_PUSP's VC) and sends it: TXPREP, send, poll
  * until the frame is out, then back to RX.
  *
- * \return true if the frame was sent (failures are logged). The radio is left in RX either way
+ * Records dir in uhf_pusp_tx_last/uhf_pusp_tx_count first. Until uhf_chip_setup() has succeeded it sends nothing and
+ * returns false: that's the seam the PUSP tests use, since they run before the radio is set up.
  *
- * TODO: only a dummy that records dir in uhf_pusp_tx_last/uhf_pusp_tx_count and sends nothing (uhf_radio_task.c)
+ * \return true if the frame was sent (failures are logged). The radio is left in RX either way (uhf_radio_task.c)
  */
 bool uhf_transmit_pusp(pusp_directive_t dir);
 
