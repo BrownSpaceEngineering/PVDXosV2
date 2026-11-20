@@ -92,6 +92,7 @@ void reflash_bootloaders(bool sched_running) {
 
 void main_reflash_task(void *pvParameters) {
     (void)pvParameters;
+    reflash_bootloaders(true);
     TickType_t last_scan = xTaskGetTickCount();
     while (true) {
         // Wake regularly for watchdog check-ins, while scanning only every six hours.
