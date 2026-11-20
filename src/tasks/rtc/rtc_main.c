@@ -10,6 +10,7 @@
 
 #include "tasks/rtc/rtc_task.h"
 
+#include "checks/device_checks.h"
 #include "cmd_dispatcher.h"
 #include "drivers/rtc/rtc_driver.h"
 #include "logging.h"
@@ -42,6 +43,8 @@ void main_rtc(void *pvParameters) {
     while (true) {
         vTaskDelay(pdMS_TO_TICKS(RTC_TASK_PERIOD_MS));
 
+        // The RTC task is the UHF radio's regular user, so it brings the radio back once it answers again
+        device_recheck_if_due(UHF_ID);
         calibrate_rtc();
 
         // Check in with the watchdog task

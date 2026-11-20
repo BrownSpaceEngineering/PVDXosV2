@@ -9,6 +9,7 @@
  * Authors: PVDX
  */
 
+#include "checks/device_checks.h"
 #include "logging.h"
 #include "thermistor_task.h"
 #include "cmd_dispatcher.h"
@@ -42,6 +43,7 @@ void main_thermistor(void *pvParameters) {
 
     while (true) {
         debug("\n---------- Thermistor Task Loop ----------\n");
+        device_recheck_if_due(THERMISTOR_ID);
 
         uint16_t codes[THERM_COUNT];
         float temps[THERM_COUNT];
