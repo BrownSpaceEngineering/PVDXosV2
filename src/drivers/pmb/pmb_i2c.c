@@ -9,6 +9,7 @@
 
 #include <string.h>
 
+#include "checks/device_checks.h"
 #include "hal_i2c_m_sync.h"
 #include "logging.h"
 #include "mutexes.h"
@@ -16,6 +17,10 @@
 status_t pmb_i2c_write_reg(uint8_t addr, uint8_t reg, const uint8_t *data, uint8_t len) {
     if (len > PMB_I2C_MAX_WRITE_LEN) {
         return ERROR_WRITE_FAILED;
+    }
+    // While the board is disabled every device on it (INA226, MCP23017) is off the bus: writes do nothing, reads give 0
+    if (device_disabled(PEROVSKITE_ID)) {
+        return SUCCESS;
     }
     uint8_t buf[1 + PMB_I2C_MAX_WRITE_LEN];
     buf[0] = reg;
@@ -37,6 +42,10 @@ status_t pmb_i2c_write_reg(uint8_t addr, uint8_t reg, const uint8_t *data, uint8
 }
 
 status_t pmb_i2c_read_reg(uint8_t addr, uint8_t reg, uint8_t *data, uint8_t len) {
+    if (device_disabled(PEROVSKITE_ID)) {
+        memset(data, 0, len);
+        return SUCCESS;
+    }
     struct _i2c_m_msg wr = {
         .addr = addr,
         .len = 1,
@@ -66,6 +75,9 @@ status_t pmb_i2c_read_reg(uint8_t addr, uint8_t reg, uint8_t *data, uint8_t len)
  * Checks that a device acknowledges its address, using a 1-byte read that doesn't touch any register pointer.
  */
 status_t pmb_i2c_probe(uint8_t addr) {
+    if (device_disabled(PEROVSKITE_ID)) {
+        return SUCCESS;
+    }
     uint8_t byte = 0;
     struct _i2c_m_msg rd = {
         .addr = addr,

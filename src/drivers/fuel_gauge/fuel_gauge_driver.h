@@ -67,6 +67,12 @@
     #define FG_RSENSE_OHMS 0.010f
 #endif
 
+// What a pack reads while the fuel gauges are disabled (failed their device check): a full 2S pack at room temperature,
+// so a dead gauge never forces the satellite into low power
+#define FG_DISABLED_SOC_PCT 100.0f
+#define FG_DISABLED_PACK_V  8.4f
+#define FG_DISABLED_TEMP_C  20.0f
+
 // Decoded per-pack telemetry.
 typedef struct {
     float soc_pct;      // state of charge, %

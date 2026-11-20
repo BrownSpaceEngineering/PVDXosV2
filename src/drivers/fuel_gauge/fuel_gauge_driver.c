@@ -16,11 +16,21 @@
 
 #include "fuel_gauge_driver.h"
 
+#include "checks/device_checks.h"
 #include "globals.h"
 #include "mutexes.h"
 #include "os_delay.h"
 
 // Largest downstream payload is a 2-byte register, so no large buffers needed.
+
+// While the gauges are disabled (EPS_ID failed its device check), every pack reads as this placeholder
+static void fg_fill_disabled(fg_reading_t *out) {
+    out->soc_pct = FG_DISABLED_SOC_PCT;
+    out->pack_voltage = FG_DISABLED_PACK_V;
+    out->current_a = 0.0f;
+    out->temp_c = FG_DISABLED_TEMP_C;
+    out->valid = true;
+}
 
 // ---------------------- TCA9546A mux ----------------------
 
@@ -274,6 +284,9 @@ status_t fg_mux_self_test(void) {
  * the others. No NV is written in this pass.
  */
 status_t init_fuel_gauges(void) {
+    if (device_disabled(EPS_ID)) {
+        return SUCCESS;
+    }
     fg_mux_release_reset();
     lock_mutex(i2c_sensors_bus_mutex);
 
@@ -353,6 +366,10 @@ static status_t fg_read_pack_locked(uint8_t channel, fg_reading_t *out) {
  *       does). The caller owns `out`.
  */
 status_t fg_read_pack(uint8_t channel, fg_reading_t *out) {
+    if (device_disabled(EPS_ID) && out != NULL && channel < FG_NUM_PACKS) {
+        fg_fill_disabled(out);
+        return SUCCESS;
+    }
     lock_mutex(i2c_sensors_bus_mutex);
     status_t result = fg_read_pack_locked(channel, out);
     unlock_mutex(i2c_sensors_bus_mutex);
@@ -366,6 +383,13 @@ status_t fg_read_pack(uint8_t channel, fg_reading_t *out) {
 status_t fg_read_all(fg_reading_t out[FG_NUM_PACKS]) {
     if (out == NULL) {
         return ERROR_BAD_TARGET;
+    }
+
+    if (device_disabled(EPS_ID)) {
+        for (uint8_t ch = 0; ch < FG_NUM_PACKS; ch++) {
+            fg_fill_disabled(&out[ch]);
+        }
+        return SUCCESS;
     }
 
     status_t result = SUCCESS;
@@ -390,6 +414,10 @@ status_t fg_read_all(fg_reading_t out[FG_NUM_PACKS]) {
 status_t fg_read_raw(uint8_t channel, uint16_t reg, uint16_t *out) {
     if (out == NULL) {
         return ERROR_BAD_TARGET;
+    }
+    if (device_disabled(EPS_ID)) {
+        *out = 0;
+        return SUCCESS;
     }
 
     lock_mutex(i2c_sensors_bus_mutex);
@@ -434,6 +462,9 @@ void fg_i2c_scan(void) {
 
 // The shared ALRT line is active low: asserted when the pin reads low.
 bool fg_alrt_asserted(void) {
+    if (device_disabled(EPS_ID)) {
+        return false;
+    }
     return gpio_get_pin_level(EPS_IRQ) == false;
 }
 
@@ -442,6 +473,9 @@ bool fg_alrt_asserted(void) {
  *        tripped gauge(s) can be identified. Closes the mux when done.
  */
 void fg_scan_alerts(void) {
+    if (device_disabled(EPS_ID)) {
+        return;
+    }
     lock_mutex(i2c_sensors_bus_mutex);
     for (uint8_t ch = 0; ch < FG_NUM_PACKS; ch++) {
         if (fg_mux_select(ch) != SUCCESS) {

@@ -8,6 +8,7 @@
  * Authors: PVDX
  */
 
+#include "checks/device_checks.h"
 #include "logging.h"
 #include "fuel_gauge_task.h"
 #include "cmd_dispatcher.h"
@@ -49,6 +50,7 @@ void main_fuel_gauge(void *pvParameters) {
 
     while (true) {
         debug("\n---------- Fuel Gauge Task Loop ----------\n");
+        device_recheck_if_due(EPS_ID);
 
         fg_reading_t packs[FG_NUM_PACKS];
         status_t rs = fg_read_all(packs);

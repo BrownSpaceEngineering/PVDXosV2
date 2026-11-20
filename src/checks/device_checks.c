@@ -13,7 +13,6 @@
 #include <stdint.h>
 
 #include "arducam_driver.h"
-#include "display_driver.h"
 #include "drivers/at86rf215/at86rf215.h"
 #include "drivers/at86rf215/regs.h"
 #include "drivers/fuel_gauge/fuel_gauge_driver.h"
@@ -41,7 +40,6 @@ bool check_sband(void);
 bool check_uhf(void);
 bool check_perovskite(void);
 bool check_fuel_gauges(void);
-bool check_display(void);
 bool check_thermistors(void);
 // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -49,9 +47,12 @@ bool check_thermistors(void);
 typedef struct device_check_state {
     bool checked;
     bool valid;
+    bool checking;              // the check function is running, so its own driver calls get through the gate
+    bool ever_checked;          // a result exists, so a later change of it gets logged
+    TickType_t last_check_tick; // when the check function last ran
 } device_check_state_t;
 
-static device_check_state_t device_states[NUM_DEVICES] = {0}; // inits to {false, false} for each entry
+static device_check_state_t device_states[NUM_DEVICES] = {0}; // inits every field to false/0 for each entry
 
 static bool (*device_check_functions[NUM_DEVICES])(void) = {
     //    func ptr      |  device_id_t
@@ -64,7 +65,7 @@ static bool (*device_check_functions[NUM_DEVICES])(void) = {
     &check_sband,        // SBAND_ID
     &check_uhf,          // UHF_ID
     &check_fuel_gauges,  // EPS_ID — the four battery fuel gauges
-    &check_display,      // DISPLAY_ID — init done inside the display task post-scheduler
+    NULL,                // DISPLAY_ID — write-only over SPI, so nothing to check; the display task inits it
     &check_camera,       // CAMERA_ID
     &check_perovskite,   // PEROVSKITE_ID
     &check_thermistors,  // THERMISTOR_ID
@@ -103,17 +104,47 @@ bool check_device(device_id_t device_id) {
         return false;
     }
     // only run the check function if "checked" is false for a device
-    if (!device_states[device_id].checked) {
-        device_states[device_id].valid = device_check_functions[device_id]();
-        device_states[device_id].checked = true;
-        const tel_device_status_t health = device_states[device_id].valid ? TEL_DEVICE_STATUS_OK : TEL_DEVICE_STATUS_BROKEN;
-        if (device_id == DISPLAY_ID) {
-            telemetry_update_display_data(health);
-        } else if (device_id == UHF_ID) {
-            telemetry_update_uhf_data(health);
+    device_check_state_t *const state = &device_states[device_id];
+    if (!state->checked) {
+        const bool was_valid = state->valid;
+        state->checking = true;
+        const bool valid = device_check_functions[device_id]();
+        state->checking = false;
+        state->valid = valid;
+        state->checked = true;
+        state->last_check_tick = xTaskGetTickCount();
+        if (device_id == UHF_ID) {
+            telemetry_update_uhf_data(valid ? TEL_DEVICE_STATUS_OK : TEL_DEVICE_STATUS_BROKEN);
         }
+
+        // Only log a change, so a device that stays dead doesn't log on every re-check
+        if (!valid && (was_valid || !state->ever_checked)) {
+            warning("%s disabled: its driver calls are now no-ops\n", device_name_of(device_id));
+        } else if (valid && state->ever_checked && !was_valid) {
+            info("%s re-enabled\n", device_name_of(device_id));
+        }
+        state->ever_checked = true;
     }
-    return device_states[device_id].valid;
+    return state->valid;
+}
+
+bool device_disabled(device_id_t device_id) {
+    if (device_id >= NUM_DEVICES) {
+        return false;
+    }
+    const device_check_state_t *const state = &device_states[device_id];
+    return state->checked && !state->valid && !state->checking;
+}
+
+void device_recheck_if_due(device_id_t device_id) {
+    if (!device_disabled(device_id)) {
+        return;
+    }
+    if (xTaskGetTickCount() - device_states[device_id].last_check_tick < pdMS_TO_TICKS(DEVICE_RECHECK_INTERVAL_MS)) {
+        return;
+    }
+    uncheck_device(device_id);
+    check_device(device_id);
 }
 
 void uncheck_device(device_id_t device_id) {
@@ -252,14 +283,20 @@ bool check_perovskite(void) {
 }
 
 // Fuel gauges (EPS): runs the driver init, which releases the mux reset, then selects each of the four
-// mux channels and reads that gauge's DevName and config. Passes only if the mux and all four gauges respond.
-// Read-only (no NV writes), so the fuel gauge task can run it again later.
+// mux channels and reads that gauge's DevName and config, warning for each gauge that doesn't answer. Passes while
+// at least one gauge answers: the fuel gauge task already skips a pack that doesn't read, so only losing all four
+// disables the gauges. Read-only (no NV writes), so the fuel gauge task can run it again later.
 bool check_fuel_gauges(void) {
-    return init_fuel_gauges() == SUCCESS;
-}
-
-bool check_display(void) {
-    return init_display_hardware() == SUCCESS;
+    if (init_fuel_gauges() == SUCCESS) {
+        return true;
+    }
+    for (uint8_t ch = 0; ch < FG_NUM_PACKS; ch++) {
+        uint16_t devname = 0;
+        if (fg_read_raw(ch, MAX17205_REG_DEVNAME, &devname) == SUCCESS) {
+            return true;
+        }
+    }
+    return false;
 }
 
 // Photodiodes: reads all 18 channels and logs each code. Fails if any ADC read fails, or if every channel reads the
@@ -307,9 +344,11 @@ bool check_photodiodes(void) {
 }
 
 // Thermistors + heaters: runs the driver init (ADC1 setup, both heater enables driven off), then reads each
-// thermistor and requires a non-railed ADC code (a railed code means an open or shorted divider) and a plausible
-// temperature. The heaters are left off: they have no feedback the MCU can read, and switching them on is
-// actuation, so the check only confirms their enables were driven off.
+// thermistor and warns unless it gives a non-railed ADC code (a railed code means an open or shorted divider) and a
+// plausible temperature. Passes while at least one thermistor reads: heater_control_update() already stands a pair
+// partner or the consensus in for a broken one, so only losing all four disables the thermistors. The heaters are
+// left off: they have no feedback the MCU can read, and switching them on is actuation, so the check only confirms
+// their enables were driven off.
 #define THERM_CHECK_MIN_C -40.0f
 #define THERM_CHECK_MAX_C 85.0f
 
@@ -320,25 +359,28 @@ bool check_thermistors(void) {
     }
 
     bool all_okay = true;
+    uint8_t readable = 0;
     for (uint8_t i = 0; i < THERM_COUNT; i++) {
         uint16_t code = 0;
         if (therm_read_raw(i, &code) != SUCCESS) {
             warning("thermistor check: T%u ADC read failed\n", i);
-            all_okay = false;
             continue;
         }
         if (code == 0 || (float)code / THERM_ADC_FS >= THERM_K_OPEN) {
             warning("thermistor check: T%u code %u railed (open or shorted divider)\n", i, code);
-            all_okay = false;
             continue;
         }
         float temp_c = 0.0f;
         if (therm_read_celsius(i, &temp_c) != SUCCESS || temp_c < THERM_CHECK_MIN_C || temp_c > THERM_CHECK_MAX_C) {
             warning("thermistor check: T%u code %u -> %ld mC out of range\n", i, code, (long)(temp_c * 1000.0f));
-            all_okay = false;
             continue;
         }
         info("thermistor check: T%u code %u -> %ld mC\n", i, code, (long)(temp_c * 1000.0f));
+        readable++;
+    }
+    if (readable == 0) {
+        warning("thermistor check: no thermistor reads\n");
+        all_okay = false;
     }
 
     for (uint8_t h = 0; h < THERM_HEATER_COUNT; h++) {

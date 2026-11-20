@@ -97,6 +97,11 @@ void main_adcs(void *pvParameters) {
     while (true) {
         debug("\n---------- ADCS Task Loop ----------\n");
 
+        // Bring back any sensor that failed its device check once it answers again
+        device_recheck_if_due(MAGNETOMETER_ID);
+        device_recheck_if_due(GYROSCOPE_ID);
+        device_recheck_if_due(PHOTODIODE_ID);
+
         // The coils are driven during this delay. vTaskDelayUntil is disabled in the ASF FreeRTOS config, so a whole
         // step takes this long plus its run time; dt is measured below so body() still sees the true step length
         os_delay_ms(ADCS_LOOP_PERIOD_MS);

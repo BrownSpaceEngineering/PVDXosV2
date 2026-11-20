@@ -4,12 +4,16 @@
 #include <string.h>
 
 #include "atmel_start.h"
+#include "checks/device_checks.h"
 #include "logging.h"
 #include "regs.h"
 
 int
 burn_at86_init_pvdx(struct at86rf215 *radio)
 {
+  if (device_disabled(UHF_ID)) {
+    return AT86RF215_OK;
+  }
   radio->clko_os      = AT86RF215_RF_CLKO_OFF;
   radio->clk_drv      = AT86RF215_RF_DRVCLKO2;
   radio->rf_femode_09 = AT86RF215_RF_FEMODE0;
@@ -60,6 +64,9 @@ burn_change_at86_config(struct at86rf215 *h, at86_config_t config)
 {
   if (h == NULL) {
     return -AT86RF215_INVAL_PARAM;
+  }
+  if (device_disabled(UHF_ID)) {
+    return AT86RF215_OK;
   }
 
   struct at86rf215_bb_conf bb_conf;
@@ -168,6 +175,11 @@ burn_at86_check_health(struct at86rf215 *h, at86_health_t *health)
   if (h == NULL || health == NULL) {
     return -AT86RF215_INVAL_PARAM;
   }
+  // The one call that still fails while the radio is disabled: a health check that always passes would be meaningless
+  if (device_disabled(UHF_ID)) {
+    memset(health, 0, sizeof(*health));
+    return -AT86RF215_UNKNOWN_IC;
+  }
 
   spi_m_sync_enable(&SPI_UHF);
 
@@ -195,6 +207,9 @@ at86_irqs_t
 burn_at86_read_irqs(struct at86rf215 *h)
 {
   at86_irqs_t irqs = {0};
+  if (device_disabled(UHF_ID)) {
+    return irqs;
+  }
   if (at86rf215_reg_read_8(h, &irqs.rf, REG_RF09_IRQS) ||
       at86rf215_reg_read_8(h, &irqs.bbc, REG_BBC0_IRQS)) {
     warning("AT86: failed to read IRQ registers\n");
@@ -206,6 +221,9 @@ burn_at86_read_irqs(struct at86rf215 *h)
 int
 burn_at86_go_txprep(struct at86rf215 *h)
 {
+  if (device_disabled(UHF_ID)) {
+    return AT86RF215_OK;
+  }
   int ret = at86rf215_set_cmd(h, AT86RF215_CMD_RF_TXPREP, AT86RF215_RF09);
   if (ret) {
     warning("AT86: failed to request TXPREP (%d)\n", ret);
@@ -216,6 +234,9 @@ burn_at86_go_txprep(struct at86rf215 *h)
 int
 burn_at86_go_rx(struct at86rf215 *h)
 {
+  if (device_disabled(UHF_ID)) {
+    return AT86RF215_OK;
+  }
   at86rf215_rf_state_t state = AT86RF215_STATE_RF_TRANSITION;
   int                  ret   = at86rf215_get_state(h, &state, AT86RF215_RF09);
   if (ret) {
@@ -279,6 +300,9 @@ burn_at86_send_frame(struct at86rf215 *h, const uint8_t *buf, size_t sz)
 
   if (h == NULL) {
     return -AT86RF215_INVAL_PARAM;
+  }
+  if (device_disabled(UHF_ID)) {
+    return AT86RF215_OK;
   }
   if (sz + AT86_FCS_LEN > AT86RF215_MAX_PDU) {
     return -AT86RF215_INVAL_PARAM;

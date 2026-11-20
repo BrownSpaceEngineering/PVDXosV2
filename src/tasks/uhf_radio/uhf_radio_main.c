@@ -25,6 +25,7 @@
 
 #include "at86rf215.h"
 #include "ccsds/radio_routing.h"
+#include "checks/device_checks.h"
 #include "ccsds/uslp.h"
 #include "drivers/rtc/rtc_driver.h"
 #include "libraries/cmd_dispatcher/cmd_dispatcher.h"
@@ -108,11 +109,15 @@ void uhf_watchdog_checkin(void) {
 void main_uhf_radio(void *pvParameters) {
     info("radio: Task Started!\n");
 
-    // Keep checking in while retrying, so that a dead radio doesn't get the whole satellite reset by the watchdog
-    while (!uhf_chip_setup()) {
-        warning("Radio: chip setup failed, retrying in %d ms\n", UHF_SETUP_RETRY_MS);
+    // Keep checking in while retrying, so that a dead radio doesn't get the whole satellite reset by the watchdog. A radio
+    // that failed its device check is left alone until a re-check passes.
+    while (device_disabled(UHF_ID) || !uhf_chip_setup()) {
+        if (!device_disabled(UHF_ID)) {
+            warning("Radio: chip setup failed, retrying in %d ms\n", UHF_SETUP_RETRY_MS);
+        }
         uhf_watchdog_checkin();
         vTaskDelay(pdMS_TO_TICKS(UHF_SETUP_RETRY_MS));
+        device_recheck_if_due(UHF_ID);
     }
 
     at86_irq_setup();

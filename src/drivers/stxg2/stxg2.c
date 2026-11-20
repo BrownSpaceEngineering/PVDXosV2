@@ -11,6 +11,7 @@
 #include <string.h>
 #include <task.h>
 
+#include "checks/device_checks.h"
 #include "hal_gpio.h"
 #include "hal_i2c_m_sync.h"
 #include "hal_spi_m_sync.h"
@@ -129,6 +130,9 @@ static status_t stxg2_clear_i2c_status(void) {
  * \returns ERROR_WRITE_FAILED if a flag is set
  */
 status_t stxg2_check_i2c_status(void) {
+    if (device_disabled(SBAND_ID)) {
+        return SUCCESS;
+    }
     uint32_t i2c_status = 0;
     ret_err_status(stxg2_read_reg(REG_I2C_STATUS, &i2c_status), "stxg2: I2C status read failed\n");
     i2c_status_needs_clear = false;
@@ -148,6 +152,9 @@ status_t stxg2_check_i2c_status(void) {
  * \note I2C_STAT read after write_reg() ensures successful write
 */
 status_t stxg2_write_reg(uint16_t addr, uint32_t value) {
+    if (device_disabled(SBAND_ID)) {
+        return SUCCESS;
+    }
     if (i2c_status_needs_clear) {
         stxg2_clear_i2c_status();
     }
@@ -183,6 +190,10 @@ status_t stxg2_read_reg(uint16_t addr, uint32_t *value) {
     if (value == NULL) {
         return ERROR_BAD_ARGS;
     }
+    if (device_disabled(SBAND_ID)) {
+        *value = 0;
+        return SUCCESS;
+    }
     uint8_t addr_buf[2] = {(uint8_t)(addr & 0xFF), (uint8_t)((addr >> 8) & 0xFF)};
     uint8_t data_buf[4] = {0};
 
@@ -210,6 +221,10 @@ status_t stxg2_read_reg(uint16_t addr, uint32_t *value) {
  * \brief Radio power on/I2C + SPI enable/read reg
  */
 status_t stxg2_init(void) {
+    // A disabled radio is never powered
+    if (device_disabled(SBAND_ID)) {
+        return SUCCESS;
+    }
     gpio_set_pin_level(SBAND_CS, true);
     gpio_set_pin_direction(SBAND_CS, GPIO_DIRECTION_OUT);
     gpio_set_pin_function(SBAND_CS, GPIO_PIN_FUNCTION_OFF);
@@ -296,6 +311,9 @@ void stxg2_power_off(void) {
  * \returns ERROR_PROCESSING_FAILED on mode error, ERROR_NOT_READY on timeout
  */
 status_t stxg2_set_mode(stxg2_mode_t mode) {
+    if (device_disabled(SBAND_ID)) {
+        return SUCCESS;
+    }
     ret_err_status(stxg2_poll_reg(REG_MODE, MODE_BUSY, 0, STXG2_MODE_TIMEOUT_MS, NULL), "stxg2: mode busy\n");
     ret_err_status(stxg2_write_reg(REG_MODE, (uint32_t)mode), "stxg2: mode write failed\n");
 
@@ -329,6 +347,9 @@ status_t stxg2_set_mode(stxg2_mode_t mode) {
  * \returns ERROR_BAD_ARGS if out of range
  */
 status_t stxg2_configure_rf(uint32_t freq_khz, uint32_t sym_rate_ksps, uint8_t modcod, uint8_t power_dbm) {
+    if (device_disabled(SBAND_ID)) {
+        return SUCCESS;
+    }
     if (freq_khz < STXG2_FREQ_MIN_KHZ || freq_khz > STXG2_FREQ_MAX_KHZ || (freq_khz % STXG2_FREQ_STEP_KHZ) != 0) {
         warning("stxg2: bad frequency %lu kHz\n", (unsigned long)freq_khz);
         return ERROR_BAD_ARGS;
@@ -362,6 +383,9 @@ status_t stxg2_configure_rf(uint32_t freq_khz, uint32_t sym_rate_ksps, uint8_t m
  * \brief Connects input_code (XBAR_IN_*) to the output at output_shift (XBAR_OUT_*_SHIFT) (USM 9.2.8.7)
  */
 status_t stxg2_route(uint8_t input_code, uint8_t output_shift) {
+    if (device_disabled(SBAND_ID)) {
+        return SUCCESS;
+    }
     if (output_shift > XBAR_OUT_HS1_SHIFT || (output_shift % 4) != 0 || input_code > XBAR_IN_MEMRD) {
         return ERROR_BAD_ARGS;
     }
@@ -447,6 +471,9 @@ static void stxg2_store_cleanup(void) {
  * \brief Starts a flash write from SPI at start_index (USM 12.1.2)
  */
 status_t stxg2_store_begin(uint32_t start_index) {
+    if (device_disabled(SBAND_ID)) {
+        return SUCCESS;
+    }
     if (store_active) {
         warning("stxg2: store session already active\n");
         return ERROR_NOT_READY;
@@ -483,6 +510,9 @@ status_t stxg2_store_begin(uint32_t start_index) {
  * \returns ERROR_NOT_READY if no write is active or the buffer does not drain
  */
 status_t stxg2_store(const uint8_t *data_buf, size_t sz) {
+    if (device_disabled(SBAND_ID)) {
+        return SUCCESS;
+    }
     if (!store_active) {
         warning("stxg2: store called without store_begin\n");
         return ERROR_NOT_READY;
@@ -524,6 +554,12 @@ status_t stxg2_store(const uint8_t *data_buf, size_t sz) {
  * \returns first error
  */
 status_t stxg2_store_end(uint32_t *packets_written) {
+    if (device_disabled(SBAND_ID)) {
+        if (packets_written != NULL) {
+            *packets_written = 0;
+        }
+        return SUCCESS;
+    }
     if (!store_active) {
         return ERROR_NOT_READY;
     }
@@ -609,6 +645,9 @@ static status_t stxg2_disable_framer(void) {
  * \param num_packets 0 = until EOF
  */
 status_t stxg2_downlink_begin(uint32_t start_index, uint32_t num_packets) {
+    if (device_disabled(SBAND_ID)) {
+        return SUCCESS;
+    }
     if (store_active) {
         // Read and write cannot run together
         warning("stxg2: downlink requested during a store session\n");
@@ -650,6 +689,9 @@ status_t stxg2_downlink_begin(uint32_t start_index, uint32_t num_packets) {
  * \note Must pad end because internal framer not on
  */
 status_t stxg2_downlink_end(void) {
+    if (device_disabled(SBAND_ID)) {
+        return SUCCESS;
+    }
     status_t result = stxg2_write_reg(REG_MEM_RD_CTRL, MEM_CTRL_STOP);
     if (result == SUCCESS) {
         result = stxg2_poll_reg(REG_MEM_RD_STAT, MEM_STAT_ACTIVE, 0, STXG2_MEM_TIMEOUT_MS, NULL);
@@ -684,6 +726,9 @@ status_t stxg2_downlink_end(void) {
  * \param count 1-255
  */
 status_t stxg2_request_retransmit(uint32_t packet_id, uint8_t count) {
+    if (device_disabled(SBAND_ID)) {
+        return SUCCESS;
+    }
     if (count == 0 || packet_id > MEM_RT_QUEUE_INDEX_MSK) {
         return ERROR_BAD_ARGS;
     }
