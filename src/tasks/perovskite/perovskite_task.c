@@ -11,6 +11,7 @@
 
 #include <string.h>
 
+#include "checks/device_checks.h"
 #include "cmd_dispatcher.h"
 #include "drivers/mram/mram_map.h"
 #include "drivers/pmb/ina226.h"
@@ -20,7 +21,7 @@
 #include "semphr.h"
 #include "state_machine.h"
 #include "task_list.h"
-#include "tasks/adcs/adcs_task.h"
+#include "utc.h"
 #include "watchdog_task.h"
 
 #define PEROVSKITE_SETTLE_MS 5U                                             // Opamp settling time after a DAC step
@@ -269,12 +270,11 @@ static status_t perovskite_sweep_pixel(uint8_t pixel, int16_t *p_samples) {
  * a stop or reboot partway leaves MRAM untouched.
  */
 static status_t perovskite_run_sweep(void) {
-    int unix_time = 0, jd_scalar = 0;
-    float jd_frac = 0.0f;
+    uint32_t unix_time = 0;
 
     memset(&sweep, 0, sizeof(sweep));
     sweep.sequence = next_sequence;
-    sweep.timestamp = adcs_get_time(&unix_time, &jd_scalar, &jd_frac) == SUCCESS ? (uint32_t)unix_time : 0;
+    sweep.timestamp = utc_get(&unix_time) == SUCCESS ? unix_time : 0;
     sweep.full_scale_mv = PVD_PIXEL_FULL_SCALE_MV;
 
     for (uint8_t pixel = 0; pixel < PEROVSKITE_PIXEL_COUNT; pixel++) {
@@ -312,6 +312,12 @@ static void perovskite_send_telemetry(const perovskite_sweep_t *p_sweep) {
 
 // Called only by the perovskite task. Hardware is left alone while the task is disabled.
 static status_t perovskite_capture(void) {
+    // Without the board a sweep would only measure zeros and overwrite a real sweep in MRAM, so skip it. The hardware
+    // is set up again once the board comes back.
+    if (device_disabled(PEROVSKITE_ID)) {
+        hardware_ready = false;
+        return SUCCESS;
+    }
     if (!hardware_ready) {
         status_t status = perovskite_init_hardware();
         if (status != SUCCESS) {

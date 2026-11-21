@@ -25,6 +25,7 @@
  * auto-increments the register pointer and returns a STATUS byte first.
  */
 
+#include "checks/device_checks.h"
 #include "globals.h"
 
 #include "magnetometer_driver.h"
@@ -63,6 +64,9 @@ static inline void rm3100_cs_deselect(void) {
  * \return `status_t` SUCCESS on success, otherwise an error status.
  */
 status_t init_rm3100(void) {
+    if (device_disabled(MAGNETOMETER_ID)) {
+        return SUCCESS;
+    }
     // Drive CS as a GPIO output, idle high (deselected).
     gpio_set_pin_function(RM3100_CS_PIN, GPIO_PIN_FUNCTION_OFF);
     gpio_set_pin_direction(RM3100_CS_PIN, GPIO_DIRECTION_OUT);
@@ -121,6 +125,14 @@ status_t rm3100_read_reg(int32_t *p_bytes_read, uint8_t addr, uint8_t *read_buf,
     if (size == 0 || size > RM3100_SPI_MAX - 1) {
         return ERROR_READ_FAILED;
     }
+    // While the magnetometer is disabled every register reads 0, so the field reads 0 and B-dot commands no dipole
+    if (device_disabled(MAGNETOMETER_ID)) {
+        memset(read_buf, 0, size);
+        if (p_bytes_read != NULL) {
+            *p_bytes_read = size;
+        }
+        return SUCCESS;
+    }
 
     uint8_t tx[RM3100_SPI_MAX] = {0};
     uint8_t rx[RM3100_SPI_MAX] = {0};
@@ -155,6 +167,12 @@ status_t rm3100_read_reg(int32_t *p_bytes_read, uint8_t addr, uint8_t *read_buf,
 status_t rm3100_write_reg(int32_t *p_bytes_written, uint8_t addr, uint8_t *data, uint16_t size) {
     if (size > RM3100_SPI_MAX - 1) {
         return ERROR_WRITE_FAILED;
+    }
+    if (device_disabled(MAGNETOMETER_ID)) {
+        if (p_bytes_written != NULL) {
+            *p_bytes_written = size;
+        }
+        return SUCCESS;
     }
 
     uint8_t tx[RM3100_SPI_MAX] = {0};
@@ -333,6 +351,11 @@ status_t mag_change_cycle_count(uint16_t newCC) {
  *         data is available yet, or an error status on a bus failure.
  */
 status_t magnetometer_read(mag_raw_reading_t *const raw_readings, mag_data_t *const gain_adj_readings) {
+    // A disabled magnetometer's STATUS reads 0 (never ready), so skip straight to its zero reading
+    if (device_disabled(MAGNETOMETER_ID)) {
+        return mag_read_data(raw_readings, gain_adj_readings);
+    }
+
     uint8_t status = 0;
     ret_err_status(rm3100_read_reg(NULL, RM3100_STATUS_REG, &status, 1), "magnetometer: Read from STATUS Register failed");
 

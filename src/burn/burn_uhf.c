@@ -12,6 +12,7 @@
 
     #include "atmel_start.h"
     #include "burn/uhf_link_packet.h"
+    #include "checks/device_checks.h"
     #include "drivers/at86rf215/at86_pvdx.h"
     #include "drivers/at86rf215/at86rf215.h"
     #include "drivers/at86rf215/regs.h"
@@ -418,6 +419,11 @@ static bool uhf_setup(void) {
 }
 
 static bool uhf_start(void) {
+    // A disabled radio would only time out at every step
+    if (device_disabled(UHF_ID)) {
+        info("uhf: radio disabled, skipping the UHF step\n");
+        return false;
+    }
     memset(&uhf_stats, 0, sizeof(uhf_stats));
     uhf_time_init();
     info("uhf: setting up MR-FSK radio (%lu Hz, power %d, call sign %s)\n", (unsigned long)UHF_FREQ_HZ, UHF_TX_POWER, LINK_CALLSIGN);

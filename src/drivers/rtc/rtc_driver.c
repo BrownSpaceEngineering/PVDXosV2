@@ -14,6 +14,7 @@
 #include "rtc_driver.h"
 
 #include "atmel_start.h"
+#include "checks/device_checks.h"
 #include "drivers/at86rf215/at86rf215.h"
 #include "drivers/at86rf215/regs.h"
 #include "logging.h"
@@ -148,6 +149,12 @@ status_t init_rtc_hardware(void) {
  */
 void calibrate_rtc(void) {
     if (!rtc_hw) {
+        return;
+    }
+    // Without the radio the RTC keeps its last calibration; the counter is set up again once the radio comes back
+    if (device_disabled(UHF_ID)) {
+        window_open = false;
+        radio_counter_on = false;
         return;
     }
 

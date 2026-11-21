@@ -1,4 +1,5 @@
 #include "camera_task.h"
+#include "checks/device_checks.h"
 #include "cmd_dispatcher.h"
 #include "logging.h"
 #include "task_list.h"
@@ -25,6 +26,7 @@ void main_camera(void *pvParameters) {
         if (camera_stop_requested()) {
             continue;
         }
+        device_recheck_if_due(CAMERA_ID);
         if (should_checkin(current_task) && enqueue_command(&cmd_checkin) != SUCCESS) {
             warning("camera: Failed to enqueue watchdog checkin command\n");
         }

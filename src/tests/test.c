@@ -843,6 +843,10 @@ void test_telemetry_downlink(void) {
     downlink.magnetometer.gain_adjusted_readings[2] = 0.15625f;
     downlink.sband.health = TEL_DEVICE_STATUS_BROKEN;
     downlink.sband.last_transmission_timestamp = 0xDEADBEEF;
+    downlink.adcs.opmode = TEL_ADCS_OPMODE_DETUMBLE_ONLY;
+    downlink.adcs.flags = TEL_ADCS_FLAG_POINTING | TEL_ADCS_FLAG_IN_SUNLIGHT;
+    downlink.adcs.filter_resets = 0x0102;
+    downlink.adcs.tle_epoch_unix_time = 0xCAFEF00D;
     downlink.command_timestamps[15] = 0xBEEF;
     downlink.os_errors.error_timestamps[7] = 0x11223344;
 
@@ -855,6 +859,8 @@ void test_telemetry_downlink(void) {
                               0x3F, 0x80, 0x00, 0x00, 0xC0, 0x20, 0x00, 0x00, 0x3E, 0x20, 0x00, 0x00}; // gain adjusted
     // S-band health and last transmission timestamp
     uint8_t expected_sband[] = {TEL_DEVICE_STATUS_BROKEN, 0xDE, 0xAD, 0xBE, 0xEF};
+    // End of the ADCS section: opmode, flags, filter resets and TLE epoch, after its 15 floats
+    uint8_t expected_adcs_tail[] = {0x01, 0x09, 0x01, 0x02, 0xCA, 0xFE, 0xF0, 0x0D};
 
     test_log("telemetry downlink serialize test:\n");
     memset(buf, 0xEE, sizeof(buf)); // nonzero, so we can tell the spare bytes were zeroed
@@ -863,6 +869,7 @@ void test_telemetry_downlink(void) {
     PVDX_ASSERT_MSG(buf[20] == 2, "downlink last bootloader\n");
     PVDX_ASSERT_MSG(memcmp(&buf[21], expected_mag, sizeof(expected_mag)) == 0, "downlink magnetometer bytes\n");
     PVDX_ASSERT_MSG(memcmp(&buf[177], expected_sband, sizeof(expected_sband)) == 0, "downlink sband bytes\n");
+    PVDX_ASSERT_MSG(memcmp(&buf[349], expected_adcs_tail, sizeof(expected_adcs_tail)) == 0, "downlink adcs tail bytes\n");
     PVDX_ASSERT_MSG(buf[387] == 0xBE && buf[388] == 0xEF, "downlink last command timestamp\n");
     PVDX_ASSERT_MSG(buf[464] == 0x11 && buf[465] == 0x22 && buf[466] == 0x33 && buf[467] == 0x44, "downlink last os error timestamp\n");
 
@@ -902,15 +909,16 @@ void test_telemetry_uplink(void) {
     // callsign "N0CALL" and timestamp 0x01020304
 
     // Six commands: sleep 3600, kepler coefficients {97.5, 120.25, 2^-10, -45.5, 270, 15.0625}, ADCS parameters
-    // (timestamp 0x6543210F, {3.75, -0.5, 0.15625, 1, -2.5, 15.0625}), enable/disable device 8 (display),
+    // (epoch JD 2461357.25, {3.75, -0.5, 0.15625, 1, -2.5, 15.0625}, B* 2^-13), enable/disable device 8 (display),
     // reboot 1, send pictures -2
-    uint8_t multi[] = {0x10, 0xAB, 0xC0, 0x05, 0x00, 0x72, 0x4E, 0x30, 0x43, 0x41, 0x4C, 0x4C, 0x00, 0x00, 0x00, 0x79, 0x00, 0x06,
+    uint8_t multi[] = {0x10, 0xAB, 0xC0, 0x05, 0x00, 0x7A, 0x4E, 0x30, 0x43, 0x41, 0x4C, 0x4C, 0x00, 0x00, 0x00, 0x81, 0x00, 0x06,
                        0x01, 0x02, 0x03, 0x04, 0x00, 0x03, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x0E, 0x10, 0x00, 0x07, 0x00, 0x00,
                        0x00, 0x18, 0x42, 0xC3, 0x00, 0x00, 0x42, 0xF0, 0x80, 0x00, 0x3A, 0x80, 0x00, 0x00, 0xC2, 0x36, 0x00, 0x00,
-                       0x43, 0x87, 0x00, 0x00, 0x41, 0x71, 0x00, 0x00, 0x00, 0x0A, 0x00, 0x00, 0x00, 0x1C, 0x65, 0x43, 0x21, 0x0F,
-                       0x40, 0x70, 0x00, 0x00, 0xBF, 0x00, 0x00, 0x00, 0x3E, 0x20, 0x00, 0x00, 0x3F, 0x80, 0x00, 0x00, 0xC0, 0x20,
-                       0x00, 0x00, 0x41, 0x71, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x08, 0x00, 0x04, 0x00, 0x00,
-                       0x00, 0x01, 0x01, 0x00, 0x06, 0x00, 0x00, 0x00, 0x04, 0xFF, 0xFF, 0xFF, 0xFE};
+                       0x43, 0x87, 0x00, 0x00, 0x41, 0x71, 0x00, 0x00, 0x00, 0x0A, 0x00, 0x00, 0x00, 0x24, 0x41, 0x42, 0xC7, 0x56,
+                       0xA0, 0x00, 0x00, 0x00, 0x40, 0x70, 0x00, 0x00, 0xBF, 0x00, 0x00, 0x00, 0x3E, 0x20, 0x00, 0x00, 0x3F, 0x80,
+                       0x00, 0x00, 0xC0, 0x20, 0x00, 0x00, 0x41, 0x71, 0x00, 0x00, 0x39, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                       0x00, 0x02, 0x00, 0x08, 0x00, 0x04, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x06, 0x00, 0x00, 0x00, 0x04, 0xFF,
+                       0xFF, 0xFF, 0xFE};
     static tel_uplink_t uplink; // static so it doesn't use up the test's stack
     bool err;
 
@@ -934,10 +942,12 @@ void test_telemetry_uplink(void) {
                     "multi kepler coefficients\n");
 
     tel_adcs_parameters_t *adcs = &cmd[2].args.adcs_parameters;
-    PVDX_ASSERT_MSG(cmd[2].id == TEL_CMD_ADCS_UPDATE_PARAMETERS && adcs->timestamp == 0x6543210F, "multi adcs timestamp\n");
+    const double expected_epoch_jd = 2461357.25;
+    PVDX_ASSERT_MSG(cmd[2].id == TEL_CMD_ADCS_UPDATE_PARAMETERS && memcmp(&adcs->epoch_jd, &expected_epoch_jd, sizeof(double)) == 0,
+                    "multi adcs epoch\n");
     PVDX_ASSERT_MSG(same_float(adcs->inclination, 3.75f) && same_float(adcs->raan, -0.5f) && same_float(adcs->eccentricity, 0.15625f) &&
                         same_float(adcs->argument_of_perigee, 1.0f) && same_float(adcs->mean_anomaly, -2.5f) &&
-                        same_float(adcs->mean_motion, 15.0625f),
+                        same_float(adcs->mean_motion, 15.0625f) && same_float(adcs->bstar, 0.0001220703125f),
                     "multi adcs parameters\n");
 
     PVDX_ASSERT_MSG(cmd[3].id == TEL_CMD_ENABLE_DISABLE_DEVICE && cmd[3].args.device == DISPLAY_ID, "multi enable/disable device\n");
@@ -954,6 +964,16 @@ void test_telemetry_uplink(void) {
                        0x4C, 0x00, 0x00, 0x00, 0x16, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04};
     err = telemetry_uplink_parse(&uplink, empty, sizeof(empty));
     PVDX_ASSERT_MSG(!err && uplink.num_commands == 0, "no commands\n");
+
+    // One set ADCS opmode command, detumble only (1)
+    uint8_t opmode[] = {0x10, 0xAB, 0xC0, 0x05, 0x00, 0x17, 0x4E, 0x30, 0x43, 0x41, 0x4C, 0x4C, 0x00, 0x00, 0x00,
+                        0x1E, 0x00, 0x01, 0x01, 0x02, 0x03, 0x04, 0x00, 0x09, 0x00, 0x00, 0x00, 0x02, 0x00, 0x01};
+    err = telemetry_uplink_parse(&uplink, opmode, sizeof(opmode));
+    PVDX_ASSERT_MSG(!err && uplink.commands[0].id == TEL_CMD_SET_ADCS_OPMODE &&
+                        uplink.commands[0].args.adcs_opmode == TEL_ADCS_OPMODE_DETUMBLE_ONLY,
+                    "adcs opmode\n");
+    opmode[sizeof(opmode) - 1] = TEL_ADCS_OPMODE_COUNT;
+    PVDX_ASSERT_MSG(telemetry_uplink_parse(&uplink, opmode, sizeof(opmode)), "unknown adcs opmode rejected\n");
 
     // One update display command with an 8192-byte bitmap. Only the headers were generated; the bitmap is filled in here
     test_log("telemetry uplink display test:\n");

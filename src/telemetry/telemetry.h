@@ -75,11 +75,30 @@ typedef struct {
     uint8_t input_variables[3];
 } tel_state_machine_data_t;
 
+// ADCS operating mode, sent as 2 bytes in TEL_CMD_SET_ADCS_OPMODE and as 1 byte in the downlink
+typedef enum {
+    TEL_ADCS_OPMODE_POINT = 0,         // point whenever possible, detumble (B-dot) whenever not pointing; the default
+    TEL_ADCS_OPMODE_DETUMBLE_ONLY = 1, // B-dot only; the attitude filter doesn't run
+    TEL_ADCS_OPMODE_COUNT,             // not a mode
+} tel_adcs_opmode_t;
+
+// Bits of tel_adcs_data_t.flags
+#define TEL_ADCS_FLAG_POINTING (1u << 0)
+#define TEL_ADCS_FLAG_ATTITUDE_VALID (1u << 1)
+#define TEL_ADCS_FLAG_POSITION_VALID (1u << 2)
+#define TEL_ADCS_FLAG_IN_SUNLIGHT (1u << 3)
+#define TEL_ADCS_FLAG_TLE_LOADED (1u << 4)
+#define TEL_ADCS_FLAG_UTC_VALID (1u << 5)
+
 typedef struct {
-    float position[3];
-    float attitude[3];
-    float state[7];      // error 6-vector & bias value
-    float covariance[4]; // 2x2 matrix
+    float position[3];            // ECI, meters, from the last SGP4 propagation; zero if TEL_ADCS_FLAG_POSITION_VALID is clear
+    float attitude[3];            // body-to-ECI rotation vector (axis * angle), radians; zero if TEL_ADCS_FLAG_ATTITUDE_VALID is clear
+    float gyro_bias[3];           // estimated gyro bias, rad/s
+    float covariance_diag[6];     // filter covariance diagonal: attitude error variances (rad^2), then gyro bias variances
+    uint8_t opmode;               // a tel_adcs_opmode_t
+    uint8_t flags;                // TEL_ADCS_FLAG_* bits
+    uint16_t filter_resets;       // times the filter has diverged and fallen back to detumbling since boot
+    uint32_t tle_epoch_unix_time; // epoch of the TLE in use, truncated to whole seconds; 0 if none is loaded
 } tel_adcs_data_t;
 
 typedef struct {
@@ -151,15 +170,17 @@ typedef enum {
     TEL_CMD_COUNT, // not a command
 } tel_command_id_t;
 
-// Data for TEL_CMD_ADCS_UPDATE_PARAMETERS
+// Data for TEL_CMD_ADCS_UPDATE_PARAMETERS: a TLE's mean elements, in TLE line 2 order, plus its epoch and B*.
+// These are SGP4 mean elements: they must be copied from a TLE as is, not replaced with osculating Kepler elements.
 typedef struct {
-    uint32_t timestamp;
-    float inclination;         // degrees, angle from equatorial reference plane
-    float raan;                // degrees, measured in ECI
+    double epoch_jd;           // TLE epoch, UTC, as a Julian date (a float32 or whole seconds would lose ~km of position)
+    float inclination;         // degrees
+    float raan;                // degrees, right ascension of the ascending node
     float eccentricity;        // unitless, 0-1
     float argument_of_perigee; // degrees
-    float mean_anomaly;
-    float mean_motion; // revolutions per day
+    float mean_anomaly;        // degrees
+    float mean_motion;         // revolutions per day
+    float bstar;               // B* drag term, 1/earth radii
 } tel_adcs_parameters_t;
 
 typedef struct {
@@ -175,7 +196,7 @@ typedef struct {
         int32_t picture_count;
         float kepler_coefficients[TELEMETRY_KEPLER_COEFFICIENTS];
         uint32_t unix_time;
-        uint16_t adcs_opmode;
+        uint16_t adcs_opmode; // a tel_adcs_opmode_t
         tel_adcs_parameters_t adcs_parameters;
         uint16_t power_mode;
     } args;

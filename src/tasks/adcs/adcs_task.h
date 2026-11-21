@@ -73,7 +73,18 @@ void main_adcs(void *pvParameters);
 /* ---------- COMMANDS ---------- */
 
 // TODO(blocked on uplink dispatcher): send these for TEL_CMD_SET_ADCS_OPMODE, _SET_UNIX_TIME and _ADCS_UPDATE_PARAMETERS
-// TODO(blocked on uplink format): tel_adcs_parameters_t needs B* before it can become an adcs_tle_t
+// (the last through adcs_tle_from_uplink())
+
+/**
+ * \fn adcs_tle_from_uplink
+ *
+ * \brief Converts uplinked TEL_CMD_ADCS_UPDATE_PARAMETERS data into the TLE `get_adcs_set_tle_command()` takes. Doesn't
+ *      check it: that happens when the command runs, and then again in `body()`.
+ *
+ * \param params the uplinked parameters
+ * \param tle the TLE to fill
+ */
+void adcs_tle_from_uplink(const tel_adcs_parameters_t *const params, adcs_tle_t *const tle);
 
 /**
  * \fn get_adcs_do_point_command
@@ -151,7 +162,8 @@ void adcs_compute_currents(const float *const last_mag, const float *const mag, 
 /**
  * \fn adcs_read_sensors
  *
- * \brief Reads all three ADCS sensors, and records whether any failed its device check for `adcs_update_state_inputs()`
+ * \brief Reads all three ADCS sensors, and records whether any failed its device check and whether we are in sunlight
+ *      for `adcs_update_state_inputs()`
  *
  * \param mag_tesla see `adcs_read_magnetometer()`
  * \param gyro_rad_s see `adcs_read_gyro()`
@@ -269,7 +281,7 @@ void adcs_get_telemetry(tel_adcs_data_t *const telemetry);
 /**
  * \fn adcs_update_state_inputs
  *
- * \brief Tells the task manager if the ADCS state machine inputs (pointing, sensor fault) have changed
+ * \brief Tells the task manager if the ADCS state machine inputs (pointing, sensor fault, sunlight) have changed
  */
 void adcs_update_state_inputs(void);
 

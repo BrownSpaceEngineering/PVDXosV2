@@ -24,7 +24,7 @@
 
 typedef struct {
     uint32_t sequence;      // Counts up across reboots; the highest in MRAM is the newest sweep
-    uint32_t timestamp;     // Unix time when the sweep started, see adcs_get_time(); 0 if unavailable
+    uint32_t timestamp;     // Unix time when the sweep started, see utc_get(); 0 if unavailable
     uint16_t full_scale_mv; // Input to PEROVSKITE_STEP_MV for this sweep
     uint16_t failed_steps;  // Number of PEROVSKITE_SAMPLE_INVALID samples in this sweep
     // Pixel current in INA226_CURRENT_LSB_NA (250 nA) units, positive when the pixel sources current

@@ -7,6 +7,7 @@
 
 #include "adg734.h"
 
+#include "checks/device_checks.h"
 #include "mcp23017.h"
 
 // Board routing: ADG734 #k channel c is pixel 4k + c, and pixel N's IN pin is MCP23017 pin N
@@ -43,6 +44,9 @@ static uint16_t adg734_levels_for(uint8_t pixel) {
  * pins become outputs so no switch moves to the measurement side during init.
  */
 status_t adg734_init(void) {
+    if (device_disabled(PEROVSKITE_ID)) {
+        return SUCCESS;
+    }
     status_t status = mcp23017_init();
     if (status != SUCCESS) {
         return status;

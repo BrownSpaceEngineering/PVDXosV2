@@ -3,6 +3,7 @@
 #include <FreeRTOS.h>
 #include <task.h>
 
+#include "checks/device_checks.h"
 #include "os_delay.h"
 #include "pmb_i2c.h"
 
@@ -25,6 +26,10 @@ status_t ina226_read_reg(uint8_t reg, uint16_t *value) {
  * Verifies the device ID, resets it, then writes the default configuration and calibration.
  */
 status_t ina226_init(void) {
+    // A disabled board's ID reads 0, which would fail the check below
+    if (device_disabled(PEROVSKITE_ID)) {
+        return SUCCESS;
+    }
     uint16_t mfg_id = 0;
     status_t status = ina226_read_reg(INA226_MANUFACTURER_ID, &mfg_id);
     if (status != SUCCESS) {
@@ -75,6 +80,11 @@ status_t ina226_configure(uint16_t config) {
  * Note: reading Mask/Enable clears the conversion ready flag.
  */
 status_t ina226_conversion_ready(bool *ready) {
+    // A disabled board's flag reads 0, so report ready rather than poll until the timeout
+    if (device_disabled(PEROVSKITE_ID)) {
+        *ready = true;
+        return SUCCESS;
+    }
     uint16_t me = 0;
     status_t status = ina226_read_reg(INA226_MASK_ENABLE, &me);
     if (status != SUCCESS) {

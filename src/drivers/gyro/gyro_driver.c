@@ -45,6 +45,9 @@
 
 #include "gyro_driver.h"
 
+#include <string.h>
+
+#include "checks/device_checks.h"
 #include "globals.h"
 #include "os_delay.h"
 
@@ -568,6 +571,20 @@ status_t gyro_get_status(SCH1_status_t *const p_status) {
     if (p_status == NULL) {
         return ERROR_SANITY_CHECK_FAILED;
     }
+    // While the gyro is disabled it reports healthy, so callers don't treat it as a new fault
+    if (device_disabled(GYROSCOPE_ID)) {
+        p_status->Summary = SCH16T_STATUS_REGISTER_OK;
+        p_status->Summary_Sat = SCH16T_STATUS_REGISTER_OK;
+        p_status->Common = SCH16T_STATUS_REGISTER_OK;
+        p_status->Rate_Common = SCH16T_STATUS_REGISTER_OK;
+        p_status->Rate_X = SCH16T_STATUS_REGISTER_OK;
+        p_status->Rate_Y = SCH16T_STATUS_REGISTER_OK;
+        p_status->Rate_Z = SCH16T_STATUS_REGISTER_OK;
+        p_status->Acc_X = SCH16T_STATUS_REGISTER_OK;
+        p_status->Acc_Y = SCH16T_STATUS_REGISTER_OK;
+        p_status->Acc_Z = SCH16T_STATUS_REGISTER_OK;
+        return SUCCESS;
+    }
 
     uint64_t responses[GYRO_STATUS_FRAME_COUNT];
     ret_err_status(gyro_read_registers(gyro_status_requests, responses, GYRO_STATUS_FRAME_COUNT),
@@ -685,6 +702,11 @@ status_t gyro_read(SCH1_result_t *const result) {
     if (result == NULL) {
         return ERROR_SANITY_CHECK_FAILED;
     }
+    // While the gyro is disabled it reads still: zero rate and acceleration
+    if (device_disabled(GYROSCOPE_ID)) {
+        memset(result, 0, sizeof(*result));
+        return SUCCESS;
+    }
 
     SCH1_raw_data_t raw_data;
     ret_err_status(gyro_get_data(&raw_data), "gyro: read failed\n");
@@ -714,6 +736,10 @@ status_t gyro_read(SCH1_result_t *const result) {
 status_t gyro_get_serial_number(char *const p_buffer, size_t buffer_size) {
     if (p_buffer == NULL || buffer_size < SCH16T_SERIAL_NUMBER_SIZE) {
         return ERROR_SANITY_CHECK_FAILED;
+    }
+    if (device_disabled(GYROSCOPE_ID)) {
+        p_buffer[0] = '\0';
+        return SUCCESS;
     }
 
     const uint64_t requests[3] = {SCH16T_REQ_READ_SN_ID1, SCH16T_REQ_READ_SN_ID2, SCH16T_REQ_READ_SN_ID3};
@@ -750,9 +776,50 @@ status_t gyro_get_serial_number(char *const p_buffer, size_t buffer_size) {
  * \brief Resets the sensor by pulsing its active-low EXTRESN pin
  */
 void gyro_reset(void) {
+    if (device_disabled(GYROSCOPE_ID)) {
+        return;
+    }
+    // ASF doesn't configure GYRO_RST, so drive it as a GPIO output, high (released) until the pulse
+    GYRO_RST_HIGH();
+    gpio_set_pin_function(GYRO_RST, GPIO_PIN_FUNCTION_OFF);
+    gpio_set_pin_direction(GYRO_RST, GPIO_DIRECTION_OUT);
+
     GYRO_RST_LOW();
     os_delay_ms(SCH16T_RESET_PULSE_MS);
     GYRO_RST_HIGH();
+}
+
+/**
+ * \fn gyro_enter_lpm
+ *
+ * \brief Puts the sensor in Low Power Mode (at most 10 mA, against 36-47 mA while measuring)
+ *
+ * \returns `status_t` SUCCESS if the sensor reports being in Low Power Mode, `ERROR_SPI_TRANSFER_FAILED` if STAT_INFO
+ *          could not be read, and `ERROR_NOT_READY` if the sensor is not in Low Power Mode
+ *
+ * \note EOI locks MODE_CTRL, so EN_SENSOR can't be cleared once the sensor is running. Instead this resets the sensor,
+ *       which then reads its non-volatile memory and waits in Low Power Mode for EN_SENSOR (section 5.1 of the SCH16T
+ *       data sheet). Readings are invalid until init_gyro_hardware() runs the startup sequence again.
+ */
+status_t gyro_enter_lpm(void) {
+    if (device_disabled(GYROSCOPE_ID)) {
+        return SUCCESS;
+    }
+    gyro_reset();
+    os_delay_ms(SCH16T_NVM_READ_WAIT_MS);
+
+    const uint64_t request = SCH16T_REQ_READ_STAT_INFO;
+    uint64_t response;
+    ret_err_status(gyro_read_registers(&request, &response, 1), "gyro: could not read STAT_INFO\n");
+    ret_err_status(gyro_verify_response(request, response), "gyro: STAT_INFO read was not acknowledged\n");
+
+    const uint16_t stat_info = SCH16T_SPI48_DATA_UINT16(response);
+    if ((stat_info & SCH16T_STAT_INFO_LPM_OK) != SCH16T_STAT_INFO_LPM_OK) {
+        warning("gyro: not in low power mode after reset (STAT_INFO 0x%04x)\n", stat_info);
+        return ERROR_NOT_READY;
+    }
+
+    return SUCCESS;
 }
 
 /**
@@ -789,6 +856,9 @@ static status_t gyro_configure(void) {
  *       so that a transient fault gets a second attempt rather than failing the whole init.
  */
 status_t init_gyro_hardware(void) {
+    if (device_disabled(GYROSCOPE_ID)) {
+        return SUCCESS;
+    }
     GYRO_CS_HIGH(); // leave the gyro deselected until a transfer wants it
     gyro_reset();
 
