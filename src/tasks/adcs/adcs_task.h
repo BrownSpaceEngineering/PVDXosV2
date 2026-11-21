@@ -89,8 +89,8 @@ void adcs_tle_from_uplink(const tel_adcs_parameters_t *const params, adcs_tle_t 
 /**
  * \fn get_adcs_do_point_command
  *
- * \brief Creates a command to run `body()` whenever possible, falling back to B-dot whenever it is not pointing.
- *      This is the mode ADCS starts in.
+ * \brief Creates a command to let `body()` hand off from B-dot detumbling to pointing when it is ready (it drops back
+ *      to B-dot by itself on any fault). This is the mode ADCS starts in.
  *
  * \warning any filter state left over from before a detumble-only period is reused, not reset; `body()`'s own
  *      failure checks are what catch it if it has gone stale
@@ -102,7 +102,8 @@ command_t get_adcs_do_point_command(void);
 /**
  * \fn get_adcs_detumble_only_command
  *
- * \brief Creates a command to run only B-dot, without calling `body()` at all, until told otherwise
+ * \brief Creates a command to keep `body()` in B-dot detumbling, never handing off to pointing, until told otherwise
+ *      (`body_set_detumble_only()`)
  *
  * \returns command_t command structure
  */
@@ -151,8 +152,7 @@ command_t get_adcs_set_utc_command(const uint32_t unix_time);
  * \param gyro this step's angular rate in rad/s, in gyro chip axes (3 floats)
  * \param photodiodes this step's photodiode readings (NUM_DIODES floats)
  * \param dt time since the last step, in seconds
- * \param currents buffer of 3 floats to fill with magnetorquer currents in Amps; zero if the magnetometer is unusable
- *      and `body()` is not pointing
+ * \param currents buffer of 3 floats to fill with magnetorquer currents in Amps, as `body()` commands them
  */
 void adcs_compute_currents(const float *const last_mag, const float *const mag, const float *const gyro, const float *const photodiodes,
                            const float dt, float *const currents);
@@ -223,8 +223,8 @@ void adcs_update_sunlight(const float *const photodiodes, const bool photodiodes
 /**
  * \fn adcs_get_tle_update
  *
- * \brief Gets the TLE to hand to `body()` if there is a new one, which stays pending until `body()` accepts it or
- *      has rejected it too many times
+ * \brief Gets the TLE to hand to `body()` if there is a new one, which stays pending until `body()` has accepted or
+ *      rejected it (a rejected TLE is dropped; the ground has to resend it with its metadata)
  *
  * \returns pointer to 6 TLE mean elements [n (rev/day), e, i, RAAN, argp, M (rad)], or NULL to reuse the last TLE
  */
