@@ -90,6 +90,7 @@ typedef enum {
 typedef struct {
     uhf_rx_kind_t kind;
     pusp_directive_t dir;           // Valid when kind == UHF_RX_PUSP
+    uint8_t notifs;                 // PUSP_NOTIF_* flags, valid when kind == UHF_RX_PUSP
     const radio_queue_item_t *item; // Valid when kind == UHF_RX_CFDP, ready to put on the uplink queue
 } uhf_rx_t;
 
@@ -141,6 +142,19 @@ uhf_rx_t uhf_rx_poll(uhf_ctx_t *ctx, uint32_t events);
 // True if rx is the PUSP directive dir (uhf_radio_task.c)
 bool uhf_rx_is_pusp(const uhf_rx_t *rx, pusp_directive_t dir);
 
+/**
+ * Acts on the PUSP_NOTIF_* flags of a directive from the ground: PUSP_NOTIF_DISABLE_TX / PUSP_NOTIF_ENABLE_TX turn
+ * transmitting off and on. Both at once is ignored (logged), as are unknown bits. Transmit starts enabled at boot, so a
+ * reset re-enables it (uhf_radio_task.c)
+ *
+ * \return true if this changed whether transmit is enabled
+ */
+bool dispatch_pusp_immediate_cmd(uint8_t notifs);
+
+// False while the ground has disabled transmit. uhf_step() then keeps the task in LISTEN, and every transmit is
+// refused (uhf_radio_task.c)
+bool uhf_tx_is_enabled(void);
+
 // Puts the CFDP PDU in rx on the uplink queue and counts it for radio_cfdp_turn_done(), warning if the queue is full.
 // Does nothing for other kinds (uhf_radio_task.c)
 void uhf_forward_cfdp(const uhf_rx_t *rx);
@@ -186,6 +200,15 @@ bool uhf_transmit_beacon(void);
  * counts as a fresh entry.
  */
 void uhf_enter_state(uhf_ctx_t *ctx, uhf_state_t next);
+
+/**
+ * One main loop iteration after polling: acts on rx's PUSP notification flags, then runs the current state's handler and
+ * enters the state it returns. While transmit is disabled, any other state is dropped to LISTEN (radio in RX) instead
+ * of running its handler, so a link or beacon burst can't send anything.
+ *
+ * \return the state the task is in afterwards
+ */
+uhf_state_t uhf_step(uhf_ctx_t *ctx, const uhf_rx_t *rx);
 
 // Sets retry_deadline to now + the current state's retry_ms, without touching retries. Used after a re-send prompted by
 // a duplicate so the retry timer doesn't re-send again straight after

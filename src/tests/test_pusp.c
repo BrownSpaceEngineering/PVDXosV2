@@ -24,6 +24,10 @@ static uhf_rx_t pusp_rx(pusp_directive_t dir) {
     return (uhf_rx_t){.kind = UHF_RX_PUSP, .dir = dir};
 }
 
+static uhf_rx_t pusp_rx_notifs(pusp_directive_t dir, uint8_t notifs) {
+    return (uhf_rx_t){.kind = UHF_RX_PUSP, .dir = dir, .notifs = notifs};
+}
+
 // A ctx entered into state the normal way, just heard from the ground, with no beacon due. Clears the sent count
 static uhf_ctx_t pusp_ctx(uhf_state_t state) {
     const TickType_t now = xTaskGetTickCount();
@@ -33,13 +37,9 @@ static uhf_ctx_t pusp_ctx(uhf_state_t state) {
     return ctx;
 }
 
-// One main loop iteration: runs the state's handler on rx and enters the state it returns
+// One main loop iteration after polling, as main_uhf_radio() does it
 static uhf_state_t pusp_step(uhf_ctx_t *ctx, uhf_rx_t rx) {
-    const uhf_state_t next = uhf_state_descs[ctx->state].proc(ctx, &rx);
-    if (next != ctx->state) {
-        uhf_enter_state(ctx, next);
-    }
-    return next;
+    return uhf_step(ctx, &rx);
 }
 
 // True if exactly one directive, dir, was sent since the count was last cleared
@@ -149,6 +149,37 @@ static void test_pusp_inactivity(void) {
     PVDX_ASSERT_MSG(pusp_step(&ctx, RX_NONE) == LISTEN, "inactivity: link dropped after the timeout\n");
 }
 
+// The ground turns transmit off and on with notification flags, on any directive. While off, the task only listens
+static void test_pusp_tx_toggle(void) {
+    PVDX_ASSERT_MSG(uhf_tx_is_enabled(), "toggle: transmit enabled at boot\n");
+
+    uhf_ctx_t ctx = pusp_ctx(LISTEN);
+    PVDX_ASSERT_MSG(pusp_step(&ctx, pusp_rx(NTF)) == LISTEN && uhf_pusp_tx_count == 0, "toggle: NTF alone does nothing\n");
+
+    // Flags on a normal directive mid-link drop the link without answering it
+    ctx = pusp_ctx(ESTABLISH_RECV);
+    PVDX_ASSERT_MSG(pusp_step(&ctx, pusp_rx_notifs(YLD, PUSP_NOTIF_DISABLE_TX)) == LISTEN && uhf_pusp_tx_count == 0,
+                    "toggle: disable mid-link -> LISTEN, nothing sent\n");
+    PVDX_ASSERT_MSG(!uhf_tx_is_enabled(), "toggle: transmit disabled\n");
+    PVDX_ASSERT_MSG(pusp_step(&ctx, pusp_rx(SYN)) == LISTEN && uhf_pusp_tx_count == 0, "toggle: SYN ignored while disabled\n");
+
+    ctx = pusp_ctx(SYN_RECV);
+    PVDX_ASSERT_MSG(pusp_step(&ctx, RX_NONE) == LISTEN && uhf_pusp_tx_count == 0, "toggle: any other state -> LISTEN while disabled\n");
+
+    PVDX_ASSERT_MSG(!dispatch_pusp_immediate_cmd(PUSP_NOTIF_DISABLE_TX | PUSP_NOTIF_ENABLE_TX) && !uhf_tx_is_enabled(),
+                    "toggle: both bits ignored\n");
+
+    PVDX_ASSERT_MSG(pusp_step(&ctx, pusp_rx_notifs(NTF, PUSP_NOTIF_ENABLE_TX)) == LISTEN && uhf_tx_is_enabled(),
+                    "toggle: NTF re-enables transmit\n");
+    PVDX_ASSERT_MSG(pusp_step(&ctx, pusp_rx(SYN)) == SYN_RECV && pusp_sent(SYN_ACK), "toggle: SYN answered once re-enabled\n");
+
+    // A SYN carrying the enable flag is answered straight away
+    dispatch_pusp_immediate_cmd(PUSP_NOTIF_DISABLE_TX);
+    ctx = pusp_ctx(LISTEN);
+    PVDX_ASSERT_MSG(pusp_step(&ctx, pusp_rx_notifs(SYN, PUSP_NOTIF_ENABLE_TX)) == SYN_RECV && pusp_sent(SYN_ACK),
+                    "toggle: SYN with enable flag answered\n");
+}
+
 void test_pusp(void) {
     test_log("----- testing pusp -----\n");
     test_pusp_timing();
@@ -156,6 +187,7 @@ void test_pusp(void) {
     test_pusp_recovery();
     test_pusp_retries();
     test_pusp_inactivity();
+    test_pusp_tx_toggle();
 }
 
 #endif // UNITTEST && TEST_PUSP

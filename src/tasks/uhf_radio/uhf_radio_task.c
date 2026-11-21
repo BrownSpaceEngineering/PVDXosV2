@@ -13,6 +13,7 @@
 #include "regs.h"
 #include "spp.h"
 #include "task_list.h"
+#include "tasks/cfdp/cfdp_task.h"
 #include "telemetry/telemetry.h"
 
 #define AT86_RF_IRQ_WAKEUP (1u << 0)
@@ -38,6 +39,9 @@ static struct at86rf215 at86_dev;
 // True once uhf_chip_setup() has succeeded. Until then uhf_transmit_pusp() doesn't touch the radio, which is also what
 // lets the PUSP tests (run before the radio is set up) drive the state machine
 static bool uhf_radio_ready;
+
+// Cleared by a PUSP_NOTIF_DISABLE_TX from the ground, see dispatch_pusp_immediate_cmd()
+static bool uhf_tx_enabled = true;
 
 // local uplink/downlink_queue item
 radio_queue_item_t item;
@@ -232,14 +236,52 @@ static void uhf_rx_classify(uhf_rx_t *out) {
                 warning("Radio: dropping PUSP packet on VC %u\n", vcid);
                 return;
             }
+            if (len < sizeof(pusp_packet_t)) {
+                warning("Radio: dropping %u byte PUSP packet\n", len);
+                return;
+            }
             out->kind = UHF_RX_PUSP;
-            out->dir = ((const uint8_t *)packet_view.data)[0]; // One-byte pusp_packet_t, len >= 1 checked above
-            debug("Radio: received PUSP directive %u\n", out->dir);
+            out->dir = ((const uint8_t *)packet_view.data)[0];
+            out->notifs = ((const uint8_t *)packet_view.data)[1];
+            debug("Radio: received PUSP directive %u, notifications 0x%x\n", out->dir, out->notifs);
             return;
         default:
             warning("Radio: dropping space packet with unknown APID 0x%x\n", apid);
             return;
     }
+}
+
+bool dispatch_pusp_immediate_cmd(uint8_t notifs) {
+    if (notifs & ~PUSP_NOTIF_KNOWN) {
+        warning("Radio: ignoring unknown PUSP notification bits 0x%x\n", notifs & ~PUSP_NOTIF_KNOWN);
+    }
+
+    const bool disable = (notifs & PUSP_NOTIF_DISABLE_TX) != 0;
+    const bool enable = (notifs & PUSP_NOTIF_ENABLE_TX) != 0;
+    if (disable && enable) {
+        warning("Radio: PUSP notification both disables and enables transmit, ignored\n");
+        return false;
+    }
+    if (!disable && !enable) {
+        return false;
+    }
+    if (uhf_tx_enabled == enable) {
+        debug("Radio: transmit already %s\n", enable ? "enabled" : "disabled");
+        return false;
+    }
+
+    uhf_tx_enabled = enable;
+    info("Radio: transmit %s by the ground\n", enable ? "enabled" : "disabled");
+    if (!enable) {
+        // Nothing CFDP queues can go out now, so end its transaction as cancelled. uhf_step() then drops the link,
+        // which the CFDP task may notice first: it drops the transaction anyway and discards this cancel
+        cfdp_cancel();
+    }
+    return true;
+}
+
+bool uhf_tx_is_enabled(void) {
+    return uhf_tx_enabled;
 }
 
 uhf_rx_t uhf_rx_poll(uhf_ctx_t *ctx, uint32_t events) {
@@ -701,12 +743,20 @@ bool uhf_beacon_prepare(void) {
 }
 
 /**
- * Sends one prepared frame: TXPREP, send, poll until the frame is out. Leaves the radio in TXPREP.
+ * Sends one prepared frame: TXPREP, send, poll until the frame is out. Leaves the radio in TXPREP. Refuses while
+ * transmit is disabled.
  *
  * \param what names the frame in warnings
  * \return true if the frame was sent within UHF_TX_TIMEOUT_MS (failures are logged)
  */
 static bool uhf_send_frame_blocking(const uint8_t *frame, size_t len, const char *what) {
+    // Every transmit comes through here. uhf_step() already keeps the task out of states that send while transmit is
+    // disabled; this is the backstop
+    if (!uhf_tx_enabled) {
+        warning("Radio: transmit disabled, %s not sent\n", what);
+        return false;
+    }
+
     // DATASHEET(verify): assumes CMD=TXPREP while already in TXPREP (e.g. after the previous frame of a burst) is
     // harmless and the state reads TXPREP straight away. The state diagram (5.2) doesn't show this transition explicitly
     uhf_go_txprep();

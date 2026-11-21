@@ -125,10 +125,7 @@ void main_uhf_radio(void *pvParameters) {
         xTaskNotifyWait(0, UINT32_MAX, &events, uhf_ticks_until_wake(&ctx));
 
         const uhf_rx_t rx = uhf_rx_poll(&ctx, events);
-        const uhf_state_t next = uhf_state_descs[ctx.state].proc(&ctx, &rx);
-        if (next != ctx.state) {
-            uhf_enter_state(&ctx, next);
-        }
+        uhf_step(&ctx, &rx);
 
         uhf_watchdog_checkin();
     }

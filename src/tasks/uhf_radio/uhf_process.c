@@ -50,7 +50,8 @@ uhf_state_t beacon_proc(uhf_ctx_t *ctx, const uhf_rx_t *rx) {
 }
 
 /**
- * No link. Radio in RX, waiting for a SYN.
+ * No link. Radio in RX, waiting for a SYN. While transmit is disabled this is the only state: SYNs are ignored and no
+ * beacon starts.
  */
 uhf_state_t listen_proc(uhf_ctx_t *ctx, const uhf_rx_t *rx) {
     switch (rx->kind) {
@@ -60,7 +61,14 @@ uhf_state_t listen_proc(uhf_ctx_t *ctx, const uhf_rx_t *rx) {
             warning("Radio: dropping CFDP PDU received in LISTEN, no link\n");
             return LISTEN;
         case UHF_RX_PUSP:
+            if (rx->dir == NTF) {
+                return LISTEN; // Only carries notification flags, which uhf_step() has already acted on
+            }
             if (rx->dir == SYN) {
+                if (!uhf_tx_is_enabled()) {
+                    info("Radio: ignoring SYN, transmit disabled\n");
+                    return LISTEN;
+                }
                 uhf_transmit_pusp(SYN_ACK);
                 return SYN_RECV;
             }
@@ -70,7 +78,7 @@ uhf_state_t listen_proc(uhf_ctx_t *ctx, const uhf_rx_t *rx) {
             break;
     }
 
-    if (!uhf_deadline_passed(ctx->next_beacon)) {
+    if (!uhf_tx_is_enabled() || !uhf_deadline_passed(ctx->next_beacon)) {
         return LISTEN;
     }
 

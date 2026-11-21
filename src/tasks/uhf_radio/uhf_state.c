@@ -46,6 +46,28 @@ void uhf_enter_state(uhf_ctx_t *ctx, uhf_state_t next) {
     }
 }
 
+uhf_state_t uhf_step(uhf_ctx_t *ctx, const uhf_rx_t *rx) {
+    if (rx->kind == UHF_RX_PUSP) {
+        dispatch_pusp_immediate_cmd(rx->notifs);
+    }
+
+    if (!uhf_tx_is_enabled() && ctx->state != LISTEN) {
+        // BEACON and ESTABLISH_SEND keep the radio in TXPREP; every other state is already in RX. The frame that got us
+        // here belonged to the link being dropped, so LISTEN's handler doesn't see it
+        if (ctx->state == BEACON || ctx->state == ESTABLISH_SEND) {
+            uhf_go_rx();
+        }
+        uhf_enter_state(ctx, LISTEN);
+        return LISTEN;
+    }
+
+    const uhf_state_t next = uhf_state_descs[ctx->state].proc(ctx, rx);
+    if (next != ctx->state) {
+        uhf_enter_state(ctx, next);
+    }
+    return ctx->state;
+}
+
 void uhf_rearm_retry(uhf_ctx_t *ctx) {
     const uint16_t retry_ms = uhf_state_descs[ctx->state].retry_ms;
     if (retry_ms != 0) {

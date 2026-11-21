@@ -104,6 +104,11 @@ void main_cfdp(void *pvParameters) {
             warning("cfdp: pass ended, dropping txn %lu\n", cfdp_txn_store.txn.transaction_id.seq_num);
             cfdp_free_transaction();
         }
+        // Notifications are only read while a transaction is active, so a cancel (e.g. the ground disabling transmit)
+        // or timeout that arrives as the link goes down would otherwise hit the next pass's transaction
+        if (!view.link_up) {
+            xTaskNotifyWait(0, CFDP_NOTIFY_ALL, NULL, 0);
+        }
 
         TickType_t poll = pdMS_TO_TICKS(CFDP_POLL_MS);
         if (!cfdp_txn_store.active) {
