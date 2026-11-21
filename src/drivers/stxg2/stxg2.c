@@ -7,6 +7,7 @@
 
 #include "stxg2.h"
 
+#include <peripheral_clk_config.h>
 #include <string.h>
 
 #include "checks/device_checks.h"
@@ -31,6 +32,20 @@ static struct spi_xfer stxg2_xfer = {.rxbuf = NULL, .txbuf = stxg2_spi_tx_buffer
 static int32_t last_i2c_error = 0;          // ASF return code of the last failed transfer
 static bool i2c_status_needs_clear = false; // A failed transfer can set flags in I2C_STAT
 
+// The waits below are timed with the cycle counter rather than by counting polls: a failed I2C read can take far longer
+// than STXG2_POLL_MS (a radio holding SCL low makes each one run to the bus timeout), and the boot wait runs in the
+// device checks, before the scheduler's tick does.
+static uint32_t stxg2_timer_start(void) {
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+    return DWT->CYCCNT;
+}
+
+// Timeouts up to 35 s fit the 32-bit counter at 120 MHz
+static bool stxg2_timed_out(uint32_t start, uint32_t timeout_ms) {
+    return DWT->CYCCNT - start >= timeout_ms * (CONF_CPU_FREQUENCY / 1000u);
+}
+
 static bool store_active = false;
 static uint32_t store_words_sent = 0; // Since SPI enable
 static uint8_t store_carry[4] = {0};  // Partial word
@@ -48,7 +63,8 @@ static status_t stxg2_poll_reg(uint16_t addr, uint32_t mask, uint32_t expected, 
     uint32_t value = 0;
     status_t read_result = ERROR_NOT_READY;
     bool read_succeeded = false;
-    for (uint32_t waited = 0; waited <= timeout_ms; waited += STXG2_POLL_MS) {
+    const uint32_t start = stxg2_timer_start();
+    do {
         read_result = stxg2_read_reg(addr, &value);
         if (read_result == SUCCESS) {
             read_succeeded = true;
@@ -60,7 +76,7 @@ static status_t stxg2_poll_reg(uint16_t addr, uint32_t mask, uint32_t expected, 
             }
         }
         os_delay_ms(STXG2_POLL_MS);
-    }
+    } while (!stxg2_timed_out(start, timeout_ms));
     if (!read_succeeded) {
         warning("stxg2: all reads of 0x%04x failed (i2c error %ld)\n", addr, (long)last_i2c_error);
         return read_result;
@@ -250,13 +266,14 @@ status_t stxg2_init(void) {
     // Reads fail until the radio boots
     uint32_t id = 0;
     status_t result = ERROR_NOT_READY;
-    for (uint32_t waited = 0; waited <= STXG2_BOOT_TIMEOUT_MS; waited += STXG2_POLL_MS) {
+    const uint32_t start = stxg2_timer_start();
+    do {
         result = stxg2_read_reg(REG_ID, &id);
         if (result == SUCCESS) {
             break;
         }
         os_delay_ms(STXG2_POLL_MS);
-    }
+    } while (!stxg2_timed_out(start, STXG2_BOOT_TIMEOUT_MS));
     if (result == ERROR_I2C_FAILED) {
         warning("stxg2: no answer on I2C after %u ms (i2c error %ld)\n", STXG2_BOOT_TIMEOUT_MS, (long)last_i2c_error);
         return result;
@@ -310,7 +327,8 @@ status_t stxg2_set_mode(stxg2_mode_t mode) {
     ret_err_status(stxg2_write_reg(REG_MODE, (uint32_t)mode), "stxg2: mode write failed\n");
 
     uint32_t value = 0;
-    for (uint32_t waited = 0; waited <= STXG2_MODE_TIMEOUT_MS; waited += STXG2_POLL_MS) {
+    const uint32_t start = stxg2_timer_start();
+    do {
         // The radio does not answer I2C during the switch
         if (stxg2_read_reg(REG_MODE, &value) != SUCCESS) {
             os_delay_ms(STXG2_POLL_MS);
@@ -324,7 +342,7 @@ status_t stxg2_set_mode(stxg2_mode_t mode) {
             return SUCCESS;
         }
         os_delay_ms(STXG2_POLL_MS);
-    }
+    } while (!stxg2_timed_out(start, STXG2_MODE_TIMEOUT_MS));
     warning("stxg2: timeout changing to mode %u (MODE = 0x%08lx)\n", (unsigned)mode, (unsigned long)value);
     return ERROR_NOT_READY;
 }

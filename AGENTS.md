@@ -122,8 +122,8 @@ documented in `.agents/skills/`.
 
 The `flatsat-hil` submodule (PVDX-flatsat-hil) holds the flatsat's
 hardware-in-the-loop rig: `flatsat-hil/tester/` is firmware for a second Grand
-Central that emulates the S-band radio, which the flatsat lacks, and the
-perovskite board, drives its photodiode and thermistor inputs, and records its
+Central that emulates the S-band radio, which the flatsat lacks, the
+perovskite board and the battery fuel gauges, drives its photodiode and thermistor inputs, and records its
 digital outputs, and
 `flatsat-hil/hil/` is a pytest suite that sends commands to it over RTT through
 a second J-Link, reads the flatsat's RTT log over the flatsat's J-Link, and

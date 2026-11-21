@@ -52,6 +52,8 @@
 // usually be enough on the first check
 #define ADCS_MAG_CONVERSION_MS 8
 #define ADCS_MAG_MAX_EXTRA_CHECKS 10
+// How often the sensor readings are logged, in steps (about 5 s): for the flatsat test rig, without filling the log
+#define ADCS_SENSOR_LOG_STEPS 50
 
 // TODO(blocked on hardware team): confirm these are V/R (the current at 100% duty); lower safety limits would get exceeded
 static const float MTQ_FULL_DUTY_CURRENT_A[3] = {0.156f, 0.156f, 0.104f};
@@ -407,11 +409,35 @@ static void update_sunlight(const float *const photodiodes, const bool photodiod
     }
 }
 
+// Rounds to an integer for the log, which has no %f
+static long adcs_log_int(const float value) {
+    return lroundf(value);
+}
+
+// For the flatsat test rig (flatsat-hil/hil/tests/test_real_devices.py), every ADCS_SENSOR_LOG_STEPS steps. Skipped while
+// a reading is missing (NaN after a failed read, which has already logged a warning)
+static void adcs_log_sensors(const float *const mag_tesla, const float *const gyro_rad_s) {
+    static uint32_t steps = 0;
+    if (++steps < ADCS_SENSOR_LOG_STEPS) {
+        return;
+    }
+    steps = 0;
+    for (size_t i = 0; i < 3; i++) {
+        if (!isfinite(mag_tesla[i]) || !isfinite(gyro_rad_s[i])) {
+            return;
+        }
+    }
+    debug("adcs: mag [%ld,%ld,%ld] nT, gyro [%ld,%ld,%ld] mrad/s\n", adcs_log_int(mag_tesla[0] * 1e9f),
+          adcs_log_int(mag_tesla[1] * 1e9f), adcs_log_int(mag_tesla[2] * 1e9f), adcs_log_int(gyro_rad_s[0] * 1e3f),
+          adcs_log_int(gyro_rad_s[1] * 1e3f), adcs_log_int(gyro_rad_s[2] * 1e3f));
+}
+
 void adcs_read_sensors(float *const mag_tesla, float *const gyro_rad_s, float *const photodiodes) {
     sensor_fault = false;
     adcs_read_magnetometer(mag_tesla);
     adcs_read_gyro(gyro_rad_s);
     update_sunlight(photodiodes, adcs_read_photodiodes(photodiodes) == SUCCESS);
+    adcs_log_sensors(mag_tesla, gyro_rad_s);
 }
 
 /* ---------- ACTUATORS, TELEMETRY AND STATE MACHINE ---------- */
@@ -424,8 +450,10 @@ void adcs_drive_magnetorquers(const float *const currents) {
 
     // TODO(blocked on hardware team): confirm positive duty gives a positive moment; a reversed coil makes B-dot spin us up
     mtq_set_all(duty[0], duty[1], duty[2]);
-    // For the flatsat test rig (flatsat-hil/hil/tests/test_magnetorquers.py), which compares it with the recorded PWM
-    debug("adcs: magnetorquer duty [x,y,z]: [%f,%f,%f]\n", duty[0], duty[1], duty[2]);
+    // For the flatsat test rig (flatsat-hil/hil/tests/test_magnetorquers.py), which compares it with the recorded PWM. In
+    // thousandths, since the log has no %f
+    debug("adcs: magnetorquer duty [x,y,z]: [%ld,%ld,%ld]/1000\n", adcs_log_int(duty[0] * 1000.0f), adcs_log_int(duty[1] * 1000.0f),
+          adcs_log_int(duty[2] * 1000.0f));
 }
 
 void adcs_publish_telemetry(void) {
