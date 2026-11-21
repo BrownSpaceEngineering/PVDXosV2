@@ -20,10 +20,16 @@ SHARED_MRAM_DIR := ../../../src/drivers/mram
 
 STAGE2_OBJS := \
 ../src/stage2.o \
-mram_driver.o \
-../src/mram_delay.o \
 ../src/flash_driver.o \
 ../src/watchdog_driver.o
+
+# `make NO_MRAM=1` (also works from the top-level Makefile) builds a stage 2 that never touches MRAM: it doesn't check
+# or repair flash, ignores flash_to_mram requests, and jumps straight to PVDXos
+ifneq ($(NO_MRAM),)
+CFLAGS += -DNO_MRAM
+else
+STAGE2_OBJS += mram_driver.o ../src/mram_delay.o
+endif
 
 export OBJS := $(STAGE2_OBJS)
 

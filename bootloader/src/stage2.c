@@ -10,6 +10,9 @@
  * MRAM. The outcome is left in backup RAM (boot_report_t) for PVDXos to log.
  *
  * Data is never written to flash unless its CRC matches the reference header.
+ *
+ * Built with NO_MRAM (`make NO_MRAM=1`), it never touches MRAM: flash is not checked, flash_to_mram requests are
+ * cleared and ignored, and the report says GOLDEN_DISABLED.
  */
 
 #include <stddef.h>
@@ -27,10 +30,12 @@
 #define BOOTLOADER_MAGIC_ADDR (0x47000000u)
 #define BOOTLOADER_MAGIC_VALUE (0x50564458u) // ASCII 'PVDX'
 
+static boot_report_t report;
+
+#ifndef NO_MRAM
 static uint8_t block_buffer[IMAGE_BLOCK_SIZE] __attribute__((aligned(4)));
 static uint8_t header_buffer[MRAM_GOLDEN_HEADER_READ_SIZE] __attribute__((aligned(4)));
 static image_header_t golden_header;
-static boot_report_t report;
 
 /* ---------- IMAGE HEADER AND BLOCKS ---------- */
 
@@ -141,13 +146,17 @@ static void repair_flash(const image_header_t *reference) {
     }
 }
 
+#endif // NO_MRAM
+
 /* ---------- JUMP TO PVDXOS ---------- */
 
 static void go_to_app(void) {
     // Hand over the hardware: watchdog still running but just petted, so PVDXos has a full period to set it up again,
     // no bootloader peripherals or interrupts, flash caches back on
     watchdog_pet();
+#ifndef NO_MRAM
     spi_m_sync_disable(&SPI_MRAM);
+#endif
     NVIC_DisableIRQ(NVMCTRL_0_IRQn);
     NVIC_DisableIRQ(NVMCTRL_1_IRQn);
     enable_flash_caches();
@@ -173,9 +182,12 @@ static void go_to_app(void) {
 int main(void) {
     watchdog_setup();
     atmel_start_init();
+#ifdef NO_MRAM
+    const mram_status_t mram_status = 0; // MRAM_STATE_OFF for every chip
+#else
     spi_m_sync_enable(&SPI_MRAM);
-
     const mram_status_t mram_status = mram_init();
+#endif
     disable_flash_caches();
 
     report = (boot_report_t){
@@ -189,6 +201,10 @@ int main(void) {
     const bool write_flash_to_mram = (*request == WRITE_TO_MRAM_REQUEST_MAGIC);
     *request = 0;
 
+#ifdef NO_MRAM
+    (void)write_flash_to_mram;
+    report.golden_state = GOLDEN_DISABLED;
+#else
     if (write_flash_to_mram) {
         const bool written = write_golden_copy((const image_header_t *)FLASH_METADATA_ADDR);
         report.golden_state = written ? GOLDEN_WRITTEN : GOLDEN_WRITE_FAILED;
@@ -198,6 +214,7 @@ int main(void) {
     } else {
         report.golden_state = GOLDEN_UNREADABLE;
     }
+#endif
 
     go_to_app();
     __builtin_unreachable();

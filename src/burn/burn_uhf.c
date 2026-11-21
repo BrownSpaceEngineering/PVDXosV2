@@ -1,6 +1,7 @@
 #include "burn_uhf.h"
 
 #include "globals.h"
+#include "os_delay.h"
 
 #if defined(BURN_SEQUENCE) && BURN_SEQUENCE_UHF_MODE != BURN_UHF_MODE_OFF
 
@@ -105,7 +106,7 @@ static void uhf_sleep_ms(uint32_t ms) {
     const uint32_t start = uhf_ms();
     while (uhf_ms() - start < ms) {
         uhf_service();
-        delay_us(100);
+        os_delay_us(100);
     }
 }
 
@@ -121,7 +122,7 @@ static bool uhf_wait_state(at86rf215_rf_state_t want, uint32_t timeout_ms) {
             return true;
         }
         uhf_service();
-        delay_us(20);
+        os_delay_us(20);
     } while (uhf_ms() - start < timeout_ms);
     return false;
 }

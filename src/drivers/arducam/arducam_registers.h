@@ -13,7 +13,7 @@ extern const struct sensor_reg OV2640_352x288_JPEG[];
 extern const struct sensor_reg OV2640_640x480_JPEG[];
 extern const struct sensor_reg OV2640_800x600_JPEG[];
 extern const struct sensor_reg OV2640_1024x768_JPEG[];
-extern const struct sensor_reg OV2640_1280x1024_JPEG[];
+extern const struct sensor_reg OV2640_1280x960_JPEG[];
 extern const struct sensor_reg OV2640_1600x1200_JPEG[];
 
 #endif // ARDUCAM_REGISTERS_H

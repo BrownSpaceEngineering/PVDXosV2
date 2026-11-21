@@ -79,11 +79,30 @@ typedef struct {
     uint8_t input_variables[3];
 } tel_state_machine_data_t;
 
+// ADCS operating mode, sent as 2 bytes in the SET_ADCS_OP_MODE uplink command and as 1 byte in the downlink
+typedef enum {
+    TEL_ADCS_OPMODE_POINT = 0,         // point whenever possible, detumble (B-dot) whenever not pointing; the default
+    TEL_ADCS_OPMODE_DETUMBLE_ONLY = 1, // B-dot only; the attitude filter doesn't run
+    TEL_ADCS_OPMODE_COUNT,             // not a mode
+} tel_adcs_opmode_t;
+
+// Bits of tel_adcs_data_t.flags
+#define TEL_ADCS_FLAG_POINTING (1u << 0)
+#define TEL_ADCS_FLAG_ATTITUDE_VALID (1u << 1)
+#define TEL_ADCS_FLAG_POSITION_VALID (1u << 2)
+#define TEL_ADCS_FLAG_IN_SUNLIGHT (1u << 3)
+#define TEL_ADCS_FLAG_TLE_LOADED (1u << 4)
+#define TEL_ADCS_FLAG_UTC_VALID (1u << 5)
+
 typedef struct {
-    float position[3];
-    float attitude[3];
-    float state[7];      // error 6-vector & bias value
-    float covariance[4]; // 2x2 matrix
+    float position[3];            // ECI, meters, from the last SGP4 propagation; zero if TEL_ADCS_FLAG_POSITION_VALID is clear
+    float attitude[3];            // body-to-ECI rotation vector (axis * angle), radians; zero if TEL_ADCS_FLAG_ATTITUDE_VALID is clear
+    float gyro_bias[3];           // estimated gyro bias, rad/s
+    float covariance_diag[6];     // filter covariance diagonal: attitude error variances (rad^2), then gyro bias variances
+    uint8_t opmode;               // a tel_adcs_opmode_t
+    uint8_t flags;                // TEL_ADCS_FLAG_* bits
+    uint16_t filter_resets;       // times the filter has diverged and fallen back to detumbling since boot
+    uint32_t tle_epoch_unix_time; // epoch of the TLE in use, truncated to whole seconds; 0 if none is loaded
 } tel_adcs_data_t;
 
 typedef struct {

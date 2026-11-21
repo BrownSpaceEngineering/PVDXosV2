@@ -44,9 +44,10 @@ def open_rtt_channels_arducam_debug(logfile = None):
                 logfile.write(text1)
 
             # Detect image start / end markers in logs
-            m = re.search(r"IMG_BEGIN len=(\d+)", text1)
+            # The length comes in IMG_END (older firmware gave it in IMG_BEGIN)
+            m = re.search(r"IMG_BEGIN(?: len=(\d+))?", text1)
             if m and not receiving:
-                expected_len = int(m.group(1))
+                expected_len = int(m.group(1)) if m.group(1) else None
                 received = 0
                 # Make a file name based on time
                 current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -58,9 +59,10 @@ def open_rtt_channels_arducam_debug(logfile = None):
                 receiving = True
                 print(f"[RTT] Starting image capture to {img_path} ({expected_len} bytes)")
 
-            if "IMG_END" in text1 and receiving and img_file is not None:
-                # We also stop by size guard below; this is just informational.
-                print(f"[RTT] IMG_END seen in logs.")
+            m = re.search(r"IMG_END len=(\d+)", text1)
+            if m and receiving and img_file is not None:
+                expected_len = int(m.group(1))
+                print(f"[RTT] IMG_END seen in logs ({expected_len} bytes).")
 
         # If we’re receiving, drain channel 2 (binary)
         if receiving and img_file is not None:
@@ -68,12 +70,12 @@ def open_rtt_channels_arducam_debug(logfile = None):
             if buf2:
                 img_file.write(bytes(buf2))
                 received += len(buf2)
-                if received >= expected_len:
-                    img_file.flush()
-                    img_file.close()
-                    print(f"[RTT] Image saved ({received} bytes).")
-                    receiving = False
-                    img_file = None
+            if expected_len is not None and received >= expected_len:
+                img_file.flush()
+                img_file.close()
+                print(f"[RTT] Image saved ({received} bytes).")
+                receiving = False
+                img_file = None
 
 
 def main():

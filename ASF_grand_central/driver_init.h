@@ -55,7 +55,7 @@ extern struct i2c_m_sync_desc       I2C_SBAND;
 extern struct spi_m_sync_descriptor SPI_MAGNETOMETER_GYRO;
 extern struct spi_m_sync_descriptor SPI_SBAND;
 
-extern struct i2c_m_sync_desc       I2C_CAMERA;
+extern struct i2c_m_sync_desc       I2C_SENSORS;
 extern struct spi_m_sync_descriptor SPI_UHF;
 
 extern struct rand_sync_desc RAND_0;
@@ -94,9 +94,9 @@ void SPI_SBAND_PORT_init(void);
 void SPI_SBAND_CLOCK_init(void);
 void SPI_SBAND_init(void);
 
-void I2C_CAMERA_CLOCK_init(void);
-void I2C_CAMERA_init(void);
-void I2C_CAMERA_PORT_init(void);
+void I2C_SENSORS_CLOCK_init(void);
+void I2C_SENSORS_init(void);
+void I2C_SENSORS_PORT_init(void);
 
 void SPI_UHF_PORT_init(void);
 void SPI_UHF_CLOCK_init(void);

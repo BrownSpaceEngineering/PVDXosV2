@@ -2,16 +2,17 @@
 #define MRAM_H
 
 // Shared by the bootloader (stage 2) and PVDXos. MRAM 0x000000-0x07EFFF holds the bootloader's golden copy of flash
-// (layout in bootloader/src/image_format.h); PVDXos must not write there.
-
-#define MRAM_PEROVSKITE_BASE_ADDRESS (0x00090000) // Address of perovskite sweeps in MRAM, past the golden copy
-#define MRAM_PEROVSKITE_SIZE (0x4800)             // Size of perovskite sweeps in MRAM
+// (layout in bootloader/src/image_format.h). PVDXos must not call this driver directly: it goes through
+// src/drivers/mram/mram_map.h, which keeps each task inside its own region and serializes access between tasks.
 
 #include "atmel_start.h"
 #include "hal_delay.h"
 #include "hal_gpio.h"
 
 typedef uint8_t mram_status_t;
+
+// SPI clock for all three chips, set by mram_init() in both the bootloader and PVDXos
+#define MRAM_SPI_HZ 1000000
 
 #define MRAM_STATE_OFF (0x00)      // MRAM module powered off.
 #define MRAM_STATE_OK (0x01)       // MRAM module functioning as expected.
@@ -39,6 +40,9 @@ mram_status_t mram_init(void);
 bool mram_read_bytes(uint32_t address, uint8_t *data, uint32_t size);
 // Writes all three chips. Returns false if any chip's write fails.
 bool mram_write_bytes(uint32_t address, const uint8_t *data, uint32_t size);
+// Read or write one chip (1-3), whatever state mram_init() found it in. Return false if the transfer fails.
+bool mram_read_chip(uint8_t mram, uint32_t address, uint8_t *data, uint32_t size);
+bool mram_write_chip(uint8_t mram, uint32_t address, const uint8_t *data, uint32_t size);
 uint32_t crc32(const uint8_t *block, uint32_t size);
 
 #endif

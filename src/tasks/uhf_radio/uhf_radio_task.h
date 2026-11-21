@@ -234,6 +234,9 @@ uhf_state_t uhf_link_check(uhf_ctx_t *ctx, const uhf_rx_t *rx);
 // True once deadline has passed. Compares (int32_t)(now - deadline) >= 0, so tick wraparound is harmless
 bool uhf_deadline_passed(TickType_t deadline);
 
+// Ticks from now until deadline, 0 if it has passed
+TickType_t uhf_ticks_until(TickType_t now, TickType_t deadline);
+
 /**
  * How long the main loop may block: until the earliest deadline that matters in ctx->state (retry_deadline, next_beacon
  * in LISTEN, yield_deadline in ESTABLISH_SEND, the link timeout in link states), capped so watchdog check-ins

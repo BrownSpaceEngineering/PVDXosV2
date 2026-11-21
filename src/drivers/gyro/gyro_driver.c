@@ -46,7 +46,7 @@
 #include "gyro_driver.h"
 
 #include "globals.h"
-#include "hal_delay.h"
+#include "os_delay.h"
 
 // The configuration from gyro_driver.h, in the shape the setter functions want it
 static const SCH1_filter_t gyro_filter = {
@@ -89,25 +89,6 @@ static const uint64_t gyro_status_requests[GYRO_STATUS_FRAME_COUNT] = {
 };
 
 /* ---------- HARDWARE LAYER ---------- */
-
-/**
- * \fn gyro_delay_ms
- *
- * \brief Blocks for the given number of milliseconds, whether or not the RTOS is running yet
- *
- * \param ms how long to wait, in milliseconds
- *
- * \note init_gyro_hardware() is reached from check_all_devices_on_startup(), which runs in
- *       main() before vTaskStartScheduler(). vTaskDelay() cannot be used there, but the
- *       SysTick-based delay_ms() must not be used once FreeRTOS owns SysTick, so pick per call.
- */
-static void gyro_delay_ms(uint16_t ms) {
-    if (xTaskGetSchedulerState() == taskSCHEDULER_NOT_STARTED) {
-        delay_ms(ms);
-    } else {
-        vTaskDelay(pdMS_TO_TICKS(ms));
-    }
-}
 
 /**
  * \fn gyro_crc8
@@ -769,9 +750,44 @@ status_t gyro_get_serial_number(char *const p_buffer, size_t buffer_size) {
  * \brief Resets the sensor by pulsing its active-low EXTRESN pin
  */
 void gyro_reset(void) {
-    GYRO_RST_LOW();
-    gyro_delay_ms(SCH16T_RESET_PULSE_MS);
+    // ASF doesn't configure GYRO_RST, so drive it as a GPIO output, high (released) until the pulse
     GYRO_RST_HIGH();
+    gpio_set_pin_function(GYRO_RST, GPIO_PIN_FUNCTION_OFF);
+    gpio_set_pin_direction(GYRO_RST, GPIO_DIRECTION_OUT);
+
+    GYRO_RST_LOW();
+    os_delay_ms(SCH16T_RESET_PULSE_MS);
+    GYRO_RST_HIGH();
+}
+
+/**
+ * \fn gyro_enter_lpm
+ *
+ * \brief Puts the sensor in Low Power Mode (at most 10 mA, against 36-47 mA while measuring)
+ *
+ * \returns `status_t` SUCCESS if the sensor reports being in Low Power Mode, `ERROR_SPI_TRANSFER_FAILED` if STAT_INFO
+ *          could not be read, and `ERROR_NOT_READY` if the sensor is not in Low Power Mode
+ *
+ * \note EOI locks MODE_CTRL, so EN_SENSOR can't be cleared once the sensor is running. Instead this resets the sensor,
+ *       which then reads its non-volatile memory and waits in Low Power Mode for EN_SENSOR (section 5.1 of the SCH16T
+ *       data sheet). Readings are invalid until init_gyro_hardware() runs the startup sequence again.
+ */
+status_t gyro_enter_lpm(void) {
+    gyro_reset();
+    os_delay_ms(SCH16T_NVM_READ_WAIT_MS);
+
+    const uint64_t request = SCH16T_REQ_READ_STAT_INFO;
+    uint64_t response;
+    ret_err_status(gyro_read_registers(&request, &response, 1), "gyro: could not read STAT_INFO\n");
+    ret_err_status(gyro_verify_response(request, response), "gyro: STAT_INFO read was not acknowledged\n");
+
+    const uint16_t stat_info = SCH16T_SPI48_DATA_UINT16(response);
+    if ((stat_info & SCH16T_STAT_INFO_LPM_OK) != SCH16T_STAT_INFO_LPM_OK) {
+        warning("gyro: not in low power mode after reset (STAT_INFO 0x%04x)\n", stat_info);
+        return ERROR_NOT_READY;
+    }
+
+    return SUCCESS;
 }
 
 /**
@@ -808,8 +824,6 @@ static status_t gyro_configure(void) {
  *       so that a transient fault gets a second attempt rather than failing the whole init.
  */
 status_t init_gyro_hardware(void) {
-    spi_m_sync_enable(&SPI_MAGNETOMETER_GYRO); // if you forget this line, every transfer returns -20
-
     GYRO_CS_HIGH(); // leave the gyro deselected until a transfer wants it
     gyro_reset();
 
@@ -817,14 +831,14 @@ status_t init_gyro_hardware(void) {
 
     for (uint8_t attempt = 0; attempt < SCH16T_STARTUP_ATTEMPTS; attempt++) {
         // Wait for the sensor to read its non-volatile memory
-        gyro_delay_ms(SCH16T_NVM_READ_WAIT_MS);
+        os_delay_ms(SCH16T_NVM_READ_WAIT_MS);
 
         if (gyro_configure() != SUCCESS) {
             warning("gyro hardware init: could not configure sensor on attempt %d\n", attempt);
         }
 
         // Wait for the sensor to stabilise now that it is measuring
-        gyro_delay_ms(SCH16T_STARTUP_WAIT_MS);
+        os_delay_ms(SCH16T_STARTUP_WAIT_MS);
 
         // The data sheet asks for one status read here. Its contents are not checked: the
         // sensor is still latching start-up faults that only settle once EOI has been set.
@@ -837,7 +851,7 @@ status_t init_gyro_hardware(void) {
             warning("gyro hardware init: could not set the end-of-initialization bit on attempt %d\n", attempt);
         }
 
-        gyro_delay_ms(SCH16T_EOI_WAIT_MS);
+        os_delay_ms(SCH16T_EOI_WAIT_MS);
 
         // Read the status registers twice; only the second read reflects the post-EOI state
         status_t first_read = gyro_get_status(&device_status);

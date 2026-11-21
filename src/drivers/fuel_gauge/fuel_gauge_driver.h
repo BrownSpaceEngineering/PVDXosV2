@@ -10,7 +10,7 @@
  * the same I2C address; firmware selects one channel at a time. A single active-low
  * ALRT line is shared by all four gauges, so an alert requires scanning all four.
  *
- * Bus: the mux + gauges live on the I2C_CAMERA descriptor (SERCOM6 on this branch),
+ * Bus: the mux + gauges live on the I2C_SENSORS descriptor (SERCOM6 on this branch),
  * shared with the Arducam (0x30), an INA226 (0x40) and an MCP23017 (0x20). The MAX
  * addresses (0x36/0x0B) are only visible while a mux channel is open; this driver
  * closes all channels when done so nothing downstream shadows the bus. See the plan
@@ -24,7 +24,6 @@
 #include "string.h"
 
 // ---- Bus / device addresses (7-bit) ----
-#define FG_I2C          I2C_CAMERA // shared bus; SERCOM6
 #define FG_MUX_ADDR     0x70       // TCA9546A (A2:A0 = 000)
 #define FG_MAX_ADDR_LOW 0x36       // MAX17205 m5 page: regs 0x000-0x0FF
 #define FG_MAX_ADDR_HIGH 0x0B      // MAX17205 SBS/NV page: regs 0x100-0x1FF

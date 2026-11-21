@@ -39,15 +39,17 @@ typedef enum uplink_cmd_type {
 
 typedef uint16_t uplink_cmd_type_t;
 
-// Data for ADCS_UPDATE_PARAMS
+// Data for ADCS_UPDATE_PARAMS: a TLE's mean elements, in TLE line 2 order, plus its epoch and B*.
+// These are SGP4 mean elements: they must be copied from a TLE as is, not replaced with osculating Kepler elements.
 typedef struct {
-    uint32_t timestamp;
-    float inclination;         // degrees, angle from equatorial reference plane
-    float raan;                // degrees, measured in ECI
+    double epoch_jd;           // TLE epoch, UTC, as a Julian date (a float32 or whole seconds would lose ~km of position)
+    float inclination;         // degrees
+    float raan;                // degrees, right ascension of the ascending node
     float eccentricity;        // unitless, 0-1
     float argument_of_perigee; // degrees
-    float mean_anomaly;
-    float mean_motion; // revolutions per day
+    float mean_anomaly;        // degrees
+    float mean_motion;         // revolutions per day
+    float bstar;               // B* drag term, 1/earth radii
 } uplink_adcs_parameters_t;
 
 typedef struct {
@@ -63,7 +65,7 @@ typedef struct {
         int32_t photo_count;
         float kepler_coefficients[UPLINK_KEPLER_COEFFICIENTS];
         uint32_t unix_time;
-        uint16_t adcs_op_mode;
+        uint16_t adcs_op_mode; // a tel_adcs_opmode_t
         uplink_adcs_parameters_t adcs_parameters;
         uint16_t power_mode;
     } args;

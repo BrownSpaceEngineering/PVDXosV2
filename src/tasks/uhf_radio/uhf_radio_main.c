@@ -27,6 +27,7 @@
 #include "at86rf215.h"
 #include "ccsds/radio_routing.h"
 #include "ccsds/uslp.h"
+#include "drivers/rtc/rtc_driver.h"
 #include "libraries/cmd_dispatcher/cmd_dispatcher.h"
 #include "logging.h"
 #include "portmacro.h"
@@ -120,12 +121,24 @@ void main_uhf_radio(void *pvParameters) {
     const TickType_t start = xTaskGetTickCount();
     uhf_ctx_t ctx = {.state = LISTEN, .last_rx = start, .next_beacon = start + pdMS_TO_TICKS(UHF_BEACON_PERIOD_MS)};
 
+    // The RTC is calibrated against the radio's timestamp counter here, since this task owns the radio's SPI bus
+    TickType_t next_rtc_calibration = start + pdMS_TO_TICKS(RTC_CALIBRATE_PERIOD_MS);
+
     while (true) {
+        TickType_t wait = uhf_ticks_until_wake(&ctx);
+        const TickType_t until_rtc_calibration = uhf_ticks_until(xTaskGetTickCount(), next_rtc_calibration);
+        wait = until_rtc_calibration < wait ? until_rtc_calibration : wait;
+
         uint32_t events = 0;
-        xTaskNotifyWait(0, UINT32_MAX, &events, uhf_ticks_until_wake(&ctx));
+        xTaskNotifyWait(0, UINT32_MAX, &events, wait);
 
         const uhf_rx_t rx = uhf_rx_poll(&ctx, events);
         uhf_step(&ctx, &rx);
+
+        if (uhf_deadline_passed(next_rtc_calibration)) {
+            calibrate_rtc();
+            next_rtc_calibration = xTaskGetTickCount() + pdMS_TO_TICKS(RTC_CALIBRATE_PERIOD_MS);
+        }
 
         uhf_watchdog_checkin();
     }

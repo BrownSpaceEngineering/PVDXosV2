@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "globals.h"
+#include "telemetry/telemetry.h"
 
 _Static_assert(sizeof(UPLINK_CALLSIGN) - 1 == UPLINK_CALLSIGN_LENGTH, "UPLINK_CALLSIGN must be UPLINK_CALLSIGN_LENGTH chars");
 
@@ -22,7 +23,7 @@ static const uint32_t command_data_sizes[UPLINK_CMD_COUNT] = {
     [SET_KEPLER_COEFF] = 4 * UPLINK_KEPLER_COEFFICIENTS,
     [SET_UNIX_TIME] = 4,
     [SET_ADCS_OP_MODE] = 2,
-    [ADCS_UPDATE_PARAMS] = 4 + 4 * 6,
+    [ADCS_UPDATE_PARAMS] = 8 + 4 * 7,
     [SET_PWR_MODE] = 2,
 };
 
@@ -70,6 +71,14 @@ static uint32_t get_uint32(uplink_reader_t *r) {
 static float get_float(uplink_reader_t *r) {
     uint32_t bits = get_uint32(r);
     float value;
+    memcpy(&value, &bits, sizeof(value));
+    return value;
+}
+
+static double get_double(uplink_reader_t *r) {
+    const uint64_t high = get_uint32(r);
+    const uint64_t bits = (high << 32) | get_uint32(r);
+    double value;
     memcpy(&value, &bits, sizeof(value));
     return value;
 }
@@ -133,15 +142,19 @@ static bool parse_command(uplink_reader_t *r, uplink_parsed_cmd_t *cmd) {
             break;
         case SET_ADCS_OP_MODE:
             cmd->args.adcs_op_mode = get_uint16(&data);
+            if (cmd->args.adcs_op_mode >= TEL_ADCS_OPMODE_COUNT) {
+                return true;
+            }
             break;
         case ADCS_UPDATE_PARAMS:
-            cmd->args.adcs_parameters.timestamp = get_uint32(&data);
+            cmd->args.adcs_parameters.epoch_jd = get_double(&data);
             cmd->args.adcs_parameters.inclination = get_float(&data);
             cmd->args.adcs_parameters.raan = get_float(&data);
             cmd->args.adcs_parameters.eccentricity = get_float(&data);
             cmd->args.adcs_parameters.argument_of_perigee = get_float(&data);
             cmd->args.adcs_parameters.mean_anomaly = get_float(&data);
             cmd->args.adcs_parameters.mean_motion = get_float(&data);
+            cmd->args.adcs_parameters.bstar = get_float(&data);
             break;
         case SET_PWR_MODE:
             cmd->args.power_mode = get_uint16(&data);

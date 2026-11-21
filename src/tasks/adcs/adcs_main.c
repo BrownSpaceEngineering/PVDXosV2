@@ -5,19 +5,22 @@
  * drives the magnetorquers at a fixed rate
  *
  * Created: September 20, 2025
- * Modified: October 25, 2026
+ * Modified: October 30, 2026
  * Authors: Avinash Patel, Yi Lyo, Alexander Thaep, Zach Mahan
  */
 
 #include <string.h>
 
-#include "drivers/gyro/gyro_driver.h"
-#include "drivers/rtc/rtc_driver.h"
+#include "checks/device_checks.h"
+#include "drivers/magnetorquer/magnetorquer_driver.h"
 #include "globals.h"
 #include "libraries/adcs/include/body.h"
 #include "libraries/adcs/include/photodiode_determination.h"
 #include "libraries/cmd_dispatcher/cmd_dispatcher.h"
 #include "logging.h"
+#include "os_delay.h"
+#include "state_machine.h"
+#include "states.h"
 #include "tasks/adcs/adcs_task.h"
 #include "watchdog_task.h"
 
@@ -25,29 +28,21 @@
 adcs_task_memory_t adcs_mem;
 
 QueueHandle_t init_adcs(void) {
-    // TODO: Uncomment once photodiode pin config is updated
-    // status_t result = init_photodiode_hardware();
-    // if (result != SUCCESS) {
-    //     warning("photodiode: Hardware initialization failed\n");
-    // }
+    QueueHandle_t adcs_command_queue_handle = xQueueCreateStatic(COMMAND_QUEUE_MAX_COMMANDS, COMMAND_QUEUE_ITEM_SIZE,
+                                                                 adcs_mem.adcs_command_queue_buffer, &adcs_mem.adcs_task_queue);
 
-    // TODO: Uncomment once magnetometer Atmel Start Config is restored
-    // info("Initializing magnetometer\n");
-    // result = init_rm3100();
-    // if (result != SUCCESS) {
-    //     warning("rm3100: Hardware initialization failed\n");
-    // }
-
-    // Initialize RTC timer hardware
-    info("Initializing RTC timer\n");
-    status_t result = init_rtc_hardware();
-    if (result != SUCCESS) {
-        warning("rtc timer: Hardware initialization failed\n");
+    if (adcs_command_queue_handle == NULL) {
+        fatal("Failed to create adcs command queue!\n");
     }
 
-    // TODO: TLE and time-sync uplinks arrive on the command dispatcher's task, so ADCS will need a command queue
-    // (returned here and set up in task_list.c) to hand them to this task safely.
-    return NULL;
+    // Leaves the coils off until the control loop drives them
+    info("Initializing magnetorquers\n");
+    status_t result = init_magnetorquers();
+    if (result != SUCCESS) {
+        warning("magnetorquers: Hardware initialization failed\n");
+    }
+
+    return adcs_command_queue_handle;
 }
 
 void main_adcs(void *pvParameters) {
@@ -57,20 +52,25 @@ void main_adcs(void *pvParameters) {
     pvdx_task_t *const current_task = get_current_task();
     // Cache the watchdog checkin command to avoid creating it every iteration
     command_t cmd_checkin = get_watchdog_checkin_command(current_task);
+    // Variable to hold commands popped off the queue
+    command_t cmd;
 
-    // The gyro startup sequence waits a few hundred ms, so it runs here rather than before the scheduler
-    info("adcs: Initializing gyro\n");
-    if (init_gyro_hardware() != SUCCESS) {
-        warning("adcs: gyro hardware initialization failed\n");
+    // Each device check also initializes that sensor. These wait for up to a few hundred ms, so they run here rather
+    // than before the scheduler.
+    info("adcs: Initializing sensors\n");
+    if (!check_device(MAGNETOMETER_ID)) {
+        warning("adcs: magnetometer failed its device check\n");
+    }
+    if (!check_device(GYROSCOPE_ID)) {
+        warning("adcs: gyro failed its device check\n");
+    }
+    if (!check_device(PHOTODIODE_ID)) {
+        warning("adcs: photodiodes failed their device check\n");
     }
 
-    // Start from the power-on filter / mode state
+    // Start from the power-on filter / mode state, then bring back whatever orbit and time survived the last reboot
     body_reset();
-    // TODO: restore the last saved TLE from MRAM here (needs a restore function in adcs-c that sets the saved
-    // TLE and marks it initialized). Reject the record on a bad magic/CRC, invalid elements, or an epoch too far
-    // from the current UTC (SGP4 error grows ~km/day), and wait for an uplink instead. UTC has to be restored
-    // first, or the TLE is propagated to the wrong time. Attitude is not restored; the filter re-initializes
-    // from detumbling.
+    adcs_restore_state();
 
     // Sensor readings handed to body(); last_mag holds the previous step's reading for B-dot
     float last_mag[3];
@@ -87,42 +87,72 @@ void main_adcs(void *pvParameters) {
     while (true) {
         debug("\n---------- ADCS Task Loop ----------\n");
 
-        // vTaskDelayUntil is disabled in the ASF FreeRTOS config, so the period drifts by the loop's run time;
-        // dt is measured below so body() still sees the true step length
-        vTaskDelay(pdMS_TO_TICKS(ADCS_LOOP_PERIOD_MS));
+        // The coils are driven during this delay. vTaskDelayUntil is disabled in the ASF FreeRTOS config, so a whole
+        // step takes this long plus its run time; dt is measured below so body() still sees the true step length
+        os_delay_ms(ADCS_LOOP_PERIOD_MS);
+
+        // The following example is provided for later because ADCS wants to average gyro 
+        // readings over 100 ms, which is better done in the adcs task loop:
+
+        // EXAMPLE (disabled): average the gyro over the coil-drive window instead of taking one sample per step. To use
+        // it, replace the os_delay_ms() above with this, and after adcs_read_sensors() below copy gyro_avg into gyro.
+        // The gyro is MEMS, so the coils being on doesn't disturb it. With the 13 Hz filter, samples closer than ~40 ms
+        // are mostly correlated, so ~10 samples at 10 ms already gets nearly all of the noise reduction, and the 100 ms
+        // boxcar (nulls at 10 Hz and multiples) stops noise above ~5 Hz aliasing into the ~9 Hz step rate. Samples that
+        // fail or that the sensor flags come back as NAN from adcs_read_gyro() and are skipped; with none good, body()
+        // gets NAN and bails as it does today.
+        // NOTE: adcs_read_gyro() calls handle_read_failure() on every bad sample, and adcs_read_sensors() clears
+        // sensor_fault at its start, so a fault seen only during this window is logged but doesn't stick.
+        // NAN needs <math.h>, which this file doesn't include yet.
+        //
+        // #define ADCS_GYRO_AVG_SAMPLES 10
+        // float gyro_avg[3] = {0.0f, 0.0f, 0.0f};
+        // uint32_t gyro_good = 0;
+        // for (uint32_t s = 0; s < ADCS_GYRO_AVG_SAMPLES; s++) {
+        //     os_delay_ms(ADCS_LOOP_PERIOD_MS / ADCS_GYRO_AVG_SAMPLES);
+        //     float sample[3];
+        //     if (adcs_read_gyro(sample) == SUCCESS) {
+        //         for (size_t i = 0; i < 3; i++) {
+        //             gyro_avg[i] += sample[i];
+        //         }
+        //         gyro_good++;
+        //     }
+        // }
+        // for (size_t i = 0; i < 3; i++) {
+        //     gyro_avg[i] = (gyro_good > 0) ? gyro_avg[i] / (float)gyro_good : NAN;
+        // }
+        //
+        // ...then after adcs_read_sensors(mag, gyro, photodiodes):
+        //     memcpy(gyro, gyro_avg, sizeof(gyro));
 
         // time since the last body() step, in seconds
         const TickType_t now_ticks = xTaskGetTickCount();
         const float dt = (float)(now_ticks - last_step_ticks) / configTICK_RATE_HZ;
         last_step_ticks = now_ticks;
 
-        // failed reads fill their buffers with values body() rejects, so it bails with zero currents
-        adcs_read_magnetometer(mag);
-        adcs_read_gyro(gyro);
-        adcs_read_photodiodes(photodiodes);
-
-        int unix_time;
-        int jd_scalar;
-        float jd_frac;
-
-        if (adcs_get_time(&unix_time, &jd_scalar, &jd_frac) == SUCCESS) {
-            body(last_mag, mag, gyro, photodiodes, adcs_get_tle_update(), unix_time, jd_scalar, jd_frac, dt, currents);
-            debug("adcs: did adcs body()\n");
-        } else {
-            // w/o a time there is no orbit or field model to compare against, so command nothing
-            memset(currents, 0, sizeof(currents));
-            // TODO actually, do bdot regardless here
-            debug("adcs: skipped adcs body()\n");
+        // Empty the queue without blocking: this loop is paced by the delay above, not by commands
+        while (xQueueReceive(p_adcs_task->command_queue, &cmd, 0) == pdPASS) {
+            debug("adcs: Command popped off queue. Target: %d, Operation: %d\n", cmd.target, cmd.operation);
+            exec_command_adcs(&cmd);
         }
 
-        adcs_drive_magnetorquers(currents);
-        adcs_publish_telemetry();
+        // The coils' own field would corrupt the magnetometer reading (and with it B-dot's dB/dt), so they are off
+        // from before the measurement starts until its result has been used
+        mtq_stop_all();
+        os_delay_ms(ADCS_MTQ_SETTLE_MS);
 
-        // TODO: save the orbit to MRAM so it survives a reboot. Only when body() committed a new TLE this step
-        // (it can still reject an uplinked one), not every loop: the 6 mean elements (float), B* (float) and the
-        // epoch JD (double), plus a magic/version and CRC (or 3 majority-voted copies). Needs an adcs-c getter
-        // for the committed TLE (e.g. body_get_tle()). Attitude and filter state are not saved; they are stale
-        // within seconds. UTC must be saved too, but it belongs with the time sync, not here (see adcs_get_time()).
+        // failed reads fill their buffers with values body() rejects, so it bails with zero currents
+        adcs_read_sensors(mag, gyro, photodiodes);
+
+        adcs_compute_currents(last_mag, mag, gyro, photodiodes, dt, currents);
+
+        // The coils stay off in low power idle, since they were stopped above
+        if (state_machine_get_current_state() != STATE_LOW_POWER_IDLE) {
+            adcs_drive_magnetorquers(currents);
+        }
+        adcs_publish_telemetry();
+        adcs_update_state_inputs();
+        adcs_save_state();
 
         memcpy(last_mag, mag, sizeof(mag));
 

@@ -141,8 +141,12 @@ static void serialize_state_machine(tel_writer_t *w, const tel_state_machine_dat
 static void serialize_adcs(tel_writer_t *w, const tel_adcs_data_t *adcs) {
     put_floats(w, adcs->position, TEL_ARRAY_LEN(adcs->position));
     put_floats(w, adcs->attitude, TEL_ARRAY_LEN(adcs->attitude));
-    put_floats(w, adcs->state, TEL_ARRAY_LEN(adcs->state));
-    put_floats(w, adcs->covariance, TEL_ARRAY_LEN(adcs->covariance));
+    put_floats(w, adcs->gyro_bias, TEL_ARRAY_LEN(adcs->gyro_bias));
+    put_floats(w, adcs->covariance_diag, TEL_ARRAY_LEN(adcs->covariance_diag));
+    put_uint8(w, adcs->opmode);
+    put_uint8(w, adcs->flags);
+    put_uint16(w, adcs->filter_resets);
+    put_uint32(w, adcs->tle_epoch_unix_time);
 }
 
 static void serialize_mram(tel_writer_t *w, const tel_mram_data_t *mram) {

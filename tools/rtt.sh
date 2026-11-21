@@ -2,7 +2,6 @@
 # Capture firmware logs (RTT up-channel 1) and framed JPEGs (channel 2) using
 # scripts/rtt_logs.py. Images go to logs/images; runs in the background.
 # Usage: tools/rtt.sh start|stop|status|tail [n]
-# Note: RTT channel 0 is the PVDXos shell (telnet :19021); this doesn't touch it.
 set -u
 cd "$(dirname "$0")/.." || exit 1
 PIDF=/tmp/pvdxos-rtt.pid

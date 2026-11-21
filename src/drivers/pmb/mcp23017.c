@@ -45,11 +45,8 @@ status_t mcp23017_read_reg16(uint8_t reg_a, uint16_t *value) {
  * and otherwise lands on GPINTENB, whose value 0 (no interrupts) is what this driver expects anyway.
  */
 status_t mcp23017_init(void) {
-    status_t status = pmb_i2c_init();
-    if (status != SUCCESS) {
-        return status;
-    }
-    if ((status = mcp23017_write_reg(MCP23017_IOCON_BANK1, 0x00)) != SUCCESS ||
+    status_t status;
+    if ((status =mcp23017_write_reg(MCP23017_IOCON_BANK1, 0x00)) != SUCCESS ||
         (status = mcp23017_write_reg(MCP23017_IOCON, 0x00)) != SUCCESS) {
         warning("mcp23017: no response at 0x%02x\n", MCP23017_I2C_ADDR);
         return status;

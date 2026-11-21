@@ -10,6 +10,7 @@
  */
 
 #include "cosmic_monkey_task.h"
+#include "os_delay.h"
 
 cosmic_monkey_task_memory_t cosmic_monkey_mem;
 /**
@@ -37,6 +38,6 @@ void main_cosmic_monkey(void *pvParameters) {
             warning("Internal error occured\n");
         }
         int time_task = (1000 / args.frequency); // Generates the time delay in milliseconds based on the frequency
-        vTaskDelay(pdMS_TO_TICKS(time_task));
+        os_delay_ms(time_task);
     }
 }

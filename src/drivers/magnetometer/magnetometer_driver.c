@@ -6,7 +6,7 @@
  * Created: Dec 7, 2023 2:22 AM
  * Authors: Nathan Kim, Alexander Thaep, Siddharta Laloux, Tanish Makadia, Defne Doken, Aidan Wang
  *
- * The RM3100 is driven over SPI on the dedicated SPI_MAGNETOMETER_GYRO bus
+ * The RM3100 is driven over SPI on the SPI_MAGNETOMETER_GYRO bus, shared with the gyro
  * (SERCOM4). Wiring is given by SAMD51 port pin (matches main's pin config):
  *
  *     RM3100 pin        signal   SAMD51 pin (SERCOM4)
@@ -29,9 +29,7 @@
 
 #include "magnetometer_driver.h"
 
-// The RM3100 lives on the dedicated SPI_MAGNETOMETER_GYRO bus (SERCOM4);
-// CS is MAGNETOMETER_CS (PC19).
-#define RM3100_SPI    SPI_MAGNETOMETER_GYRO
+// The RM3100 shares SPI_MAGNETOMETER_GYRO (SERCOM4) with the gyro; CS is MAGNETOMETER_CS (PC19).
 #define RM3100_CS_PIN MAGNETOMETER_CS
 
 // Largest single SPI payload (9-byte measurement read) plus the command byte.
@@ -59,17 +57,12 @@ static inline void rm3100_cs_deselect(void) {
 /**
  * \fn init_rm3100
  *
- * \brief Brings up the SPI bus and the RM3100: verifies the REVID, programs the
- *        cycle count, and starts continuous measurement mode.
+ * \brief Brings up the RM3100: verifies the REVID, programs the cycle count, and
+ *        starts continuous measurement mode.
  *
  * \return `status_t` SUCCESS on success, otherwise an error status.
  */
 status_t init_rm3100(void) {
-    // Configure SPI. set_mode() must run while the peripheral is disabled;
-    // spi_m_sync_init() (from atmel_start_init) leaves it disabled.
-    spi_m_sync_set_mode(&RM3100_SPI, SPI_MODE_0);
-    spi_m_sync_enable(&RM3100_SPI);
-
     // Drive CS as a GPIO output, idle high (deselected).
     gpio_set_pin_function(RM3100_CS_PIN, GPIO_PIN_FUNCTION_OFF);
     gpio_set_pin_direction(RM3100_CS_PIN, GPIO_DIRECTION_OUT);
@@ -136,7 +129,7 @@ status_t rm3100_read_reg(int32_t *p_bytes_read, uint8_t addr, uint8_t *read_buf,
     struct spi_xfer xfer = {.txbuf = tx, .rxbuf = rx, .size = (uint32_t)size + 1};
 
     rm3100_cs_select();
-    int32_t rv = spi_m_sync_transfer(&RM3100_SPI, &xfer);
+    int32_t rv = spi_m_sync_transfer(&SPI_MAGNETOMETER_GYRO, &xfer);
     rm3100_cs_deselect();
 
     if (rv < 0) {
@@ -172,7 +165,7 @@ status_t rm3100_write_reg(int32_t *p_bytes_written, uint8_t addr, uint8_t *data,
     struct spi_xfer xfer = {.txbuf = tx, .rxbuf = rx, .size = (uint32_t)size + 1};
 
     rm3100_cs_select();
-    int32_t rv = spi_m_sync_transfer(&RM3100_SPI, &xfer);
+    int32_t rv = spi_m_sync_transfer(&SPI_MAGNETOMETER_GYRO, &xfer);
     rm3100_cs_deselect();
 
     if (rv < 0) {

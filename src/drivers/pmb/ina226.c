@@ -1,6 +1,6 @@
 #include "ina226.h"
 
-#include "hal_delay.h"
+#include "os_delay.h"
 #include "pmb_i2c.h"
 
 status_t ina226_write_reg(uint8_t reg, uint16_t value) {
@@ -19,16 +19,11 @@ status_t ina226_read_reg(uint8_t reg, uint16_t *value) {
 }
 
 /**
- * Enables the I2C bus, verifies the device ID, resets it, then writes the default configuration and calibration.
+ * Verifies the device ID, resets it, then writes the default configuration and calibration.
  */
 status_t ina226_init(void) {
-    status_t status = pmb_i2c_init();
-    if (status != SUCCESS) {
-        return status;
-    }
-
     uint16_t mfg_id = 0;
-    status = ina226_read_reg(INA226_MANUFACTURER_ID, &mfg_id);
+    status_t status = ina226_read_reg(INA226_MANUFACTURER_ID, &mfg_id);
     if (status != SUCCESS) {
         warning("ina226: failed to read manufacturer ID\n");
         return status;
@@ -101,12 +96,7 @@ status_t ina226_wait_for_fresh_conversion(uint32_t timeout_ms) {
         if (timeout_ms-- == 0) {
             return ERROR_NOT_READY;
         }
-        // delay_ms() overwrites SysTick, which FreeRTOS owns once the scheduler has started
-        if (xTaskGetSchedulerState() == taskSCHEDULER_NOT_STARTED) {
-            delay_ms(1);
-        } else {
-            vTaskDelay(pdMS_TO_TICKS(1));
-        }
+        os_delay_ms(1);
         if ((status = ina226_conversion_ready(&ready)) != SUCCESS) {
             return status;
         }

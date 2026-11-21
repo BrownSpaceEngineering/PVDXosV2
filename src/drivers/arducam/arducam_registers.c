@@ -541,7 +541,9 @@ const struct sensor_reg OV2640_1024x768_JPEG[] =
   {0xff, 0xff},
 };
 
-const struct sensor_reg OV2640_1280x1024_JPEG[] =  
+// ArduCAM's library calls this table 1280x1024, but its output height (0x5C bit 2 and 0x5B, times 4) is 960 rows,
+// which keeps the sensor's 4:3 aspect ratio
+const struct sensor_reg OV2640_1280x960_JPEG[] =  
 {
 	{0xff, 0x01},
 	{0x11, 0x01},

@@ -1,8 +1,8 @@
 /**
  * heartbeat_main.c
  *
- * Main loop of the Heartbeat task, which simply blinks an LED at a fixed rate to indicate that the
- * system is still running.
+ * Main loop of the Heartbeat task, which logs the time once a second and mocks the state machine inputs that
+ * nothing produces yet.
  *
  * Created: November 20, 2023
  * Authors: Oren Kohavi, Tanish Makadia
@@ -10,7 +10,10 @@
 
 #include "cmd_dispatcher.h"
 #include "heartbeat_task.h"
+#include "logging.h"
+#include "os_delay.h"
 #include "state_machine.h"
+
 heartbeat_task_memory_t heartbeat_mem;
 
 /* ---------- EXAMPLE ONLY: MOCKED STATE MACHINE INPUTS ----------
@@ -22,7 +25,7 @@ heartbeat_task_memory_t heartbeat_mem;
  */
 
 // At most one mock update per MOCK_INPUT_PERIOD_MS. Longer than a FAKE_HEARTBEAT visit (5 s) and shorter than the
-// time between visits (about 30 s), so each visit sends exactly one. Measured in ticks rather than with vTaskDelay(),
+// time between visits (about 30 s), so each visit sends exactly one. Measured in ticks rather than with os_delay_ms(),
 // because suspending this task between visits cuts any delay short.
 #define MOCK_INPUT_PERIOD_MS 20000
 static input_update_data_t mock_eclipse_inputs = {
@@ -74,13 +77,6 @@ void main_heartbeat(void *pvParameters) {
     // Cache the watchdog checkin command to avoid creating it every iteration
     command_t cmd_checkin = get_watchdog_checkin_command(current_task);
 
-// NOTE: false is on for some reason on the orange LEDs
-// In release build, make sure orange LEDs are off
-#if defined(RELEASE)
-    gpio_set_pin_level(LED_ORANGE1, true);
-    gpio_set_pin_level(LED_ORANGE2, true);
-#endif
-
     while (true) {
         debug("\n---------- Heartbeat Task Loop ----------\n");
 
@@ -89,41 +85,7 @@ void main_heartbeat(void *pvParameters) {
 
         send_mock_inputs_if_due();
 
-// Devbuild heartbeat pattern (Smoothly turning on and off LEDs in a line)
-#if defined(DEVBUILD)
-        gpio_set_pin_level(LED_ORANGE1, false);
-        vTaskDelay(pdMS_TO_TICKS(100));
-        gpio_set_pin_level(LED_ORANGE2, false);
-        vTaskDelay(pdMS_TO_TICKS(100));
-        gpio_set_pin_level(LED_RED, true);
-        vTaskDelay(pdMS_TO_TICKS(400));
-        gpio_set_pin_level(LED_ORANGE1, true);
-        vTaskDelay(pdMS_TO_TICKS(33));
-        gpio_set_pin_level(LED_ORANGE2, true);
-        vTaskDelay(pdMS_TO_TICKS(33));
-        gpio_set_pin_level(LED_RED, false);
-        vTaskDelay(pdMS_TO_TICKS(300));
-#endif
-
-// Testing heartbeat pattern (Blinking LEDs in an oscillating pattern [ON/OFF/ON] -> [OFF/ON/OFF])
-#if defined(UNITTEST)
-        gpio_set_pin_level(LED_ORANGE1, false);
-        gpio_set_pin_level(LED_ORANGE2, true);
-        gpio_set_pin_level(LED_RED, true);
-        vTaskDelay(pdMS_TO_TICKS(500));
-        gpio_set_pin_level(LED_ORANGE1, true);
-        gpio_set_pin_level(LED_ORANGE2, false);
-        gpio_set_pin_level(LED_RED, false);
-        vTaskDelay(pdMS_TO_TICKS(500));
-#endif
-
-// Release heartbeat pattern (Red LED only, blinking at 1Hz)
-#if defined(RELEASE)
-        gpio_set_pin_level(LED_RED, true);
-        vTaskDelay(pdMS_TO_TICKS(500));
-        gpio_set_pin_level(LED_RED, false);
-        vTaskDelay(pdMS_TO_TICKS(500));
-#endif
+        os_delay_ms(1000);
 
         // Check in with the watchdog task
         if (should_checkin(current_task)) {

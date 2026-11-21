@@ -112,7 +112,7 @@ uhf_state_t uhf_link_check(uhf_ctx_t *ctx, const uhf_rx_t *rx) {
 }
 
 // Ticks from now until deadline, 0 if it has passed
-static TickType_t uhf_ticks_until(TickType_t now, TickType_t deadline) {
+TickType_t uhf_ticks_until(TickType_t now, TickType_t deadline) {
     const int32_t left = (int32_t)(deadline - now);
     return left > 0 ? (TickType_t)left : 0;
 }
