@@ -266,7 +266,7 @@ int main(void) {
     i2c_sensors_bus_mutex = xSemaphoreCreateMutexStatic(&i2c_sensors_bus_mutex_buffer);
 
     if (i2c_sensors_bus_mutex == NULL) {
-        fatal("Failed to create I2C_SENSORS bus mutex");
+        fatal("Failed to create I2C_SENSORS bus mutex\n");
     }
     // atmel_start_init() initializes the shared buses but leaves them disabled; the drivers on them assume they are
     // enabled
@@ -311,13 +311,13 @@ int main(void) {
     task_list_mutex = xSemaphoreCreateMutexStatic(&task_list_mutex_buffer);
 
     if (task_list_mutex == NULL) {
-        fatal("Failed to create PVDX task list mutex");
+        fatal("Failed to create PVDX task list mutex\n");
     }
 
     init_adc1_mutex();
 
     if (task_list[0] != p_watchdog_task) {
-        fatal("Watchdog is not first in task_list!");
+        fatal("Watchdog is not first in task_list!\n");
     }
 
     // Initialize all OS integrity tasks

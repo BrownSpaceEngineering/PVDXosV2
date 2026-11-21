@@ -76,7 +76,7 @@ void uslp_init(void) {
     uslp_tx_mutex = xSemaphoreCreateMutexStatic(&uslp_tx_mutex_buffer);
 
     if (uslp_tx_mutex == NULL) {
-        fatal("Failed to create USLP tx mutex");
+        fatal("Failed to create USLP tx mutex\n");
     }
 }
 

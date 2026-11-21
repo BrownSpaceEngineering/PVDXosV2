@@ -146,9 +146,9 @@ command_t get_adcs_set_utc_command(const uint32_t unix_time);
  *
  * \brief Runs one ADCS control step in the current mode
  *
- * \param last_mag the previous step's magnetometer reading in Tesla (3 floats)
- * \param mag this step's magnetometer reading in Tesla (3 floats)
- * \param gyro this step's angular rate in rad/s (3 floats)
+ * \param last_mag the previous step's magnetometer reading in Tesla, in magnetometer axes (3 floats)
+ * \param mag this step's magnetometer reading in Tesla, in magnetometer axes (3 floats)
+ * \param gyro this step's angular rate in rad/s, in gyro chip axes (3 floats)
  * \param photodiodes this step's photodiode readings (NUM_DIODES floats)
  * \param dt time since the last step, in seconds
  * \param currents buffer of 3 floats to fill with magnetorquer currents in Amps; zero if the magnetometer is unusable
@@ -176,7 +176,8 @@ void adcs_read_sensors(float *const mag_tesla, float *const gyro_rad_s, float *c
 /**
  * \fn adcs_read_magnetometer
  *
- * \brief Takes a single magnetometer measurement, in the body frame and in Tesla, as `body()` expects
+ * \brief Takes a single magnetometer measurement in Tesla, in the magnetometer's own [U8, U9, U10] axes, as `body()`
+ *      expects (it maps them to the body frame itself)
  *
  * \param mag_tesla buffer of 3 floats to fill; set to NAN on failure so `body()` safely bails
  *
@@ -189,7 +190,8 @@ status_t adcs_read_magnetometer(float *const mag_tesla);
 /**
  * \fn adcs_read_gyro
  *
- * \brief Reads the body-frame angular rate in rad/s, as `body()` expects
+ * \brief Reads the angular rate in rad/s, in the gyro chip's own axes, as `body()` expects (it maps them to the body
+ *      frame itself)
  *
  * \param gyro_rad_s buffer of 3 floats to fill; set to NAN on failure so `body()` safely bails
  *
@@ -207,6 +209,16 @@ status_t adcs_read_gyro(float *const gyro_rad_s);
  * \returns status_t SUCCESS if the readings are valid
  */
 status_t adcs_read_photodiodes(float *const photodiodes);
+
+/**
+ * \fn adcs_update_sunlight
+ *
+ * \brief Updates the debounced sunlight / eclipse status that `adcs_update_state_inputs()` reports
+ *
+ * \param photodiodes this step's photodiode readings (NUM_DIODES floats)
+ * \param photodiodes_valid whether the read succeeded; a failed read restarts the debounce count
+ */
+void adcs_update_sunlight(const float *const photodiodes, const bool photodiodes_valid);
 
 /**
  * \fn adcs_get_tle_update

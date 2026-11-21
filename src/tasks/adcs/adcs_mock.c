@@ -53,24 +53,47 @@ static uint32_t pointing_ticks = 0;
 
 /* ---------- LOGGING HELPERS ---------- */
 
-// SEGGER_RTT_printf has no %f, so values are logged as fixed point: "%s%ld.%03lu" with these three arguments
-    #define FIX3(x) fix_sign(x), fix_whole(x), fix_milli(x)
-    #define FIX3_FMT "%s%ld.%03lu"
+// SEGGER_RTT_printf has no %f, so values are logged as fixed point with 3 decimals, written into one of a few
+// rotating buffers so that one log call can format several. Only the ADCS task logs from here.
+    #define FIX3_BUFFERS 8
+    #define FIX3_LEN 16
 
-static const char *fix_sign(const double x) {
-    return (x < 0.0) ? "-" : "";
-}
+static const char *fix3(const double x) {
+    static char buffers[FIX3_BUFFERS][FIX3_LEN];
+    static size_t next = 0;
+    char *const out = buffers[next];
+    next = (next + 1) % FIX3_BUFFERS;
 
-static long fix_whole(const double x) {
-    return isfinite(x) ? (long)fabs(x) : 0;
-}
-
-static unsigned long fix_milli(const double x) {
-    if (!isfinite(x)) {
-        return 0;
+    // NAN means "no estimate", which has to look different from a perfect 0.000
+    if (isnan(x)) {
+        return "nan";
     }
-    const double a = fabs(x);
-    return (unsigned long)((a - floor(a)) * 1000.0) % 1000u;
+    if (!isfinite(x) || fabs(x) >= 1e9) {
+        return x < 0.0 ? "-inf" : "inf";
+    }
+
+    unsigned long milli = (unsigned long)llround(fabs(x) * 1000.0);
+    // Something like -0.0001 prints as 0.000 rather than -0.000
+    const bool negative = x < 0.0 && milli > 0u;
+    unsigned long whole = milli / 1000u;
+    milli %= 1000u;
+
+    // Written backwards from the end of the buffer
+    char *p = out + FIX3_LEN - 1;
+    *p = '\0';
+    for (int i = 0; i < 3; i++) {
+        *--p = (char)('0' + milli % 10u);
+        milli /= 10u;
+    }
+    *--p = '.';
+    do {
+        *--p = (char)('0' + whole % 10u);
+        whole /= 10u;
+    } while (whole > 0u);
+    if (negative) {
+        *--p = '-';
+    }
+    return p;
 }
 
 /* ---------- SCORING ---------- */
@@ -174,8 +197,8 @@ void adcs_mock_sense(float *const last_mag, float *const mag, float *const gyro,
         command_t cmd = get_adcs_set_tle_command(&uplinked_tle);
         const status_t result = enqueue_command(&cmd);
         if (result == SUCCESS) {
-            info("adcs mock: uplink %lu enqueued (n = " FIX3_FMT " rev/day, fit residual " FIX3_FMT " m)\n", (unsigned long)uplinks,
-                 FIX3(uplinked_tle.mean[0]), FIX3(plant.tle_fit_resid_m));
+            info("adcs mock: uplink %lu enqueued (n = %s rev/day, fit residual %s m)\n", (unsigned long)uplinks, fix3(uplinked_tle.mean[0]),
+                 fix3(plant.tle_fit_resid_m));
         } else {
             warning("adcs mock: failed to enqueue uplink %lu: %d\n", (unsigned long)uplinks, result);
         }
@@ -209,13 +232,13 @@ void adcs_mock_step(const float *const currents, const TickType_t step_ticks) {
     const double *const w = truth.w_body_rad_s;
     const double rate_deg_s = sqrt(w[0] * w[0] + w[1] * w[1] + w[2] * w[2]) * MOCK_RAD_TO_DEG;
 
-    info("adcs mock: t " FIX3_FMT " s | pointing %d (%lu%% of run) | |w| " FIX3_FMT " deg/s | nadir err " FIX3_FMT
-         " deg | est err " FIX3_FMT " deg | pos err " FIX3_FMT " km | sunlit %d | resets %d\n",
-         FIX3(truth.t_s), body_is_pointing(), (unsigned long)(100u * pointing_ticks / tick), FIX3(rate_deg_s),
-         FIX3(nadir_error_deg(&truth)), FIX3(estimate_error_deg(&truth)), FIX3(position_error_km(&truth)), truth.sunlit,
-         body_get_filter_resets());
-    info("adcs mock: currents [" FIX3_FMT ", " FIX3_FMT ", " FIX3_FMT "] A | mag [%ld, %ld, %ld] nT | step %lu ms\n", FIX3(currents[0]),
-         FIX3(currents[1]), FIX3(currents[2]), isfinite(inputs.magnetometer[0]) ? (long)(inputs.magnetometer[0] * 1e9f) : 0,
+    info(
+        "adcs mock: t %s s | pointing %d (%lu%% of run) | |w| %s deg/s | nadir err %s deg | est err %s deg | pos err %s km | "
+        "sunlit %d | resets %d\n",
+        fix3(truth.t_s), body_is_pointing(), (unsigned long)(100u * pointing_ticks / tick), fix3(rate_deg_s), fix3(nadir_error_deg(&truth)),
+        fix3(estimate_error_deg(&truth)), fix3(position_error_km(&truth)), truth.sunlit, body_get_filter_resets());
+    info("adcs mock: currents [%s, %s, %s] A | mag [%ld, %ld, %ld] nT | step %lu ms\n", fix3(currents[0]), fix3(currents[1]),
+         fix3(currents[2]), isfinite(inputs.magnetometer[0]) ? (long)(inputs.magnetometer[0] * 1e9f) : 0,
          isfinite(inputs.magnetometer[1]) ? (long)(inputs.magnetometer[1] * 1e9f) : 0,
          isfinite(inputs.magnetometer[2]) ? (long)(inputs.magnetometer[2] * 1e9f) : 0,
          (unsigned long)(step_ticks * 1000u / configTICK_RATE_HZ));

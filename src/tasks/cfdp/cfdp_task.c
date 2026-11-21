@@ -216,7 +216,7 @@ static void handle_filedata_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data
                 } else {
                     warning(
                         "cfdp: no room to split gap in NAK buffer, fd pdu "
-                        "disregarded");
+                        "disregarded\n");
                 }
                 break;
             } else if (fd.offset > seg.start_offset) {
@@ -239,7 +239,7 @@ static void handle_filedata_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data
         } else {
             warning(
                 "cfdp: no room to properly update NAK buffer, therefore the fd "
-                "pdu will be disregarded");
+                "pdu will be disregarded\n");
         }
     }
 
@@ -490,7 +490,7 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz) {
     pdu_data = raw + header_size;
 
     if (header.pdu_data_length > sz - header_size) {
-        warning("cfdp: labeled pdu size does not match to recved len");
+        warning("cfdp: labeled pdu size does not match to recved len\n");
         return;
     }
     size_t pdu_data_sz = header.pdu_data_length;
@@ -587,7 +587,7 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz) {
         }
 
         if (header.largefile != 0 || header.segmentation_control != 0) {
-            warning("cfdp: unsupported transaction type, rejecting");
+            warning("cfdp: unsupported transaction type, rejecting\n");
             // need to send a fin here to show that we recieved the transaction,
             // but are not accepting it
             cfdp_send_reject_fin(&header, &meta, CFDP_COND_INVALID_TRANSMISSION);
@@ -595,7 +595,7 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz) {
         }
 
         if (meta.checksum_type != 0x00 && meta.checksum_type != 0x0F) {
-            warning("cfdp: unsported checksum type, rejecting");
+            warning("cfdp: unsported checksum type, rejecting\n");
             cfdp_send_reject_fin(&header, &meta, CFDP_COND_BAD_CHECKSUM);
         }
 
@@ -680,7 +680,7 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz) {
             handle_nak_pdu(txn, pdu_data, pdu_data_sz);
             break;
         default:
-            warning("cfdp: unrecognized directive code: %x", dir_code);
+            warning("cfdp: unrecognized directive code: %x\n", dir_code);
             return;
     }
 }

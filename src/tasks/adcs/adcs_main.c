@@ -101,7 +101,7 @@ void main_adcs(void *pvParameters) {
         // step takes this long plus its run time; dt is measured below so body() still sees the true step length
         os_delay_ms(ADCS_LOOP_PERIOD_MS);
 
-        // The following example is provided for later because ADCS wants to average gyro 
+        // The following example is provided for later because ADCS wants to average gyro
         // readings over 100 ms, which is better done in the adcs task loop:
 
         // EXAMPLE (disabled): average the gyro over the coil-drive window instead of taking one sample per step. To use
@@ -153,6 +153,9 @@ void main_adcs(void *pvParameters) {
 #ifdef PLANT_SIM
         // The plant gives its own last_mag, which carries its simulated sensor dropouts
         adcs_mock_sense(last_mag, mag, gyro, photodiodes, &dt);
+        // adcs_read_sensors() isn't called here, so the sunlight input has to be fed from the plant's photodiodes
+        // (dropouts are NAN, which the sun vector code skips)
+        adcs_update_sunlight(photodiodes, true);
 
         adcs_compute_currents(last_mag, mag, gyro, photodiodes, dt, currents);
 

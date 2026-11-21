@@ -127,7 +127,7 @@ cfdp_transaction_t *cfdp_alloc_transaction(cfdp_transaction_store_t *txn_store) 
         }
     }
     txn_store->slot_free = false;
-    warning("cfdp: mismatch between slot_free and txn store capacity");
+    warning("cfdp: mismatch between slot_free and txn store capacity\n");
     return NULL;
 }
 

@@ -24,6 +24,7 @@
 #include "libraries/adcs/include/moments2currents.h"
 #include "libraries/adcs/include/photodiode_determination.h"
 #include "libraries/adcs/include/quat.h"
+#include "libraries/adcs/include/sensor_frames.h"
 #include "libraries/cmd_dispatcher/cmd_dispatcher.h"
 #include "logging.h"
 #include "os_delay.h"
@@ -55,10 +56,6 @@
 
 // TODO(blocked on hardware team): confirm these are V/R (the current at 100% duty); lower safety limits would get exceeded
 static const float MTQ_FULL_DUTY_CURRENT_A[3] = {0.156f, 0.156f, 0.104f};
-
-// TODO(blocked on mechanical): set these sensor-to-body rotations from the PCB/CAD mounting (identity until then)
-static const float BODY_FROM_MAG[3][3] = {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}};
-static const float BODY_FROM_GYRO[3][3] = {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}};
 
 // The same values as the uplinked and downlinked tel_adcs_opmode_t
 typedef enum {
@@ -269,12 +266,20 @@ static bool mag_usable(const float *const mag) {
     return isfinite(norm_squared) && norm_squared > 0.0f;
 }
 
-static void adcs_detumble(const float *const last_mag, const float *const mag, const float dt, float *const currents) {
+// The readings are in magnetometer axes, as body() takes them, but the magnetorquers are wired as body X/Y/Z, so B-dot
+// has to run in the body frame (sensor_frames.h). In sensor axes the Z moment comes out with the wrong sign, and that
+// coil pumps the tumble up while X and Y damp it, so the rate never settles.
+static void adcs_detumble(const float *const last_mag_sensor, const float *const mag_sensor, const float dt, float *const currents) {
     // moment2current3axis's clamp lets NaN through, so a bad reading has to be stopped here
-    if (!mag_usable(last_mag) || !mag_usable(mag)) {
+    if (!mag_usable(last_mag_sensor) || !mag_usable(mag_sensor)) {
         memset(currents, 0, 3 * sizeof(float));
         return;
     }
+
+    float last_mag[3];
+    float mag[3];
+    mag_sensor_to_body(last_mag_sensor, last_mag);
+    mag_sensor_to_body(mag_sensor, mag);
 
     float moments[3];
     Bdot(mag, last_mag, BDOT_GAIN, dt, moments);
@@ -307,12 +312,6 @@ void adcs_compute_currents(const float *const last_mag, const float *const mag, 
 }
 
 /* ---------- SENSORS ---------- */
-
-static void rotate_to_body(const float rotation[3][3], const float *const sensor_frame, float *const body_frame) {
-    for (size_t row = 0; row < 3; row++) {
-        body_frame[row] = rotation[row][0] * sensor_frame[0] + rotation[row][1] * sensor_frame[1] + rotation[row][2] * sensor_frame[2];
-    }
-}
 
 static void handle_read_failure(const device_id_t device, const char *const name) {
     warning("adcs: %s read failed\n", name);
@@ -358,8 +357,10 @@ status_t adcs_read_magnetometer(float *const mag_tesla) {
         return result;
     }
 
-    const float sensor_frame[3] = {reading.x * MICROTESLA_TO_TESLA, reading.y * MICROTESLA_TO_TESLA, reading.z * MICROTESLA_TO_TESLA};
-    rotate_to_body(BODY_FROM_MAG, sensor_frame, mag_tesla);
+    // Left in the magnetometer's own [U8, U9, U10] axes: body() maps them to the body frame itself (sensor_frames.h)
+    mag_tesla[0] = reading.x * MICROTESLA_TO_TESLA;
+    mag_tesla[1] = reading.y * MICROTESLA_TO_TESLA;
+    mag_tesla[2] = reading.z * MICROTESLA_TO_TESLA;
     return SUCCESS;
 }
 
@@ -375,8 +376,10 @@ status_t adcs_read_gyro(float *const gyro_rad_s) {
         return result;
     }
 
-    const float sensor_frame[3] = {reading.Rate1[0] * DEG_TO_RAD, reading.Rate1[1] * DEG_TO_RAD, reading.Rate1[2] * DEG_TO_RAD};
-    rotate_to_body(BODY_FROM_GYRO, sensor_frame, gyro_rad_s);
+    // Left in the gyro chip's own axes: body() maps them to the body frame itself (sensor_frames.h)
+    for (size_t i = 0; i < 3; i++) {
+        gyro_rad_s[i] = reading.Rate1[i] * DEG_TO_RAD;
+    }
     return SUCCESS;
 }
 
@@ -398,7 +401,7 @@ status_t adcs_read_photodiodes(float *const photodiodes) {
 }
 
 // A failed read is all zeros, which would look like eclipse, so it restarts the count instead of counting towards one
-static void update_sunlight(const float *const photodiodes, const bool photodiodes_valid) {
+void adcs_update_sunlight(const float *const photodiodes, const bool photodiodes_valid) {
     float sun_vector[3];
     if (!photodiodes_valid || get_vec_from_photodiode_readings(photodiodes, sun_vector) == in_sunlight) {
         sunlight_disagree_steps = 0;
@@ -416,7 +419,7 @@ void adcs_read_sensors(float *const mag_tesla, float *const gyro_rad_s, float *c
     sensor_fault = false;
     adcs_read_magnetometer(mag_tesla);
     adcs_read_gyro(gyro_rad_s);
-    update_sunlight(photodiodes, adcs_read_photodiodes(photodiodes) == SUCCESS);
+    adcs_update_sunlight(photodiodes, adcs_read_photodiodes(photodiodes) == SUCCESS);
 }
 
 /* ---------- ACTUATORS, TELEMETRY AND STATE MACHINE ---------- */
