@@ -112,9 +112,6 @@ static void enter_state(state_id_t next_state) {
  */
 static void copy_input(input_update_t update, const input_t *const p_new_values) {
     switch (update) {
-        case BURN_WIRE_STATUS_UPDATE:
-            inputs.burn_wire_burned = p_new_values->burn_wire_burned;
-            break;
         case SUNLIGHT_STATUS_UPDATE:
             inputs.in_sunlight = p_new_values->in_sunlight;
             break;
@@ -143,7 +140,7 @@ static void copy_input(input_update_t update, const input_t *const p_new_values)
             inputs.perovskite_data_ready_for_downlink = p_new_values->perovskite_data_ready_for_downlink;
             break;
         case SBAND_READY_TRANSMIT_UPDATE:
-            inputs.sband_wants_to_transmit = p_new_values->sband_wants_to_transmit;
+            inputs.sband_pass_pending = p_new_values->sband_pass_pending;
             break;
         case SAFE_DISABLE_RADIO_UPDATE:
             inputs.safe_to_disable_radio = p_new_values->safe_to_disable_radio;
