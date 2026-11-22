@@ -278,6 +278,13 @@ status_t init_fuel_gauges(void) {
     info("fuel_gauge: TCA9546A mux, %u packs (SERCOM6 SDA=PD09 SCL=PD08)\n", FG_NUM_PACKS);
     status_t result = SUCCESS;
     for (uint8_t ch = 0; ch < FG_NUM_PACKS; ch++) {
+#ifdef SKIP_FUEL_GAUGE_3
+        // Left out of the result entirely, so a dead gauge 3 does not fail the EPS check (see globals.h)
+        if (ch == 2) {
+            warning("fuel_gauge: gauge 3 SKIPPED, not under test on this board\n");
+            continue;
+        }
+#endif
         if (fg_mux_select(ch) != SUCCESS) {
             warning("fuel_gauge: gauge %u unreachable (channel select failed)\n", ch + 1);
             result = ERROR_I2C_FAILED;

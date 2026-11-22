@@ -26,8 +26,10 @@
 // its MRAM record still run, but the burn pin is never driven and the burn is never recorded as done.
 // #define BURN_SEQUENCE_FIRE_BURN_WIRE
 
-// Uncomment to make the burn sequence's startup camera check also capture a picture over RTT channel 2
-#define BURN_SEQUENCE_CAMERA_CHECK_CAPTURE
+// Uncomment to make the burn sequence's startup camera check also capture a picture over RTT channel 2.
+// NOTE: in a dev build channel 2 blocks when full, and tools/rtt.sh does not drain it, so defining this parks the boot
+// forever inside capture_rtt() and nothing after the device checks ever runs.
+// #define BURN_SEQUENCE_CAMERA_CHECK_CAPTURE
 
 // Uncomment to transmit the S-band station identification pattern for 30 seconds after the startup device checks, then
 // power the radio off and boot the OS as normal (see src/burn/burn_sband.c). It radiates 27 dBm at 2418.5 MHz under the
@@ -37,6 +39,16 @@
 
 // Uncomment to store the identification packet in the radio's flash again even when MRAM says it is already there.
 // #define SBAND_TX_FORCE_STORE
+
+// Uncomment to transmit the radio's own TPGEN counter pattern instead of the stored callsign packet. It needs neither
+// the flash nor the SPI data path, so it isolates the RF chain from them. It carries NO station identification, so
+// transmit it into a 50 ohm load rather than an antenna.
+#define SBAND_TX_TPGEN
+
+// BEFORE-FLIGHT: remove both of these. They hide hardware that is known bad on the bench unit, so with them defined the
+// startup checks report a pass that the flight hardware has not earned.
+#define SKIP_PHOTODIODE_CHECK // The photodiode array is not expected to work on this board
+#define SKIP_FUEL_GAUGE_3     // Gauge 3 (mux channel 2) is not expected to answer on this board
 
 #define BURN_UHF_MODE_BEACON 0
 #define BURN_UHF_MODE_LINK   1

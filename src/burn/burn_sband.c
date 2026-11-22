@@ -45,13 +45,19 @@
     #define SBAND_TX_SYM_RATE_KSPS STXG2_SYM_RATE_DEFAULT_KSPS
     #define SBAND_TX_MODCOD DVBS2_MODCOD_QPSK_1_2
     #define SBAND_TX_POWER_DBM 27u // Flight model range is 27-33 dBm (USM 9.2.9.2)
-    #define SBAND_TX_SECONDS 30u   // Carrier time, not counting the checks or the gaps between packets
+    #define SBAND_TX_SECONDS 15u   // Carrier time, not counting the checks or the gaps between packets
 
     #define SBAND_TX_MEM_INDEX 0u            // Flash packet that holds the identification pattern
     #define SBAND_TX_PACKET_TIMEOUT_MS 10000u // One packet takes about 1.3 s at 100 ksps on QPSK 1/2
 // 30 s of carrier is about 23 packets. This bound only trips if the radio reports a packet complete without taking the
 // time that sending one needs, which would otherwise spin here forever with the carrier time never adding up.
     #define SBAND_TX_MAX_PACKETS 100u
+// Counts down before anything else happens, so the RTT capture can be attached after a reset. The capture cannot
+// survive a power cycle, and every way of resetting the board takes the probe away from it, so without this the whole
+// test runs before anything is listening. Set to 0 to start immediately.
+    #ifndef SBAND_TX_START_DELAY_S
+        #define SBAND_TX_START_DELAY_S 30u
+    #endif
     #define SBAND_TX_POLL_MS 10u
     #define SBAND_TX_REPORT_PERIOD_MS 1000u
 
@@ -82,6 +88,7 @@ typedef struct {
     uint32_t pattern_check; // Checksum of the identification block, so an edited callsign forces a new store
 } sband_record_t;
 
+    #ifndef SBAND_TX_TPGEN
 static sband_record_t load_sband_record(void) {
     // On the stack, because the image runs from RAM and .bss is tight. uint32_t so that the page is word-aligned and
     // can be read as an sband_record_t; mram_read_bytes() only reads whole pages.
@@ -135,6 +142,7 @@ static uint32_t checksum_block(const uint8_t *block, size_t len) {
     }
     return (sum_b << 16) | sum_a;
 }
+    #endif // !SBAND_TX_TPGEN
 
 /* ---------- HELPERS ---------- */
 
@@ -192,6 +200,7 @@ static int sband_sanity(uint32_t *serial) {
     return failures;
 }
 
+    #ifndef SBAND_TX_TPGEN
 // Stores one full memory packet of the repeating identification block
 static status_t store_id_packet(const uint8_t *block) {
     status_t status = stxg2_store_begin(SBAND_TX_MEM_INDEX);
@@ -217,6 +226,7 @@ static status_t store_id_packet(const uint8_t *block) {
     }
     return packets == 1 ? SUCCESS : ERROR_SANITY_CHECK_FAILED;
 }
+    #endif // !SBAND_TX_TPGEN
 
 // Logs what the radio is doing while the PA is on
 static void report_transmit(uint32_t packets_sent) {
@@ -247,6 +257,7 @@ static void report_transmit(uint32_t packets_sent) {
  * \param elapsed_ms incremented by the time the PA spent on
  * \returns ERROR_READ_FAILED if the radio reports a memory read error, ERROR_NOT_READY on timeout
  */
+    #ifndef SBAND_TX_TPGEN
 static status_t wait_packet_sent(uint32_t *elapsed_ms) {
     for (uint32_t waited = 0; waited < SBAND_TX_PACKET_TIMEOUT_MS; waited += SBAND_TX_POLL_MS) {
         uint32_t rd_stat = 0;
@@ -268,6 +279,38 @@ static status_t wait_packet_sent(uint32_t *elapsed_ms) {
     warning("sband: packet not sent after %lu ms\n", (unsigned long)SBAND_TX_PACKET_TIMEOUT_MS);
     return ERROR_NOT_READY;
 }
+    #endif // !SBAND_TX_TPGEN
+
+    #ifdef SBAND_TX_TPGEN
+        #define SBAND_TX_LOCK_TIMEOUT_MS 5000u
+
+// Starts the radio's own counter pattern. It goes straight to the encoder with the radio framer off, so neither the
+// flash nor the SPI data path is involved. Returns SUCCESS once the radio is in Transmit mode with the PA on.
+static status_t sband_start_tpgen(void) {
+    ret_err_status(stxg2_route(XBAR_IN_TPGEN, XBAR_OUT_FRAMER_SHIFT), "sband: route test pattern failed\n");
+
+    // Lock RF before the PA turns on
+    uint32_t rf_status = 0;
+    for (uint32_t waited = 0; (rf_status & RF_STATUS_LOCKED) != RF_STATUS_LOCKED; waited += SBAND_TX_POLL_MS) {
+        if (waited >= SBAND_TX_LOCK_TIMEOUT_MS) {
+            warning("sband: RF not locked after %lu ms (RF_STAT = 0x%lx)\n", (unsigned long)SBAND_TX_LOCK_TIMEOUT_MS,
+                    (unsigned long)rf_status);
+            return ERROR_NOT_READY;
+        }
+        wait_ms_feeding_watchdog(SBAND_TX_POLL_MS);
+        ret_err_status(stxg2_get_rf_status(&rf_status), "sband: RF status read failed\n");
+    }
+
+    ret_err_status(stxg2_set_mode(STXG2_MODE_TRANSMIT), "sband: transmit mode failed\n");
+
+    // Entering Transmit can turn the framer back on, so turn it off again before the pattern starts
+    uint32_t tf_ctrl = 0;
+    ret_err_status(stxg2_read_reg(REG_TF_CTRL, &tf_ctrl), "sband: TF_CTRL read failed\n");
+    ret_err_status(stxg2_write_reg(REG_TF_CTRL, tf_ctrl & ~TF_CTRL_ENABLE), "sband: framer disable failed\n");
+
+    return stxg2_write_reg(REG_TP_GEN_CTRL, TP_GEN_CTRL_ENABLE);
+}
+    #endif // SBAND_TX_TPGEN
 
 // Commands Standby and cuts power, in that order: the radio must reach Standby before it loses power (USM 8.2.1)
 static void shut_radio_down(void) {
@@ -284,6 +327,12 @@ static void shut_radio_down(void) {
 void sband_tx_test(void) {
     info("----- s-band transmit test -----\n");
 
+    // Logged every second, so attaching the capture part way through still shows the countdown finishing
+    for (uint32_t left = SBAND_TX_START_DELAY_S; left > 0; left--) {
+        info("sband: starting in %lu s\n", (unsigned long)left);
+        wait_ms_feeding_watchdog(1000);
+    }
+
     uint32_t serial = 0;
     if (sband_sanity(&serial) != 0) {
         warning("sband: checks failed, not transmitting\n");
@@ -291,6 +340,10 @@ void sband_tx_test(void) {
         return;
     }
 
+    #ifdef SBAND_TX_TPGEN
+    warning("sband: TPGEN pattern selected, NO callsign is transmitted: use a 50 ohm load, not an antenna\n");
+    (void)serial;
+    #else
     uint8_t id_block[SBAND_TX_BLOCK_BYTES];
     build_id_block(id_block);
     const uint32_t pattern_check = checksum_block(id_block, sizeof(id_block));
@@ -316,6 +369,7 @@ void sband_tx_test(void) {
         record = (sband_record_t){.magic = SBAND_RECORD_MAGIC, .radio_serial = serial, .pattern_check = pattern_check};
         save_sband_record(&record);
     }
+    #endif // SBAND_TX_TPGEN
 
     // Config mode holds every setting below; the PA stays off until Transmit (USM 8.2.1)
     status_t status = stxg2_set_mode(STXG2_MODE_CONFIG);
@@ -335,6 +389,22 @@ void sband_tx_test(void) {
          (unsigned long)SBAND_TX_FREQ_KHZ, (unsigned long)SBAND_TX_SYM_RATE_KSPS, (unsigned)SBAND_TX_MODCOD,
          (unsigned)SBAND_TX_POWER_DBM, (unsigned long)SBAND_TX_SECONDS);
 
+    #ifdef SBAND_TX_TPGEN
+    status = sband_start_tpgen();
+    if (status != SUCCESS) {
+        warning("sband: could not start the test pattern (status %d)\n", status);
+        shut_radio_down();
+        return;
+    }
+    for (uint32_t elapsed_ms = 0; elapsed_ms < SBAND_TX_SECONDS * 1000u; elapsed_ms += SBAND_TX_REPORT_PERIOD_MS) {
+        wait_ms_feeding_watchdog(SBAND_TX_REPORT_PERIOD_MS);
+        uint32_t tp_count = 0;
+        (void)stxg2_read_reg(REG_TP_GEN_CNT, &tp_count);
+        report_transmit(tp_count);
+    }
+    (void)stxg2_write_reg(REG_TP_GEN_CTRL, 0);
+    info("sband: test pattern stopped after %lu s\n", (unsigned long)SBAND_TX_SECONDS);
+    #else
     // Each pass sends the whole packet, so the last one runs past the limit rather than cutting the callsign short
     const uint32_t target_ms = SBAND_TX_SECONDS * 1000u;
     uint32_t elapsed_ms = 0;
@@ -365,6 +435,7 @@ void sband_tx_test(void) {
     }
 
     info("sband: sent %lu packet(s), %lu ms of carrier\n", (unsigned long)packets_sent, (unsigned long)elapsed_ms);
+    #endif // SBAND_TX_TPGEN
     shut_radio_down();
 }
 

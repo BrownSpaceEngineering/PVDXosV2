@@ -244,6 +244,9 @@ typedef enum {
 #define PA_TIMEOUT_LIMIT_POS 16u
 #define PA_TIMEOUT_UPTIME_MSK 0xFFFFu
 
+// TP_GEN_CTRL (USM 9.2.8.8). Pattern 0 = 8-bit counter; length 0 = generate until disabled.
+#define TP_GEN_CTRL_ENABLE (1u << 0)
+
 // TF_CTRL (USM 9.2.8.1). The radio sets Enable on entering Config. The driver clears it.
 #define TF_CTRL_ENABLE (1u << 0)
 #define TF_CTRL_BUF_FLUSH (1u << 4) // Unused. Framer only.

@@ -252,6 +252,11 @@ bool check_display(void) {
 #define PHD_CHECK_LIGHT_FLOOR 50 // ADC code a lit channel should exceed
 
 bool check_photodiodes(void) {
+#ifdef SKIP_PHOTODIODE_CHECK
+    // Reports a pass without touching the array (see SKIP_PHOTODIODE_CHECK in globals.h)
+    warning("photodiode check: SKIPPED, the array is not under test on this board\n");
+    return true;
+#else
     if (init_photodiodes() != SUCCESS) {
         warning("photodiode check: init failed\n");
         return false;
@@ -288,6 +293,7 @@ bool check_photodiodes(void) {
         return false;
     }
     return true;
+#endif // SKIP_PHOTODIODE_CHECK
 }
 
 // Thermistors + heaters: runs the driver init (ADC1 setup, both heater enables driven off), then reads each
