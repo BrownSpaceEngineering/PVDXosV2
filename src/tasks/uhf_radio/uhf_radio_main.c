@@ -14,7 +14,7 @@
  * - Confirm CCSDS_APID_TELEMETRY (0x04) and the one-byte PUSP payload format, both temporary
  * - Confirm the placeholder RF settings (UHF_FREQ_HZ, UHF_TX_POWER, UHF_PHY_CONFIG) with the ground station
  * - Hardware: pick RF09's front-end mode (PA/LNA switch wiring) and trim xo_fs/xo_trim, see at86_init_pvdx()
- * - Enable the task in task_list.c and settle its priority
+ * - Settle the task's priority in task_list.c
  *
  * TODO (SPP / CFDP):
  * - spp_wrap() (radio_routing.c) sends a placeholder callsign and zero timestamps on every downlink, beacons and PUSP

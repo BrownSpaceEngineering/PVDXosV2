@@ -90,8 +90,8 @@ void adcs_tle_from_uplink(const uplink_adcs_parameters_t *const params, adcs_tle
 /**
  * \fn get_adcs_do_point_command
  *
- * \brief Creates a command to run `body()` whenever possible, falling back to B-dot whenever it is not pointing.
- *      This is the mode ADCS starts in.
+ * \brief Creates a command to let `body()` hand off from B-dot detumbling to pointing when it is ready (it drops back
+ *      to B-dot by itself on any fault). This is the mode ADCS starts in.
  *
  * \warning any filter state left over from before a detumble-only period is reused, not reset; `body()`'s own
  *      failure checks are what catch it if it has gone stale
@@ -103,7 +103,8 @@ command_t get_adcs_do_point_command(void);
 /**
  * \fn get_adcs_detumble_only_command
  *
- * \brief Creates a command to run only B-dot, without calling `body()` at all, until told otherwise
+ * \brief Creates a command to keep `body()` in B-dot detumbling, never handing off to pointing, until told otherwise
+ *      (`body_set_detumble_only()`)
  *
  * \returns command_t command structure
  */
@@ -147,13 +148,12 @@ command_t get_adcs_set_utc_command(const uint32_t unix_time);
  *
  * \brief Runs one ADCS control step in the current mode
  *
- * \param last_mag the previous step's magnetometer reading in Tesla (3 floats)
- * \param mag this step's magnetometer reading in Tesla (3 floats)
- * \param gyro this step's angular rate in rad/s (3 floats)
+ * \param last_mag the previous step's magnetometer reading in Tesla, in magnetometer axes (3 floats)
+ * \param mag this step's magnetometer reading in Tesla, in magnetometer axes (3 floats)
+ * \param gyro this step's angular rate in rad/s, in gyro chip axes (3 floats)
  * \param photodiodes this step's photodiode readings (NUM_DIODES floats)
  * \param dt time since the last step, in seconds
- * \param currents buffer of 3 floats to fill with magnetorquer currents in Amps; zero if the magnetometer is unusable
- *      and `body()` is not pointing
+ * \param currents buffer of 3 floats to fill with magnetorquer currents in Amps, as `body()` commands them
  */
 void adcs_compute_currents(const float *const last_mag, const float *const mag, const float *const gyro, const float *const photodiodes,
                            const float dt, float *const currents);
@@ -177,7 +177,8 @@ void adcs_read_sensors(float *const mag_tesla, float *const gyro_rad_s, float *c
 /**
  * \fn adcs_read_magnetometer
  *
- * \brief Takes a single magnetometer measurement, in the body frame and in Tesla, as `body()` expects
+ * \brief Takes a single magnetometer measurement in Tesla, in the magnetometer's own [U8, U9, U10] axes, as `body()`
+ *      expects (it maps them to the body frame itself)
  *
  * \param mag_tesla buffer of 3 floats to fill; set to NAN on failure so `body()` safely bails
  *
@@ -190,7 +191,8 @@ status_t adcs_read_magnetometer(float *const mag_tesla);
 /**
  * \fn adcs_read_gyro
  *
- * \brief Reads the body-frame angular rate in rad/s, as `body()` expects
+ * \brief Reads the angular rate in rad/s, in the gyro chip's own axes, as `body()` expects (it maps them to the body
+ *      frame itself)
  *
  * \param gyro_rad_s buffer of 3 floats to fill; set to NAN on failure so `body()` safely bails
  *
@@ -210,10 +212,20 @@ status_t adcs_read_gyro(float *const gyro_rad_s);
 status_t adcs_read_photodiodes(float *const photodiodes);
 
 /**
+ * \fn adcs_update_sunlight
+ *
+ * \brief Updates the debounced sunlight / eclipse status that `adcs_update_state_inputs()` reports
+ *
+ * \param photodiodes this step's photodiode readings (NUM_DIODES floats)
+ * \param photodiodes_valid whether the read succeeded; a failed read restarts the debounce count
+ */
+void adcs_update_sunlight(const float *const photodiodes, const bool photodiodes_valid);
+
+/**
  * \fn adcs_get_tle_update
  *
- * \brief Gets the TLE to hand to `body()` if there is a new one, which stays pending until `body()` accepts it or
- *      has rejected it too many times
+ * \brief Gets the TLE to hand to `body()` if there is a new one, which stays pending until `body()` has accepted or
+ *      rejected it (a rejected TLE is dropped; the ground has to resend it with its metadata)
  *
  * \returns pointer to 6 TLE mean elements [n (rev/day), e, i, RAAN, argp, M (rad)], or NULL to reuse the last TLE
  */
@@ -285,5 +297,53 @@ void adcs_get_telemetry(tel_adcs_data_t *const telemetry);
  * \brief Tells the task manager if the ADCS state machine inputs (pointing, sensor fault, sunlight) have changed
  */
 void adcs_update_state_inputs(void);
+
+/* ---------- MOCK (make PLANT_SIM=1) ---------- */
+
+#ifdef PLANT_SIM
+/**
+ * \fn adcs_mock_init
+ *
+ * \brief Starts the adcs-c truth plant that stands in for the ADCS sensors and magnetorquers, and sets UTC to its
+ *      start time through the set UTC command
+ *
+ * \warning must be called after `body_reset()`
+ */
+void adcs_mock_init(void);
+
+/**
+ * \fn adcs_mock_sense
+ *
+ * \brief Samples the plant's simulated sensors in place of `adcs_read_sensors()`, and enqueues a set TLE command when
+ *      the plant's ground station uplinks one
+ *
+ * \param last_mag the plant's previous magnetometer sample (3 floats, T)
+ * \param mag see `adcs_read_magnetometer()`
+ * \param gyro see `adcs_read_gyro()`
+ * \param photodiodes see `adcs_read_photodiodes()`
+ * \param dt filled with the plant's fixed step, which the simulated physics advances by regardless of real time
+ */
+void adcs_mock_sense(float *const last_mag, float *const mag, float *const gyro, float *const photodiodes, float *const dt);
+
+/**
+ * \fn adcs_mock_get_time
+ *
+ * \brief The plant's simulated UTC, which `adcs_get_time()` returns in place of the RTC's
+ *
+ * \returns status_t SUCCESS, or ERROR_NOT_READY before `adcs_mock_init()`
+ */
+status_t adcs_mock_get_time(int *const unix_time, int *const jd_scalar, float *const jd_frac);
+
+/**
+ * \fn adcs_mock_step
+ *
+ * \brief Applies the currents to the plant's magnetorquers in place of `adcs_drive_magnetorquers()`, advances it one
+ *      tick, and periodically logs the ADCS performance against the plant's truth
+ *
+ * \param currents 3 magnetorquer currents in Amps (x, y, z)
+ * \param step_ticks how long this step's work took, for logging
+ */
+void adcs_mock_step(const float *const currents, const TickType_t step_ticks);
+#endif
 
 #endif // ADCS_H

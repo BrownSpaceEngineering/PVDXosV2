@@ -124,7 +124,7 @@ pvdx_task_t cfdp_task = {.name = "CFDP",
                          .task_type = ACTUATOR};
 
 pvdx_task_t uhf_radio_task = {.name = "Radio",
-                              .enabled = false,
+                              .enabled = true,
                               .handle = NULL,
                               .command_queue = NULL,
                               .init = init_uhf_radio,
