@@ -22,8 +22,8 @@ typedef enum { // preliminary contents; still under discussion
     STATE_IDLE,
     STATE_PEROVSKITE_CAPTURE,
     STATE_STUDENT_PICTURE_CAPTURE,
-    STATE_SBAND_TRANSMISSION,
-    STATE_UHF_TRANSMISSION,
+    STATE_SBAND_PASS,
+    STATE_UHF_PASS,
     STATE_REFLASH,
     STATE_FAKE_HEARTBEAT, // EXAMPLE ONLY: not a real PVDX state
     NUM_STATES
@@ -46,6 +46,7 @@ typedef struct { // preliminary contents; still under discussion
     TickType_t last_reflash_tick;
     bool sband_pass_pending; // this does not guarantee a transition to STATE_SBAND_TRANS
     bool uhf_pass_pending;
+    bool reflash_in_progress;
     bool safe_to_disable_radio; // any time this is set to true, the radio should assume it might be disabled
 } input_t;
 
@@ -61,6 +62,7 @@ typedef enum { // preliminary contents; still under discussion
     PEROVSKITE_READY_DOWNLINK_UPDATE,
     SBAND_READY_TRANSMIT_UPDATE,
     SAFE_DISABLE_RADIO_UPDATE,
+    REFLASH_PROGRESS_UPDATE,
     NUM_INPUT_UPDATE_OPTIONS
 } input_update_t;
 

@@ -19,12 +19,12 @@
 
 // TRANSITIONS
 
-// these state transitions are just examples
-#define LOW_BATTERY_LEVEL 0.1                // absolutely made up
-#define RECOVERED_BATTERY_LEVEL 0.5          // absolutely made up
-#define FAKE_IDLE_PERIOD_MS 25000            // EXAMPLE ONLY: how long IDLE waits before the next FAKE_HEARTBEAT
-#define FAKE_HEARTBEAT_PERIOD_MS 5000        // EXAMPLE ONLY: how long to stay in FAKE_HEARTBEAT
-#define PEROVSKITE_CAPTURE_TIMEOUT_MS 300000 // Give up on a sweep that hasn't finished; a normal one takes about 90 s
+#define LOW_BATTERY_LEVEL 0.1
+#define RECOVERED_BATTERY_LEVEL 0.1
+#define REFLASH_INTERVAL_MS (60 * 60 * 1000)  // 1 hour
+#define FAKE_IDLE_PERIOD_MS 25000             // EXAMPLE ONLY: how long IDLE waits before the next FAKE_HEARTBEAT
+#define FAKE_HEARTBEAT_PERIOD_MS 5000         // EXAMPLE ONLY: how long to stay in FAKE_HEARTBEAT
+#define PEROVSKITE_CAPTURE_TIMEOUT_MS 300000  // Give up on a sweep that hasn't finished; a normal one takes about 90 s
 
 // How long the state machine has been in its current state
 static TickType_t ticks_in_state(const input_t *const input) {
@@ -36,23 +36,29 @@ static state_id_t unimplemented_next_state(const input_t *const input) {
     return STATE_IDLE;
 }
 
+static state_id_t low_power_idle_next_state(const input_t *const input) {
+    if (input->battery_level > RECOVERED_BATTERY_LEVEL)
+        return STATE_IDLE;
+    return STATE_LOW_POWER_IDLE;
+}
+
 static state_id_t idle_next_state(const input_t *const input) {
     if (input->battery_level < LOW_BATTERY_LEVEL)
         return STATE_LOW_POWER_IDLE;
+    if (input->uhf_pass_pending)
+        return STATE_UHF_PASS;
+    if (input->sband_pass_pending)
+        return STATE_SBAND_PASS;
     if (input->image_ready_to_display && !input->photo_taken_for_downlink && !input->in_sunlight)
         return STATE_STUDENT_PICTURE_CAPTURE;
-    // if (input->photo_taken_for_downlink)
-    //     return STATE_SBAND_TRANS; // TODO: re-enable? cfdp_send_complete() now clears the flag, so this would exit
     if (input->in_sunlight && !input->perovskite_data_ready_for_downlink)
         return STATE_PEROVSKITE_CAPTURE;
-    if (ticks_in_state(input) >= pdMS_TO_TICKS(FAKE_IDLE_PERIOD_MS))
-        return STATE_FAKE_HEARTBEAT; // EXAMPLE ONLY
+    if (input->current_tick - input->last_reflash_tick > pdMS_TO_TICKS(REFLASH_INTERVAL_MS))
+        return STATE_REFLASH;
     return STATE_IDLE;
 }
 
 static state_id_t perovskite_capture_next_state(const input_t *const input) {
-    if (input->battery_level < LOW_BATTERY_LEVEL)
-        return STATE_LOW_POWER_IDLE;
     if (input->perovskite_data_ready_for_downlink)
         return STATE_IDLE; // cleared once the downlink finishes
     if (ticks_in_state(input) >= pdMS_TO_TICKS(PEROVSKITE_CAPTURE_TIMEOUT_MS))
@@ -82,12 +88,6 @@ static state_id_t sband_trans_next_state(const input_t *const input) {
     if (!input->photo_taken_for_downlink)
         return STATE_IDLE; // cleared once the downlink finishes
     return STATE_SBAND_TRANS;
-}
-
-static state_id_t low_power_idle_next_state(const input_t *const input) {
-    if (input->battery_level > RECOVERED_BATTERY_LEVEL)
-        return STATE_IDLE;
-    return STATE_LOW_POWER_IDLE;
 }
 
 // ENTRY ACTIONS
