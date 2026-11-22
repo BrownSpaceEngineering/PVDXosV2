@@ -42,10 +42,10 @@ typedef struct { // preliminary contents; still under discussion
 	// Filled in by the task manager itself; never sent as an input update
 	TickType_t current_tick;
 	TickType_t last_transition_tick; // when the current state was entered
-	TickType_t last_reflash_tick;
 	bool sband_pass_pending; // this does not guarantee a transition to STATE_SBAND_TRANS
     bool uhf_pass_pending;
     bool safe_to_disable_radio; // any time this is set to true, the radio should assume it might be disabled
+    bool reflash_update_pending; // explicit scan request; cleared by reflash on completion
 } input_t;
 
 typedef enum { // preliminary contents; still under discussion
@@ -60,7 +60,9 @@ typedef enum { // preliminary contents; still under discussion
 	PEROVSKITE_READY_DOWNLINK_UPDATE,
 	SBAND_READY_TRANSMIT_UPDATE,
 	SAFE_DISABLE_RADIO_UPDATE,
-	NUM_INPUT_UPDATE_OPTIONS
+    REFLASH_UPDATE,
+    NUM_INPUT_UPDATE_OPTIONS
+
 } input_update_t;
 
 struct input_update_data {

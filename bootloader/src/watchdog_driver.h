@@ -16,6 +16,8 @@ void watchdog_set_clear_register(hri_wdt_clear_reg_t data);
 int32_t watchdog_enable(void);
 int32_t watchdog_disable(void);
 void watchdog_pet(void);
+// Compatibility with callers using the former hardware-instance argument.
+void watchdog_feed(volatile Wdt *const watchdog_instance);
 void watchdog_kick(void);
 
 #endif // WATCHDOG_DRIVER_H

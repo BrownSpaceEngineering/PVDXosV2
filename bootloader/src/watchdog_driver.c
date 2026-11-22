@@ -124,6 +124,11 @@ void watchdog_pet(void) {
     watchdog_set_clear_register(WDT_CLEAR_CLEAR_KEY);
 }
 
+void watchdog_feed(volatile Wdt *const watchdog_instance) {
+    (void)watchdog_instance; // The shared driver uses the single hardware watchdog.
+    watchdog_pet();
+}
+
 /**
  * \fn watchdog_kick
  * 

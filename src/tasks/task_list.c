@@ -211,7 +211,7 @@ pvdx_task_t perovskite_task = {.name = "Perovskite",
                                .task_type = SENSOR};
 
 pvdx_task_t reflash_task = {.name = "Reflash",
-                            .enabled = true,
+                            .enabled = false,
                             .handle = NULL,
                             .command_queue = NULL,
                             .init = NULL,
@@ -224,7 +224,8 @@ pvdx_task_t reflash_task = {.name = "Reflash",
                             .watchdog_timeout_ms = 10000,
                             .last_checkin_time_ticks = 0xDEADBEEF,
                             .has_registered = false,
-                            .task_type = OS}; // repairs bootloader flash slots from MRAM in every state
+                            .task_type = ACTUATOR,
+                            .prepare_resume = reflash_prepare_resume}; // enabled only for state-machine-requested scans
 
 // and define their constant pointers
 pvdx_task_t *const p_watchdog_task = &watchdog_task;

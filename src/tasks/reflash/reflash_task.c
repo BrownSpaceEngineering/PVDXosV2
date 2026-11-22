@@ -2,18 +2,22 @@
 
 #include <string.h>
 
+#include "cmd_dispatcher.h"
 #include "flash_driver.h"
-#include "mram_map.h"
 #include "logging.h"
+#include "mram_map.h"
+#include "state_machine.h"
 #include "task_list.h"
 #include "watchdog_task.h"
 
-#define REFLASH_INTERVAL_TICKS ((TickType_t)(6u * 60u * 60u) * configTICK_RATE_HZ)
 #define BOOTLOADER_CRC_SIZE (FLASH_STAGE2_SIZE - sizeof(uint32_t))
 
 reflash_task_memory_t reflash_mem;
 static uint8_t slot_buffer[FLASH_STAGE2_SIZE] __attribute__((aligned(4)));
-static bool reflash_in_progress;
+// Static lifetime: the task manager reads this after the command is queued.
+static input_update_data_t reflash_inputs = {
+    .input_update_bitmask = INPUT_UPDATE_BIT(REFLASH_UPDATE),
+};
 
 static bool slot_crc_valid(void) {
     uint32_t stored_crc;
@@ -21,33 +25,20 @@ static bool slot_crc_valid(void) {
     return crc32(slot_buffer, BOOTLOADER_CRC_SIZE) == stored_crc;
 }
 
-static void reflash_checkin(bool sched_running) {
-    if (sched_running) {
-        pvdx_task_t *current = get_current_task();
-        if (current != NULL && current->has_registered) {
-            watchdog_checkin(current);
-        }
+void reflash_checkin(void) {
+    pvdx_task_t *current = get_current_task();
+    if (current != NULL && current->has_registered) {
+        watchdog_checkin(current);
     }
 }
 
-// MRAM/SPI initialization is owned by OS startup (mram_map_init()); this task only reads, through mram_map's lock.
-void reflash_bootloaders(bool sched_running) {
-    if (sched_running) {
-        taskENTER_CRITICAL();
-    }
-    bool already_running = reflash_in_progress;
-    reflash_in_progress = true;
-    if (sched_running) {
-        taskEXIT_CRITICAL();
-    }
-    if (already_running) {
-        return;
-    }
-
+// Only this task calls the scan; MRAM/SPI initialization belongs to OS startup.
+status_t reflash_bootloaders(void) {
+    status_t result = SUCCESS;
     // Slot 0 is preboot; slots 1 through 8 are individually linked stage-2 copies.
     for (uint32_t index = 0; index <= FLASH_STAGE2_COUNT; index++) {
         uint32_t address = FLASH_STAGE1_ADDR + index * FLASH_STAGE2_SIZE;
-        reflash_checkin(sched_running);
+        reflash_checkin();
         bool no_ecc_error = flash_read_bootloader_block(address, slot_buffer);
         if (no_ecc_error && slot_crc_valid()) {
             continue;
@@ -55,52 +46,43 @@ void reflash_bootloaders(bool sched_running) {
         warning("reflash: slot %u has %s; checking MRAM\n", (unsigned int)index, no_ecc_error ? "bad CRC" : "ECC error");
         if (!mram_bootloader_copy_read(address - FLASH_STAGE1_ADDR, slot_buffer, sizeof(slot_buffer))) {
             warning("reflash: slot %u MRAM read failed; flash unchanged\n", (unsigned int)index);
+            result = ERROR_READ_FAILED;
             continue;
         }
         if (!slot_crc_valid()) {
             warning("reflash: slot %u MRAM CRC failed; flash unchanged\n", (unsigned int)index);
+            result = ERROR_READ_FAILED;
             continue;
         }
 
         // NVM commands/cache settings are shared. IRQs and the hardware watchdog remain active.
-        if (sched_running) {
-            vTaskSuspendAll();
-        }
+        vTaskSuspendAll();
         bool programmed = flash_program_bootloader_block(address, slot_buffer);
-        if (sched_running) {
-            (void)xTaskResumeAll();
-        }
+        (void)xTaskResumeAll();
         if (!programmed || !flash_read_bootloader_block(address, slot_buffer) || !slot_crc_valid()) {
             warning("reflash: slot %u repair failed\n", (unsigned int)index);
+            result = ERROR_WRITE_FAILED;
         } else {
             info("reflash: slot %u repaired and verified\n", (unsigned int)index);
         }
-        reflash_checkin(sched_running);
-        if (sched_running) {
-            vTaskDelay(1);
-        }
+        reflash_checkin();
+        vTaskDelay(1);
     }
-    if (sched_running) {
-        taskENTER_CRITICAL();
-    }
-    reflash_in_progress = false;
-    if (sched_running) {
-        taskEXIT_CRITICAL();
-    }
+    return result;
 }
 
-void main_reflash_task(void *pvParameters) {
-    (void)pvParameters;
-    reflash_bootloaders(true);
-    TickType_t last_scan = xTaskGetTickCount();
-    while (true) {
-        // Wake regularly for watchdog check-ins, while scanning only every six hours.
-        vTaskDelay(pdMS_TO_TICKS(1000));
-        reflash_checkin(true);
-        TickType_t now = xTaskGetTickCount();
-        if ((TickType_t)(now - last_scan) >= REFLASH_INTERVAL_TICKS) {
-            reflash_bootloaders(true);
-            last_scan = xTaskGetTickCount();
-        }
+// The task manager calls this before every enable/resume. One notification
+// releases one scan, even if the previous completion has not returned yet.
+void reflash_prepare_resume(void) {
+    xTaskNotifyGive(p_reflash_task->handle);
+}
+
+void reflash_report_completion(void) {
+    // Completion means the scan finished, including any logged repair failures.
+    reflash_inputs.new_values.reflash_update_pending = false;
+    command_t update = get_state_input_update_command(&reflash_inputs);
+    const status_t status = enqueue_command(&update);
+    if (status != SUCCESS) {
+        warning("reflash: Failed to enqueue completion update (status %d)\n", status);
     }
 }

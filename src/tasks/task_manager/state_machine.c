@@ -145,6 +145,9 @@ static void copy_input(input_update_t update, const input_t *const p_new_values)
         case SAFE_DISABLE_RADIO_UPDATE:
             inputs.safe_to_disable_radio = p_new_values->safe_to_disable_radio;
             break;
+        case REFLASH_UPDATE:
+            inputs.reflash_update_pending = p_new_values->reflash_update_pending;
+            break;
         case NUM_INPUT_UPDATE_OPTIONS:
             // Not an input; listed so that the switch covers the whole enum
             break;

@@ -13,7 +13,12 @@ typedef struct {
 
 extern reflash_task_memory_t reflash_mem;
 
-void reflash_bootloaders(bool sched_running);
+// Lifecycle hook: enabling the task authorizes exactly one scan.
+void reflash_prepare_resume(void);
+// Called only by main_reflash_task; scans are serialized in that task.
+status_t reflash_bootloaders(void);
+void reflash_report_completion(void);
+void reflash_checkin(void);
 
 void main_reflash_task(void *pvParameters);
 

@@ -39,6 +39,8 @@ static state_id_t unimplemented_next_state(const input_t *const input) {
 static state_id_t idle_next_state(const input_t *const input) {
     if (input->battery_level < LOW_BATTERY_LEVEL)
         return STATE_LOW_POWER_IDLE;
+    if (input->reflash_update_pending)
+        return STATE_FLASH_RECOVERY_CHECK;
     if (input->image_ready_to_display && !input->photo_taken_for_downlink && !input->in_sunlight)
         return STATE_STUDENT_PICTURE_CAPTURE;
     // if (input->photo_taken_for_downlink)
@@ -88,6 +90,11 @@ static state_id_t low_power_idle_next_state(const input_t *const input) {
     if (input->battery_level > RECOVERED_BATTERY_LEVEL)
         return STATE_IDLE;
     return STATE_LOW_POWER_IDLE;
+}
+
+// Once started, let the scan release all resources before leaving recovery.
+static state_id_t flash_recovery_check_next_state(const input_t *const input) {
+    return input->reflash_update_pending ? STATE_FLASH_RECOVERY_CHECK : STATE_IDLE;
 }
 
 // ENTRY ACTIONS
@@ -151,6 +158,9 @@ void init_states(void) {
                                                   .fetch_next_state = sband_trans_next_state};
     mission_states[STATE_LOW_POWER_IDLE] = (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_uhf_radio_task, p_cfdp_task},
                                                      .fetch_next_state = low_power_idle_next_state};
+    mission_states[STATE_FLASH_RECOVERY_CHECK] =
+        (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_uhf_radio_task, p_cfdp_task, p_reflash_task},
+                  .fetch_next_state = flash_recovery_check_next_state};
     mission_states[STATE_FAKE_HEARTBEAT] =
         (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_uhf_radio_task, p_cfdp_task, p_heartbeat_task},
                   .fetch_next_state = fake_heartbeat_next_state};
