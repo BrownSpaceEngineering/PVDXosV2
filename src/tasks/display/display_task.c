@@ -73,6 +73,26 @@ status_t display_image(const color_t *const p_buffer) {
 }
 
 /**
+ * \fn display_stored_image
+ *
+ * \brief Shows the image saved with display_store_image(), or the built-in IMAGE_BUFFER_PVDX if no valid one is saved
+ *
+ * \returns `status_t` SUCCESS if the display was updated, or an error code otherwise
+ */
+static status_t display_stored_image(void) {
+    // Loaded straight into the display buffer, so no second 8 KB buffer is needed. A failed load leaves it overwritten,
+    // which the built-in image then replaces
+    if (mram_record_load(MRAM_REGION_DISPLAY, DISPLAY_STORED_IMAGE_OFFSET, display_buffer, DISPLAY_BUFFER_SIZE)) {
+        info("display: Showing the stored image\n");
+    } else {
+        info("display: No stored image in MRAM, showing the built-in one\n");
+        display_set_buffer(IMAGE_BUFFER_PVDX);
+    }
+    ret_err_status(display_update(), "display: Update failed");
+    return SUCCESS;
+}
+
+/**
  * \fn clear_image
  *
  * \brief Clears the display buffer and triggers an update of the display
@@ -89,6 +109,27 @@ status_t clear_image(void) {
 }
 
 /* ---------- NON-DISPATCHABLE FUNCTIONS (do not go through the command dispatcher) ---------- */
+
+_Static_assert(DISPLAY_INCOMING_IMAGE_OFFSET + DISPLAY_IMAGE_RECORD_SIZE <= MRAM_DISPLAY_SIZE,
+               "the stored and incoming display images must fit MRAM_REGION_DISPLAY");
+
+/**
+ * \fn display_store_image
+ *
+ * \brief Saves an image to MRAM as the one OPERATION_DISPLAY_STORED_IMAGE shows, surviving reboots. Safe to call from
+ * any task (MRAM access is serialized)
+ *
+ * \param p_buffer DISPLAY_BUFFER_SIZE bytes of image, 2 pixels per byte
+ *
+ * \returns `status_t` SUCCESS, or ERROR_WRITE_FAILED if any MRAM chip's write failed
+ */
+status_t display_store_image(const color_t *const p_buffer) {
+    if (!mram_record_save(MRAM_REGION_DISPLAY, DISPLAY_STORED_IMAGE_OFFSET, p_buffer, DISPLAY_BUFFER_SIZE)) {
+        warning("display: Failed to save the image to MRAM\n");
+        return ERROR_WRITE_FAILED;
+    }
+    return SUCCESS;
+}
 
 /**
  * \fn get_display_image_command
@@ -110,6 +151,23 @@ inline command_t get_display_image_command(const color_t *const p_buffer) {
         .result = PROCESSING,
     };
     return cmd;
+}
+
+/**
+ * \fn get_display_stored_image_command
+ *
+ * \brief Gets the task command to show the image stored in MRAM (or the built-in one)
+ *
+ * \returns `command_t`, the command to show the stored image
+ */
+command_t get_display_stored_image_command(void) {
+    return (command_t){
+        .target = p_display_task,
+        .operation = OPERATION_DISPLAY_STORED_IMAGE,
+        .data = {0},
+        .data_type = CMD_DATA_NONE,
+        .result = PROCESSING,
+    };
 }
 
 /**
@@ -170,6 +228,12 @@ void exec_command_display(command_t *const p_cmd) {
             p_cmd->result = display_image((const color_t *)p_cmd->data.display_data);
             if (p_cmd->result == SUCCESS) {
                 // Photograph the image now that it is on the display
+                request_photo();
+            }
+            break;
+        case OPERATION_DISPLAY_STORED_IMAGE:
+            p_cmd->result = display_stored_image();
+            if (p_cmd->result == SUCCESS) {
                 request_photo();
             }
             break;

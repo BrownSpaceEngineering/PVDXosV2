@@ -15,7 +15,8 @@
  *   0x080000  MRAM_REGION_BURN_RECORD                                              4 KB
  *   0x081000  MRAM_REGION_ADCS                                                     4 KB
  *   0x082000  MRAM_REGION_PEROVSKITE                                              32 KB
- *   0x08A000  free                                                                24 KB
+ *   0x08A000  MRAM_REGION_DISPLAY                                                 20 KB
+ *   0x08F000  free                                                                 4 KB
  *   0x090000  MRAM_REGION_CAMERA                                                 388 KB
  *   0x0F1000  free, to the end of the chip at 0x100000                            60 KB
  */
@@ -35,6 +36,8 @@
 #define MRAM_ADCS_SIZE (0x1000u)
 #define MRAM_PEROVSKITE_ADDRESS (0x082000u)
 #define MRAM_PEROVSKITE_SIZE (0x8000u)
+#define MRAM_DISPLAY_ADDRESS (0x08A000u)
+#define MRAM_DISPLAY_SIZE (0x5000u) // Two 256x64 4-bit images (8 KB each) as records, which add a header each
 #define MRAM_CAMERA_ADDRESS (0x090000u)
 #define MRAM_CAMERA_SIZE (0x61000u)
 
@@ -43,6 +46,7 @@ typedef enum {
     MRAM_REGION_ADCS,        // TLE and UTC, see adcs_persist.c
     MRAM_REGION_PEROVSKITE,  // Sweep ring buffer, see perovskite_task.h
     MRAM_REGION_CAMERA,      // Last JPEG from capture_mram(), see arducam_driver.h
+    MRAM_REGION_DISPLAY,     // Display image data (display_buffer, DISPLAY_BUFFER_SIZE bytes per image)
     MRAM_REGION_COUNT,
 } mram_region_t;
 

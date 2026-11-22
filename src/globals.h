@@ -126,6 +126,9 @@ typedef enum {
 
     // Perovskite operations (append to preserve existing operation values)
     OPERATION_PEROVSKITE_SWEEP, // p_data: NULL
+
+    // Display operations (append to preserve existing operation values)
+    OPERATION_DISPLAY_STORED_IMAGE, // p_data: NULL; the image saved in MRAM, or IMAGE_BUFFER_PVDX if there is none
 } operation_t;
 
 // An enum to represent the different log levels that functions can use
