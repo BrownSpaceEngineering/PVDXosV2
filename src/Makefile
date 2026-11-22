@@ -34,11 +34,36 @@ include $(ADCS_MK)
 SRCS += $(ADCS_SRCS)
 CFLAGS += $(ADCS_CFLAGS)
 
+# `make dev PLANT_SIM=1` (or `make test PLANT_SIM=1`) runs the ADCS task against the adcs-c truth plant instead of its
+# sensors and magnetorquers (see src/tasks/adcs/adcs_mock.c). The plant's sources are ground-side only, so adcs.mk
+# leaves them out of normal builds.
+ifeq ($(PLANT_SIM),1)
+    ifneq ($(filter release,$(MAKECMDGOALS)),)
+        $(error PLANT_SIM can't be used for a release build)
+    endif
+    SRCS += $(ADCS_DIR)/src/plant.c $(ADCS_DIR)/src/tle_fit.c
+    CFLAGS += -DPLANT_SIM
+    BUILD_TAGS += plant_sim
+endif
+
+# `make dev NO_MRAM=1` (or `make test NO_MRAM=1`; from the top-level Makefile it also builds a bootloader that never
+# touches MRAM) compiles out every MRAM operation: the MRAM driver and mram_map.c aren't built, and each user of
+# mram_map.h skips its reads and writes under #ifdef NO_MRAM, so nothing persists across reboots.
+ifneq ($(NO_MRAM),)
+    ifneq ($(filter release,$(MAKECMDGOALS)),)
+        $(error NO_MRAM can't be used for a release build)
+    endif
+    SRCS := $(filter-out $(SRC_DIR)/drivers/mram/%,$(SRCS))
+    CFLAGS += -DNO_MRAM
+    BUILD_TAGS += no_mram
+endif
+
 # Map src/foo/bar.c -> build/foo/bar.o so artifacts don't clutter src
 export OBJS := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SRCS))
 
 # Create list of directories to include from
-export EXTRA_VPATH := $(sort $(dir $(SRCS)) $(addsuffix /,$(ADCS_INCLUDE_DIRS)))
+# (drivers/mram stays on the include path for mram_map.h's types even when NO_MRAM leaves its sources out)
+export EXTRA_VPATH := $(sort $(dir $(SRCS)) $(SRC_DIR)/drivers/mram/ $(addsuffix /,$(ADCS_INCLUDE_DIRS)))
 
 # Print discovered objs and VPATH for debugging 
 $(info Parsed OBJS:)
@@ -192,13 +217,15 @@ endef
 all: dev
 
 dev:
-	$(call ensure_build_type,dev)
+	$(call ensure_build_type,$(strip dev $(BUILD_TAGS)))
 	$(call child_build,dev, $(CFLAGS_DEV) $(CFLAGS))
 	$(call check_bin_size,dev)
 	@cp -f ../ASF/gcc/PVDXos.bin ./ \
 	&& cp -f ../ASF/gcc/PVDXos.elf ./ \
 	&& echo " --- Finished Building PVDXos --- " \
-	&& echo " ---  THIS IS THE DEV BUILD! --- "
+	&& echo " ---  THIS IS THE DEV BUILD! --- " \
+	&& $(if $(filter plant_sim,$(BUILD_TAGS)),echo " ---  ADCS RUNS ON THE PLANT SIM (PLANT_SIM=1)  --- " &&,) \
+	$(if $(filter no_mram,$(BUILD_TAGS)),echo " ---  MRAM IS COMPILED OUT (NO_MRAM=1)  --- ",true)
 
 release: clean #Might as well clean before compiling the release build
 	@echo "release" > $(BUILD_TYPE_FILE)
@@ -211,7 +238,7 @@ release: clean #Might as well clean before compiling the release build
 
 # The selected tests are part of the build type, so changing TESTS forces a rebuild
 test:
-	$(call ensure_build_type,$(strip test $(TEST_DEFINES)))
+	$(call ensure_build_type,$(strip test $(TEST_DEFINES) $(BUILD_TAGS)))
 	$(call child_build,test, $(CFLAGS_UNITTEST) $(CFLAGS))
 	$(call check_bin_size,test)
 	@cp -f ../ASF/gcc/PVDXos.elf ./ \

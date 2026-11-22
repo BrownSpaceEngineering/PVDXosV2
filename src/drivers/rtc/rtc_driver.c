@@ -152,9 +152,8 @@ void calibrate_rtc(void) {
     }
 
     if (!window_open) {
-        if (!radio_counter_on) {
-            radio_counter_on = enable_radio_counter();
-        }
+        // Checked for every new window, since check_uhf() and uhf_chip_setup() reset the radio, which stops its counter
+        radio_counter_on = enable_radio_counter();
         if (!radio_counter_on) {
             return;
         }
@@ -194,6 +193,7 @@ void calibrate_rtc(void) {
     info("rtc: calibrated over %lu ticks: %lu.%03lu us per tick, time corrected by %ld us\n",
          (unsigned long)(rtc_count - window_rtc_count), (unsigned long)measured_us_per_tick,
          (unsigned long)((measured_us_per_tick - (double)(uint32_t)measured_us_per_tick) * 1000.0), (long)correction_us);
+    (void)correction_us; // only logged, and release builds compile info() out
 
     taskENTER_CRITICAL();
     base_us = window_us + (uint64_t)window_real_us;
@@ -217,7 +217,7 @@ void calibrate_rtc(void) {
  */
 status_t get_rtc_values(rtc_data_t *data) {
     if (!rtc_hw) {
-        warning("Attempting to get RTC count before initializing RTC");
+        warning("Attempting to get RTC count before initializing RTC\n");
         return ERROR_NOT_READY;
     }
     taskENTER_CRITICAL();

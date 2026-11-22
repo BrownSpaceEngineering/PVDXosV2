@@ -283,7 +283,11 @@ bool cfdp_read_file(const cfdp_transaction_t *txn, uint32_t offset, uint8_t *dst
         memcpy(dst, txn->file_data + offset, size);
         return true;
     }
+#ifdef NO_MRAM
+    return false; // A NO_MRAM build has nowhere to read a file from
+#else
     return mram_region_read(txn->file_mram_region, txn->file_mram_offset + offset, dst, size);
+#endif
 }
 
 #define CFDP_CHECKSUM_CHUNK_SZ 256 // Bytes read at a time by cfdp_file_checksum, on the CFDP task's stack

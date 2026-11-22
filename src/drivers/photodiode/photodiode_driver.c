@@ -99,7 +99,7 @@ status_t phd_read_voltage(uint8_t index, float *volts) {
         return ERROR_BAD_TARGET;
     }
     uint16_t code = 0;
-    ret_err_status(phd_read_raw(index, &code), "photodiode: raw read failed");
+    ret_err_status(phd_read_raw(index, &code), "photodiode: raw read failed\n");
     *volts = (float)code / PHD_ADC_FS * PHD_VREF_V;
     return SUCCESS;
 }

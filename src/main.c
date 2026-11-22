@@ -243,18 +243,27 @@ typedef struct {
 // which means the full wait runs again: waiting too long is safer than burning too early.
 static burn_record_t load_burn_record(void) {
     burn_record_t record;
+#ifdef NO_MRAM
+    // A NO_MRAM build keeps the record only in RAM, so every boot starts a fresh one
+    record = (burn_record_t){0};
+#else
     if (!mram_record_load(MRAM_REGION_BURN_RECORD, 0, &record, sizeof(record))) {
         warning_impl("[!] No valid burn record in MRAM; starting a fresh one\n");
         record = (burn_record_t){0};
     }
+#endif
     return record;
 }
 
 // Writes the record to all three MRAM modules
 static void save_burn_record(const burn_record_t *const p_record) {
+#ifdef NO_MRAM
+    (void)p_record;
+#else
     if (!mram_record_save(MRAM_REGION_BURN_RECORD, 0, p_record, sizeof(*p_record))) {
         warning_impl("[!] Could not write the burn record to every MRAM chip\n");
     }
+#endif
 }
 
 int main(void) {
@@ -278,6 +287,9 @@ int main(void) {
 
     // BURN SEQUENCE
 
+#ifdef NO_MRAM
+    warning_impl("[!] NO_MRAM build: MRAM is never touched, and nothing persists across reboots\n");
+#else
     // The only mram_map_init() call; everything else uses mram_map_status()
     mram_status_t mram_status = mram_map_init();
     for (uint8_t mram = 1; mram <= 3; mram++) {
@@ -285,6 +297,7 @@ int main(void) {
             warning_impl("[!] MRAM%u failed to initialize; the burn record relies on the other modules\n", mram);
         }
     }
+#endif
 
     burn_record_t burn_record = load_burn_record();
     burn_record.boot_count++;
@@ -337,7 +350,7 @@ int main(void) {
     i2c_sensors_bus_mutex = xSemaphoreCreateMutexStatic(&i2c_sensors_bus_mutex_buffer);
 
     if (i2c_sensors_bus_mutex == NULL) {
-        fatal("Failed to create I2C_SENSORS bus mutex");
+        fatal("Failed to create I2C_SENSORS bus mutex\n");
     }
     // atmel_start_init() initializes the shared buses but leaves them disabled; the drivers on them assume they are
     // enabled
@@ -385,13 +398,13 @@ int main(void) {
     task_list_mutex = xSemaphoreCreateMutexStatic(&task_list_mutex_buffer);
 
     if (task_list_mutex == NULL) {
-        fatal("Failed to create PVDX task list mutex");
+        fatal("Failed to create PVDX task list mutex\n");
     }
 
     init_adc1_mutex();
 
     if (task_list[0] != p_watchdog_task) {
-        fatal("Watchdog is not first in task_list!");
+        fatal("Watchdog is not first in task_list!\n");
     }
 
     // Initialize all OS integrity tasks

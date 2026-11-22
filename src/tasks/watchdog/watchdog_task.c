@@ -26,7 +26,7 @@
  */
 void watchdog_checkin(pvdx_task_t *const p_task) {
     if (!p_task) {
-        fatal("Attempted to update checkin time of null task!");
+        fatal("Attempted to update checkin time of null task!\n");
     }
 
     if (!(p_task->has_registered)) {
@@ -170,7 +170,7 @@ void register_task_with_watchdog(pvdx_task_t *const p_task) {
  */
 void unregister_task_with_watchdog(pvdx_task_t *const p_task) {
     if (!p_task) {
-        fatal("Attempted to update checkin time of null task!");
+        fatal("Attempted to update checkin time of null task!\n");
     }
 
     if (!(p_task->has_registered)) {

@@ -3,7 +3,6 @@
 Open items for CFDP, radio, and integration. UHF hardware/RF items are listed in `src/tasks/uhf_radio/uhf_radio_main.c`.
 
 ## Blocking
-- Enable the UHF task: `enabled = false` in `task_list.c` and it's in no state's `enabled_tasks`.
 - ADCS uplink commands crash: `OPERATION_SET_UNIX_TIME`, `SET_KEPLER_COEFF`, `SET_ADCS_OP_MODE`, `ADCS_UPDATE_PARAMS` hit `fatal()` in `exec_command_adcs()`. Still true on `adcs-body-integration`.
 - Merge `origin/adcs-body-integration` (newest ADCS; `main` has nothing new). Commit first; expect conflicts in `device_checks.c`, `cfdp_utils.c`.
 

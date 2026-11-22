@@ -7,13 +7,16 @@
 
 #include "stxg2.h"
 
+#include <FreeRTOS.h>
 #include <string.h>
+#include <task.h>
 
 #include "hal_gpio.h"
 #include "hal_i2c_m_sync.h"
 #include "hal_spi_m_sync.h"
 #include "logging.h"
 #include "os_delay.h"
+#include "watchdog_driver.h"
 
 // NOTE: these are all estimates
 #define STXG2_POLL_MS 10u
@@ -236,6 +239,11 @@ status_t stxg2_init(void) {
     uint32_t id = 0;
     status_t result = ERROR_NOT_READY;
     for (uint32_t waited = 0; waited <= STXG2_BOOT_TIMEOUT_MS; waited += STXG2_POLL_MS) {
+        // Before the scheduler (the startup device check) nothing else feeds the hardware watchdog, and with no radio
+        // each failed read waits out the I2C timeouts on top of the poll delay, so this wait can outlast it (~16 s)
+        if (xTaskGetSchedulerState() == taskSCHEDULER_NOT_STARTED) {
+            watchdog_feed(WDT);
+        }
         result = stxg2_read_reg(REG_ID, &id);
         if (result == SUCCESS) {
             break;

@@ -194,7 +194,7 @@ status_t mag_read_data(mag_raw_reading_t *raw_readings, mag_data_t *gain_adj_rea
     int8_t m_samples[9];
 
     ret_err_status(rm3100_read_reg(NULL, RM3100_QX2_REG, (uint8_t *)&m_samples, sizeof(m_samples)),
-                   "magnetometer: Read from QX2 Register failed");
+                   "magnetometer: Read from QX2 Register failed\n");
 
     // Each axis is 24-bit two's complement: only the top byte carries the sign; the
     // middle and low bytes are plain magnitude (0-255). Sign-extend via the (int8_t)
@@ -227,8 +227,8 @@ status_t mag_read_data(mag_raw_reading_t *raw_readings, mag_data_t *gain_adj_rea
 status_t mag_modify_interrupts(uint8_t cmm_value, uint8_t poll_value) {
     uint8_t data[2] = {cmm_value, poll_value};
 
-    ret_err_status(rm3100_write_reg(NULL, RM3100_CMM_REG, &data[0], 1), "magnetometer: Write to CMM Register failed");
-    ret_err_status(rm3100_write_reg(NULL, RM3100_POLL_REG, &data[1], 1), "magnetometer: Write to Poll Register failed");
+    ret_err_status(rm3100_write_reg(NULL, RM3100_CMM_REG, &data[0], 1), "magnetometer: Write to CMM Register failed\n");
+    ret_err_status(rm3100_write_reg(NULL, RM3100_POLL_REG, &data[1], 1), "magnetometer: Write to Poll Register failed\n");
 
     return SUCCESS;
 }
@@ -287,7 +287,7 @@ uint16_t mag_set_sample_rate(uint16_t sample_rate) {
     m_sample_rate = supported_rates[i][0];
     i2c_buffer[0] = (uint8_t)supported_rates[i][1];
 
-    ret_err_status(rm3100_write_reg(NULL, RM3100_TMRC_REG, i2c_buffer, 1), "magnetometer: Write to TMRC Register failed");
+    ret_err_status(rm3100_write_reg(NULL, RM3100_TMRC_REG, i2c_buffer, 1), "magnetometer: Write to TMRC Register failed\n");
 
     if (m_sensor_mode == SENSOR_POWER_MODE_CONTINUOUS) {
         mag_modify_interrupts(RM3100_ENABLED, RM3100_DISABLED);
@@ -318,7 +318,7 @@ status_t mag_change_cycle_count(uint16_t newCC) {
     settings[4] = CCMSB; /* CCPZ1 */
     settings[5] = CCLSB; /* CCPZ0 */
 
-    ret_err_status(rm3100_write_reg(NULL, RM3100_CCX1_REG, settings, 6), "magnetometer: Write to CCX1 Register failed");
+    ret_err_status(rm3100_write_reg(NULL, RM3100_CCX1_REG, settings, 6), "magnetometer: Write to CCX1 Register failed\n");
 
     return SUCCESS;
 }
@@ -334,7 +334,7 @@ status_t mag_change_cycle_count(uint16_t newCC) {
  */
 status_t magnetometer_read(mag_raw_reading_t *const raw_readings, mag_data_t *const gain_adj_readings) {
     uint8_t status = 0;
-    ret_err_status(rm3100_read_reg(NULL, RM3100_STATUS_REG, &status, 1), "magnetometer: Read from STATUS Register failed");
+    ret_err_status(rm3100_read_reg(NULL, RM3100_STATUS_REG, &status, 1), "magnetometer: Read from STATUS Register failed\n");
 
     if (!(status & RM3100_STATUS_DRDY)) {
         debug("magnetometer: data not ready yet (STATUS=0x%02x)\n", status);
