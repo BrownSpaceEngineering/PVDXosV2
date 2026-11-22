@@ -49,7 +49,7 @@ Treat the flash as successful when the J-Link session shows all of the following
 ## Common Follow-Up Checks
 
 - If the board does not appear to run after flashing, check the RTT logs.
-- The RTT log's `[+] Bootloader ...` lines report the bootloader's flash check. A boot after `make flash_to_mram` says `golden copy written from flash`. Other boots say `golden copy valid`, with `0 repaired, 0 failed` unless flash differs from the golden copy, in which case flash gets overwritten by the golden copy (flash with `make flash_to_mram` to make a build the golden copy instead). Failed or skipped blocks mean flash could not be fully repaired from the MRAM golden copy.
+- The RTT log's `Boot: ...` lines report what the bootloader did (from the boot record in backup RAM). A boot after `make flash_to_mram` says `Boot: MRAM refresh complete (N blocks copied)`; if the refresh fails it says why and is retried on the next boot. Every boot then says `Boot: flash checked against MRAM: N blocks, 0 repaired, ...` unless flash differs from the golden copy, in which case flash gets overwritten by the golden copy (flash with `make flash_to_mram` to make a build the golden copy instead). Blocks reported `still WRONG at OS start`, or `flash repair skipped`, mean flash could not be fully repaired from the MRAM golden copy. `tools/mram_refresh.sh status` reads the same record over SWD without RTT.
 - If a factory-new SAMD51 board refuses to flash, clear the `BOOTPROT` fuse first, then retry the build and flash flow.
 - If `flash.bin` is missing, rebuild with `make clean all` before retrying J-Link.
 

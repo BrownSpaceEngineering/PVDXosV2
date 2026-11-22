@@ -11,14 +11,15 @@ terminate and will hang the session: `make connect`, `make connect_bl`, `gdb`,
 
 ## How this firmware is laid out (matters for debugging)
 
-- Flash layout (`bootloader/src/image_format.h`): stage 1 bootloader at 0x0, three stage-2 bootloader copies at
-  0x2000/0x6000/0xA000, image metadata at 0xE000, and PVDXos at 0x1E000, which runs in place from flash.
-  On boot, stage 2 checks every flash block against the MRAM golden copy, rewrites bad blocks, leaves a
-  report in backup RAM (PVDXos logs it as "[+] Bootloader ..."), and jumps to PVDXos.
-  GDB needs `src/PVDXos.elf` plus the bootloader ELFs in `bootloader/src/`; `tools/gdb.sh` loads them
-  the same way `make connect` does.
+- Flash layout (`bootloader/src/image_format.h`): stage 1 (preboot) at 0x0, eight 8 KB stage-2 copies at
+  0x2000-0x12000, the OS header row (block CRCs) at 0x80000, and PVDXos at 0x82000, which runs in place from
+  flash. On boot, stage 2 checks every app block against the MRAM golden copy, rewrites bad blocks, leaves a
+  boot record in backup RAM at 0x47001FC0 (PVDXos logs it as "Boot: ..." lines; `tools/mram_refresh.sh status`
+  reads it from the target), and jumps to PVDXos.
+  GDB needs `src/PVDXos.elf` plus the bootloader ELFs (`preboot.elf`, `bootloader1.elf`-`bootloader8.elf`) in
+  `bootloader/src/`; `tools/gdb.sh` loads them the same way `make connect` does.
 - Flashing is done with `JLinkExe -CommanderScript flash.jlink` (the composite `flash.bin`), never GDB
-  `load`: loading only the app ELF leaves the metadata stale, and the bootloader then rewrites flash
+  `load`: loading only the app ELF leaves the header row's block CRCs stale, and the bootloader then rewrites flash
   from the MRAM golden copy. See build-and-flash-pvdxos.
 - ELFs are gitignored: build first (`make dev`) and make sure the ELFs match what is flashed.
 
@@ -40,15 +41,17 @@ Macros in `tools/gdb/helpers.gdb`: `faults`, `rtos_current`, `tasks`, `reset_hal
 ## Approval rules
 
 - Safe without asking: reading registers, memory, backtraces, RTT log, `info threads`.
-- Ask first: flashing, `make reset_mcu`, `make flash_monkey`, erasing, writing memory or registers, BOOTPROT fuses.
+- Ask first: flashing, `make reset_mcu`, `make flash_monkey`, `tools/mram_refresh.sh request|cancel`, erasing,
+  writing memory or registers, BOOTPROT fuses. (`tools/mram_refresh.sh status` only reads.)
 
 ## Gotchas
 
-- The hardware watchdog is enabled in every build (period 16384 cycles, about 16 s assuming the
-  usual 1.024 kHz clock). Don't leave the core halted for long; `tools/gdb.sh` resumes by default.
+- The hardware watchdog is enabled by stage 2 on every boot (period 16384 cycles, about 16 s assuming the
+  usual 1.024 kHz clock); PVDXos only pets it. Don't leave the core halted for long; `tools/gdb.sh` resumes by default.
   Use `GDB_RESUME=0` only for short inspections.
-- If the PC is below 0x1E000 the core is in a bootloader, and app symbols/backtraces are meaningless.
-- The bootloader may rewrite flash blocks at boot (check the "[+] Bootloader" log lines). A build that
+- If the PC is below 0x12000 the core is in a bootloader, and app symbols/backtraces are meaningless (PVDXos
+  code is at 0x82000 and up).
+- The bootloader may rewrite flash blocks at boot (check the "Boot: flash checked against MRAM" log line). A build that
   differs from the golden copy gets overwritten by it, so the ELFs you built no longer match the target,
   unless it was flashed with `make flash_to_mram` (asks permission, like any flash).
 - Task names are truncated to 8 characters. `info threads` may be empty if the J-Link FreeRTOS plugin

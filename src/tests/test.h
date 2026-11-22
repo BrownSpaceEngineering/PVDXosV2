@@ -13,7 +13,7 @@
 // does via -DTEST_SPP -DTEST_CFDP. If no test is selected, the defaults below are compiled.
 // Keep this list in sync with TEST_NAMES in src/Makefile
 #if !defined(TEST_SPP) && !defined(TEST_CFDP) && !defined(TEST_USLP) && !defined(TEST_PMB) && !defined(TEST_TELEMETRY) &&                  \
-    !defined(TEST_UPLINK) && !defined(TEST_FLOAT) && !defined(TEST_PUSP)
+    !defined(TEST_UPLINK) && !defined(TEST_FLOAT) && !defined(TEST_PUSP) && !defined(TEST_MRAM)
     #define TEST_CFDP
     #define TEST_SPP
     #define TEST_USLP

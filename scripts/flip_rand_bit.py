@@ -8,8 +8,9 @@ import image_format as fmt  # noqa: E402
 
 # Byte ranges of flash.bin that --region can target (see bootloader/src/image_format.h)
 REGIONS = {
-    "boot": lambda size: (fmt.FLASH_STAGE1_ADDR, fmt.FLASH_BOOT_REGION_SIZE),  # stage 1, stage-2 copies, metadata
-    "app": lambda size: (fmt.FLASH_APP_ADDR, size),                          # PVDXos
+    # stage 1 (preboot) and the stage-2 copies
+    "boot": lambda size: (fmt.FLASH_STAGE1_ADDR, fmt.FLASH_STAGE2_BASE + fmt.FLASH_STAGE2_COUNT * fmt.FLASH_STAGE2_SIZE),
+    "app": lambda size: (fmt.FLASH_OS_ADDR, size),  # PVDXos header row and image
     "all": lambda size: (0, size),
 }
 

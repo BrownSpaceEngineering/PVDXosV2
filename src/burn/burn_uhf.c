@@ -97,7 +97,7 @@ static void uhf_time_init(void) {
 static void uhf_service(void) {
     const uint32_t now = uhf_ms();
     if (now - uhf_last_feed >= UHF_WDT_FEED_MS) {
-        watchdog_feed(WDT);
+        watchdog_pet();
         uhf_last_feed = now;
     }
 }

@@ -11,25 +11,13 @@
 ###############################################################################
 ###############################################################################
 
-# Stage-2 copies (must match FLASH_STAGE2_COUNT in image_format.h)
-export NUM_STAGE2_COPIES := 3
-
-# The MRAM driver is shared with PVDXos and lives in src/drivers/mram. Paths below are relative to the ASF build
-# directory (CHILD_MAKEFILE_PATH), where the compiler runs; mram_driver.o is found there through VPATH.
-SHARED_MRAM_DIR := ../../../src/drivers/mram
+export NUM_BOOTLOADERS := 8
 
 STAGE2_OBJS := \
-../src/stage2.o \
+../src/bootloader.o \
 ../src/flash_driver.o \
+../src/mram_driver.o \
 ../src/watchdog_driver.o
-
-# `make NO_MRAM=1` (also works from the top-level Makefile) builds a stage 2 that never touches MRAM: it doesn't check
-# or repair flash, ignores flash_to_mram requests, and jumps straight to PVDXos
-ifneq ($(NO_MRAM),)
-CFLAGS += -DNO_MRAM
-else
-STAGE2_OBJS += mram_driver.o ../src/mram_delay.o
-endif
 
 export OBJS := $(STAGE2_OBJS)
 
@@ -79,13 +67,11 @@ endif
 # Compiler flags
 # Include git branch and commit hash in the build
 CFLAGS += -D'GIT_BRANCH_NAME="$(GIT_BRANCH_NAME)"' -D'GIT_COMMIT_HASH="$(GIT_COMMIT_HASH)"'
-CFLAGS += -I"$(SHARED_MRAM_DIR)"
 
 # Robust error checking
 CFLAGS += -Wextra -Werror -Werror=maybe-uninitialized
 CFLAGS += -Wshadow -Wnull-dereference -Wduplicated-cond -Wlogical-op -Werror=return-type -Wfloat-equal
 CFLAGS += -Wdangling-else -Wtautological-compare
-CFLAGS += -fno-delete-null-pointer-checks # Flash starts at address 0 (stage 1), so reading through a pointer to 0 is valid
 CFLAGS += -fwrapv # Enable fwrapv (wrap on overflow of signed integers) just to be safe
 CFLAGS += -fsigned-char # Ensure that char is signed as your average c programmer might expect -- it's actually default unsigned on arm!
 
@@ -112,25 +98,25 @@ STAGE2_DEPS_AS_ARGS := $(patsubst %.o,%.d,$(STAGE2_OBJS_AS_ARGS))
 # Default target
 all: clean #Might as well clean before compiling the release build
 	@set -eu; \
-	python3 ../../scripts/gen_bootloaders.py $(NUM_STAGE2_COPIES); \
-	arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -g -Os -flto -nostdlib -nostartfiles -ffunction-sections -fdata-sections -Wl,--gc-sections -T ./stage1_flash.ld ./stage1.c -o ./stage1.elf; \
-	arm-none-eabi-objcopy -O binary ./stage1.elf ./stage1.bin; \
-	for index in $$(seq 1 $(NUM_STAGE2_COPIES)); do \
+	python3 ../../scripts/gen_bootloaders.py $(NUM_BOOTLOADERS); \
+	arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -Os -flto -nostdlib -nostartfiles -ffunction-sections -fdata-sections -Wl,--gc-sections -T ./preboot_flash.ld ./preboot.c -o ./preboot.elf; \
+	arm-none-eabi-objcopy -O binary ./preboot.elf ./preboot.bin; \
+	for index in $$(seq 1 $(NUM_BOOTLOADERS)); do \
 		echo "Building Stage 2 bootloader $$index"; \
 		rm -f ../ASF/gcc/PVDXos_bootloader.elf; \
 		OBJS="$(STAGE2_OBJS)" \
 		OBJS_AS_ARGS="$(STAGE2_OBJS_AS_ARGS)" \
 		DEPS_AS_ARGS="$(STAGE2_DEPS_AS_ARGS)" \
-		$(MAKE) -C $(CHILD_MAKEFILE_PATH) CFLAGS="$(CFLAGS)" VPATH="$(SHARED_MRAM_DIR)" LINKER_SCRIPT="../../src/stage2_flash$$index.ld"; \
-		cp -f ../ASF/gcc/PVDXos_bootloader.bin ./stage2_$$index.bin; \
-		cp -f ../ASF/gcc/PVDXos_bootloader.elf ./stage2_$$index.elf; \
+		$(MAKE) -C $(CHILD_MAKEFILE_PATH) CFLAGS="$(CFLAGS)" LINKER_SCRIPT="../../src/bootloader_flash$$index.ld"; \
+		cp -f ../ASF/gcc/PVDXos_bootloader.bin ./bootloader$$index.bin; \
+		cp -f ../ASF/gcc/PVDXos_bootloader.elf ./bootloader$$index.elf; \
 	done
-	@echo " --- Finished Building Stage 1 and $(NUM_STAGE2_COPIES) Stage 2 Bootloaders --- "
+	@echo " --- Finished Building Stage 1 and $(NUM_BOOTLOADERS) Stage 2 Bootloaders --- "
 
 # Clean target
 clean:
 	@$(MAKE) -C $(CHILD_MAKEFILE_PATH) clean \
-	&& rm -f *.o *.elf *.bin *.hex *.map stage2_flash*.ld stage1_flash.ld bootloader_index.h \
+	&& rm -f *.o *.elf *.bin *.hex *.map bootloader_flash*.ld preboot_flash.ld bootloader_index.h \
 	&& echo " --- Cleaned Bootloader Build Files --- "
 
 # When updating the ASF configuration, this must be run once in order to automatically integrate the new ASF config

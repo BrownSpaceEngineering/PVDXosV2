@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Batch GDB wrapper for PVDXos: connect, halt, run the given commands, resume, detach.
 # Symbol setup mirrors `make connect`: stage-2 bootloader copy 1 as main file, plus the
-# flash-linked app (src/PVDXos.elf) and stage-2 copies 2 and 3 via add-symbol-file.
+# flash-linked app (src/PVDXos.elf), stage 1 (preboot) and the other stage-2 copies via add-symbol-file.
 # Usage: tools/gdb.sh "cmd1" "cmd2" ...
 # Env:   GDB (default: gdb-multiarch | arm-none-eabi-gdb | gdb), GDB_HOST, GDB_PORT (2331),
 #        GDB_TIMEOUT (s, default 30), GDB_MAXLINES (default 200),
 #        GDB_RESUME (1 = resume target afterwards, default 1),
-#        STAGE1_ELF STAGE2_1_ELF STAGE2_2_ELF STAGE2_3_ELF APP_ELF (override ELF paths)
+#        STAGE1_ELF STAGE2_1_ELF APP_ELF (override ELF paths; copies 2-8 are bootloader/src/bootloader<N>.elf)
 set -u
 cd "$(dirname "$0")/.." || exit 1
 HOST=${GDB_HOST:-localhost}
@@ -14,10 +14,8 @@ PORT=${GDB_PORT:-2331}
 T=${GDB_TIMEOUT:-30}
 MAX=${GDB_MAXLINES:-200}
 RESUME=${GDB_RESUME:-1}
-STAGE1=${STAGE1_ELF:-bootloader/src/stage1.elf}
-STAGE2_1=${STAGE2_1_ELF:-bootloader/src/stage2_1.elf}
-STAGE2_2=${STAGE2_2_ELF:-bootloader/src/stage2_2.elf}
-STAGE2_3=${STAGE2_3_ELF:-bootloader/src/stage2_3.elf}
+STAGE1=${STAGE1_ELF:-bootloader/src/preboot.elf}
+STAGE2_1=${STAGE2_1_ELF:-bootloader/src/bootloader1.elf}
 APP=${APP_ELF:-src/PVDXos.elf}
 
 GDB=${GDB:-}
@@ -35,8 +33,9 @@ done
 
 sym=(-ex "set confirm off" -ex "add-symbol-file $APP")
 [ -f "$STAGE1" ] && sym+=(-ex "add-symbol-file $STAGE1")
-[ -f "$STAGE2_2" ] && sym+=(-ex "add-symbol-file $STAGE2_2")
-[ -f "$STAGE2_3" ] && sym+=(-ex "add-symbol-file $STAGE2_3")
+for n in 2 3 4 5 6 7 8; do
+  [ -f "bootloader/src/bootloader$n.elf" ] && sym+=(-ex "add-symbol-file bootloader/src/bootloader$n.elf")
+done
 
 args=()
 for c in "$@"; do args+=(-ex "$c"); done

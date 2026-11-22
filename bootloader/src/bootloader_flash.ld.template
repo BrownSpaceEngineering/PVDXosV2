@@ -5,13 +5,16 @@ SEARCH_DIR(.)
 /* Memory Spaces Definitions */
 MEMORY
 {
-  rom      (rx)  : ORIGIN = $BL_START, LENGTH = $BL_LENGTH
-  ram      (rwx) : ORIGIN = 0x20030000, LENGTH = 0x00010000 /* PVDXos owns all of RAM once the bootloader jumps */
-  bkupram  (rwx) : ORIGIN = 0x47000000, LENGTH = 0x00002000
+  rom      (rx)  : ORIGIN = $BL_START, LENGTH = 0x00001FFC
+  ram      (rwx) : ORIGIN = 0x2003B000, LENGTH = 0x00004000
+  /* The last 0x40 bytes of backup RAM are the boot record / MRAM refresh request (boot_record.h) */
+  bkupram  (rwx) : ORIGIN = 0x47000000, LENGTH = 0x00001FC0
   qspi     (rwx) : ORIGIN = 0x04000000, LENGTH = 0x01000000
 }
-/* Stage 2 keeps its 8 KB flash/MRAM block buffer in .bss, so the stack only needs room for the drivers */
-STACK_SIZE = 0x3000;
+__flash_address_zero = 0x00000000;
+
+/* The stack size used by the application. NOTE: you need to adjust according to your application. */
+STACK_SIZE = 0x1800;
 
 /* Section Definitions */
 SECTIONS

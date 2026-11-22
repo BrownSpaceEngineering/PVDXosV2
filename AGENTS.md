@@ -8,20 +8,44 @@ Adafruit Grand Central development board.
 ## Architecture and hardware
 
 - `bootloader/` is a two-stage bootloader; the layout is defined in
-  `bootloader/src/image_format.h`. Stage 1 (`src/stage1.c`, flash
-  `0x00000000`) jumps to the first of three stage-2 copies (`0x00002000`,
-  `0x00006000`, `0x0000A000`, 16 KB each, CRC32 in the last 4 bytes) whose CRC
-  is valid. Stage 2 (`src/stage2.c`, an ASF project in `bootloader/ASF`)
-  copies MRAM (three chips holding the same copy; header at MRAM `0x000000`) into any
-  8 KB flash block that doesn't match it, using the ASF flash HAL. When a
-  debugger requests it (`make flash_to_mram`), it instead copies flash into
-  MRAM on that one boot. It then
-  leaves a boot report in backup RAM, and jumps to PVDXos. The block CRCs live
-  in the metadata block at `0x0000E000`.
+  `bootloader/src/image_format.h`. Flash (1 MB):
+  - `0x00000` stage 1 (`src/preboot.c`, 8 KB, CRC32 in its last 4 bytes)
+    jumps to the first of eight stage-2 copies (`0x02000` + n × `0x2000`,
+    up to `0x12000`, 8 KB each, CRC32 in the last 4 bytes) whose CRC is valid.
+    If none is, it jumps straight to PVDXos with no repair.
+  - `0x80000` the OS image (second flash bank): an 8 KB header row
+    (`image_header_t`: magic, app size, one CRC32 per 8 KB app block, header
+    CRC) followed by PVDXos at `0x82000` (at most `0x7E000` bytes).
+
+  Stage 2 (`src/bootloader.c`, an ASF project in `bootloader/ASF`) configures
+  the hardware watchdog and MRAM, then checks the header row and every app
+  block (CRC and flash ECC) against the golden copy in MRAM, rewriting any that
+  differ. MRAM reads are a bitwise majority vote of the three chips, falling
+  back to each chip on its own when the vote fails the CRC. When the refresh
+  request word is set in backup RAM (`make flash_to_mram` or
+  `tools/mram_refresh.sh request`), it first copies flash into MRAM instead,
+  keeping the request until a copy completes. It leaves a boot record in the
+  last 64 bytes of backup RAM (`src/boot_record.h`, `0x47001FC0`) and jumps
+  to PVDXos.
+- MRAM (three EM008LX chips, 1 MB each, written identically):
+  `0x000000` golden copy of the OS image (header row + PVDXos, 512 KB),
+  `0x080000` golden copy of stage 1 and the stage-2 copies (72 KB), and from
+  `0x093000` PVDXos's own regions (`src/drivers/mram/mram_map.h`). PVDXos
+  reaches MRAM only through `mram_map.h`, which range-checks each region and
+  serializes tasks with a mutex.
+- The flash, MRAM and watchdog drivers are shared:
+  `bootloader/src/{flash,mram,watchdog}_driver.[ch]` are the sources, and
+  `src/drivers/{flash,mram,watchdog}/` hold symlinks to them. PVDXos finds
+  `image_format.h` and `boot_record.h` through `-idirafter bootloader/src`.
+  The bootloader configures the watchdog; PVDXos only pets and kicks it.
 - `src/` is the application; `src/src_flash.ld` links it to run in place from
-  flash at `0x0001E000`, above any `BOOTPROT` region (RAM holds only data, bss and stacks).
-  `src/main.c` initializes Atmel Start hardware, logging, logs the bootloader's
-  boot report, runs startup checks, tasks, and FreeRTOS.
+  flash at `0x00082000` (RAM holds only data, bss and stacks). The SEGGER RTT
+  control block is pinned to `0x20000000`, the same address stage 2 uses, and
+  is not zeroed at startup, so `main()` calls `SEGGER_RTT_Init()` first.
+  `src/main.c` initializes Atmel Start hardware and logging, logs the boot
+  record, runs startup checks, tasks, and FreeRTOS. The reflash task
+  (`src/tasks/reflash/`) checks stage 1 and the stage-2 copies at startup and
+  every six hours, and rewrites any that fail their CRC or ECC from MRAM.
 - `ASF/` is generated Atmel Start/HAL/FreeRTOS support. Drivers are under
   `src/drivers/`, CCSDS protocols under `src/ccsds/`, and numerical routines
   under `src/linalg/`. Host-only utilities are under `scripts/`.
@@ -51,22 +75,26 @@ make clean
 ```
 
 `make dev`, `make release`, and `make test` rebuild the bootloader and run
-`scripts/create_flash_segment.py`, which assembles the stage 1 bootloader, the three
-CRC-checked stage-2 bootloaders, the image metadata and PVDXos into `flash.bin`.
-The bootloader copies MRAM into any flash block that doesn't match and never
-writes to MRAM, so a build flashed with `flash.jlink` gets overwritten by the
-golden copy. To make a build the golden copy, flash it with `make flash_to_mram`
-(`flash_to_mram.jlink`), which leaves a request word in backup RAM that makes
-the bootloader copy flash into MRAM on that one boot. `src/Makefile` passes
+`scripts/create_flash_segment.py`, which assembles stage 1, the eight
+CRC-checked stage-2 copies, the OS header row and PVDXos into a 1 MB `flash.bin`.
+The bootloader copies MRAM into any flash block that doesn't match, and writes
+MRAM only when asked to, so a build flashed with `flash.jlink` gets overwritten
+by the golden copy. To make a build the golden copy, flash it with
+`make flash_to_mram` (`flash_to_mram.jlink`), which leaves the refresh request
+word in backup RAM so the bootloader copies flash into MRAM on the next boot
+(`tools/mram_refresh.sh request|cancel|status` does the same without flashing,
+and reports progress). `src/Makefile` passes
 exactly one of `DEVBUILD`, `RELEASE`, or `UNITTEST`; do not combine these
 manually. Tests are embedded firmware tests: `make test` calls `tests_run()` in
 `src/main.c` before FreeRTOS, with results emitted through SEGGER RTT. Current
 test functions cover SPP, linear algebra matrix multiplication, and CFDP
 parsing. To build only some tests, pass their names, e.g.
 `make test TESTS="spp cfdp"` (defines `TEST_SPP`/`TEST_CFDP`; see `TEST_NAMES`
-in `src/Makefile` and `src/tests/test.h`); with no `TESTS`, all are built.
-Builds fail if `PVDXos.bin` exceeds its 440 KB MRAM golden-copy slot or the
-linker's flash or RAM region overflows.
+in `src/Makefile` and `src/tests/test.h`); with no `TESTS`, the defaults are
+built. `TESTS=mram` is a hardware MRAM test that overwrites (then restores) MRAM
+and is never built by default.
+Builds fail if `PVDXos.bin` exceeds its 504 KB flash slot (`FLASH_OS_APP_SIZE`)
+or the linker's flash or RAM region overflows.
 
 For hardware flashing, start a J-Link GDB server configured for
 `ATSAMD51P20A`, SWD, and port 2331. For J-Link/GDB workflows:
@@ -112,8 +140,12 @@ configuration, for example `clang-format -i path/to/file.c`.
   Change them in `bootloader/src/image_format.h` (which
   `scripts/image_format.py` parses for `create_flash_segment.py` and
   `gen_bootloaders.py`), and keep `src/src_flash.ld`,
-  `bootloader/src/bootloader_flash.ld.template` and `NUM_STAGE2_COPIES` in
-  `bootloader/src/Makefile` consistent with it.
+  `bootloader/src/bootloader_flash.ld.template`, `NUM_BOOTLOADERS` in
+  `bootloader/src/Makefile` (must equal `FLASH_STAGE2_COUNT`) and
+  `src/drivers/mram/mram_map.h` (PVDXos regions must start after the MRAM
+  golden copies) consistent with it. Backup RAM's last 64 bytes belong to the
+  boot record and refresh request (`bootloader/src/boot_record.h`); both linker
+  scripts stop their `bkupram` region before them.
 
 Shared procedures with detailed build/flash or logic-analyzer workflows are
 documented in `.agents/skills/`.
@@ -151,8 +183,10 @@ Several commands above are interactive or never terminate. Agents must NOT run `
 - Inspect the running target (safe, read-only): `tools/gdb.sh "bt" "rtos_current" "faults" "info threads"`
 - Catch a fault (board resets ~1 s after `fatal()`): `GDB_TIMEOUT=90 tools/gdb.sh wait_fault`
 - Build/flash: see the `build-and-flash-pvdxos` skill. Flash with `flash.jlink`, which writes the whole
-  `flash.bin`. Never GDB `load` `src/PVDXos.elf`: it leaves the metadata block stale, so at the next boot the
-  bootloader sees flash as corrupt and rewrites it from the MRAM golden copy.
+  `flash.bin`. Never GDB `load` `src/PVDXos.elf`: it leaves the header row's block CRCs at `0x80000` stale, so
+  at the next boot the bootloader sees flash as corrupt and rewrites it from the MRAM golden copy.
+- `tools/mram_refresh.sh status` only reads; `request` and `cancel` write backup RAM (and `request` resets the
+  board), so they need user approval like flashing.
 
 Rules:
 

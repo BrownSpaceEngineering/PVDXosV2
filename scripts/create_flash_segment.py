@@ -1,70 +1,64 @@
-"""Assembles flash.bin: the stage 1 bootloader, three CRC-checked stage 2 bootloaders, the image metadata block and PVDXos.
+import math
 
-Layout (see bootloader/src/image_format.h):
-    0x00000  stage 1 bootloader
-    0x02000  stage-2 bootloader copies (16 KB each, CRC32 in the last 4 bytes)
-    0x0E000  metadata: image_header_t with a CRC32 for every block, used by the bootloader to check flash
-    0x1E000  PVDXos (runs in place from flash), padded with 0xFF to a whole number of 8 KB blocks
-Gaps are 0xFF, the value of erased flash.
-"""
-
-import os
-import sys
-
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import image_format as fmt  # noqa: E402
-
-stage1_path = "bootloader/src/stage1.bin"
-stage2_paths = [f"bootloader/src/stage2_{i + 1}.bin" for i in range(fmt.FLASH_STAGE2_COUNT)]
-pvdxos_path = "src/PVDXos.bin"
-flash_path = "flash.bin"
+import image_format as fmt
 
 
-def read(path):
-    with open(path, "rb") as f:
-        return f.read()
+def read_binary(path):
+    with open(path, "rb") as binary:
+        return binary.read()
 
 
-def place(flash, offset, data, limit, name):
-    if len(data) > limit:
-        raise SystemExit(f"error: {name} is {len(data)} bytes, but its slot holds {limit} bytes")
-    flash[offset : offset + len(data)] = data
+def place_segment(flash, address, path, size):
+    segment = read_binary(path)
+    if len(segment) > size:
+        raise ValueError(f"{path} is too large for its flash slot")
+    flash[address:address + len(segment)] = segment
 
 
-pvdxos = read(pvdxos_path)
-app_blocks = (len(pvdxos) + fmt.IMAGE_BLOCK_SIZE - 1) // fmt.IMAGE_BLOCK_SIZE
-app_size = app_blocks * fmt.IMAGE_BLOCK_SIZE
-if app_blocks == 0 or app_blocks > fmt.APP_MAX_BLOCKS:
-    raise SystemExit(f"error: {pvdxos_path} is {len(pvdxos)} bytes; it must be 1 to {fmt.MRAM_GOLDEN_APP_MAX_SIZE} bytes")
+def place_checksummed_bootloader(flash, address, path, slot_size):
+    segment = read_binary(path)
+    if len(segment) > slot_size - 4:
+        raise ValueError(f"{path} leaves no room for its checksum")
 
-flash = bytearray([0xFF] * (fmt.FLASH_APP_ADDR + app_size))
+    flash[address:address + len(segment)] = segment
+    checksum_address = address + slot_size - 4
+    checksum = fmt.crc32(flash[address:checksum_address])
+    flash[checksum_address:checksum_address + 4] = checksum.to_bytes(4, "little")
 
-place(flash, fmt.FLASH_STAGE1_ADDR, read(stage1_path), fmt.FLASH_STAGE1_SIZE, stage1_path)
+flash = bytearray([0xFF] * fmt.FLASH_IMAGE_SIZE)
 
-for i, path in enumerate(stage2_paths):
-    start = fmt.stage2_addr(i)
-    body_size = fmt.FLASH_STAGE2_SIZE - fmt.CRC_SIZE
-    place(flash, start, read(path), body_size, path)
-    flash[start + body_size : start + fmt.FLASH_STAGE2_SIZE] = fmt.crc32(flash[start : start + body_size]).to_bytes(4, "little")
+place_checksummed_bootloader(
+    flash, fmt.FLASH_STAGE1_ADDR,
+    "bootloader/src/preboot.bin", fmt.FLASH_STAGE1_SIZE,
+)
 
-place(flash, fmt.FLASH_APP_ADDR, pvdxos, app_size, pvdxos_path)
+for index in range(fmt.FLASH_STAGE2_COUNT):
+    address = fmt.FLASH_STAGE2_BASE + index * fmt.FLASH_STAGE2_SIZE
+    path = f"bootloader/src/bootloader{index + 1}.bin"
+    place_checksummed_bootloader(
+        flash, address, path, fmt.FLASH_STAGE2_SIZE,
+    )
 
+app_binary = read_binary("src/PVDXos.bin")
+app_size = math.ceil(len(app_binary) / fmt.IMAGE_BLOCK_SIZE) * fmt.IMAGE_BLOCK_SIZE
+if not app_binary or app_size > fmt.FLASH_OS_APP_SIZE:
+    raise ValueError(f"PVDXos.bin must be 1 to {fmt.FLASH_OS_APP_SIZE} bytes to fit its flash slot")
+flash[fmt.FLASH_OS_APP_ADDR:fmt.FLASH_OS_APP_ADDR + len(app_binary)] = app_binary
 
-def block(offset):
-    return flash[offset : offset + fmt.IMAGE_BLOCK_SIZE]
+block_crcs = []
+for block in range(app_size // fmt.IMAGE_BLOCK_SIZE):
+    start = fmt.FLASH_OS_APP_ADDR + block * fmt.IMAGE_BLOCK_SIZE
+    end = start + fmt.IMAGE_BLOCK_SIZE
+    block_crcs.append(fmt.crc32(flash[start:end]))
 
+header = fmt.pack_header(app_size, block_crcs)
+if len(header) > fmt.FLASH_OS_HEADER_SIZE:
+    raise ValueError("image header does not fit its OS block")
+header_block = bytearray([0xFF] * fmt.FLASH_OS_HEADER_SIZE)
+header_block[:len(header)] = header
+flash[fmt.FLASH_OS_ADDR:fmt.FLASH_OS_APP_ADDR] = header_block
 
-# CRC32 of every block the bootloader checks; the metadata block can't contain its own CRC, so its entry is 0
-boot_block_crc = [
-    0 if n == fmt.METADATA_BLOCK_INDEX else fmt.crc32(block(fmt.FLASH_STAGE1_ADDR + n * fmt.IMAGE_BLOCK_SIZE))
-    for n in range(fmt.BOOT_REGION_BLOCKS)
-]
-app_block_crc = [fmt.crc32(block(fmt.FLASH_APP_ADDR + n * fmt.IMAGE_BLOCK_SIZE)) for n in range(app_blocks)]
+with open("flash.bin", "wb") as image:
+    image.write(flash)
 
-header = fmt.pack_header(app_size, boot_block_crc, app_block_crc)
-place(flash, fmt.FLASH_METADATA_ADDR, header, fmt.IMAGE_BLOCK_SIZE, "image header")
-
-with open(flash_path, "wb") as f:
-    f.write(flash)
-
-print(f"flash.bin created successfully! (PVDXos {len(pvdxos)} bytes in {app_blocks} blocks)")
+print("flash.bin created successfully!")
