@@ -8,6 +8,9 @@
 // calibrate_rtc()) and this nominal rate is only used until the first measurement.
 #define RTC_TICKS_PER_SECOND 32
 
+// How often calibrate_rtc() should be called. It must close each window within 5 s of it reaching 100 s
+#define RTC_CALIBRATE_PERIOD_MS 1000
+
 // Data structure to hold RTC values
 typedef struct {
     uint32_t rtc_count;

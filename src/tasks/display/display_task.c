@@ -11,6 +11,7 @@
 #include "display_task.h"
 
 #include "camera_task.h"
+#include "cfdp/uplink_commands.h"
 #include "cmd_dispatcher.h"
 #include "display_driver.h"
 #include "state_machine.h"
@@ -123,7 +124,7 @@ command_t get_display_init_command(void) {
     return (command_t){
         .target = p_display_task,
         .operation = OPERATION_DISPLAY_INIT,
-        .data = {0},
+        .data = {{0}},
         .data_type = CMD_DATA_NONE,
         .result = PROCESSING,
     };
@@ -136,7 +137,7 @@ command_t get_display_off_command(void) {
     return (command_t){
         .target = p_display_task,
         .operation = OPERATION_POWER_OFF,
-        .data = {0},
+        .data = {{0}},
         .data_type = CMD_DATA_NONE,
         .result = PROCESSING,
     };
@@ -167,10 +168,17 @@ void exec_command_display(command_t *const p_cmd) {
             p_cmd->result = init_display_hardware();
             break;
         case OPERATION_DISPLAY_IMAGE:
-            p_cmd->result = display_image((const color_t *)p_cmd->data.display_data);
-            if (p_cmd->result == SUCCESS) {
-                // Photograph the image now that it is on the display
-                request_photo();
+            if (p_cmd->data_type == CMD_DATA_UPLINK) {
+                // The bitmap is in the CFDP buffer the uplink arrived in; display_image copies it out
+                const uplink_cmd_t *uplink_cmd = &p_cmd->data.uplink_cmd;
+                p_cmd->result = display_image((const color_t *)((const uint8_t *)uplink_cmd->header->buff + uplink_cmd->buff_offset));
+                uplink_cmd_release(uplink_cmd);
+            } else {
+                p_cmd->result = display_image((const color_t *)p_cmd->data.display_data);
+                if (p_cmd->result == SUCCESS) {
+                    // Photograph the image now that it is on the display
+                    request_photo();
+                }
             }
             break;
         case OPERATION_CLEAR_IMAGE:

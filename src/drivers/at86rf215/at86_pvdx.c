@@ -1,3 +1,4 @@
+// DIVERGED COPY, used only by the burn sequence. See the note at the top of at86_pvdx.h.
 #include "at86_pvdx.h"
 
 #include <string.h>
@@ -7,7 +8,7 @@
 #include "regs.h"
 
 int
-at86_init_pvdx(struct at86rf215 *radio)
+burn_at86_init_pvdx(struct at86rf215 *radio)
 {
   radio->clko_os      = AT86RF215_RF_CLKO_OFF;
   radio->clk_drv      = AT86RF215_RF_DRVCLKO2;
@@ -55,7 +56,7 @@ at86_init_pvdx(struct at86rf215 *radio)
 }
 
 int
-change_at86_config(struct at86rf215 *h, at86_config_t config)
+burn_change_at86_config(struct at86rf215 *h, at86_config_t config)
 {
   if (h == NULL) {
     return -AT86RF215_INVAL_PARAM;
@@ -162,7 +163,7 @@ change_at86_config(struct at86rf215 *h, at86_config_t config)
 }
 
 int
-at86_check_health(struct at86rf215 *h, at86_health_t *health)
+burn_at86_check_health(struct at86rf215 *h, at86_health_t *health)
 {
   if (h == NULL || health == NULL) {
     return -AT86RF215_INVAL_PARAM;
@@ -191,7 +192,7 @@ at86_check_health(struct at86rf215 *h, at86_health_t *health)
 }
 
 at86_irqs_t
-at86_read_irqs(struct at86rf215 *h)
+burn_at86_read_irqs(struct at86rf215 *h)
 {
   at86_irqs_t irqs = {0};
   if (at86rf215_reg_read_8(h, &irqs.rf, REG_RF09_IRQS) ||
@@ -203,7 +204,7 @@ at86_read_irqs(struct at86rf215 *h)
 }
 
 int
-at86_go_txprep(struct at86rf215 *h)
+burn_at86_go_txprep(struct at86rf215 *h)
 {
   int ret = at86rf215_set_cmd(h, AT86RF215_CMD_RF_TXPREP, AT86RF215_RF09);
   if (ret) {
@@ -213,7 +214,7 @@ at86_go_txprep(struct at86rf215 *h)
 }
 
 int
-at86_go_rx(struct at86rf215 *h)
+burn_at86_go_rx(struct at86rf215 *h)
 {
   at86rf215_rf_state_t state = AT86RF215_STATE_RF_TRANSITION;
   int                  ret   = at86rf215_get_state(h, &state, AT86RF215_RF09);
@@ -246,7 +247,7 @@ at86_go_rx(struct at86rf215 *h)
 }
 
 static int
-at86_write_tx_buffer(struct at86rf215 *h, const uint8_t *buf, size_t sz)
+burn_at86_write_tx_buffer(struct at86rf215 *h, const uint8_t *buf, size_t sz)
 {
   static const uint8_t fcs_pad[AT86_FCS_LEN] = {0};
   uint8_t cmd[2]       = {(REG_BBC0_FBTXS >> 8) | 0x80, REG_BBC0_FBTXS & 0xFF};
@@ -272,7 +273,7 @@ at86_write_tx_buffer(struct at86rf215 *h, const uint8_t *buf, size_t sz)
 }
 
 int
-at86_send_frame(struct at86rf215 *h, const uint8_t *buf, size_t sz)
+burn_at86_send_frame(struct at86rf215 *h, const uint8_t *buf, size_t sz)
 {
   at86rf215_radio_t radio = AT86RF215_RF09;
 
@@ -309,7 +310,7 @@ at86_send_frame(struct at86rf215 *h, const uint8_t *buf, size_t sz)
     return ret;
   }
 
-  ret = at86_write_tx_buffer(h, buf, sz);
+  ret = burn_at86_write_tx_buffer(h, buf, sz);
   if (ret) {
     return ret;
   }

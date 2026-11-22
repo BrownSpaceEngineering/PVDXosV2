@@ -24,7 +24,7 @@
 #include "os_delay.h"
 #include "arducam_driver.h"
 #include "display_driver.h"
-#include "drivers/at86rf215/at86_irq.h"
+#include "drivers/rtc/rtc_driver.h"
 #include "burn/burn_uhf.h"
 #include "image_buffer_PVDX.h"
 #include "mram_map.h"
@@ -34,6 +34,7 @@
 #include "rtos_start.h"
 #include "task_list.h"
 #include "tasks/task_manager/task_manager_task.h"
+#include "telemetry/telemetry.h"
 #include "tests/test.h"
 
 
@@ -59,6 +60,7 @@ static void log_boot_report(void) {
     const char *golden = report->golden_state < sizeof(golden_states) / sizeof(golden_states[0])
                              ? golden_states[report->golden_state]
                              : "unknown";
+    telemetry_update_last_bootloader(report->stage2_index);
     info_impl("[+] Bootloader (stage 2 copy %u): golden copy %s, MRAM status 0x%02x\n", report->stage2_index, golden,
               report->mram_status);
     info_impl("[+] Bootloader blocks: %u checked, %u repaired, %u failed\n", report->blocks_checked, report->blocks_repaired,
@@ -262,8 +264,11 @@ int main(void) {
     }
     spi_m_sync_enable(&SPI_MAGNETOMETER_GYRO);
 
-    // The UHF radio's IRQ line stays disarmed until a task waits on it, so this is safe before the radio is set up
-    at86_irq_init();
+    // Start the RTC (and the UHF radio's timestamp counter it is calibrated against) before any task reads the time.
+    // The UHF radio task calibrates it from then on, since it owns the radio's SPI bus
+    if (init_rtc_hardware() != SUCCESS) {
+        warning("rtc: Hardware initialization failed\n");
+    }
 
     log_boot_report();
 

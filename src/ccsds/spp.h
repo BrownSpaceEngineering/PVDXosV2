@@ -154,4 +154,27 @@ void spp_packet_view_clear_data(spp_packet_view_t view);
  */
 bool spp_packet_parse(spp_packet_view_t *view, uint8_t *data, uint32_t len);
 
+/**
+ * Serializes a whole SPP Space Packet into the byte layout it is sent in: the primary header, then the secondary
+ * header (only if primary->secondary_header_flag is set), then data
+ *
+ * - The inverse of spp_packet_parse
+ * - The packet data length field is computed from data_len (and the secondary header, if present), so
+ *   primary->data_length is ignored
+ *
+ * \param primary - primary header to send
+ * \param secondary - secondary header to send; may be NULL if primary->secondary_header_flag is not set
+ * \param data - user data field to send after the headers; may be NULL if data_len is 0
+ * \param data_len - length, in bytes, of data
+ * \param buf - buffer to write the packet into, starting at buf[0]
+ * \param buf_size - size, in bytes, of buf
+ * \param packet_len - set to the total length, in bytes, of the packet written
+ *
+ * \return true on failure (null argument, empty or oversized data field, or not enough room in buf), else false
+ *
+ * Reference: SPP Blue Book pg. 4-2 (primary header), pg. 4-7 (secondary header)
+ */
+bool spp_packet_serialize(const spp_primary_packet_header_t *primary, const spp_secondary_packet_header_t *secondary, const uint8_t *data,
+                          size_t data_len, uint8_t *buf, size_t buf_size, size_t *packet_len);
+
 #endif // !RADIO_SPP_H
