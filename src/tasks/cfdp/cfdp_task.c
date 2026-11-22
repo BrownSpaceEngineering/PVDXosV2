@@ -113,7 +113,7 @@ void cfdp_send_complete(const cfdp_transaction_t *txn) {
     input_update_data_t *p_update;
     switch ((cfdp_file_t)txn->file) {
         case CFDP_FILE_IMAGE:
-            p_update = &image_downlinked_input; // Lets SBAND_TRANS exit and the next picture be taken
+            p_update = &image_downlinked_input; // Lets the next picture be taken
             break;
         case CFDP_FILE_PEROVSKITE:
             // TODO: clears after any sweep is sent; only clear once every unsent sweep is
@@ -811,10 +811,6 @@ cfdp_result_t cfdp_handle_send_state(cfdp_transaction_t *transaction) {
             } else {
                 if (cfdp_send_eof(transaction) < 0) {
                     return CFDP_RESULT_DOWNLINK_FULL;
-                }
-                // EOF is the file's last packet, so the S-band radio can be powered off now
-                if (radio_routes[transaction->stream].radio == RADIO_SBAND) {
-                    radio_sband_close();
                 }
                 if (transaction->reliable_mode) {
                     transaction->state = CFDP_SEND_STATE_WAIT_ACK;

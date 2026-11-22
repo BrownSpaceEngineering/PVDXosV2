@@ -134,8 +134,8 @@ typedef struct cfdp_transaction {
     // after transfer completes.
     uint32_t expected_checksum;
 
-    // Stream the file belongs to, which picks the radio and VC its file PDUs are sent on. Replies always go on
-    // RADIO_STREAM_CFDP_REPLY
+    // Stream the file belongs to, which picks the VC its file PDUs are sent on. Replies always go on
+    // RADIO_STREAM_CFDP_REPLY. The radio comes from the pass type (radio_route_radio())
     radio_stream_t stream;
 
     // Pass the transaction started in. It's dropped when that pass ends
@@ -218,6 +218,15 @@ command_t get_cfdp_put_command(cfdp_file_t file, uint8_t index, radio_stream_t s
 void cfdp_send_complete(const cfdp_transaction_t *txn);
 void cfdp_cancel_request(void);
 void cfdp_cancel(void);
+
+// Safe-suspend handshake with the task manager (pvdx_task_t.prepare_suspend/prepare_resume). CFDP only runs in the pass
+// states: before it's suspended it drops its transaction and powers the S-band radio off, so nothing is left transmitting
+bool cfdp_prepare_suspend(void);
+void cfdp_prepare_resume(void);
+// Whether the task manager is waiting for the CFDP task to park (cfdp_main.c)
+bool cfdp_stop_requested(void);
+// Checks in with the watchdog if it's time to. For long blocking work in the CFDP task (cfdp_main.c)
+void cfdp_checkin(void);
 
 int cfdp_prepare_pdu_header(uint8_t *buff, cfdp_transaction_t *transaction, uint16_t pdu_len, cfdp_pdu_type_t pdu_type);
 int cfdp_send_metadata(cfdp_transaction_t *transaction);

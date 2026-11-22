@@ -139,8 +139,11 @@ static void copy_input(input_update_t update, const input_t *const p_new_values)
         case PEROVSKITE_READY_DOWNLINK_UPDATE:
             inputs.perovskite_data_ready_for_downlink = p_new_values->perovskite_data_ready_for_downlink;
             break;
-        case SBAND_READY_TRANSMIT_UPDATE:
+        case SBAND_PASS_UPDATE:
             inputs.sband_pass_pending = p_new_values->sband_pass_pending;
+            break;
+        case UHF_PASS_UPDATE:
+            inputs.uhf_pass_pending = p_new_values->uhf_pass_pending;
             break;
         case SAFE_DISABLE_RADIO_UPDATE:
             inputs.safe_to_disable_radio = p_new_values->safe_to_disable_radio;

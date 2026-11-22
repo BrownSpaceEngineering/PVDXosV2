@@ -122,6 +122,7 @@ struct uhf_ctx {
     TickType_t next_beacon;    // Absolute tick at which LISTEN goes to BEACON
     TickType_t beacon_end;     // Absolute tick at which BEACON stops sending and goes back to LISTEN, set by LISTEN
     TickType_t yield_deadline; // Absolute tick at which ESTABLISH_SEND yields, set on entering it
+    bool sband_pass;           // Type of the current pass, from PUSP_NOTIF_SBAND_PASS on the SYN that opened it
 };
 
 extern const uhf_state_desc_t uhf_state_descs[UHF_STATE_COUNT];
@@ -222,10 +223,16 @@ void uhf_rearm_retry(uhf_ctx_t *ctx);
  */
 uhf_state_t uhf_retry(uhf_ctx_t *ctx, pusp_directive_t dir);
 
+// Whether a received SYN asks for a UHF + S-band pass (PUSP_NOTIF_SBAND_PASS)
+static inline bool uhf_rx_sband_pass(const uhf_rx_t *rx) {
+    return (rx->notifs & PUSP_NOTIF_SBAND_PASS) != 0;
+}
+
 /**
  * Checks shared by every link state, which call it first. A SYN means the ground restarted the link: sends SYN_ACK
- * (re-arming the retry timer if already in SYN_RECV). No packet from the ground for UHF_LINK_TIMEOUT_MS drops the link
- * (logged).
+ * (re-arming the retry timer if already in SYN_RECV). A SYN of the same pass type stays in the same pass; one of the
+ * other type ends the pass and starts a new one of its type (CFDP drops its transaction). No packet from the ground for
+ * UHF_LINK_TIMEOUT_MS drops the link (logged).
  *
  * \return SYN_RECV on a SYN, LISTEN on a timeout, else ctx->state: the handler carries on only if this is ctx->state
  */

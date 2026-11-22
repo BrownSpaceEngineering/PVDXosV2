@@ -15,9 +15,16 @@
 #include "globals.h"
 #include "libraries/cmd_dispatcher/cmd_dispatcher.h"
 #include "logging.h"
+#include "os_delay.h"
+#include "semphr.h"
+#include "task_list.h"
 #include "uhf_radio/uhf_radio_task.h"
 #include "uplink_commands.h"
 #include "watchdog_task.h"
+
+// How long the task manager waits for the CFDP task to park. An S-band bring-up step can block for up to 2 s before it
+// sees the request (see radio_sband_service())
+#define CFDP_PARK_TIMEOUT_MS 3000
 
 // CFDP Memory Stores. PDUs go to and from the radio through its uplink_queue/downlink_queue (see cfdp_utils.c)
 cfdp_task_memory_t cfdp_mem;
@@ -25,6 +32,11 @@ cfdp_transaction_store_t cfdp_txn_store;
 cfdp_large_buff_t cfdp_large_buff;
 cfdp_small_buff_t cfdp_small_buffs[CFDP_SMALL_BUFF_COUNT];
 fin_txn_buf_t cfdp_fin_txn;
+
+// Safe-suspend handshake, as in the perovskite task
+static volatile bool stop_requested = false;
+static StaticSemaphore_t stop_ack_storage;
+static SemaphoreHandle_t stop_ack;
 
 // cfdp_recv receives a whole radio_queue_item_t into the buffer it's given
 _Static_assert(CFDP_MAX_PDU_SIZE >= sizeof(radio_queue_item_t), "CFDP receive buffer must hold a radio_queue_item_t");
@@ -67,7 +79,60 @@ QueueHandle_t init_cfdp(void) {
 
     cfdp_fin_txn = (fin_txn_buf_t){0};
 
+    stop_ack = xSemaphoreCreateBinaryStatic(&stop_ack_storage);
+    if (stop_ack == NULL) {
+        fatal("cfdp: failed to create suspend acknowledgement semaphore\n");
+    }
+
     return cfdp_command_queue_handle;
+}
+
+bool cfdp_stop_requested(void) {
+    return stop_requested;
+}
+
+bool cfdp_prepare_suspend(void) {
+    if (stop_ack == NULL) {
+        return false;
+    }
+    // Drain the previous handshake before publishing a new request
+    (void)xSemaphoreTake(stop_ack, 0);
+    stop_requested = true;
+    return xSemaphoreTake(stop_ack, pdMS_TO_TICKS(CFDP_PARK_TIMEOUT_MS)) == pdTRUE;
+}
+
+void cfdp_prepare_resume(void) {
+    // Drop late queue writes from producers that passed admission before disable
+    xQueueReset(p_cfdp_task->command_queue);
+    stop_requested = false;
+}
+
+void cfdp_checkin(void) {
+    command_t cmd_checkin = get_watchdog_checkin_command(p_cfdp_task);
+    if (should_checkin(p_cfdp_task) && enqueue_command(&cmd_checkin) != SUCCESS) {
+        warning("cfdp: failed to enqueue watchdog checkin command\n");
+    }
+}
+
+/**
+ * Parks the task if the task manager is suspending it (leaving a pass state): drops the transaction, powers S-band off
+ * and acknowledges, then waits to be suspended. Only called at the top of the main loop, where nothing is half sent
+ */
+static void cfdp_park_if_stopped(void) {
+    if (!stop_requested) {
+        return;
+    }
+    if (cfdp_txn_store.active) {
+        warning("cfdp: leaving the pass state, dropping txn %lu\n", cfdp_txn_store.txn.transaction_id.seq_num);
+        cfdp_free_transaction();
+    }
+    radio_sband_close();
+    xQueueReset(p_cfdp_task->command_queue);
+    xSemaphoreGive(stop_ack);
+    // Never self-suspend: the manager could resume us just before a self-suspend
+    while (stop_requested) {
+        os_delay_ms(1);
+    }
 }
 
 /**
@@ -84,9 +149,6 @@ void main_cfdp(void *pvParameters) {
 
     // Obtain a pointer to the current task within the global task list
     pvdx_task_t *const current_task = get_current_task();
-    // Cache the watchdog checkin command to avoid creating it every iteration
-
-    command_t cmd_checkin = get_watchdog_checkin_command(current_task);
 
     // Variable to hold commands popped off the queue
     command_t cmd;
@@ -95,6 +157,8 @@ void main_cfdp(void *pvParameters) {
     cfdp_txn_store = (cfdp_transaction_store_t){0};
 
     while (true) {
+        cfdp_park_if_stopped();
+
         // Taken before reading the uplink queue, so a PDU or turn start after this isn't counted as handled (see
         // radio_routing.h)
         const radio_link_view_t view = radio_link_view();
@@ -104,6 +168,17 @@ void main_cfdp(void *pvParameters) {
             warning("cfdp: pass ended, dropping txn %lu\n", cfdp_txn_store.txn.transaction_id.seq_num);
             cfdp_free_transaction();
         }
+
+        // S-band streams for the whole of an S-band pass. Brought up here (blocking) before any transaction starts
+        radio_sband_service(&view);
+        // A transaction that couldn't send on S-band is killed, not moved to UHF: the ground never yields its UHF turn on
+        // an S-band pass, so it would never hear it
+        if (radio_sband_take_failure() && cfdp_txn_store.active) {
+            warning("cfdp: S-band failed, killing txn %lu\n", cfdp_txn_store.txn.transaction_id.seq_num);
+            cfdp_free_transaction();
+        }
+        // On an S-band pass, puts wait in the queue until the stream is up
+        const bool can_send = view.link_up && (!view.sband || radio_sband_ready());
         // Notifications are only read while a transaction is active, so a cancel (e.g. the ground disabling transmit)
         // or timeout that arrives as the link goes down would otherwise hit the next pass's transaction
         if (!view.link_up) {
@@ -114,7 +189,7 @@ void main_cfdp(void *pvParameters) {
         if (!cfdp_txn_store.active) {
             // Only start a new transaction once the last one has finished, and only during a pass. Take one command at
             // a time: a put starts a transaction, and the rest of the queue waits until it's done
-            if (!view.link_up) {
+            if (!can_send) {
                 vTaskDelay(poll);
             } else if (xQueueReceive(current_task->command_queue, &cmd, poll) == pdPASS) {
                 radio_cfdp_set_busy();
@@ -168,7 +243,10 @@ void main_cfdp(void *pvParameters) {
                 result = cfdp_transact(txn);
             } while (result == CFDP_RESULT_IN_PROGRESS);
 
-            if (result == CFDP_RESULT_COMPLETE) {
+            if (radio_sband_take_failure()) {
+                warning("cfdp: S-band failed, killing txn %lu\n", txn->transaction_id.seq_num);
+                cfdp_free_transaction();
+            } else if (result == CFDP_RESULT_COMPLETE) {
                 info("cfdp: transaction %lu complete\n", txn->transaction_id.seq_num);
                 // The ground only sends us uplink command files, so every file we finish receiving is one
                 if (txn->direction == CFDP_RECV && txn->condition_code == CFDP_COND_NOERROR) {
@@ -199,9 +277,6 @@ void main_cfdp(void *pvParameters) {
             radio_cfdp_set_busy();
         }
 
-        if (should_checkin(current_task)) {
-            enqueue_command(&cmd_checkin);
-            debug("cfdp: Enqueued watchdog checkin command\n");
-        }
+        cfdp_checkin();
     }
 }
