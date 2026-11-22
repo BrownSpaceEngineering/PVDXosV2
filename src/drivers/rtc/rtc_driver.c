@@ -152,9 +152,8 @@ void calibrate_rtc(void) {
     }
 
     if (!window_open) {
-        if (!radio_counter_on) {
-            radio_counter_on = enable_radio_counter();
-        }
+        // Checked for every new window, since check_uhf() and uhf_chip_setup() reset the radio, which stops its counter
+        radio_counter_on = enable_radio_counter();
         if (!radio_counter_on) {
             return;
         }
