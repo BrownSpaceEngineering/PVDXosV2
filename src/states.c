@@ -36,6 +36,14 @@ static state_id_t unimplemented_next_state(const input_t *const input) {
     return STATE_IDLE;
 }
 
+// EXAMPLE ONLY: runs the heartbeat task for a while, then goes back to idle. The heartbeat task mocks the inputs that
+// nothing produces yet, so that IDLE goes on to a student picture or a perovskite sweep afterwards (see heartbeat_main.c)
+static state_id_t fake_heartbeat_next_state(const input_t *const input) {
+    if (ticks_in_state(input) >= pdMS_TO_TICKS(FAKE_HEARTBEAT_PERIOD_MS))
+        return STATE_IDLE;
+    return STATE_FAKE_HEARTBEAT;
+}
+
 static state_id_t low_power_idle_next_state(const input_t *const input) {
     if (input->battery_level > RECOVERED_BATTERY_LEVEL)
         return STATE_IDLE;
@@ -43,6 +51,7 @@ static state_id_t low_power_idle_next_state(const input_t *const input) {
 }
 
 static state_id_t idle_next_state(const input_t *const input) {
+    /** TODO: Determine priority of transitions */
     if (input->battery_level < LOW_BATTERY_LEVEL)
         return STATE_LOW_POWER_IDLE;
     if (input->uhf_pass_pending)
@@ -59,35 +68,35 @@ static state_id_t idle_next_state(const input_t *const input) {
 }
 
 static state_id_t perovskite_capture_next_state(const input_t *const input) {
-    if (input->perovskite_data_ready_for_downlink)
+    if (input->perovskite_data_ready_for_downlink || input->uhf_pass_pending || input->sband_pass_pending)
         return STATE_IDLE; // cleared once the downlink finishes
     if (ticks_in_state(input) >= pdMS_TO_TICKS(PEROVSKITE_CAPTURE_TIMEOUT_MS))
         return STATE_IDLE;
     return STATE_PEROVSKITE_CAPTURE;
 }
 
-// EXAMPLE ONLY: runs the heartbeat task for a while, then goes back to idle. The heartbeat task mocks the inputs that
-// nothing produces yet, so that IDLE goes on to a student picture or a perovskite sweep afterwards (see heartbeat_main.c)
-static state_id_t fake_heartbeat_next_state(const input_t *const input) {
-    if (ticks_in_state(input) >= pdMS_TO_TICKS(FAKE_HEARTBEAT_PERIOD_MS))
-        return STATE_IDLE;
-    return STATE_FAKE_HEARTBEAT;
-}
-
 static state_id_t student_picture_capture_next_state(const input_t *const input) {
-    // if (input->battery_level < LOW_BATTERY_LEVEL)
-    //     return STATE_LOW_POWER_IDLE;
     if (input->photo_taken_for_downlink)
-        return STATE_IDLE; // cleared once the picture is taken
+        return STATE_IDLE; // cleared once the downlink finishes
     return STATE_STUDENT_PICTURE_CAPTURE;
 }
 
-static state_id_t sband_trans_next_state(const input_t *const input) {
-    if (input->battery_level < LOW_BATTERY_LEVEL)
-        return STATE_LOW_POWER_IDLE;
-    if (!input->photo_taken_for_downlink)
+static state_id_t sband_pass_next_state(const input_t *const input) {
+    if (!input->sband_pass_pending)
         return STATE_IDLE; // cleared once the downlink finishes
-    return STATE_SBAND_TRANS;
+    return STATE_SBAND_PASS;
+}
+
+static state_id_t uhf_pass_next_state(const input_t *const input) {
+    if (!input->uhf_pass_pending)
+        return STATE_IDLE;
+    return STATE_UHF_PASS;
+}
+
+static state_id_t reflash_next_state(const input_t *const input) {
+    if (!input->reflash_in_progress)
+        return STATE_IDLE;
+    return STATE_REFLASH;
 }
 
 // ENTRY ACTIONS
@@ -132,13 +141,18 @@ void init_states(void) {
     // The fuel gauge task runs in every state: it supplies battery_level, which LOW_POWER_IDLE needs to recover.
     for (state_id_t state = 0; state < NUM_STATES; state++) {
         mission_states[state] =
-            (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_uhf_radio_task}, .fetch_next_state = unimplemented_next_state};
+            (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_uhf_radio_task},
+                      .fetch_next_state = unimplemented_next_state};
     }
 
     // TODO: the thermistor task is a SENSOR task but no state lists it yet, so the state machine suspends it on entering
     // STATE_IDLE and it never runs (no heater control). Add p_thermistor_task to the states that need it.
+    mission_states[STATE_LOW_POWER_IDLE] =
+        (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_uhf_radio_task, p_cfdp_task},
+                  .fetch_next_state = low_power_idle_next_state};
     mission_states[STATE_IDLE] =
-        (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_uhf_radio_task, p_cfdp_task}, .fetch_next_state = idle_next_state};
+        (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_uhf_radio_task, p_cfdp_task},
+                  .fetch_next_state = idle_next_state};
     mission_states[STATE_PEROVSKITE_CAPTURE] =
         (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_uhf_radio_task, p_cfdp_task, p_perovskite_task},
                   .fetch_next_state = perovskite_capture_next_state,
@@ -147,10 +161,15 @@ void init_states(void) {
         (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_uhf_radio_task, p_cfdp_task, p_display_task, p_camera_task},
                   .fetch_next_state = student_picture_capture_next_state,
                   .on_enter = student_picture_capture_on_enter};
-    mission_states[STATE_SBAND_TRANS] = (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_uhf_radio_task, p_cfdp_task},
-                                                  .fetch_next_state = sband_trans_next_state};
-    mission_states[STATE_LOW_POWER_IDLE] = (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_uhf_radio_task, p_cfdp_task},
-                                                     .fetch_next_state = low_power_idle_next_state};
+    mission_states[STATE_SBAND_PASS] =
+        (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_uhf_radio_task, p_cfdp_task},
+                  .fetch_next_state = sband_pass_next_state};
+    mission_states[STATE_UHF_PASS] =
+        (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_uhf_radio_task, p_cfdp_task},
+                  .fetch_next_state = uhf_pass_next_state};
+    mission_states[STATE_REFLASH] =
+        (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_uhf_radio_task, p_cfdp_task},
+                  .fetch_next_state = reflash_next_state};
     mission_states[STATE_FAKE_HEARTBEAT] =
         (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_uhf_radio_task, p_cfdp_task, p_heartbeat_task},
                   .fetch_next_state = fake_heartbeat_next_state};
