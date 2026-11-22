@@ -16,10 +16,14 @@
 #include "cfdp_timer.h"
 #include "cfdp_utils.h"
 #include "checks/device_checks.h"
+#include "drivers/arducam/arducam_driver.h"
 #include "globals.h"
+#include "libraries/cmd_dispatcher/cmd_dispatcher.h"
 #include "logging.h"
 #include "rtc_driver.h"
+#include "state_machine.h"
 #include "task_list.h"
+#include "tasks/perovskite/perovskite_task.h"
 
 /* ---------- DISPATCHABLE FUNCTIONS (sent as commands through the command
  * dispatcher task) ---------- */
@@ -27,8 +31,34 @@
 // cfdp_put_t is packed so a command doesn't grow to hold it
 _Static_assert(sizeof(cfdp_put_t) <= sizeof(uplink_cmd_t), "cfdp_put_t must not grow command_data_t");
 
+status_t cfdp_find_file(const cfdp_put_t *put, mram_region_t *p_region, uint32_t *p_offset, uint32_t *p_size) {
+    switch ((cfdp_file_t)put->file) {
+        case CFDP_FILE_IMAGE:
+            // capture_mram() saves the length in a record once the whole image is written
+            *p_region = MRAM_REGION_CAMERA;
+            *p_offset = ARDUCAM_MRAM_IMAGE_OFFSET;
+            return arducam_mram_image_length(p_size);
+        case CFDP_FILE_PEROVSKITE:
+            // Every sweep is the same size; the record header around it just confirms the slot holds one
+            *p_region = MRAM_REGION_PEROVSKITE;
+            *p_size = sizeof(perovskite_sweep_t);
+            return perovskite_sweep_mram_offset(put->index, p_offset);
+        default:
+            return ERROR_BAD_ARGS;
+    }
+}
+
 // Only called while no transaction is active, since the main loop only reads the command queue then
 void cfdp_put_request(const cfdp_put_t *put) {
+    mram_region_t region;
+    uint32_t offset;
+    uint32_t size;
+    status_t status = cfdp_find_file(put, &region, &offset, &size);
+    if (status != SUCCESS) {
+        warning("cfdp put: no file %u (index %u) in MRAM (status %d), dropping put\n", put->file, put->index, status);
+        return;
+    }
+
     cfdp_transaction_t *txn = cfdp_alloc_transaction();
 
     if (txn == NULL) {
@@ -38,13 +68,13 @@ void cfdp_put_request(const cfdp_put_t *put) {
 
     uint32_t seq_num = next_seq_num();
 
-    info("cfdp_put: seq #%u\n", seq_num);
+    info("cfdp_put: seq #%u, file %u (index %u), %lu bytes\n", seq_num, put->file, put->index, size);
 
     txn->transaction_id.entity_id = ENTITY_ID_SPACECRAFT;
     txn->transaction_id.seq_num = seq_num;
     txn->stream = (radio_stream_t)put->stream;
     txn->dest_entity_id = ENTITY_ID_GROUND;
-    txn->file_size = put->file_size;
+    txn->file_size = size;
     txn->file_offset = 0;
     txn->state = CFDP_SEND_STATE_METADATA_SEND;
     txn->direction = CFDP_SEND;
@@ -52,11 +82,64 @@ void cfdp_put_request(const cfdp_put_t *put) {
     txn->reliable_mode = true;
     txn->source_filename = (cfdp_lv_t){.length = 0, .value = NULL};
     txn->dest_filename = (cfdp_lv_t){.length = 0, .value = NULL};
-    txn->file_data = put->memory;
+    txn->file = put->file;
+    txn->file_data = NULL; // Read from MRAM as it's sent
+    txn->file_mram_region = region;
+    txn->file_mram_offset = offset;
+    txn->checksum = 0;
+    txn->checksum_offset = 0;
     txn->checksum_type = 0;
     txn->condition_code = CFDP_COND_NOERROR;
 
     start_timer(cfdp_mem.inactivity_timer_handle);
+}
+
+// State machine inputs cleared once a file is delivered (static: the task manager reads them after the command is sent)
+static input_update_data_t image_downlinked_input = {
+    .input_update_bitmask = INPUT_UPDATE_BIT(PHOTO_READY_DOWNLINK_UPDATE),
+    .new_values = {.photo_taken_for_downlink = false},
+};
+static input_update_data_t perovskite_downlinked_input = {
+    .input_update_bitmask = INPUT_UPDATE_BIT(PEROVSKITE_READY_DOWNLINK_UPDATE),
+    .new_values = {.perovskite_data_ready_for_downlink = false},
+};
+
+// TODO: a FIN arriving after its txn was dropped (pass ended) is ACKed as stale but doesn't clear the input
+void cfdp_send_complete(const cfdp_transaction_t *txn) {
+    if (txn->direction != CFDP_SEND || txn->condition_code != CFDP_COND_NOERROR || !txn->delivery_complete) {
+        return;
+    }
+
+    input_update_data_t *p_update;
+    switch ((cfdp_file_t)txn->file) {
+        case CFDP_FILE_IMAGE:
+            p_update = &image_downlinked_input; // Lets SBAND_TRANS exit and the next picture be taken
+            break;
+        case CFDP_FILE_PEROVSKITE:
+            // TODO: clears after any sweep is sent; only clear once every unsent sweep is
+            p_update = &perovskite_downlinked_input; // Lets the next sweep be taken
+            break;
+        default:
+            return;
+    }
+
+    command_t cmd = get_state_input_update_command(p_update);
+    status_t status = enqueue_command(&cmd);
+    if (status != SUCCESS) {
+        warning("cfdp: failed to report file %u downlinked (status %d)\n", txn->file, status);
+        return;
+    }
+    info("cfdp: file %u downlinked\n", txn->file);
+}
+
+command_t get_cfdp_put_command(cfdp_file_t file, uint8_t index, radio_stream_t stream) {
+    return (command_t){
+        .target = p_cfdp_task,
+        .operation = OPERATION_CFDP_PUT,
+        .data = {.cfdp_put = (cfdp_put_t){.file = (uint8_t)file, .index = index, .stream = (uint8_t)stream}},
+        .data_type = CMD_CFDP_PUT,
+        .result = PROCESSING,
+    };
 }
 
 /**
@@ -287,9 +370,11 @@ static void handle_finished_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data
     cfdp_pdu_finished_t fin;
     if (cfdp_pdu_finished_parse(pdu_data, pdu_data_sz, &fin) < 0) {
         warning("cfdp: unable to parse finished PDU\n");
+        return; // fin isn't filled in; the ground resends the FIN until it gets our ACK
     }
 
-    info("cfdp: recved fin w/ code: %d\n", fin.condition_code);
+    info("cfdp: recved fin w/ code: %d, delivery %s\n", fin.condition_code, fin.delivery_code ? "incomplete" : "complete");
+    txn->delivery_complete = (fin.delivery_code == 0);
 
     if (fin.condition_code != CFDP_COND_NOERROR) {
         txn->state = CFDP_SEND_STATE_ERR;

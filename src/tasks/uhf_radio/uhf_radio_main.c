@@ -19,8 +19,7 @@
  * TODO (SPP / CFDP):
  * - spp_wrap() (radio_routing.c) sends a placeholder callsign and zero timestamps on every downlink, beacons and PUSP
  *   directives included. Needs the real callsign before transmitting on UHF
- * - implement finalized uplink command format
- ** - implement reading from MRAM for CFDP send
+ * - More in TODO.md at the repository root
  */
 #include <sys/types.h>
 

@@ -232,8 +232,7 @@ void exec_command_task_manager(command_t *const p_cmd) {
             p_cmd->result = SUCCESS;
             break;
         case OPERATION_REBOOT:
-        case OPERATION_SLEEP_TRANSMIT:
-        case OPERATION_DISABLE_TRANSMIT:
+        case OPERATION_TRANSMIT_ON_OFF:
         case OPERATION_SET_POWER_MODE:
             // TODO: uplinked commands that aren't implemented yet are thrown away
             warning("task-manager: operation %d not implemented, dropping command\n", p_cmd->operation);

@@ -9,6 +9,7 @@
 #include "ccsds/radio_routing.h"
 #include "cfdp_pdu.h"
 #include "drivers/at86rf215/at86rf215.h"
+#include "drivers/mram/mram_map.h"
 #include "globals.h"
 #include "tasks/watchdog/watchdog_task.h"
 #include "timers.h"
@@ -165,7 +166,16 @@ typedef struct cfdp_transaction {
     bool eof_acked;
 
     cfdp_buff_header_t *buff_header;
+    // The file in RAM. Received files always use it. When it's NULL, a sent file is read from MRAM instead: file_size
+    // bytes at file_mram_offset within file_mram_region (see cfdp_put_request). Read either with cfdp_read_file()
     uint8_t *file_data;
+    uint8_t file; // Sent files: the cfdp_file_t being sent, so its state machine input is cleared once it's delivered
+    mram_region_t file_mram_region;
+    uint32_t file_mram_offset;
+
+    // Sent files: `checksum` is the modular checksum of the file's first checksum_offset bytes, added to as file data
+    // is first sent, so the EOF doesn't have to read the whole file again (slow from MRAM)
+    uint32_t checksum_offset;
 
     uint32_t latest_packet_timestamp;
 
@@ -199,6 +209,13 @@ cfdp_result_t cfdp_handle_recv_state(cfdp_transaction_t *transaction);
 cfdp_result_t cfdp_transact(cfdp_transaction_t *txn);
 
 void cfdp_put_request(const cfdp_put_t *put);
+// Finds where a put's file is in MRAM and how big it is. SUCCESS only if there's a file to send
+status_t cfdp_find_file(const cfdp_put_t *put, mram_region_t *p_region, uint32_t *p_offset, uint32_t *p_size);
+// A put of `file` (a perovskite sweep's slot in `index`) on `stream`, for enqueue_command()
+command_t get_cfdp_put_command(cfdp_file_t file, uint8_t index, radio_stream_t stream);
+// Called when a send transaction completes. If the ground received the whole file, clears the state machine input
+// saying it's waiting for downlink
+void cfdp_send_complete(const cfdp_transaction_t *txn);
 void cfdp_cancel_request(void);
 void cfdp_cancel(void);
 

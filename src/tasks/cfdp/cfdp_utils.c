@@ -267,3 +267,38 @@ uint32_t cfdp_calculate_modular_checksum(cfdp_transaction_t *txn) {
 
     return checksum + checksum_rem;
 }
+
+uint32_t cfdp_checksum_add(uint32_t checksum, uint32_t offset, const uint8_t *data, uint32_t size) {
+    for (uint32_t i = 0; i < size; i++) {
+        checksum += (uint32_t)data[i] << (8 * (3 - ((offset + i) % 4)));
+    }
+    return checksum;
+}
+
+bool cfdp_read_file(const cfdp_transaction_t *txn, uint32_t offset, uint8_t *dst, uint32_t size) {
+    if (offset > txn->file_size || size > txn->file_size - offset) {
+        return false;
+    }
+    if (txn->file_data != NULL) {
+        memcpy(dst, txn->file_data + offset, size);
+        return true;
+    }
+    return mram_region_read(txn->file_mram_region, txn->file_mram_offset + offset, dst, size);
+}
+
+#define CFDP_CHECKSUM_CHUNK_SZ 256 // Bytes read at a time by cfdp_file_checksum, on the CFDP task's stack
+
+bool cfdp_file_checksum(const cfdp_transaction_t *txn, uint32_t size, uint32_t *p_checksum) {
+    uint8_t chunk[CFDP_CHECKSUM_CHUNK_SZ];
+    uint32_t checksum = 0;
+    for (uint32_t offset = 0; offset < size;) {
+        uint32_t n = (size - offset > sizeof(chunk)) ? sizeof(chunk) : size - offset;
+        if (!cfdp_read_file(txn, offset, chunk, n)) {
+            return false;
+        }
+        checksum = cfdp_checksum_add(checksum, offset, chunk, n);
+        offset += n;
+    }
+    *p_checksum = checksum;
+    return true;
+}

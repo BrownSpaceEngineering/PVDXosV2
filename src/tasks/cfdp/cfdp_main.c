@@ -180,6 +180,9 @@ void main_cfdp(void *pvParameters) {
                     fin_txn_buf_push(&cfdp_fin_txn,
                                      (fin_txn_t){.seq_num = txn->transaction_id.seq_num, .src_entity_id = txn->transaction_id.entity_id});
                 }
+                if (txn->direction == CFDP_SEND) {
+                    cfdp_send_complete(txn);
+                }
 
                 cfdp_free_transaction();
             } else if (result == CFDP_RESULT_ERROR) {

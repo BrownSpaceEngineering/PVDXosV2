@@ -42,7 +42,7 @@ static state_id_t idle_next_state(const input_t *const input) {
     if (input->image_ready_to_display && !input->photo_taken_for_downlink && !input->in_sunlight)
         return STATE_STUDENT_PICTURE_CAPTURE;
     // if (input->photo_taken_for_downlink)
-    //     return STATE_SBAND_TRANS; // TODO: nothing clears photo_taken_for_downlink yet, so SBAND_TRANS never exits
+    //     return STATE_SBAND_TRANS; // TODO: re-enable? cfdp_send_complete() now clears the flag, so this would exit
     if (input->in_sunlight && !input->perovskite_data_ready_for_downlink)
         return STATE_PEROVSKITE_CAPTURE;
     if (ticks_in_state(input) >= pdMS_TO_TICKS(FAKE_IDLE_PERIOD_MS))

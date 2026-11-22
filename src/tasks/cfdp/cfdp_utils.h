@@ -64,4 +64,13 @@ int cfdp_add_buff_reference(cfdp_buff_header_t *buff);
 
 uint32_t cfdp_calculate_modular_checksum(cfdp_transaction_t *transaction);
 
+// Adds `size` bytes of file data, starting at file offset `offset`, to a modular checksum. Any offset works, since
+// each byte is placed by its own offset in the file's 4-byte words
+uint32_t cfdp_checksum_add(uint32_t checksum, uint32_t offset, const uint8_t *data, uint32_t size);
+// Reads `size` bytes of a transaction's file from `offset`, from RAM or MRAM (see cfdp_transaction_t.file_data). False if
+// the range isn't within the file or the MRAM read fails
+bool cfdp_read_file(const cfdp_transaction_t *txn, uint32_t offset, uint8_t *dst, uint32_t size);
+// Modular checksum of a transaction's file's first `size` bytes, read in pieces with cfdp_read_file()
+bool cfdp_file_checksum(const cfdp_transaction_t *txn, uint32_t size, uint32_t *p_checksum);
+
 #endif

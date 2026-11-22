@@ -82,8 +82,7 @@ typedef enum {
 typedef enum {
     // General operations (can be overloaded by any task)
     OPERATION_POWER_OFF = 0,
-    OPERATION_ENABLE_DISABLE_DEVICE,      // p_data: uplink_cmd_t* uplink_cmd
-    OPERATION_SET_DEVICE_BROKEN_UNBROKEN, // p_data: uplink_cmd_t* uplink_cmd
+    OPERATION_ENABLE_DISABLE_DEVICE, // p_data: uplink_cmd_t* uplink_cmd
 
     // Watchdog operations
     OPERATION_CHECKIN, // p_data: TaskHandle_t *handle
@@ -93,8 +92,7 @@ typedef enum {
     OPERATION_ENABLE_SUBTASK,   // p_data: TaskHandle_t *handle
     OPERATION_DISABLE_SUBTASK,  // p_data: TaskHandle_t *handle
     OPERATION_REBOOT,           // p_data: uplink_cmd_t* uplink_cmd
-    OPERATION_SLEEP_TRANSMIT,   // p_data: uplink_cmd_t* uplink_cmd
-    OPERATION_DISABLE_TRANSMIT, // p_data: uplink_cmd_t* uplink_cmd
+    OPERATION_TRANSMIT_ON_OFF,  // p_data: uplink_cmd_t* uplink_cmd
     OPERATION_SET_POWER_MODE,   // p_data: uplink_cmd_t* uplink_cmd
 
     // Display operations
@@ -109,7 +107,6 @@ typedef enum {
 
     // Camera Operations
     OPERATION_TAKE_PHOTO, // uplink_cmd_t* uplink_cmd
-    OPERATION_SEND_PHOTO, // uplink_cmd_t* uplink_cmd
 
     // ADCS Operations
     OPERATION_SET_KEPLER_COEFF, // p_data: uplink_cmd_t* uplink_cmd
@@ -223,12 +220,18 @@ typedef struct {
     cfdp_buff_header_t *header;
 } uplink_cmd_t;
 
-// A CFDP put request. It's stored in the command, so the sender doesn't have to keep it alive, but the file memory it
-// points at must stay valid until the transfer finishes. Packed to fit in the union without growing command_t
+// Files a CFDP put can send. Each is read straight out of its MRAM region while it's sent, since it may not fit in RAM
+typedef enum {
+    CFDP_FILE_IMAGE = 0,  // The JPEG capture_mram() last saved to MRAM_REGION_CAMERA
+    CFDP_FILE_PEROVSKITE, // The perovskite_sweep_t saved in MRAM_REGION_PEROVSKITE slot `index`
+} cfdp_file_t;
+
+// A CFDP put request. It's stored in the command, so the sender doesn't have to keep it alive. The file's size is found
+// from MRAM when the put starts, and the file must not be overwritten in MRAM until the transfer finishes
 typedef struct {
-    uint8_t *memory;
-    uint32_t file_size : 24;
-    uint32_t stream : 8; // radio_stream_t
+    uint8_t file;   // cfdp_file_t
+    uint8_t index;  // CFDP_FILE_PEROVSKITE: slot of the sweep (0 to PEROVSKITE_SLOT_COUNT - 1). Unused otherwise
+    uint8_t stream; // radio_stream_t
 } cfdp_put_t;
 
 typedef union command_data {

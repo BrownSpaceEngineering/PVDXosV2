@@ -373,12 +373,21 @@ int cfdp_send_filedata(cfdp_transaction_t *transaction, uint32_t offset, uint32_
 
     uint32_to_big_endian(offset, filedata_buff);
 
-    memcpy(filedata_buff + 4, transaction->file_data + offset, size);
+    if (!cfdp_read_file(transaction, offset, filedata_buff + 4, size)) {
+        warning("cfdp: failed to read file bytes %lu to %lu\n", offset, offset + size);
+        return -1;
+    }
 
     if (cfdp_send(buff, 20 + size, transaction->stream)) {
         return -1;
     }
     info("cfdp: sending filedata\n");
+
+    // Only bytes straight after those already summed are added, so a resent segment isn't counted twice
+    if (offset == transaction->checksum_offset) {
+        transaction->checksum = cfdp_checksum_add(transaction->checksum, offset, filedata_buff + 4, size);
+        transaction->checksum_offset += size;
+    }
 
     return size;
 }
@@ -683,6 +692,21 @@ int cfdp_send_stale_ack(const cfdp_pdu_header_t *header, uint8_t condition_code)
     return 0;
 }
 
+// Checksum of the file data sent so far, which is what the EOF's file size (file_offset) covers. It's normally built up
+// while sending (see cfdp_send_filedata); the file is only read again if that sum doesn't cover exactly those bytes
+static uint32_t cfdp_eof_checksum(cfdp_transaction_t *transaction) {
+    if (transaction->checksum_offset != transaction->file_offset) {
+        uint32_t checksum;
+        if (cfdp_file_checksum(transaction, transaction->file_offset, &checksum)) {
+            transaction->checksum = checksum;
+            transaction->checksum_offset = transaction->file_offset;
+        } else {
+            warning("cfdp: failed to read file for EOF checksum; sending a partial one\n");
+        }
+    }
+    return transaction->checksum;
+}
+
 int cfdp_send_eof(cfdp_transaction_t *transaction) {
     size_t fault_location_size = 0;
     if (transaction->condition_code != CFDP_COND_NOERROR) {
@@ -699,7 +723,7 @@ int cfdp_send_eof(cfdp_transaction_t *transaction) {
     // Directive code must be the first byte of the PDU data field (BB Table 5-4, Pg. 78)
     eof_buff[0] = CFDP_DIR_EOF;
     eof_buff[1] = (transaction->condition_code & 0xF) << 4;
-    uint32_to_big_endian(cfdp_calculate_modular_checksum(transaction), eof_buff + 2);
+    uint32_to_big_endian(cfdp_eof_checksum(transaction), eof_buff + 2);
     uint32_to_big_endian(transaction->file_offset, eof_buff + 6);
 
     // We're making all entity IDs 4 Bytes, but we still have to encode TLV Format

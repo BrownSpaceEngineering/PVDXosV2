@@ -7,23 +7,20 @@
 
 _Static_assert(sizeof(UPLINK_CALLSIGN) - 1 == UPLINK_CALLSIGN_LENGTH, "UPLINK_CALLSIGN must be UPLINK_CALLSIGN_LENGTH chars");
 
-// In command_data_sizes, a command whose data can be any size
-#define UPLINK_ANY_SIZE UINT32_MAX
-
-// Expected command data size, in bytes, for each command type
+// Expected command data size, in bytes, for each command type (the "Size" column of the uplink sheet)
 static const uint32_t command_data_sizes[UPLINK_CMD_COUNT] = {
-    [ENABLE_DISABLE_DEVICE] = 2,
-    [SET_DEVICE_BROKEN_UNBROKEN] = 2,
+    [ENABLE_DISABLE_DEVICE] = 3,
     [UPDATE_DISPLAY] = UPLINK_DISPLAY_BITMAP_SIZE,
-    [SLEEP_TRANSMIT] = 4,
-    [DISABLE_TRANSMIT] = UPLINK_ANY_SIZE, // TODO: not in the uplink spreadsheet yet
+    [TAKE_IV_CURVE] = 4,
+    [SEND_IV_CURVE] = 1,
+    [TRANSMIT_ON_OFF] = 1,
     [REBOOT] = 1,
     [TAKE_PHOTO] = 4,
     [SEND_PHOTO] = 4,
     [SET_KEPLER_COEFF] = 4 * UPLINK_KEPLER_COEFFICIENTS,
     [SET_UNIX_TIME] = 4,
     [SET_ADCS_OP_MODE] = 2,
-    [ADCS_UPDATE_PARAMS] = 8 + 4 * 7,
+    [ADCS_UPDATE_PARAMS] = 8 + 4 * 7, // TODO: will change once the ADCS command format is decided (see uplink_adcs_parameters_t)
     [SET_PWR_MODE] = 2,
 };
 
@@ -96,8 +93,7 @@ static bool parse_command(uplink_reader_t *r, uplink_parsed_cmd_t *cmd) {
     if (r->overflow || cmd->type >= UPLINK_CMD_COUNT) {
         return true;
     }
-    uint32_t expected_size = command_data_sizes[cmd->type];
-    if (expected_size != UPLINK_ANY_SIZE && cmd->data_size != expected_size) {
+    if (cmd->data_size != command_data_sizes[cmd->type]) {
         return true;
     }
 
@@ -110,18 +106,23 @@ static bool parse_command(uplink_reader_t *r, uplink_parsed_cmd_t *cmd) {
     uplink_reader_t data = {.buf = cmd->data, .size = cmd->data_size};
     switch (cmd->type) {
         case ENABLE_DISABLE_DEVICE:
-        case SET_DEVICE_BROKEN_UNBROKEN:
-            cmd->args.device = get_uint16(&data);
-            if (cmd->args.device >= NUM_DEVICES) {
+            cmd->args.device_state.device = get_uint16(&data);
+            cmd->args.device_state.enabled = get_uint8(&data);
+            if (cmd->args.device_state.device >= NUM_DEVICES || cmd->args.device_state.enabled > 1) {
                 return true;
             }
             break;
         case UPDATE_DISPLAY:
             break; // the bitmap is used straight from cmd->data
-        case SLEEP_TRANSMIT:
-            cmd->args.sleep_time = get_uint32(&data);
+        case TAKE_IV_CURVE:
+            cmd->args.iv_sampling_resolution = get_uint32(&data);
             break;
-        case DISABLE_TRANSMIT:
+        case SEND_IV_CURVE:
+            break; // its byte has no meaning
+        case TRANSMIT_ON_OFF:
+            // TODO: the sheet doesn't say what this byte means (its data is N/A), or whether transmit should be turned
+            // on/off with this command at all or only through PUSP notifications (see PUSP_NOTIF_DISABLE_TX)
+            cmd->args.transmit = get_uint8(&data);
             break;
         case REBOOT:
             cmd->args.reboot = get_uint8(&data);
