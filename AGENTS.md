@@ -94,7 +94,12 @@ in `src/Makefile` and `src/tests/test.h`); with no `TESTS`, the defaults are
 built. `TESTS=mram` is a hardware MRAM test that overwrites (then restores) MRAM
 and is never built by default.
 Builds fail if `PVDXos.bin` exceeds its 504 KB flash slot (`FLASH_OS_APP_SIZE`)
-or the linker's flash or RAM region overflows.
+or the linker's flash or RAM region overflows. Two optional flags work with
+`make dev` and `make test` (not `release`): `NO_MRAM=1` builds a bootloader
+that never touches MRAM and leaves the MRAM driver and `mram_map.c` out of
+PVDXos, with every MRAM user skipping its reads and writes under
+`#ifdef NO_MRAM`; `PLANT_SIM=1` runs the ADCS task against the adcs-c truth
+plant (`src/tasks/adcs/adcs_mock.c`) instead of its sensors and magnetorquers.
 
 For hardware flashing, start a J-Link GDB server configured for
 `ATSAMD51P20A`, SWD, and port 2331. For J-Link/GDB workflows:
