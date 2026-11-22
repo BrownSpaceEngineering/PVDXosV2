@@ -32,7 +32,7 @@
     #define MOCK_EPOCH_JD 2461345.5
 
     // Initial tumble, in deg/s about [1, -1, 1] / sqrt(3), so B-dot has something to detumble before pointing
-    #define MOCK_INITIAL_RATE_DEG_S 5.0
+    #define MOCK_INITIAL_RATE_DEG_S 1.0
     #define MOCK_SEED 1u
 
     // How many plant ticks (PLANT_DT each) between summary logs
