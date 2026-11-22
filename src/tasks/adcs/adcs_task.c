@@ -251,6 +251,12 @@ void exec_command_adcs(command_t *const p_cmd) {
                 last_utc_save_time = p_cmd->data.unix_time;
             }
             break;
+        case OPERATION_SET_KEPLER_COEFF:   // TODO: load from MRAM_REGION_ADCS_UPLINK (UPLINK_MRAM_KEPLER_OFFSET) and apply
+        case OPERATION_ADCS_UPDATE_PARAMS: // TODO: load from MRAM_REGION_ADCS_UPLINK (UPLINK_MRAM_ADCS_PARAMS_OFFSET) and apply
+        case OPERATION_SET_UNIX_TIME:      // TODO: decide whether the UHF task's per-packet ground timestamp should set UTC
+            warning("adcs: operation %d not implemented, ignoring\n", p_cmd->operation);
+            p_cmd->result = ERROR_NOT_READY;
+            break;
         default:
             fatal("adcs: Invalid operation! target: %d operation: %d\n", p_cmd->target, p_cmd->operation);
             break;

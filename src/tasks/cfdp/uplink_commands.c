@@ -2,6 +2,7 @@
 
 #include "cfdp_task.h"
 #include "cfdp_utils.h"
+#include "drivers/mram/mram_map.h"
 #include "globals.h"
 #include "libraries/cmd_dispatcher/cmd_dispatcher.h"
 #include "logging.h"
@@ -58,6 +59,29 @@ static void uplink_send_iv_curve(void) {
     uplink_queue_put(CFDP_FILE_PEROVSKITE, slot, RADIO_STREAM_PEROVSKITE);
 }
 
+_Static_assert(UPLINK_MRAM_KEPLER_OFFSET + MRAM_RECORD_OVERHEAD + sizeof(float) * UPLINK_KEPLER_COEFFICIENTS <=
+                   UPLINK_MRAM_ADCS_PARAMS_OFFSET,
+               "Kepler record overlaps the ADCS parameters record");
+_Static_assert(UPLINK_MRAM_ADCS_PARAMS_OFFSET + MRAM_RECORD_OVERHEAD + sizeof(uplink_adcs_parameters_t) <= MRAM_ADCS_UPLINK_SIZE,
+               "ADCS parameters record must fit MRAM_REGION_ADCS_UPLINK");
+
+// Sends a command whose data fits in the command itself, so it doesn't hold the uplink buffer
+static void uplink_send_direct(command_t cmd) {
+    status_t status = enqueue_command(&cmd);
+    if (status != SUCCESS) {
+        warning("uplink: operation %d not sent (status %d)\n", cmd.operation, status);
+    }
+}
+
+// Saves command data too big for a command_t to MRAM_REGION_ADCS_UPLINK, then tells ADCS with `op` to read it
+static void uplink_save_for_adcs(operation_t op, uint32_t offset, const void *data, uint32_t size) {
+    if (!mram_record_save(MRAM_REGION_ADCS_UPLINK, offset, data, size)) {
+        warning("uplink: failed to save %lu bytes of ADCS data to MRAM offset 0x%lx\n", size, offset);
+        return;
+    }
+    uplink_send_direct((command_t){.target = p_adcs_task, .operation = op, .data_type = CMD_DATA_NONE, .result = PROCESSING});
+}
+
 void uplink_commands_dispatch(cfdp_buff_header_t *buff, size_t n) {
     if (buff == NULL) {
         return;
@@ -112,21 +136,28 @@ void uplink_commands_dispatch(cfdp_buff_header_t *buff, size_t n) {
                 uplink_send_photo(parsed->args.photo_count);
                 continue; // run here, so the command doesn't need the buffer
             case SET_KEPLER_COEFF:
-                target = p_adcs_task;
-                op = OPERATION_SET_KEPLER_COEFF;
-                break;
+                uplink_save_for_adcs(OPERATION_SET_KEPLER_COEFF, UPLINK_MRAM_KEPLER_OFFSET, parsed->args.kepler_coefficients,
+                                     sizeof(parsed->args.kepler_coefficients));
+                continue;
             case SET_UNIX_TIME:
-                target = p_adcs_task;
-                op = OPERATION_SET_UNIX_TIME;
-                break;
+                uplink_send_direct((command_t){.target = p_adcs_task,
+                                               .operation = OPERATION_ADCS_SET_UTC,
+                                               .data = {.unix_time = parsed->args.unix_time},
+                                               .data_type = CMD_DATA_UNIX_TIME,
+                                               .result = PROCESSING});
+                continue;
             case SET_ADCS_OP_MODE:
-                target = p_adcs_task;
-                op = OPERATION_SET_ADCS_OP_MODE;
-                break;
+                uplink_send_direct((command_t){.target = p_adcs_task,
+                                               .operation = (parsed->args.adcs_op_mode == TEL_ADCS_OPMODE_DETUMBLE_ONLY)
+                                                   ? OPERATION_ADCS_DETUMBLE_ONLY
+                                                   : OPERATION_ADCS_DO_POINT,
+                                               .data_type = CMD_DATA_NONE,
+                                               .result = PROCESSING});
+                continue;
             case ADCS_UPDATE_PARAMS:
-                target = p_adcs_task;
-                op = OPERATION_ADCS_UPDATE_PARAMS;
-                break;
+                uplink_save_for_adcs(OPERATION_ADCS_UPDATE_PARAMS, UPLINK_MRAM_ADCS_PARAMS_OFFSET, &parsed->args.adcs_parameters,
+                                     sizeof(parsed->args.adcs_parameters));
+                continue;
             case SET_PWR_MODE:
                 target = p_task_manager_task;
                 op = OPERATION_SET_POWER_MODE;

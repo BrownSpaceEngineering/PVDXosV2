@@ -20,7 +20,7 @@ static const uint32_t command_data_sizes[UPLINK_CMD_COUNT] = {
     [SET_KEPLER_COEFF] = 4 * UPLINK_KEPLER_COEFFICIENTS,
     [SET_UNIX_TIME] = 4,
     [SET_ADCS_OP_MODE] = 2,
-    [ADCS_UPDATE_PARAMS] = 8 + 4 * 7, // TODO: will change once the ADCS command format is decided (see uplink_adcs_parameters_t)
+    [ADCS_UPDATE_PARAMS] = UPLINK_ADCS_PARAMETERS_SIZE,
     [SET_PWR_MODE] = 2,
 };
 
@@ -81,6 +81,36 @@ static double get_double(uplink_reader_t *r) {
 }
 
 /* ---------- PARSING ---------- */
+
+/**
+ * Parses ADCS_UPDATE_PARAMS data (see uplink_adcs_parameters_t) from r into params
+ *
+ * \return true if the flags byte has a reserved bit set, else false
+ */
+static bool parse_adcs_parameters(uplink_reader_t *r, uplink_adcs_parameters_t *params) {
+    params->epoch_jd = get_double(r);
+    params->inclination = get_float(r);
+    params->raan = get_float(r);
+    params->eccentricity = get_float(r);
+    params->argument_of_perigee = get_float(r);
+    params->mean_anomaly = get_float(r);
+    params->mean_motion = get_float(r);
+    params->bstar = get_float(r);
+    for (size_t i = 0; i < 3; i++) {
+        params->device_rotation[i] = (int8_t)get_uint8(r);
+    }
+
+    const uint8_t flags = get_uint8(r);
+    if (flags & 0x07) {
+        return true; // reserved bits set: the ground's layout doesn't match ours
+    }
+    for (size_t i = 0; i < 3; i++) {
+        params->flip_magnetorquer_current[i] = (flags >> (7 - i)) & 1;
+    }
+    params->bdot_override = (flags >> 4) & 1;
+    params->dipole_off = (flags >> 3) & 1;
+    return false;
+}
 
 /**
  * Parses one command (type, data size and data) from r into cmd
@@ -148,14 +178,9 @@ static bool parse_command(uplink_reader_t *r, uplink_parsed_cmd_t *cmd) {
             }
             break;
         case ADCS_UPDATE_PARAMS:
-            cmd->args.adcs_parameters.epoch_jd = get_double(&data);
-            cmd->args.adcs_parameters.inclination = get_float(&data);
-            cmd->args.adcs_parameters.raan = get_float(&data);
-            cmd->args.adcs_parameters.eccentricity = get_float(&data);
-            cmd->args.adcs_parameters.argument_of_perigee = get_float(&data);
-            cmd->args.adcs_parameters.mean_anomaly = get_float(&data);
-            cmd->args.adcs_parameters.mean_motion = get_float(&data);
-            cmd->args.adcs_parameters.bstar = get_float(&data);
+            if (parse_adcs_parameters(&data, &cmd->args.adcs_parameters)) {
+                return true;
+            }
             break;
         case SET_PWR_MODE:
             cmd->args.power_mode = get_uint16(&data);

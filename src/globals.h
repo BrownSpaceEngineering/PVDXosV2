@@ -109,10 +109,9 @@ typedef enum {
     OPERATION_TAKE_PHOTO, // uplink_cmd_t* uplink_cmd
 
     // ADCS Operations
-    OPERATION_SET_KEPLER_COEFF, // p_data: uplink_cmd_t* uplink_cmd
-    OPERATION_SET_UNIX_TIME,    // p_data: uint32_t timestamp
-    OPERATION_SET_ADCS_OP_MODE, // p_data: uplink_cmd_t* uplink_cmd
-    OPERATION_ADCS_UPDATE_PARAMS,
+    OPERATION_SET_KEPLER_COEFF,   // No data: read from MRAM_REGION_ADCS_UPLINK (see uplink_parse.h)
+    OPERATION_SET_UNIX_TIME,      // data: uint32_t timestamp
+    OPERATION_ADCS_UPDATE_PARAMS, // No data: read from MRAM_REGION_ADCS_UPLINK (see uplink_parse.h)
 
     // CFDP Operations
     OPERATION_CFDP_PUT, // data: cfdp_put_t cfdp_put. Cancels and timeouts are task notifications (see cfdp_task.h)
