@@ -1032,11 +1032,10 @@ void test_telemetry_setters(void) {
     // An uplink with no commands ("PVDXGS", message size 0, 0 commands, timestamp 0x0A0B0C0D) records its timestamp;
     // one from another callsign doesn't. No commands, so nothing is enqueued before the scheduler starts
     static uint8_t uplink[] = {'P', 'V', 'D', 'X', 'G', 'S', 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A, 0x0B, 0x0C, 0x0D};
-    cfdp_buff_header_t uplink_buff = {.buff = uplink};
-    uplink_commands_dispatch(&uplink_buff, sizeof(uplink));
+    uplink_commands_dispatch(uplink, sizeof(uplink));
     uplink[0] = 'X';
     uplink[15] = 0xFF;
-    uplink_commands_dispatch(&uplink_buff, sizeof(uplink));
+    uplink_commands_dispatch(uplink, sizeof(uplink));
     tel_collect_and_serialize(&downlink, buf);
     PVDX_ASSERT_MSG(tel_be32_is(&buf[TEL_OFF_COMMANDS], 0x0A0B0C0D) && tel_be32_is(&buf[TEL_OFF_COMMANDS + 4], 0xC0000010u),
                     "uplink timestamp recorded, rejected uplink not\n");
@@ -1158,7 +1157,7 @@ void test_uplink_parse(void) {
     for (size_t i = sizeof(display_header); i < sizeof(display); i++) {
         display[i] = (uint8_t)(i * 7);
     }
-    PVDX_ASSERT_MSG(sizeof(display) <= CFDP_LARGE_BUFF_SZ, "display uplink fits in the CFDP large buffer\n");
+    PVDX_ASSERT_MSG(sizeof(display) <= CFDP_FILE_BUFF_SZ, "display uplink fits in the CFDP file buffer\n");
     err = uplink_packet_parse(&packet, display, sizeof(display));
     PVDX_ASSERT_MSG(!err, "display parse\n");
     PVDX_ASSERT_MSG(packet.cmds[0].type == UPDATE_DISPLAY, "display type\n");

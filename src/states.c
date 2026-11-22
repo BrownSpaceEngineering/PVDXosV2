@@ -45,6 +45,14 @@ static state_id_t pass_state(const input_t *const input) {
     return STATE_IDLE;
 }
 
+// Whether a TAKE_PHOTO override is due: its time has come, or UTC isn't known (then it's taken as soon as possible, see
+// student_capture_override_on_enter())
+static bool student_capture_due(const input_t *const input) {
+    if (!input->student_capture_override)
+        return false;
+    return !input->utc_valid || input->student_capture_time == 0 || (int32_t)(input->current_utc - input->student_capture_time) >= 0;
+}
+
 static state_id_t idle_next_state(const input_t *const input) {
     if (input->battery_level < LOW_BATTERY_LEVEL)
         return STATE_LOW_POWER_IDLE;
@@ -52,6 +60,9 @@ static state_id_t idle_next_state(const input_t *const input) {
     // doing first and come back here, which then goes straight to the pass
     if (pass_state(input) != STATE_IDLE)
         return pass_state(input);
+    // OVERRIDE, else the previous logic: an uplinked image to show, no photo waiting for downlink, and in eclipse
+    if (student_capture_due(input))
+        return STATE_STUDENT_CAPTURE_OVERRIDE;
     if (input->image_ready_to_display && !input->photo_taken_for_downlink && !input->in_sunlight)
         return STATE_STUDENT_PICTURE_CAPTURE;
     if (input->in_sunlight && !input->perovskite_data_ready_for_downlink)
@@ -87,6 +98,16 @@ static state_id_t student_picture_capture_next_state(const input_t *const input)
     return STATE_STUDENT_PICTURE_CAPTURE;
 }
 
+// Leaves once the display task reports the photo taken, which clears the override. Not on photo_taken_for_downlink: an
+// earlier photo still waiting for downlink already has it set (the override replaces that photo)
+static state_id_t student_capture_override_next_state(const input_t *const input) {
+    if (input->battery_level < LOW_BATTERY_LEVEL)
+        return STATE_LOW_POWER_IDLE;
+    if (!input->student_capture_override)
+        return STATE_IDLE;
+    return STATE_STUDENT_CAPTURE_OVERRIDE;
+}
+
 // Both pass states stay until the UHF task ends the pass, and move straight to the other one if a SYN changes the pass
 // type. Leaving suspends CFDP, which first drops its transaction and powers S-band off (cfdp_prepare_suspend())
 static state_id_t pass_next_state(const input_t *const input) {
@@ -114,12 +135,20 @@ static void student_picture_capture_on_enter(state_id_t previous_state, const in
         return; // no point drawing on a display that will not be initialised
     }
 
-    // TODO: show the student's picture once there is a buffer for it; PVDX logo for now
-    command_t image_cmd = get_display_image_command(IMAGE_BUFFER_PVDX);
+    // The student's picture saved in MRAM (display_store_image()), or the PVDX logo if none has been saved
+    command_t image_cmd = get_display_stored_image_command();
     status = enqueue_command(&image_cmd);
     if (status != SUCCESS) {
         warning("states: failed to enqueue student picture display command (status %d)\n", status);
     }
+}
+
+// Same sequence as the student picture state
+static void student_capture_override_on_enter(state_id_t previous_state, const input_t *const input) {
+    if (!input->utc_valid && input->student_capture_time != 0) {
+        warning("states: UTC not set, taking the TAKE_PHOTO picture now instead of at %lu\n", (unsigned long)input->student_capture_time);
+    }
+    student_picture_capture_on_enter(previous_state, input);
 }
 
 static void perovskite_capture_on_enter(state_id_t previous_state, const input_t *const input) {
@@ -159,6 +188,10 @@ void init_states(void) {
         (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_uhf_radio_task, p_display_task, p_camera_task},
                   .fetch_next_state = student_picture_capture_next_state,
                   .on_enter = student_picture_capture_on_enter};
+    mission_states[STATE_STUDENT_CAPTURE_OVERRIDE] =
+        (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_uhf_radio_task, p_display_task, p_camera_task},
+                  .fetch_next_state = student_capture_override_next_state,
+                  .on_enter = student_capture_override_on_enter};
     mission_states[STATE_UHF_PASS] =
         (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_uhf_radio_task, p_cfdp_task}, .fetch_next_state = pass_next_state};
     mission_states[STATE_SBAND_PASS] =

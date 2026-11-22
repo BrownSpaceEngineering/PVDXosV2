@@ -29,8 +29,7 @@
 // CFDP Memory Stores. PDUs go to and from the radio through its uplink_queue/downlink_queue (see cfdp_utils.c)
 cfdp_task_memory_t cfdp_mem;
 cfdp_transaction_store_t cfdp_txn_store;
-cfdp_large_buff_t cfdp_large_buff;
-cfdp_small_buff_t cfdp_small_buffs[CFDP_SMALL_BUFF_COUNT];
+uint8_t cfdp_file_buff[CFDP_FILE_BUFF_SZ];
 fin_txn_buf_t cfdp_fin_txn;
 
 // Safe-suspend handshake, as in the perovskite task
@@ -40,17 +39,6 @@ static SemaphoreHandle_t stop_ack;
 
 // cfdp_recv receives a whole radio_queue_item_t into the buffer it's given
 _Static_assert(CFDP_MAX_PDU_SIZE >= sizeof(radio_queue_item_t), "CFDP receive buffer must hold a radio_queue_item_t");
-
-static void init_cfdp_buff(cfdp_buff_header_t *header, uint8_t *buff, bool is_large) {
-    header->ref_count = 0;
-    header->is_large = is_large;
-    header->buff = buff;
-    header->semaphore = xSemaphoreCreateMutexStatic(&header->_semaphore_mem);
-
-    if (header->semaphore == NULL) {
-        fatal("Failed to create cfdp buffer mutex!\n");
-    }
-}
 
 /**
  * \fn init_cfdp
@@ -71,11 +59,6 @@ QueueHandle_t init_cfdp(void) {
     }
 
     init_cfdp_timers(&cfdp_mem);
-
-    for (size_t i = 0; i < CFDP_SMALL_BUFF_COUNT; i++) {
-        init_cfdp_buff(&cfdp_small_buffs[i].header, cfdp_small_buffs[i].buff, false);
-    }
-    init_cfdp_buff(&cfdp_large_buff.header, cfdp_large_buff.buff, true);
 
     cfdp_fin_txn = (fin_txn_buf_t){0};
 
@@ -127,6 +110,8 @@ static void cfdp_park_if_stopped(void) {
         cfdp_free_transaction();
     }
     radio_sband_close();
+    // The pass is over: commands uplinked during it can take effect now
+    uplink_commands_pass_exit();
     xQueueReset(p_cfdp_task->command_queue);
     xSemaphoreGive(stop_ack);
     // Never self-suspend: the manager could resume us just before a self-suspend
@@ -250,7 +235,7 @@ void main_cfdp(void *pvParameters) {
                 info("cfdp: transaction %lu complete\n", txn->transaction_id.seq_num);
                 // The ground only sends us uplink command files, so every file we finish receiving is one
                 if (txn->direction == CFDP_RECV && txn->condition_code == CFDP_COND_NOERROR) {
-                    uplink_commands_dispatch(txn->buff_header, txn->file_size);
+                    uplink_commands_dispatch(txn->file_data, txn->file_size);
                 }
                 // Only class 2 sends get a FIN from the ground, so only they can get a stale one
                 if (txn->direction == CFDP_SEND && txn->reliable_mode) {

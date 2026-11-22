@@ -37,10 +37,11 @@
 #define UHF_EVENT_DOWNLINK (1u << 0)
 #define UHF_EVENT_IRQ (1u << 1) // Set by uhf_radio_irq_handler(), the task then calls uhf_read_irqs()
 // Set by uhf_irqs_to_events(). After RXFE or TXFE the radio is in TXPREP
-#define UHF_EVENT_RXFE (1u << 2)      // A frame was received
-#define UHF_EVENT_TXFE (1u << 3)      // A frame was sent
-#define UHF_EVENT_TXRDY (1u << 4)     // The radio reached TXPREP. Masked from the pin, so only seen alongside another IRQ
-#define UHF_EVENT_CFDP_DONE (1u << 5) // CFDP has nothing more to send for now, see radio_cfdp_turn_done()
+#define UHF_EVENT_RXFE (1u << 2)       // A frame was received
+#define UHF_EVENT_TXFE (1u << 3)       // A frame was sent
+#define UHF_EVENT_TXRDY (1u << 4)      // The radio reached TXPREP. Masked from the pin, so only seen alongside another IRQ
+#define UHF_EVENT_CFDP_DONE (1u << 5)  // CFDP has nothing more to send for now, see radio_cfdp_turn_done()
+#define UHF_EVENT_TX_REQUEST (1u << 6) // uhf_request_transmit() asked to turn transmit on or off
 
 // PUSP link timing. TODO: tune on hardware. The retry period must cover a whole round trip: our frame's airtime, the
 // ground station's RX/TX turnaround and its reply's airtime
@@ -151,6 +152,15 @@ bool uhf_rx_is_pusp(const uhf_rx_t *rx, pusp_directive_t dir);
  * \return true if this changed whether transmit is enabled
  */
 bool dispatch_pusp_immediate_cmd(uint8_t notifs);
+
+/**
+ * Turns transmit on or off from another task, as PUSP_NOTIF_ENABLE_TX / PUSP_NOTIF_DISABLE_TX would: the backup path
+ * for the TRANSMIT_ON_OFF uplink command. The UHF task applies it on its next wake-up (uhf_radio_task.c)
+ */
+void uhf_request_transmit(bool enable);
+
+// Run by the UHF task on UHF_EVENT_TX_REQUEST: applies the last uhf_request_transmit() (uhf_radio_task.c)
+void uhf_apply_transmit_request(void);
 
 // False while the ground has disabled transmit. uhf_step() then keeps the task in LISTEN, and every transmit is
 // refused (uhf_radio_task.c)

@@ -130,6 +130,9 @@ void main_uhf_radio(void *pvParameters) {
 
         uint32_t events = 0;
         xTaskNotifyWait(0, UINT32_MAX, &events, wait);
+        if (events & UHF_EVENT_TX_REQUEST) {
+            uhf_apply_transmit_request(); // uhf_step() below drops to LISTEN if transmit is now off
+        }
 
         const uhf_rx_t rx = uhf_rx_poll(&ctx, events);
         uhf_step(&ctx, &rx);

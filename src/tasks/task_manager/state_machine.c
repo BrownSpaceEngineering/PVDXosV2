@@ -12,6 +12,7 @@
 #include "logging.h"
 #include "tasks/adcs/adcs_task.h"
 #include "telemetry/telemetry.h"
+#include "utc.h"
 
 // Whether state_machine_init() has run; no transition is taken before then
 static bool state_machine_initialised = false;
@@ -148,6 +149,10 @@ static void copy_input(input_update_t update, const input_t *const p_new_values)
         case SAFE_DISABLE_RADIO_UPDATE:
             inputs.safe_to_disable_radio = p_new_values->safe_to_disable_radio;
             break;
+        case STUDENT_CAPTURE_OVERRIDE_UPDATE:
+            inputs.student_capture_override = p_new_values->student_capture_override;
+            inputs.student_capture_time = p_new_values->student_capture_time;
+            break;
         case NUM_INPUT_UPDATE_OPTIONS:
             // Not an input; listed so that the switch covers the whole enum
             break;
@@ -206,6 +211,7 @@ void state_machine_check_transition(void) {
 
     // Inputs the task manager knows itself are filled in here rather than sent as updates
     inputs.current_tick = xTaskGetTickCount();
+    inputs.utc_valid = utc_get(&inputs.current_utc) == SUCCESS;
 
     const state_id_t next_state = mission_states[current_state].fetch_next_state(&inputs);
     if (next_state >= NUM_STATES) {

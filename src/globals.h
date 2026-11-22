@@ -82,7 +82,7 @@ typedef enum {
 typedef enum {
     // General operations (can be overloaded by any task)
     OPERATION_POWER_OFF = 0,
-    OPERATION_ENABLE_DISABLE_DEVICE, // p_data: uplink_cmd_t* uplink_cmd
+    OPERATION_ENABLE_DISABLE_DEVICE, // p_data: NULL
 
     // Watchdog operations
     OPERATION_CHECKIN, // p_data: TaskHandle_t *handle
@@ -91,12 +91,12 @@ typedef enum {
     OPERATION_INIT_SUBTASKS,    // p_data: NULL
     OPERATION_ENABLE_SUBTASK,   // p_data: TaskHandle_t *handle
     OPERATION_DISABLE_SUBTASK,  // p_data: TaskHandle_t *handle
-    OPERATION_REBOOT,           // p_data: uplink_cmd_t* uplink_cmd
-    OPERATION_TRANSMIT_ON_OFF,  // p_data: uplink_cmd_t* uplink_cmd
-    OPERATION_SET_POWER_MODE,   // p_data: uplink_cmd_t* uplink_cmd
+    OPERATION_REBOOT,           // p_data: NULL
+    OPERATION_TRANSMIT_ON_OFF,  // p_data: NULL
+    OPERATION_SET_POWER_MODE,   // p_data: NULL
 
     // Display operations
-    OPERATION_DISPLAY_IMAGE, // p_data: uplink_cmd_t* uplink_cmd
+    OPERATION_DISPLAY_IMAGE, // p_data: const uint8_t *display_data
     OPERATION_CLEAR_IMAGE,   // p_data: NULL
 
     // ADCS operations
@@ -106,7 +106,7 @@ typedef enum {
     OPERATION_ADCS_SET_UTC,       // data: uint32_t unix_time
 
     // Camera Operations
-    OPERATION_TAKE_PHOTO, // uplink_cmd_t* uplink_cmd
+    OPERATION_TAKE_PHOTO, // unused: TAKE_PHOTO sets the student capture override (see uplink_commands.c)
 
     // ADCS Operations
     OPERATION_SET_KEPLER_COEFF,   // No data: read from MRAM_REGION_ADCS_UPLINK (see uplink_parse.h)
@@ -130,6 +130,9 @@ typedef enum {
 
     // Perovskite operations (append to preserve existing operation values)
     OPERATION_PEROVSKITE_SWEEP, // p_data: NULL
+
+    // Display operations (append to preserve existing operation values)
+    OPERATION_DISPLAY_STORED_IMAGE, // p_data: NULL; the image saved in MRAM, or IMAGE_BUFFER_PVDX if there is none
 } operation_t;
 
 // An enum to represent the different log levels that functions can use
@@ -212,13 +215,6 @@ typedef struct {
 typedef struct adcs_tle adcs_tle_t;
 typedef struct input_update_data input_update_data_t;
 
-typedef struct cfdp_buff_header cfdp_buff_header_t;
-
-typedef struct {
-    size_t buff_offset;
-    cfdp_buff_header_t *header;
-} uplink_cmd_t;
-
 // Files a CFDP put can send. Each is read straight out of its MRAM region while it's sent, since it may not fit in RAM
 typedef enum {
     CFDP_FILE_IMAGE = 0,  // The JPEG capture_mram() last saved to MRAM_REGION_CAMERA
@@ -234,7 +230,6 @@ typedef struct {
 } cfdp_put_t;
 
 typedef union command_data {
-    uplink_cmd_t uplink_cmd; // Can't be a pointer: Data has to live in the command queue -> must be in the command_t struct
     const adcs_tle_t *adcs_tle;
     uint32_t unix_time;
     const uint8_t *display_data;
@@ -253,7 +248,6 @@ typedef enum {
     CMD_DATA_TASK_HANDLE,
     CMD_DATA_PVDX_TASK,
     CMD_CFDP_PUT,
-    CMD_DATA_UPLINK,
     CMD_STATE_INPUT_UPDATE,
     CMD_DATA_TIMESTAMP
 } command_data_type_t;

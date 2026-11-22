@@ -7,7 +7,6 @@
 #include "cfdp_timer.h"
 #include "globals.h"
 #include "logging.h"
-#include "mutexes.h"
 #include "rtos_start.h"
 #include "uhf_radio/uhf_radio_task.h"
 
@@ -168,13 +167,8 @@ void cfdp_free_transaction(void) {
     // The timer outlives the transaction, so stop it or it fires on the next one
     stop_timer(cfdp_mem.inactivity_timer_handle);
 
-    // Received files hold a CFDP buffer. Commands parsed out of it hold their own references, so this only drops
-    // the transaction's
-    if (txn->buff_header != NULL) {
-        cfdp_release_buff(txn->buff_header);
-        txn->buff_header = NULL;
-        txn->file_data = NULL;
-    }
+    // Received files are in cfdp_file_buff, which is free again for the next transaction
+    txn->file_data = NULL;
     cfdp_txn_store.active = false;
 }
 
@@ -184,66 +178,6 @@ cfdp_transaction_t *cfdp_find_transaction(uint32_t entity_id, uint32_t seq_num) 
         return txn;
     }
     return NULL;
-}
-
-cfdp_buff_header_t *cfdp_alloc_small_buff() {
-    for (size_t i = 0; i < CFDP_SMALL_BUFF_COUNT; ++i) {
-        lock_mutex(cfdp_small_buffs[i].header.semaphore);
-        if (!cfdp_small_buffs[i].header.ref_count) {
-            cfdp_small_buffs[i].header.ref_count = 1;
-            cfdp_small_buffs[i].header.is_large = false;
-            unlock_mutex(cfdp_small_buffs[i].header.semaphore);
-            return &cfdp_small_buffs[i].header;
-        }
-        unlock_mutex(cfdp_small_buffs[i].header.semaphore);
-    }
-    return NULL;
-}
-
-cfdp_buff_header_t *cfdp_alloc_large_buff() {
-    lock_mutex(cfdp_large_buff.header.semaphore);
-    cfdp_buff_header_t *ret = NULL;
-    if (cfdp_large_buff.header.ref_count == 0) {
-        cfdp_large_buff.header.ref_count = 1;
-        ret = &cfdp_large_buff.header;
-    }
-    unlock_mutex(cfdp_large_buff.header.semaphore);
-    return ret;
-}
-
-int cfdp_free_buff(cfdp_buff_header_t *buff) {
-    lock_mutex(buff->semaphore);
-    if (buff->ref_count != 1) {
-        unlock_mutex(buff->semaphore);
-        return -1;
-    }
-
-    buff->ref_count = 0;
-    unlock_mutex(buff->semaphore);
-    return 0;
-}
-
-int cfdp_release_buff(cfdp_buff_header_t *buff) {
-    lock_mutex(buff->semaphore);
-
-    if (buff->ref_count == 0) {
-        unlock_mutex(buff->semaphore);
-        return -1;
-    }
-
-    buff->ref_count--;
-    unlock_mutex(buff->semaphore);
-    return 0;
-}
-
-int cfdp_add_buff_reference(cfdp_buff_header_t *buff) {
-    lock_mutex(buff->semaphore);
-
-    buff->ref_count++;
-
-    unlock_mutex(buff->semaphore);
-
-    return 0;
 }
 
 uint32_t cfdp_calculate_modular_checksum(cfdp_transaction_t *txn) {

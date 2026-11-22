@@ -22,6 +22,7 @@ typedef enum { // preliminary contents; still under discussion
     STATE_IDLE,
     STATE_PEROVSKITE_CAPTURE,
     STATE_STUDENT_PICTURE_CAPTURE,
+    STATE_STUDENT_CAPTURE_OVERRIDE, // TAKE_PHOTO uplinked: the student picture, whatever the inputs that usually gate it
     STATE_UHF_PASS,
     STATE_SBAND_PASS,
     STATE_FLASH_RECOVERY_CHECK,
@@ -40,8 +41,14 @@ typedef struct { // preliminary contents; still under discussion
     bool adcs_pointing;     // ?
     bool adcs_sensor_fault; // ?
     bool perovskite_data_ready_for_downlink;
+    // TAKE_PHOTO uplinked (sent once the pass ends): take the student picture at student_capture_time. Cleared by the
+    // display task once the photo is taken
+    bool student_capture_override;
+    uint32_t student_capture_time; // Unix time to take it at, 0 for as soon as possible
     // Filled in by the task manager itself; never sent as an input update
     TickType_t current_tick;
+    uint32_t current_utc; // Unix time, valid if utc_valid (see utc_get())
+    bool utc_valid;
     TickType_t last_transition_tick; // when the current state was entered
     TickType_t last_reflash_tick;
     // Set by the UHF task while the ground has a pass open, from the pass type on its SYN (PUSP_NOTIF_SBAND_PASS). At most
@@ -64,6 +71,7 @@ typedef enum { // preliminary contents; still under discussion
     SBAND_PASS_UPDATE,
     UHF_PASS_UPDATE,
     SAFE_DISABLE_RADIO_UPDATE,
+    STUDENT_CAPTURE_OVERRIDE_UPDATE, // student_capture_override and student_capture_time
     NUM_INPUT_UPDATE_OPTIONS
 } input_update_t;
 

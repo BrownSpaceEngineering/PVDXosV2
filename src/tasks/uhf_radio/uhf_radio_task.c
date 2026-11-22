@@ -280,6 +280,21 @@ bool dispatch_pusp_immediate_cmd(uint8_t notifs) {
     return true;
 }
 
+// Set by uhf_request_transmit() from another task, applied by the UHF task
+static volatile uint8_t tx_request_notifs;
+
+void uhf_request_transmit(bool enable) {
+    tx_request_notifs = enable ? PUSP_NOTIF_ENABLE_TX : PUSP_NOTIF_DISABLE_TX;
+    if (p_uhf_radio_task->handle != NULL) {
+        xTaskNotify(p_uhf_radio_task->handle, UHF_EVENT_TX_REQUEST, eSetBits);
+    }
+}
+
+void uhf_apply_transmit_request(void) {
+    info("Radio: transmit %s requested by uplink command\n", tx_request_notifs == PUSP_NOTIF_ENABLE_TX ? "on" : "off");
+    dispatch_pusp_immediate_cmd(tx_request_notifs);
+}
+
 bool uhf_tx_is_enabled(void) {
     return uhf_tx_enabled;
 }

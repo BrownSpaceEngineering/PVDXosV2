@@ -3,11 +3,18 @@
 
 // Includes
 #include "drivers/display/display_driver.h"
+#include "drivers/mram/mram_map.h"
 #include "globals.h"
 #include "image_buffer_BrownLogo.h"
 #include "image_buffer_PVDX.h"
 #include "logging.h"
 #include "watchdog_task.h"
+
+// Images kept in MRAM_REGION_DISPLAY, each a record of DISPLAY_BUFFER_SIZE bytes. The stored image is what
+// OPERATION_DISPLAY_STORED_IMAGE shows; the incoming slot is for receiving a new image without losing the stored one
+#define DISPLAY_IMAGE_RECORD_SIZE (MRAM_RECORD_OVERHEAD + DISPLAY_BUFFER_SIZE)
+#define DISPLAY_STORED_IMAGE_OFFSET 0u
+#define DISPLAY_INCOMING_IMAGE_OFFSET DISPLAY_IMAGE_RECORD_SIZE
 
 // FreeRTOS Task structs
 // Memory for the display task
@@ -32,7 +39,9 @@ QueueHandle_t init_display(void);
 status_t display_update(void);
 void display_set_buffer(const color_t *const p_buffer);
 void display_clear_buffer(void);
+status_t display_store_image(const color_t *const p_buffer);
 command_t get_display_image_command(const color_t *const p_buffer);
+command_t get_display_stored_image_command(void);
 command_t get_display_init_command(void);
 command_t get_display_off_command(void);
 void exec_command_display(command_t *const p_cmd);

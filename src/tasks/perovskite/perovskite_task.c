@@ -2,7 +2,8 @@
  * perovskite_task.c
  *
  * Measures the perovskite pixels: on each OPERATION_PEROVSKITE_SWEEP, steps every pixel through
- * PEROVSKITE_STEP_COUNT voltages, logs and records the current at each step, and saves the sweep to MRAM.
+ * the sampling resolution's number of voltages (perovskite_set_step_count()), logs and records the current at each
+ * step, and saves the sweep to MRAM.
  *
  * A sweep takes about 90 s: each step waits out two INA226 conversions, see ina226_wait_for_fresh_conversion().
  */
@@ -41,6 +42,22 @@ static uint8_t next_slot = 0;
 static uint32_t next_sequence = 0;
 
 static perovskite_sweep_t sweep; // The sweep being measured, or a saved one while scanning the slots
+
+static volatile uint16_t step_count = PEROVSKITE_STEP_COUNT; // Sampling resolution, see perovskite_set_step_count()
+
+void perovskite_set_step_count(uint32_t requested) {
+    uint32_t clamped = requested;
+    if (clamped < PEROVSKITE_MIN_STEP_COUNT) {
+        clamped = PEROVSKITE_MIN_STEP_COUNT;
+    } else if (clamped > PEROVSKITE_STEP_COUNT) {
+        clamped = PEROVSKITE_STEP_COUNT;
+    }
+    if (clamped != requested) {
+        warning("perovskite: Sampling resolution %lu out of range, using %lu\n", (unsigned long)requested, (unsigned long)clamped);
+    }
+    step_count = (uint16_t)clamped;
+    info("perovskite: Sampling resolution set to %lu steps\n", (unsigned long)clamped);
+}
 
 // The state machine input this task owns (static: the task manager reads it after the command is sent)
 static input_update_data_t perovskite_inputs = {
@@ -107,7 +124,7 @@ command_t get_perovskite_sweep_command(void) {
     return (command_t){
         .target = p_perovskite_task,
         .operation = OPERATION_PEROVSKITE_SWEEP,
-        .data = {{0}},
+        .data = {0},
         .data_type = CMD_DATA_NONE,
         .result = PROCESSING,
     };
@@ -242,7 +259,7 @@ static void perovskite_idle_circuit(void) {
 }
 
 static status_t perovskite_measure_step(uint8_t pixel, uint32_t step, int16_t *p_current) {
-    const uint32_t step_mv = PEROVSKITE_STEP_MV(step, PVD_PIXEL_FULL_SCALE_MV);
+    const uint32_t step_mv = PEROVSKITE_STEP_MV(step, PVD_PIXEL_FULL_SCALE_MV, sweep.step_count);
     status_t status = pvd_dac_set_pixel_mv(step_mv);
     if (status != SUCCESS) {
         return status;
@@ -277,7 +294,10 @@ static status_t perovskite_sweep_pixel(uint8_t pixel, int16_t *p_samples) {
     }
 
     status_t result = SUCCESS;
-    for (uint32_t step = 0; step < PEROVSKITE_STEP_COUNT; step++) {
+    for (uint32_t step = sweep.step_count; step < PEROVSKITE_STEP_COUNT; step++) {
+        p_samples[step] = PEROVSKITE_SAMPLE_INVALID; // Not measured at this resolution
+    }
+    for (uint32_t step = 0; step < sweep.step_count; step++) {
         if (perovskite_stop_requested()) {
             result = ERROR_TASK_DISABLED;
             break;
@@ -312,6 +332,7 @@ static status_t perovskite_run_sweep(void) {
     sweep.sequence = next_sequence;
     sweep.timestamp = utc_get(&unix_time) == SUCCESS ? unix_time : 0;
     sweep.full_scale_mv = PVD_PIXEL_FULL_SCALE_MV;
+    sweep.step_count = step_count; // Fixed for the whole sweep
 
     for (uint8_t pixel = 0; pixel < PEROVSKITE_PIXEL_COUNT; pixel++) {
         status_t status = perovskite_sweep_pixel(pixel, sweep.current[pixel]);
@@ -321,7 +342,7 @@ static status_t perovskite_run_sweep(void) {
         perovskite_checkin();
     }
 
-    if (sweep.failed_steps == PEROVSKITE_PIXEL_COUNT * PEROVSKITE_STEP_COUNT) {
+    if (sweep.failed_steps == PEROVSKITE_PIXEL_COUNT * sweep.step_count) {
         warning("perovskite: Every step failed, not keeping the sweep\n");
         return ERROR_PROCESSING_FAILED;
     }

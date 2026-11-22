@@ -6,14 +6,37 @@
 #include "globals.h"
 #include "libraries/cmd_dispatcher/cmd_dispatcher.h"
 #include "logging.h"
+#include "state_machine.h"
 #include "task_list.h"
+#include "tasks/display/display_task.h"
 #include "tasks/perovskite/perovskite_task.h"
+#include "tasks/uhf_radio/uhf_radio_task.h"
 #include "telemetry/telemetry.h"
 
 /*
+ * Commands for ADCS and CFDP are sent straight away. Every other command is for a task that doesn't run during a pass,
+ * so it's turned into what it should change and kept in `pending` until the pass ends: uplink_commands_pass_exit(), run
+ * by the CFDP task as it's suspended on leaving the pass state, sends it. Commands take what they need from the uplink as
+ * they're parsed (the UPDATE_DISPLAY bitmap goes to MRAM), so nothing points into cfdp_file_buff once this returns.
+ */
+static struct {
+    input_update_data_t inputs; // State machine inputs to update. input_update_bitmask lists the ones set this pass
+    bool step_count_set;        // TAKE_IV_CURVE
+    uint32_t step_count;
+    bool transmit_set; // TRANSMIT_ON_OFF
+    bool transmit;
+    bool reboot; // REBOOT
+} pending;
+
+// The inputs sent at the last pass exit. A copy, since the task manager reads it after the command is sent (see
+// get_state_input_update_command()), while `pending` starts filling again in the next pass
+static input_update_data_t pass_exit_inputs;
+
+/*
  * SEND_PHOTO and SEND_IV_CURVE are run here, in the CFDP task, instead of being sent to the camera or perovskite
- * task: those are only enabled in some states, while the CFDP task always is. Each checks that there's data in MRAM to
- * send, then queues a put to the CFDP task, which starts it once the transaction in progress (e.g. this uplink) is done.
+ * task: those are only enabled in some states, while the CFDP task always is (when in a pass, and thus recieving a command). Each checks
+ * that there's data in MRAM to send, then queues a put to the CFDP task, which starts it once the transaction in progress (e.g. this
+ * uplink) is done.
  */
 
 // Queues a put of a file, if it's in MRAM
@@ -82,13 +105,13 @@ static void uplink_save_for_adcs(operation_t op, uint32_t offset, const void *da
     uplink_send_direct((command_t){.target = p_adcs_task, .operation = op, .data_type = CMD_DATA_NONE, .result = PROCESSING});
 }
 
-void uplink_commands_dispatch(cfdp_buff_header_t *buff, size_t n) {
-    if (buff == NULL) {
+void uplink_commands_dispatch(const uint8_t *data, size_t n) {
+    if (data == NULL) {
         return;
     }
 
     static uplink_packet_t packet; // static, since it is too big for the CFDP task's stack
-    if (uplink_packet_parse(&packet, buff->buff, n)) {
+    if (uplink_packet_parse(&packet, data, n)) {
         warning("uplink: rejected malformed uplink of %lu bytes\n", n);
         return;
     }
@@ -96,56 +119,26 @@ void uplink_commands_dispatch(cfdp_buff_header_t *buff, size_t n) {
 
     for (uint16_t i = 0; i < packet.n_cmds; i++) {
         const uplink_parsed_cmd_t *parsed = &packet.cmds[i];
-        pvdx_task_t *target;
-        operation_t op;
 
         switch (parsed->type) {
-            case ENABLE_DISABLE_DEVICE:
-                // TODO (uplink sheet): add device enabled/disabled to the state machine inputs, and send this there
-                target = NULL;
-                op = OPERATION_ENABLE_DISABLE_DEVICE;
-                break;
-            case UPDATE_DISPLAY:
-                target = p_display_task;
-                op = OPERATION_DISPLAY_IMAGE;
-                break;
-            case TAKE_IV_CURVE:
-                // TODO: perovskite task. OPERATION_PEROVSKITE_SWEEP takes no data and always sweeps
-                // PEROVSKITE_STEP_COUNT steps, so it can't use the sampling resolution yet
-                target = NULL;
-                op = OPERATION_PEROVSKITE_SWEEP;
-                break;
+            /* ---- Sent straight away: ADCS and CFDP ---- */
             case SEND_IV_CURVE:
                 uplink_send_iv_curve();
-                continue; // run here, so the command doesn't need the buffer
-            case TRANSMIT_ON_OFF:
-                // TODO (uplink sheet): "Done through PUSP notifications?" The UHF task already turns transmit on/off
-                // from PUSP_NOTIF_DISABLE_TX/PUSP_NOTIF_ENABLE_TX
-                target = p_task_manager_task;
-                op = OPERATION_TRANSMIT_ON_OFF;
-                break;
-            case REBOOT:
-                target = p_task_manager_task;
-                op = OPERATION_REBOOT;
-                break;
-            case TAKE_PHOTO:
-                target = NULL; // camera
-                op = OPERATION_TAKE_PHOTO;
                 break;
             case SEND_PHOTO:
                 uplink_send_photo(parsed->args.photo_count);
-                continue; // run here, so the command doesn't need the buffer
+                break;
             case SET_KEPLER_COEFF:
                 uplink_save_for_adcs(OPERATION_SET_KEPLER_COEFF, UPLINK_MRAM_KEPLER_OFFSET, parsed->args.kepler_coefficients,
                                      sizeof(parsed->args.kepler_coefficients));
-                continue;
+                break;
             case SET_UNIX_TIME:
                 uplink_send_direct((command_t){.target = p_adcs_task,
                                                .operation = OPERATION_ADCS_SET_UTC,
                                                .data = {.unix_time = parsed->args.unix_time},
                                                .data_type = CMD_DATA_UNIX_TIME,
                                                .result = PROCESSING});
-                continue;
+                break;
             case SET_ADCS_OP_MODE:
                 uplink_send_direct((command_t){.target = p_adcs_task,
                                                .operation = (parsed->args.adcs_op_mode == TEL_ADCS_OPMODE_DETUMBLE_ONLY)
@@ -153,39 +146,81 @@ void uplink_commands_dispatch(cfdp_buff_header_t *buff, size_t n) {
                                                    : OPERATION_ADCS_DO_POINT,
                                                .data_type = CMD_DATA_NONE,
                                                .result = PROCESSING});
-                continue;
+                break;
             case ADCS_UPDATE_PARAMS:
                 uplink_save_for_adcs(OPERATION_ADCS_UPDATE_PARAMS, UPLINK_MRAM_ADCS_PARAMS_OFFSET, &parsed->args.adcs_parameters,
                                      sizeof(parsed->args.adcs_parameters));
-                continue;
+                break;
+
+            /* ---- Kept until the pass ends ---- */
+            case UPDATE_DISPLAY:
+                // Saved now, while the uplink is still in cfdp_file_buff. Once the pass ends the student picture state
+                // shows it and photographs it (when in eclipse and no photo is waiting for downlink)
+                if (display_store_image((const color_t *)parsed->data) == SUCCESS) {
+                    pending.inputs.input_update_bitmask |= INPUT_UPDATE_BIT(IMAGE_READY_DISPLAY_UPDATE);
+                    pending.inputs.new_values.image_ready_to_display = true;
+                    info("uplink: display image saved, shown once the pass ends\n");
+                }
+                break;
+            case TAKE_PHOTO:
+                // STATE_STUDENT_CAPTURE_OVERRIDE takes the student picture at this time, whatever else is going on
+                pending.inputs.input_update_bitmask |= INPUT_UPDATE_BIT(STUDENT_CAPTURE_OVERRIDE_UPDATE);
+                pending.inputs.new_values.student_capture_override = true;
+                pending.inputs.new_values.student_capture_time = parsed->args.photo_timestamp;
+                info("uplink: photo override at %lu once the pass ends\n", (unsigned long)parsed->args.photo_timestamp);
+                break;
+            case TAKE_IV_CURVE:
+                // Only sets the sampling resolution of the following sweeps; it doesn't start one
+                pending.step_count_set = true;
+                pending.step_count = parsed->args.iv_sampling_resolution;
+                break;
+            case TRANSMIT_ON_OFF:
+                // Backup for PUSP_NOTIF_ENABLE_TX / PUSP_NOTIF_DISABLE_TX. TODO(temp): 1 = on, 0 = off, until the sheet
+                // gives this byte a meaning
+                if (parsed->args.transmit > 1) {
+                    warning("uplink: TRANSMIT_ON_OFF with value %u ignored, expected 0 or 1\n", parsed->args.transmit);
+                    break;
+                }
+                pending.transmit_set = true;
+                pending.transmit = parsed->args.transmit == 1;
+                break;
+            case REBOOT:
+                if (parsed->args.reboot != 0) {
+                    pending.reboot = true;
+                    info("uplink: reboot once the pass ends\n");
+                }
+                break;
+            case ENABLE_DISABLE_DEVICE:
+                // TODO: to be done through the device mock system
             case SET_PWR_MODE:
-                target = p_task_manager_task;
-                op = OPERATION_SET_POWER_MODE;
+                // TODO: power mode will be set through PUSP
+                info("uplink: command type %u not implemented yet, ignored\n", parsed->type);
                 break;
             default:
-                continue; // uplink_packet_parse already rejects unknown types
-        }
-
-        command_t cmd = (command_t){
-            .data = {.uplink_cmd = (uplink_cmd_t){.header = buff, .buff_offset = (size_t)(parsed->data - (const uint8_t *)buff->buff)}},
-            .data_type = CMD_DATA_UPLINK,
-            .operation = op,
-            .result = SUCCESS,
-            .target = target};
-
-        // The command keeps the buffer alive until its task is done with it
-        // TODO (uplink sheet): ensure nice error handling in all tasks. A command that's dropped or fails is only
-        // logged here or by its task; nothing tells the ground
-        cfdp_add_buff_reference(buff);
-        if (enqueue_command(&cmd) != SUCCESS) {
-            debug("uplink: command %u (type %u) not sent, its task is missing or disabled\n", i, parsed->type);
-            cfdp_release_buff(buff);
+                break; // uplink_packet_parse already rejects unknown types
         }
     }
 }
 
-void uplink_cmd_release(const uplink_cmd_t *uplink_cmd) {
-    if (uplink_cmd != NULL && uplink_cmd->header != NULL) {
-        cfdp_release_buff(uplink_cmd->header);
+void uplink_commands_pass_exit(void) {
+    if (pending.inputs.input_update_bitmask != 0) {
+        pass_exit_inputs = pending.inputs;
+        command_t cmd = get_state_input_update_command(&pass_exit_inputs);
+        const status_t status = enqueue_command(&cmd);
+        if (status != SUCCESS) {
+            warning("uplink: failed to send the pass's state machine updates (status %d)\n", status);
+        }
     }
+    if (pending.step_count_set) {
+        perovskite_set_step_count(pending.step_count);
+    }
+    if (pending.transmit_set) {
+        uhf_request_transmit(pending.transmit);
+    }
+    // Last, since the task manager stops once it gets it
+    if (pending.reboot) {
+        uplink_send_direct(
+            (command_t){.target = p_task_manager_task, .operation = OPERATION_REBOOT, .data_type = CMD_DATA_NONE, .result = PROCESSING});
+    }
+    pending = (typeof(pending)){0};
 }

@@ -66,7 +66,7 @@ command_t get_camera_capture_command(void) {
     return (command_t){
         .target = p_camera_task,
         .operation = OPERATION_CAMERA_CAPTURE,
-        .data = {{0}},
+        .data = {0},
         .data_type = CMD_DATA_NONE,
         .result = PROCESSING,
     };

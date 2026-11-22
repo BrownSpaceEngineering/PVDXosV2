@@ -8,21 +8,19 @@
 #include "uplink_parse.h"
 
 /**
- * Parses an uplink received with CFDP and, only if the whole uplink is valid, sends each of its commands to the
- * task that runs it
+ * Parses an uplink received with CFDP and, only if the whole uplink is valid, runs its commands: ADCS and CFDP ones
+ * straight away, the rest once the pass ends (uplink_commands_pass_exit()). Nothing points into data afterwards
  *
- * Every command sent holds its own reference to buff (its data points into buff), so the receiving task must call
- * uplink_cmd_release() once it is done with the command. The caller keeps its own reference
- *
- * \param buff - CFDP buffer holding the uplink
+ * \param data - the uplink file, in cfdp_file_buff
  * \param n - size of the uplink, in bytes
  */
-void uplink_commands_dispatch(cfdp_buff_header_t *buff, size_t n);
+void uplink_commands_dispatch(const uint8_t *data, size_t n);
 
 /**
- * Drops a command's reference to the CFDP buffer its data lives in. Call this once a CMD_DATA_UPLINK command has
- * been handled (or thrown away)
+ * Sends what this pass's uplinked commands change for tasks that don't run during a pass: one state machine input
+ * update, the perovskite sampling resolution, transmit on/off, and a reboot last. Run by the CFDP task as it parks on
+ * leaving the pass state
  */
-void uplink_cmd_release(const uplink_cmd_t *uplink_cmd);
+void uplink_commands_pass_exit(void);
 
 #endif // UPLINK_COMMANDS_H
