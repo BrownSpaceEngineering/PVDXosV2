@@ -15,30 +15,29 @@
 
 #include "main.h"
 
-#include "SEGGER_RTT.h"
-#include "checks/device_checks.h"
 #include "../bootloader/src/image_format.h"
-#include "globals.h" // defines BURN_SEQUENCE
-#include "logging.h"
-#include "mutexes.h"
-#include "os_delay.h"
+#include "SEGGER_RTT.h"
 #include "arducam_driver.h"
+#include "burn/burn_uhf.h"
+#include "ccsds/ccsds.h"
+#include "checks/device_checks.h"
+#include "cosmic_monkey_task.h"
 #include "display_driver.h"
 #include "drivers/rtc/rtc_driver.h"
-#include "burn/burn_uhf.h"
+#include "globals.h" // defines BURN_SEQUENCE
 #include "image_buffer_PVDX.h"
+#include "logging.h"
 #include "mram_map.h"
-#include "watchdog_driver.h"
-#include "ccsds/ccsds.h"
-#include "cosmic_monkey_task.h"
+#include "mutexes.h"
+#include "os_delay.h"
 #include "rtos_start.h"
 #include "task_list.h"
 #include "tasks/task_manager/task_manager_task.h"
 #include "telemetry/telemetry.h"
 #include "tests/test.h"
+#include "watchdog_driver.h"
 
-
-#define BURN_WAIT_MINUTES      30
+#define BURN_WAIT_MINUTES 30
 #define BURN_ON_FOR_SECONDS 30
 #define POST_BURN_STEP_MINUTES 2 // wait before each post-burn step
 
@@ -48,7 +47,6 @@ cosmic_monkey_task_arguments_t cm_args = {0};
 // How often the burn wait saves its progress to MRAM, so a reboot resumes the wait instead of restarting it
 #define BURN_RECORD_SAVE_PERIOD_S 60u
 
-
 // Logs (and clears) the report stage 2 of the bootloader leaves in backup RAM about checking flash against MRAM
 static void log_boot_report(void) {
     static const char *const golden_states[] = {"valid", "written from flash", "write failed", "unreadable", "disabled (NO_MRAM)"};
@@ -57,12 +55,10 @@ static void log_boot_report(void) {
         warning_impl("[!] No bootloader flash report\n");
         return;
     }
-    const char *golden = report->golden_state < sizeof(golden_states) / sizeof(golden_states[0])
-                             ? golden_states[report->golden_state]
-                             : "unknown";
+    const char *golden =
+        report->golden_state < sizeof(golden_states) / sizeof(golden_states[0]) ? golden_states[report->golden_state] : "unknown";
     telemetry_update_last_bootloader(report->stage2_index);
-    info_impl("[+] Bootloader (stage 2 copy %u): golden copy %s, MRAM status 0x%02x\n", report->stage2_index, golden,
-              report->mram_status);
+    info_impl("[+] Bootloader (stage 2 copy %u): golden copy %s, MRAM status 0x%02x\n", report->stage2_index, golden, report->mram_status);
     info_impl("[+] Bootloader blocks: %u checked, %u repaired, %u failed\n", report->blocks_checked, report->blocks_repaired,
               report->blocks_failed);
     if (report->blocks_failed != 0) {
@@ -118,15 +114,14 @@ static status_t PVDX_init(void) {
 
 // Called before the device checks, so that the camera check can capture too (BURN_SEQUENCE_CAMERA_CHECK_CAPTURE)
 [[maybe_unused]] static void configure_camera_rtt_channel(void) {
-    #if defined(RELEASE)
+#if defined(RELEASE)
     // No host drains channel 2 in flight, so drop image bytes that don't fit rather than hang
     const unsigned rtt_image_mode = SEGGER_RTT_MODE_NO_BLOCK_SKIP;
-    #else
+#else
     // Block so image bytes are not dropped. NOTE: this hangs until a host reads RTT channel 2
     const unsigned rtt_image_mode = SEGGER_RTT_MODE_BLOCK_IF_FIFO_FULL;
-    #endif
-    SEGGER_RTT_ConfigUpBuffer(CAMERA_RTT_OUTPUT_CHANNEL, "Image", camera_rtt_image_buffer, SEGGER_RTT_IMAGE_BUFFER_SIZE,
-                              rtt_image_mode);
+#endif
+    SEGGER_RTT_ConfigUpBuffer(CAMERA_RTT_OUTPUT_CHANNEL, "Image", camera_rtt_image_buffer, SEGGER_RTT_IMAGE_BUFFER_SIZE, rtt_image_mode);
 }
 
 [[maybe_unused]] static void send_picture_over_rtt(void) {
@@ -202,7 +197,6 @@ int main(void) {
     info("[+] Built from branch: %s\n", GIT_BRANCH_NAME);
     info("[+] Built from commit: %s\n", GIT_COMMIT_HASH);
 
-
     // BURN SEQUENCE
 
 #ifdef NO_MRAM
@@ -219,9 +213,9 @@ int main(void) {
 
     burn_record_t burn_record = load_burn_record();
     burn_record.boot_count++;
-    
+
     // BEFORE-FLIGHT: remove
-    burn_record.burned = true; 
+    burn_record.burned = true;
 
     save_burn_record(&burn_record);
     // Called outside info(): in RELEASE builds info() compiles out, but this should always be printed
@@ -243,25 +237,25 @@ int main(void) {
         burn_record.burn_attempts++;
         save_burn_record(&burn_record);
 
-    // BEFORE-FLIGHT: define macro 
-    #ifdef BURN_SEQUENCE_FIRE_BURN_WIRE
+// BEFORE-FLIGHT: define macro
+#ifdef BURN_SEQUENCE_FIRE_BURN_WIRE
         // stuff commented out for utmost safety
-        
+
         // BEFORE-FLIGHT: uncomment and test
-        // gpio_set_pin_level(BURN, true); 
-        
+        // gpio_set_pin_level(BURN, true);
+
         info_impl("[+] Burn pin (PB29) on for %d s (attempt %lu)\n", BURN_ON_FOR_SECONDS, (unsigned long)burn_record.burn_attempts);
         wait_seconds_feeding_watchdog(BURN_ON_FOR_SECONDS);
 
         // BEFORE-FLIGHT: uncomment and test
         // gpio_set_pin_level(BURN, false);
-        
+
         burn_record.burned = 1;
         save_burn_record(&burn_record);
         info_impl("[+] Burn pin (PB29) off; burn recorded in MRAM\n");
-    #else
+#else
         info_impl("[+] BURN_SEQUENCE_FIRE_BURN_WIRE is not defined: burn wire not fired\n");
-    #endif
+#endif
     }
 
     // Initialize the mutex for the I2C bus shared by Arducam, fuel gauges, and PMB before startup checks/tests
@@ -285,6 +279,11 @@ int main(void) {
 
     log_boot_report();
 
+/* -------------------------------------- TESTS ---------------------------------------------- */
+#ifdef UNITTEST
+    tests_run();
+#endif
+
     /* ---------- DEVICE CHECKS ---------- */
 
     configure_camera_rtt_channel();
@@ -292,7 +291,6 @@ int main(void) {
     bool at_least_one_failed = check_all_devices_on_startup();
     info("AT_LEAST_ONE_DEVICE_FAILED: %d\n", at_least_one_failed);
     (void)at_least_one_failed; // unused when info() compiles out
-
 
     /* ---------- POST-BURN STEPS, TWO MINUTES APART ---------- */
 
@@ -304,13 +302,7 @@ int main(void) {
     burn_uhf_beacon();
 #endif
 
-
     ccsds_init();
-
-/* -------------------------------------- TESTS ---------------------------------------------- */
-#ifdef UNITTEST
-    tests_run();
-#endif
 
     // Initialize a mutex wrapping the shared PVDX task list struct
     task_list_mutex = xSemaphoreCreateMutexStatic(&task_list_mutex_buffer);
@@ -335,13 +327,13 @@ int main(void) {
 
     /* ---------- COSMIC MONKEY TASK ---------- */
 
-    #if defined(UNITTEST) || defined(DEVBUILD)
-        #if defined(UNITTEST)
+#if defined(UNITTEST) || defined(DEVBUILD)
+    #if defined(UNITTEST)
     cm_args.frequency = 1;
-        #endif
-        #if defined(DEVBUILD) // set to 0 for now for ease of debugging
+    #endif
+    #if defined(DEVBUILD)  // set to 0 for now for ease of debugging
     cm_args.frequency = 0; // Bitflips per second
-        #endif
+    #endif
 
     TaskHandle_t cosmic_monkey_task_handle =
         xTaskCreateStatic(main_cosmic_monkey, "CosmicMonkey", COSMIC_MONKEY_TASK_STACK_SIZE, (void *)&cm_args, 1,
@@ -351,7 +343,7 @@ int main(void) {
     } else {
         info("Cosmic Monkey Task initialized\n");
     }
-    #endif // Cosmic Monkey
+#endif // Cosmic Monkey
 
     /* ---------- START FREERTOS SCHEDULER ---------- */
 
