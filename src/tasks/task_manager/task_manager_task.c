@@ -52,12 +52,12 @@ void task_manager_enable_task(pvdx_task_t *const p_task) {
 
     // If given an unintialized task, something went wrong
     if (p_task->handle == NULL) {
-        fatal("task_manager: Attempted to enable uninitialized task");
+        fatal("task_manager: Attempted to enable uninitialized task\n");
     }
 
     // If given an already enabled task, something went wrong
     if (p_task->enabled) {
-        fatal("task_manager: Tried to enable a task that has already been enabled");
+        fatal("task_manager: Tried to enable a task that has already been enabled\n");
     }
 
     if (p_task->prepare_resume != NULL) {
@@ -91,12 +91,12 @@ void task_manager_disable_task(pvdx_task_t *const p_task) {
 
     // If given an unintialized task, something went wrong
     if (p_task->handle == NULL) {
-        fatal("task_manager: Trying to disable task that was never initialized");
+        fatal("task_manager: Trying to disable task that was never initialized\n");
     }
 
     // If given an already disabled task, something went wrong
     if (!p_task->enabled) {
-        fatal("task_manager: Tried to disable a task that has already been disabled");
+        fatal("task_manager: Tried to disable a task that has already been disabled\n");
     }
 
     if (p_task->prepare_suspend != NULL) {

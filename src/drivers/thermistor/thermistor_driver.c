@@ -153,7 +153,7 @@ status_t therm_read_celsius(uint8_t index, float *temp_c) {
     }
 
     uint16_t code = 0;
-    ret_err_status(therm_read_raw(index, &code), "thermistor: raw read failed");
+    ret_err_status(therm_read_raw(index, &code), "thermistor: raw read failed\n");
     return therm_celsius_from_code(index, code, temp_c);
 }
 

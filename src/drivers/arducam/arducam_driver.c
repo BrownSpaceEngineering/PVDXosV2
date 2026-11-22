@@ -84,7 +84,7 @@ status_t init_arducam_hardware(arducam_resolution_t resolution) {
     arducam_spi_write(ARDUCHIP_TEST1, 0x55);
     int temp = arducam_spi_read(ARDUCHIP_TEST1);
     if (temp != 0x55){
-        warning("Camera SPI interface error!");
+        warning("Camera SPI interface error!\n");
         return ERROR_SPI_TRANSFER_FAILED;
     }
 
@@ -105,7 +105,7 @@ status_t init_arducam_hardware(arducam_resolution_t resolution) {
     }
     
     if (vid != 0x26 || (pid != 0x41 && pid != 0x42)) {
-        warning("Unexpected OV2640 ID: vid=0x%02X pid=0x%02X", vid, pid);
+        warning("Unexpected OV2640 ID: vid=0x%02X pid=0x%02X\n", vid, pid);
         // Don't fail hard here for now, maybe just wrong ID
     }
     
@@ -164,7 +164,7 @@ uint32_t arducam_i2c_write(uint8_t addr, uint8_t *data, uint16_t size) {
     rv = io_write(arducam_i2c_io, writeBuf, size + 1);
     unlock_mutex(i2c_sensors_bus_mutex);
     if (rv < 0) {
-        warning("Error in Arducam Write");
+        warning("Error in Arducam Write\n");
     }
 	return rv;
 }
@@ -189,10 +189,10 @@ uint32_t arducam_i2c_read(uint8_t addr, uint8_t *readBuf, uint16_t size) {
     lock_mutex(i2c_sensors_bus_mutex);
     i2c_m_sync_set_slaveaddr(&I2C_SENSORS, ARDUCAM_ADDR >> 1, I2C_M_SEVEN);
     if ((rv = io_write(arducam_i2c_io, writeBuf, 1)) < 0) {
-        warning("Error in Arducam Write");
+        warning("Error in Arducam Write\n");
     }
     if ((rv = io_read(arducam_i2c_io, readBuf, size)) < 0) {
-        warning("Error in Arducam Read");
+        warning("Error in Arducam Read\n");
     }
     unlock_mutex(i2c_sensors_bus_mutex);
     return rv;
@@ -249,7 +249,7 @@ static status_t wait_capture_done(void) {
     uint32_t waited_ms = 0;
     while (!get_bit(ARDUCHIP_TRIG, CAP_DONE_MASK)) {
         if (waited_ms > ARDUCAM_CAPTURE_TIMEOUT_MS) {
-            warning("Arducam capture timed out!");
+            warning("Arducam capture timed out!\n");
             return ERROR_NOT_READY;
         }
         os_delay_ms(1);
@@ -264,15 +264,15 @@ status_t capture(void) {
     arducam_spi_write(ARDUCHIP_FIFO, FIFO_CLEAR_MASK); // Flush the FIFO
     arducam_spi_write(ARDUCHIP_FIFO, FIFO_CLEAR_MASK); // Clear the capture done flag (uses same clear mask)
     arducam_spi_write(ARDUCHIP_FIFO, FIFO_START_MASK); // Start capture
-    ret_err_status(wait_capture_done(), "Arducam capture failed");
+    ret_err_status(wait_capture_done(), "Arducam capture failed\n");
 
     // Read how many bytes were captured
     size_t len = read_fifo_length();
     if (len >= OV2640_MAX_FIFO_SIZE) {
-        info("Oversized!");
+        info("Oversized!\n");
         return ERROR_SANITY_CHECK_FAILED;
     } else if (len == 0 ){
-        info("Size is 0!");
+        info("Size is 0!\n");
         return ERROR_SANITY_CHECK_FAILED;
     }
 
@@ -311,15 +311,15 @@ static status_t capture_to_fifo(size_t *p_len) {
     arducam_spi_write(ARDUCHIP_FIFO, FIFO_CLEAR_MASK); // Flush the FIFO
     arducam_spi_write(ARDUCHIP_FIFO, FIFO_CLEAR_MASK); // Clear the capture done flag (uses same clear mask)
     arducam_spi_write(ARDUCHIP_FIFO, FIFO_START_MASK); // Start capture
-    ret_err_status(wait_capture_done(), "Arducam capture failed");
+    ret_err_status(wait_capture_done(), "Arducam capture failed\n");
 
     // Read how many bytes were captured
     *p_len = read_fifo_length();
     if (*p_len >= OV2640_MAX_FIFO_SIZE) {
-        info("Oversized!");
+        info("Oversized!\n");
         return ERROR_SANITY_CHECK_FAILED;
     } else if (*p_len == 0) {
-        info("Size is 0!");
+        info("Size is 0!\n");
         return ERROR_SANITY_CHECK_FAILED;
     }
     return SUCCESS;
@@ -372,6 +372,7 @@ static bool write_rtt(void *ctx, const uint8_t *buf, size_t len) {
     return true;
 }
 
+#ifndef NO_MRAM
 typedef struct {
     size_t offset;
 } mram_writer_t;
@@ -385,6 +386,7 @@ static bool write_mram(void *ctx, const uint8_t *buf, size_t len) {
     p_writer->offset += len;
     return true;
 }
+#endif
 
 /**
  * \fn capture_rtt
@@ -397,7 +399,7 @@ static bool write_mram(void *ctx, const uint8_t *buf, size_t len) {
  */
 status_t capture_rtt(void) {
     size_t len = 0;
-    ret_err_status(capture_to_fifo(&len), "Arducam capture failed");
+    ret_err_status(capture_to_fifo(&len), "Arducam capture failed\n");
 
     // WARNING: If you edit the info() calls, then you must also update open_rtt_channels_arducam_debug()
     // within scripts/rtt_logs.py (specifically the regex parsing), otherwise things will break.
@@ -429,8 +431,12 @@ status_t capture_rtt(void) {
  * \returns `status_t`, whether the operation was successful
  */
 status_t capture_mram(void) {
+#ifdef NO_MRAM
+    warning("camera: NO_MRAM build, so there is nowhere to save the image\n");
+    return ERROR_WRITE_FAILED;
+#else
     size_t len = 0;
-    ret_err_status(capture_to_fifo(&len), "Arducam capture failed");
+    ret_err_status(capture_to_fifo(&len), "Arducam capture failed\n");
 
     // The old image is overwritten from here on
     arducam_mram_image_t image = {.length = 0};
@@ -460,6 +466,7 @@ status_t capture_mram(void) {
     }
     info("camera: %u-byte image saved to MRAM\n", (unsigned)out_len);
     return SUCCESS;
+#endif
 }
 
 /**
@@ -473,6 +480,10 @@ status_t capture_mram(void) {
  * \returns `status_t`, ERROR_READ_FAILED if there is no complete image in MRAM
  */
 status_t arducam_mram_image_length(uint32_t *p_length) {
+#ifdef NO_MRAM
+    (void)p_length;
+    return ERROR_READ_FAILED;
+#else
     arducam_mram_image_t image;
     if (!mram_record_load(MRAM_REGION_CAMERA, ARDUCAM_MRAM_IMAGE_INFO_OFFSET, &image, sizeof(image)) || image.length == 0 ||
         image.length > ARDUCAM_MRAM_IMAGE_SIZE) {
@@ -480,4 +491,5 @@ status_t arducam_mram_image_length(uint32_t *p_length) {
     }
     *p_length = image.length;
     return SUCCESS;
+#endif
 }

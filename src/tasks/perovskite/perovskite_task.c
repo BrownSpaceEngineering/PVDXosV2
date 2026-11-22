@@ -115,31 +115,47 @@ command_t get_perovskite_sweep_command(void) {
 
 /* ---------- MRAM ---------- */
 
+#ifndef NO_MRAM
 static uint32_t perovskite_slot_offset(uint8_t slot) {
     return (uint32_t)slot * PEROVSKITE_SLOT_SIZE;
 }
+#endif
 
 status_t perovskite_load_sweep(uint8_t slot, perovskite_sweep_t *p_sweep) {
     if (slot >= PEROVSKITE_SLOT_COUNT) {
         return ERROR_BAD_ARGS;
     }
+#ifdef NO_MRAM
+    (void)p_sweep;
+    return ERROR_READ_FAILED;
+#else
     if (!mram_record_load(MRAM_REGION_PEROVSKITE, perovskite_slot_offset(slot), p_sweep, sizeof(*p_sweep))) {
         return ERROR_READ_FAILED;
     }
     return SUCCESS;
+#endif
 }
 
 status_t perovskite_sweep_mram_offset(uint8_t slot, uint32_t *p_offset) {
     if (slot >= PEROVSKITE_SLOT_COUNT) {
         return ERROR_BAD_ARGS;
     }
+#ifdef NO_MRAM
+    (void)p_offset;
+    return ERROR_READ_FAILED;
+#else
     if (!mram_record_payload_offset(MRAM_REGION_PEROVSKITE, perovskite_slot_offset(slot), sizeof(perovskite_sweep_t), p_offset)) {
         return ERROR_READ_FAILED;
     }
     return SUCCESS;
+#endif
 }
 
 status_t perovskite_newest_sweep_slot(uint8_t *p_slot) {
+#ifdef NO_MRAM
+    (void)p_slot;
+    return ERROR_READ_FAILED;
+#else
     bool found = false;
     uint32_t newest_sequence = 0;
     for (uint8_t slot = 0; slot < PEROVSKITE_SLOT_COUNT; slot++) {
@@ -156,6 +172,7 @@ status_t perovskite_newest_sweep_slot(uint8_t *p_slot) {
         }
     }
     return found ? SUCCESS : ERROR_READ_FAILED;
+#endif
 }
 
 /**
@@ -163,8 +180,8 @@ status_t perovskite_newest_sweep_slot(uint8_t *p_slot) {
  * holds the oldest. Uses the sweep buffer, so it must not run during a sweep.
  */
 static status_t perovskite_scan_slots(void) {
-#ifdef PEROVSKITE_LOG_ONLY
-    info("perovskite: PEROVSKITE_LOG_ONLY is set, sweeps are logged but not saved to MRAM\n");
+#if defined(PEROVSKITE_LOG_ONLY) || defined(NO_MRAM)
+    info("perovskite: PEROVSKITE_LOG_ONLY or NO_MRAM is set, sweeps are logged but not saved to MRAM\n");
     slots_scanned = true;
     return SUCCESS;
 #else
@@ -192,7 +209,7 @@ static status_t perovskite_scan_slots(void) {
 }
 
 static status_t perovskite_save_sweep(void) {
-#ifdef PEROVSKITE_LOG_ONLY
+#if defined(PEROVSKITE_LOG_ONLY) || defined(NO_MRAM)
     return SUCCESS;
 #else
     if (!mram_record_save(MRAM_REGION_PEROVSKITE, perovskite_slot_offset(next_slot), &sweep, sizeof(sweep))) {

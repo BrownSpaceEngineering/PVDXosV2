@@ -578,7 +578,7 @@ int cfdp_send_reject_fin(const cfdp_pdu_header_t *header, const cfdp_pdu_metadat
                 }
 
                 if (17 + fin_size + tlv.length + 6 + 2 >= TXN_FRAME) {
-                    warning("cfdp: unable to process all filestore requests");
+                    warning("cfdp: unable to process all filestore requests\n");
                     break;
                 }
                 buff[17 + fin_size] = 0x01;

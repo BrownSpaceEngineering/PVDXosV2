@@ -40,7 +40,12 @@ DEBUG: Detailed information about the system for debugging (e.g. length of array
         #define debug(msg, ...)
     #else
         #define test_log(msg, ...)
-        #define debug(msg, ...) debug_impl(RTT_CTRL_TEXT_WHITE "[DEBUG|%s:%d]: " msg RTT_CTRL_RESET, __FILENAME__, __LINE__, ##__VA_ARGS__)
+        #ifndef PLANT_SIM
+            #define debug(msg, ...)                                                                                                        \
+                debug_impl(RTT_CTRL_TEXT_WHITE "[DEBUG|%s:%d]: " msg RTT_CTRL_RESET, __FILENAME__, __LINE__, ##__VA_ARGS__)
+        #else
+            #define debug(msg, ...)
+        #endif
     #endif
 #else
     /* Other build types (such as release or unittest) don't need filenames or line numbers */

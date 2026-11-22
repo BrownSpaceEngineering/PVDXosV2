@@ -8,7 +8,8 @@
 #include "logging.h"
 #include "uhf_radio_task.h"
 
-static const char *const uhf_state_names[UHF_STATE_COUNT] = {
+// Only logged, and release builds compile logging out
+[[maybe_unused]] static const char *const uhf_state_names[UHF_STATE_COUNT] = {
     [BEACON] = "BEACON",           [LISTEN] = "LISTEN",
     [SYN_RECV] = "SYN_RECV",       [ESTABLISH_RECV] = "ESTABLISH_RECV",
     [TRANS_TO_TX] = "TRANS_TO_TX", [ESTABLISH_SEND] = "ESTABLISH_SEND",
