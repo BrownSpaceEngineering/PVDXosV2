@@ -297,7 +297,7 @@ static void handle_read_failure(const device_id_t device, const char *const name
 }
 
 // Commanding a single measurement here means that it only happens while the magnetorquers are off
-static status_t read_magnetometer_single(mag_data_t *const reading) {
+static status_t read_magnetometer_single(mag_raw_reading_t *const raw, mag_data_t *const reading) {
     // The gain is only set once the device check has passed
     if (!check_device(MAGNETOMETER_ID)) {
         return ERROR_NOT_READY;
@@ -309,17 +309,18 @@ static status_t read_magnetometer_single(mag_data_t *const reading) {
     }
 
     os_delay_ms(ADCS_MAG_CONVERSION_MS);
-    result = magnetometer_read(NULL, reading);
+    result = magnetometer_read(raw, reading);
     for (size_t i = 0; result == ERROR_NOT_READY && i < ADCS_MAG_MAX_EXTRA_CHECKS; i++) {
         os_delay_ms(1);
-        result = magnetometer_read(NULL, reading);
+        result = magnetometer_read(raw, reading);
     }
     return result;
 }
 
 status_t adcs_read_magnetometer(float *const mag_tesla) {
+    mag_raw_reading_t raw;
     mag_data_t reading;
-    const status_t result = read_magnetometer_single(&reading);
+    const status_t result = read_magnetometer_single(&raw, &reading);
 
     if (result != SUCCESS) {
         handle_read_failure(MAGNETOMETER_ID, "magnetometer");
@@ -328,6 +329,7 @@ status_t adcs_read_magnetometer(float *const mag_tesla) {
         }
         return result;
     }
+    telemetry_update_magnetometer_readings(&raw, &reading);
 
     // Left in the magnetometer's own [U8, U9, U10] axes: body() maps them to the body frame itself (sensor_frames.h)
     mag_tesla[0] = reading.x * MICROTESLA_TO_TESLA;
@@ -366,6 +368,7 @@ status_t adcs_read_photodiodes(float *const photodiodes) {
         memset(photodiodes, 0, NUM_DIODES * sizeof(float));
         return result;
     }
+    telemetry_update_photodiode_data(codes);
 
     // TODO(blocked on hardware team): confirm PHD_n is wired to PHOTODIODES[n], and that MIN/MAX_READING are in volts
     for (size_t i = 0; i < NUM_DIODES; i++) {
@@ -406,6 +409,7 @@ void adcs_drive_magnetorquers(const float *const currents) {
 
     // TODO(blocked on hardware team): confirm positive duty gives a positive moment; a reversed coil makes B-dot spin us up
     mtq_set_all(duty[0], duty[1], duty[2]);
+    telemetry_update_magnetorquer_data(&(mag_torque_input_t){.x = duty[0], .y = duty[1], .z = duty[2]});
     debug("adcs: magnetorquer duty [x,y,z]: [%f,%f,%f]\n", duty[0], duty[1], duty[2]);
 }
 
@@ -451,6 +455,7 @@ void adcs_publish_telemetry(void) {
     taskENTER_CRITICAL();
     telemetry_snapshot = telemetry;
     taskEXIT_CRITICAL();
+    telemetry_update_adcs_data(&telemetry);
 
     debug("adcs: mode: %d, pointing: %d, attitude valid: %d, filter resets: %d, min free stack: %lu words\n", adcs_mode, body_is_pointing(),
           attitude_valid, body_get_filter_resets(), (unsigned long)uxTaskGetStackHighWaterMark(NULL));

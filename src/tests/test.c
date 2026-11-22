@@ -22,6 +22,7 @@
 #include "os_delay.h"
 #include "telemetry/telemetry.h"
 #include "tests/test_pusp.h"
+#include "utc.h"
 
 // test.c is compiled in every build, but the tests use hooks (test_mem, uslp_test_last_frame) that only unit test builds
 // have. Which tests run is chosen in tests_run(); the linker drops the rest.
@@ -923,16 +924,29 @@ void test_telemetry_downlink(void) {
 }
 
     // Offsets of fields in a serialized downlink, from the order in telemetry_downlink_serialize()
+    #define TEL_OFF_TIMESTAMP 0
+    #define TEL_OFF_BOOT_TIMESTAMP 4
     #define TEL_OFF_LAST_BOOTLOADER 8
+    #define TEL_OFF_MAG_RAW 11  // after revid and bist
+    #define TEL_OFF_MAG_GAIN 23 // gain-adjusted readings
+    #define TEL_OFF_MAGNETORQUER 35
+    #define TEL_OFF_PHOTODIODE 47
     #define TEL_OFF_GYRO_RATE 95
     #define TEL_OFF_GYRO_HEALTH 107
     #define TEL_OFF_DISPLAY_HEALTH 111
     #define TEL_OFF_UHF_HEALTH 112
-    #define TEL_OFF_EPS 118 // charge, voltage, current, temperature; 4 floats each
+    #define TEL_OFF_SBAND 113 // health, last transmission timestamp
+    #define TEL_OFF_EPS 118   // charge, voltage, current, temperature; 4 floats each
     #define TEL_OFF_STATE_HISTORY 182
     #define TEL_OFF_TRANSITION_TIMES 190
+    #define TEL_OFF_ADCS 225 // position, attitude, gyro bias, covariance diagonal, then opmode, flags, filter resets, TLE epoch
     #define TEL_OFF_COMMANDS 293
     #define TEL_OFF_MRAM 357 // status, reflash count, reflash timestamps
+
+// The 4 bytes at p, big-endian
+static uint32_t tel_be32(const uint8_t *p) {
+    return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) | ((uint32_t)p[2] << 8) | p[3];
+}
 
 // Whether the 4 bytes at p are value, big-endian
 static bool tel_be32_is(const uint8_t *p, uint32_t value) {
@@ -993,6 +1007,32 @@ void test_telemetry_setters(void) {
     mram.reflash_timestamps[7] = 0x01020304;
     telemetry_update_mram_data(&mram);
 
+    telemetry_update_magnetometer_readings(&(mag_raw_reading_t){.x = 1, .y = -2, .z = 0x12345678},
+                                           &(mag_data_t){.x = 1.0f, .y = -2.5f, .z = 0.15625f});
+    telemetry_update_magnetorquer_data(&(mag_torque_input_t){.x = 0.5f, .y = -1.0f, .z = 0.25f});
+
+    uint16_t photodiodes[PHD_COUNT];
+    for (size_t i = 0; i < PHD_COUNT; i++) {
+        photodiodes[i] = (uint16_t)(0x0101u * i + 1);
+    }
+    telemetry_update_photodiode_data(photodiodes);
+
+    telemetry_update_sband_data(TEL_DEVICE_STATUS_BROKEN, 0xDEADBEEF);
+
+    tel_adcs_data_t adcs = {
+        .opmode = TEL_ADCS_OPMODE_DETUMBLE_ONLY,
+        .flags = TEL_ADCS_FLAG_POINTING | TEL_ADCS_FLAG_TLE_LOADED,
+        .filter_resets = 0x0102,
+        .tle_epoch_unix_time = 0xCAFEF00D,
+    };
+    adcs.position[0] = -2.5f;
+    adcs.covariance_diag[5] = 0.15625f;
+    telemetry_update_adcs_data(&adcs);
+
+    // Whether UTC is known depends on what ran before the tests, so the stamps are checked against utc.c either way
+    uint32_t boot_time = 0;
+    const bool utc_known = utc_get_boot_time(&boot_time) == SUCCESS;
+
     tel_collect_and_serialize(&downlink, buf);
 
     PVDX_ASSERT_MSG(buf[TEL_OFF_LAST_BOOTLOADER] == 1, "last bootloader\n");
@@ -1027,6 +1067,37 @@ void test_telemetry_setters(void) {
     PVDX_ASSERT_MSG(
         buf[TEL_OFF_MRAM] == 0x39 && tel_be32_is(&buf[TEL_OFF_MRAM + 1], 3) && tel_be32_is(&buf[TEL_OFF_MRAM + 5 + 28], 0x01020304),
         "mram data\n");
+
+    PVDX_ASSERT_MSG(tel_be32_is(&buf[TEL_OFF_MAG_RAW], 1) && tel_be32_is(&buf[TEL_OFF_MAG_RAW + 4], 0xFFFFFFFEu) &&
+                        tel_be32_is(&buf[TEL_OFF_MAG_RAW + 8], 0x12345678) && tel_be_float_is(&buf[TEL_OFF_MAG_GAIN], 1.0f) &&
+                        tel_be_float_is(&buf[TEL_OFF_MAG_GAIN + 4], -2.5f) && tel_be_float_is(&buf[TEL_OFF_MAG_GAIN + 8], 0.15625f),
+                    "magnetometer readings\n");
+    PVDX_ASSERT_MSG(tel_be_float_is(&buf[TEL_OFF_MAGNETORQUER], 0.5f) && tel_be_float_is(&buf[TEL_OFF_MAGNETORQUER + 4], -1.0f) &&
+                        tel_be_float_is(&buf[TEL_OFF_MAGNETORQUER + 8], 0.25f),
+                    "magnetorquer duty\n");
+
+    ok = true;
+    for (size_t i = 0; i < PHD_COUNT; i++) {
+        ok = ok && buf[TEL_OFF_PHOTODIODE + 2 * i] == (uint8_t)(photodiodes[i] >> 8) &&
+            buf[TEL_OFF_PHOTODIODE + 2 * i + 1] == (uint8_t)photodiodes[i];
+    }
+    PVDX_ASSERT_MSG(ok, "photodiode codes, in order\n");
+
+    PVDX_ASSERT_MSG(buf[TEL_OFF_SBAND] == TEL_DEVICE_STATUS_BROKEN && tel_be32_is(&buf[TEL_OFF_SBAND + 1], 0xDEADBEEF), "sband data\n");
+
+    // opmode 1, flags 0x11, filter resets 0x0102, TLE epoch, after the 15 floats
+    static const uint8_t adcs_tail[] = {0x01, 0x11, 0x01, 0x02, 0xCA, 0xFE, 0xF0, 0x0D};
+    PVDX_ASSERT_MSG(tel_be_float_is(&buf[TEL_OFF_ADCS], -2.5f) && tel_be_float_is(&buf[TEL_OFF_ADCS + 56], 0.15625f) &&
+                        memcmp(&buf[TEL_OFF_ADCS + 60], adcs_tail, sizeof(adcs_tail)) == 0,
+                    "adcs data\n");
+
+    if (utc_known) {
+        PVDX_ASSERT_MSG(tel_be32(&buf[TEL_OFF_BOOT_TIMESTAMP]) == boot_time && tel_be32(&buf[TEL_OFF_TIMESTAMP]) >= boot_time,
+                        "timestamps stamped from UTC\n");
+    } else {
+        PVDX_ASSERT_MSG(tel_be32(&buf[TEL_OFF_TIMESTAMP]) == 0 && tel_be32(&buf[TEL_OFF_BOOT_TIMESTAMP]) == 0,
+                        "timestamps 0 without UTC\n");
+    }
 
     test_log("telemetry call site tests:\n");
     // An uplink with no commands ("PVDXGS", message size 0, 0 commands, timestamp 0x0A0B0C0D) records its timestamp;

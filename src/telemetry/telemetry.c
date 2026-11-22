@@ -4,6 +4,7 @@
 
 #include "FreeRTOS.h"
 #include "task.h"
+#include "utc.h"
 
 #define TEL_ARRAY_LEN(a) (sizeof(a) / sizeof((a)[0]))
 
@@ -164,12 +165,11 @@ void telemetry_collect(tel_downlink_t *downlink) {
     taskENTER_CRITICAL();
     *downlink = tel_cache;
     taskEXIT_CRITICAL();
-}
 
-void telemetry_update_boot_timestamp(uint32_t boot_timestamp) {
-    taskENTER_CRITICAL();
-    tel_cache.boot_timestamp = boot_timestamp;
-    taskEXIT_CRITICAL();
+    // Stamped here rather than cached, since both come from UTC
+    uint32_t unix_time;
+    downlink->timestamp = utc_get(&unix_time) == SUCCESS ? unix_time : 0;
+    downlink->boot_timestamp = utc_get_boot_time(&unix_time) == SUCCESS ? unix_time : 0;
 }
 
 void telemetry_update_last_bootloader(uint8_t bootloader) {

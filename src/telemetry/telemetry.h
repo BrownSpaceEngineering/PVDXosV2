@@ -117,8 +117,8 @@ typedef struct {
 } tel_os_error_data_t;
 
 typedef struct {
-    uint32_t timestamp;      // unix time. TODO: NOT SET YET: telemetry_collect() should stamp it
-    uint32_t boot_timestamp; // unix time of the last boot
+    uint32_t timestamp;      // unix time, stamped by telemetry_collect(); 0 until UTC is set
+    uint32_t boot_timestamp; // unix time of the last boot, stamped by telemetry_collect(); 0 until UTC is set
 
     uint8_t last_bootloader; // bootloader copy that we last booted from
     tel_magnetometer_data_t magnetometer;
@@ -149,20 +149,12 @@ typedef struct {
 bool telemetry_downlink_serialize(const tel_downlink_t *downlink, uint8_t *buf, size_t buf_size);
 
 /**
- * Fills in downlink with the current telemetry
+ * Fills in downlink with the current telemetry, and stamps it with the current UTC and the UTC of the last boot
+ * (both 0 until UTC is set)
  *
  * \param downlink - telemetry to fill in
  */
 void telemetry_collect(tel_downlink_t *downlink);
-
-/**
- * Updates the timestamp of last boot in the telemetry cache
- *
- * \param boot_timestamp - timstamp of last boot
- *
- * TODO: NOT CALLED YET: needs UTC, but the RTC only counts time since boot
- */
-void telemetry_update_boot_timestamp(uint32_t boot_timestamp);
 
 /**
  * Updates which bootloader was last booted from in telemetry cache
@@ -186,8 +178,6 @@ void telemetry_update_magnetometer_registers(uint8_t revid, uint8_t bist);
  *
  * \param raw - raw magnetometer data
  * \param gain_adjusted - gain adjusted magnetometer data
- *
- * TODO: NOT CALLED YET: adcs_read_magnetometer() is a stub; call this from it once it uses magnetometer_read()
  */
 void telemetry_update_magnetometer_readings(const mag_raw_reading_t *raw, const mag_data_t *gain_adjusted);
 
@@ -195,8 +185,6 @@ void telemetry_update_magnetometer_readings(const mag_raw_reading_t *raw, const 
  * Updates the magnetorquer data inside the telemetry cache
  *
  * \param mag_data - signed PWM duty of each magnetorquer, from -1.0 to 1.0
- *
- * TODO: NOT CALLED YET: adcs_drive_magnetorquers() doesn't drive the magnetorquers yet
  */
 void telemetry_update_magnetorquer_data(const mag_torque_input_t *mag_data);
 
@@ -204,8 +192,6 @@ void telemetry_update_magnetorquer_data(const mag_torque_input_t *mag_data);
  * Updates the photodiode data inside the telemetry cache
  *
  * \param photodiode_data - raw ADC codes, as from phd_read_all()
- *
- * TODO: NOT CALLED YET: adcs_read_photodiodes() is a stub; call this from it once it uses phd_read_all()
  */
 void telemetry_update_photodiode_data(const uint16_t photodiode_data[PHD_COUNT]);
 
@@ -247,8 +233,6 @@ void telemetry_update_uhf_data(tel_device_status_t uhf_status);
  *
  * \param sband_status - status of the sband
  * \param last_transmission_timestamp - timestamp of last sband transmission
- *
- * TODO: NOT CALLED YET: there is no S-band task
  */
 void telemetry_update_sband_data(tel_device_status_t sband_status, uint32_t last_transmission_timestamp);
 
@@ -256,8 +240,6 @@ void telemetry_update_sband_data(tel_device_status_t sband_status, uint32_t last
  * Updates the ADCS data inside the telemetry cache
  *
  * \param adcs_data - ADCS data to update
- *
- * TODO: NOT CALLED YET: adcs_publish_telemetry() is a TODO, and adcs-c has no position getter
  */
 void telemetry_update_adcs_data(const tel_adcs_data_t *adcs_data);
 
