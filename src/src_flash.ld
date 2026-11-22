@@ -2,22 +2,18 @@ OUTPUT_FORMAT("elf32-littlearm", "elf32-littlearm", "elf32-littlearm")
 OUTPUT_ARCH(arm)
 SEARCH_DIR(.)
 
-/* Memory Spaces Definitions */
-/* PVDXos runs in place from flash, above the largest BOOTPROT region, and is limited to its 440 KB MRAM golden-copy slot (see
-   bootloader/src/image_format.h). The bootloader is finished by the time PVDXos starts, so all 256 KB of RAM belongs to
-   PVDXos. */
+/* PVDXos executes from flash after the header row embedded at the OS image base. */
 MEMORY
 {
-  rom      (rx)  : ORIGIN = 0x0001E000, LENGTH = 0x0006E000
+    rom      (rx)  : ORIGIN = 0x00082000, LENGTH = 0x0007E000
   ram      (rwx) : ORIGIN = 0x20000000, LENGTH = 0x00040000
-  bkupram  (rwx) : ORIGIN = 0x47000000, LENGTH = 0x00002000
+  /* The last 0x40 bytes of backup RAM are the boot record / MRAM refresh request (bootloader/src/boot_record.h) */
+  bkupram  (rwx) : ORIGIN = 0x47000000, LENGTH = 0x00001FC0
   qspi     (rwx) : ORIGIN = 0x04000000, LENGTH = 0x01000000
 }
 
-/* The stack size used by the application. NOTE: you need to adjust according to your application. */
-STACK_SIZE = DEFINED(STACK_SIZE) ? STACK_SIZE : DEFINED(__stack_size__) ? __stack_size__ : 0x1000;
+STACK_SIZE = DEFINED(STACK_SIZE) ? STACK_SIZE : DEFINED(__stack_size__) ? __stack_size__ : 0x10000;
 
-/* Section Definitions */
 SECTIONS
 {
     .text :
@@ -30,8 +26,6 @@ SECTIONS
         *(.rodata .rodata* .gnu.linkonce.r.*)
         *(.ARM.extab* .gnu.linkonce.armextab.*)
 
-        /* Support C constructors, and C destructors in both user code
-           and the C library. This also provides support for C++ code. */
         . = ALIGN(4);
         KEEP(*(.init))
         . = ALIGN(4);
@@ -64,12 +58,10 @@ SECTIONS
         KEEP (*(EXCLUDE_FILE (*crtend.o) .dtors))
         KEEP (*(SORT(.dtors.*)))
         KEEP (*crtend.o(.dtors))
-
         . = ALIGN(4);
-        _efixed = .;            /* End of text section */
+        _efixed = .;
     } > rom
 
-    /* .ARM.exidx is sorted, so has to go in its own output section.  */
     PROVIDE_HIDDEN (__exidx_start = .);
     .ARM.exidx :
     {
@@ -79,6 +71,13 @@ SECTIONS
 
     . = ALIGN(4);
     _etext = .;
+
+    /* SEGGER RTT control block, first in RAM: stage 2 uses the same address so one host session follows the boot.
+       Not zeroed at startup; main() calls SEGGER_RTT_Init() before any logging. */
+    .segger_rtt (NOLOAD) :
+    {
+        KEEP(*(.segger_rtt))
+    } > ram
 
     .relocate : AT (_etext)
     {
@@ -108,20 +107,19 @@ SECTIONS
         _eqspi = .;
     } > qspi
 
-    /* .bss section which is used for uninitialized data */
     .bss (NOLOAD) :
     {
         . = ALIGN(4);
-        _sbss = . ;
+        _sbss = .;
         _szero = .;
         *(.bss .bss.*)
+        *(.segger_rtt_buf)
         *(COMMON)
         . = ALIGN(4);
-        _ebss = . ;
+        _ebss = .;
         _ezero = .;
     } > ram
 
-    /* stack section */
     .stack (NOLOAD):
     {
         . = ALIGN(8);
@@ -132,5 +130,7 @@ SECTIONS
     } > ram
 
     . = ALIGN(4);
-    _end = . ;
+    _end = .;
 }
+
+ASSERT(_SEGGER_RTT == ORIGIN(ram), "SEGGER RTT control block must sit at the shared RAM address")

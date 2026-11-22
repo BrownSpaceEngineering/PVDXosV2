@@ -10,14 +10,14 @@
  * still found by the next. To add a region, take free space after the last one, add it to mram_region_t and to the
  * table and checks in mram_map.c.
  *
- *   0x000000  bootloader golden copy of flash (bootloader/src/image_format.h)    508 KB
- *   0x07F000  unused guard                                                         4 KB
- *   0x080000  MRAM_REGION_BURN_RECORD                                              4 KB
- *   0x081000  MRAM_REGION_ADCS                                                     4 KB
- *   0x082000  MRAM_REGION_PEROVSKITE                                              32 KB
- *   0x08A000  free                                                                24 KB
- *   0x090000  MRAM_REGION_CAMERA                                                 388 KB
- *   0x0F1000  free, to the end of the chip at 0x100000                            60 KB
+ *   0x000000  bootloader golden copy of the flash OS image (MRAM_OS_ADDR)          512 KB
+ *   0x080000  bootloader golden copy of the bootloaders (MRAM_BOOTLOADER_ADDR)       72 KB
+ *   0x092000  unused guard                                                         4 KB
+ *   0x093000  MRAM_REGION_BURN_RECORD                                              4 KB
+ *   0x094000  MRAM_REGION_ADCS                                                     4 KB
+ *   0x095000  MRAM_REGION_PEROVSKITE                                              32 KB
+ *   0x09D000  MRAM_REGION_CAMERA                                                 388 KB
+ *   0x0FE000  free, to the end of the chip at 0x100000                             8 KB
  */
 
 #include <stdbool.h>
@@ -27,15 +27,15 @@
 
 #define MRAM_CHIP_SIZE (0x100000u) // EM008LX: 8 Mb
 
-#define MRAM_OS_START (0x080000u) // First address PVDXos may use
+#define MRAM_OS_START (0x093000u) // First address PVDXos may use
 
-#define MRAM_BURN_RECORD_ADDRESS (0x080000u)
+#define MRAM_BURN_RECORD_ADDRESS (0x093000u)
 #define MRAM_BURN_RECORD_SIZE (0x1000u)
-#define MRAM_ADCS_ADDRESS (0x081000u)
+#define MRAM_ADCS_ADDRESS (0x094000u)
 #define MRAM_ADCS_SIZE (0x1000u)
-#define MRAM_PEROVSKITE_ADDRESS (0x082000u)
+#define MRAM_PEROVSKITE_ADDRESS (0x095000u)
 #define MRAM_PEROVSKITE_SIZE (0x8000u)
-#define MRAM_CAMERA_ADDRESS (0x090000u)
+#define MRAM_CAMERA_ADDRESS (0x09D000u)
 #define MRAM_CAMERA_SIZE (0x61000u)
 
 typedef enum {
@@ -56,10 +56,15 @@ mram_status_t mram_map_init(void);
 mram_status_t mram_map_status(void);
 
 // Read or write `size` bytes at `offset` within `region`. Return false if the range doesn't fit in the region or the
-// transfer fails. Reads come from the first chip mram_init() found working; writes go to all three, and return false
-// if any chip's write fails.
+// transfer fails. Reads are a bitwise majority vote of the healthy chips, and fail if only two are healthy and they
+// disagree; writes go to every healthy chip, and return false only if some page reached none of them.
 bool mram_region_read(mram_region_t region, uint32_t offset, void *data, uint32_t size);
 bool mram_region_write(mram_region_t region, uint32_t offset, const void *data, uint32_t size);
+
+// Read-only access to the bootloader's golden copy of stage 1 and the stage-2 copies (MRAM_BOOTLOADER_ADDR), for the
+// reflash task. `offset` is from FLASH_STAGE1_ADDR; `size` must be a multiple of 256. Returns false if the range is
+// outside the copy or the voted read fails. PVDXos never writes the copy: only the bootloader's MRAM refresh does.
+bool mram_bootloader_copy_read(uint32_t offset, void *data, uint32_t size);
 
 /*
  * Records: a payload of `size` bytes saved at `offset` within `region` with its size and a CRC, taking up
@@ -67,7 +72,7 @@ bool mram_region_write(mram_region_t region, uint32_t offset, const void *data, 
  * a different layout is not, so a payload whose layout changes should also change size or move.
  *
  * mram_record_save() writes the chips one after another, so a reset part way through leaves at most one chip torn.
- * It returns false if any chip's write fails.
+ * It returns false if any chip's write fails or a chip is already marked failed (it is then skipped).
  *
  * mram_record_load() uses the first chip whose copy has the right size and CRC, then writes that copy back to
  * the other two, so one bad chip never leaves the record unprotected. It returns false, with `payload` overwritten,

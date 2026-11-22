@@ -40,6 +40,9 @@ void test_telemetry_downlink(void);
 void test_telemetry_setters(void);
 void test_uplink_parse(void);
 void test_float(void);
+#ifdef TEST_MRAM
+void test_mram(void);
+#endif
 void test_pmb(void);
 
 void tests_run(void) {
@@ -57,6 +60,9 @@ void tests_run(void) {
 #endif
 #ifdef TEST_FLOAT
     test_float();
+#endif
+#ifdef TEST_MRAM
+    test_mram(); // Destructive hardware test (saves and restores its MRAM range); only with TESTS=mram
 #endif
 #ifdef TEST_TELEMETRY
     test_telemetry_downlink();
@@ -1280,7 +1286,7 @@ static void test_pmb_sweep_pixel(uint8_t pixel) {
 
     int out_of_tolerance = 0;
     for (uint32_t target_mv = 0; target_mv <= PVD_PIXEL_FULL_SCALE_MV; target_mv += PMB_TEST_STEP_MV) {
-        watchdog_feed(WDT);
+        watchdog_pet();
 
         ina226_measurement_t m = {0};
         status_t status = pvd_dac_set_pixel_mv(target_mv);

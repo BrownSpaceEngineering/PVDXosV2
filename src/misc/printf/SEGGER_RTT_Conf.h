@@ -91,6 +91,18 @@ Revision: $Rev: 24316 $
         #define SEGGER_RTT_MAX_NUM_DOWN_BUFFERS (3) // Max. number of down-buffers (H->T) available on this target  (Default: 3)
     #endif
 
+    //
+    // PVDX: the control block is pinned to the start of RAM (section placed by src/src_flash.ld and the stage-2
+    // linker scripts) so the bootloader and the OS share one address; buffers go wherever each image puts them.
+    // Because the control block is no longer zeroed at startup, each image must call SEGGER_RTT_Init() first.
+    //
+    #ifndef SEGGER_RTT_SECTION
+        #define SEGGER_RTT_SECTION ".segger_rtt"
+    #endif
+    #ifndef SEGGER_RTT_BUFFER_SECTION
+        #define SEGGER_RTT_BUFFER_SECTION ".segger_rtt_buf"
+    #endif
+
     #ifndef BUFFER_SIZE_UP
         #define BUFFER_SIZE_UP (1024) // Size of the buffer for terminal output of target, up to host (Default: 1k)
     #endif

@@ -17,7 +17,7 @@
 
 #include "SEGGER_RTT.h"
 #include "checks/device_checks.h"
-#include "../bootloader/src/image_format.h"
+#include "boot_record.h"
 #include "globals.h" // defines BURN_SEQUENCE
 #include "logging.h"
 #include "mutexes.h"
@@ -49,29 +49,111 @@ cosmic_monkey_task_arguments_t cm_args = {0};
 #define BURN_RECORD_SAVE_PERIOD_S 60u
 
 
-// Logs (and clears) the report stage 2 of the bootloader leaves in backup RAM about checking flash against MRAM
-static void log_boot_report(void) {
-    static const char *const golden_states[] = {"valid", "written from flash", "write failed", "unreadable", "disabled (NO_MRAM)"};
-    volatile boot_report_t *report = (volatile boot_report_t *)BOOT_REPORT_ADDR;
-    if (report->magic != BOOT_REPORT_MAGIC) {
-        warning_impl("[!] No bootloader flash report\n");
+__attribute__((unused)) static const char *mram_state_name(uint8_t state) { // Unused when logging compiles out
+
+    static const char *const names[] = {"off", "ok", "degraded", "failed"};
+    return names[state & 0x03u];
+}
+
+// Logs what stage 1 and stage 2 did this boot (bootloader/src/boot_record.h), then invalidates the record.
+static void log_boot_record(void) {
+    volatile boot_record_t *record = (volatile boot_record_t *)BOOT_RECORD_ADDR;
+    if (record->magic != BOOT_RECORD_MAGIC) {
+        warning("Boot: no boot record from stage 1/2 (magic %x)\n", (unsigned int)record->magic);
         return;
     }
-    const char *golden = report->golden_state < sizeof(golden_states) / sizeof(golden_states[0])
-                             ? golden_states[report->golden_state]
-                             : "unknown";
-    telemetry_update_last_bootloader(report->stage2_index);
-    info_impl("[+] Bootloader (stage 2 copy %u): golden copy %s, MRAM status 0x%02x\n", report->stage2_index, golden,
-              report->mram_status);
-    info_impl("[+] Bootloader blocks: %u checked, %u repaired, %u failed\n", report->blocks_checked, report->blocks_repaired,
-              report->blocks_failed);
-    if (report->blocks_failed != 0) {
-        warning_impl("[!] Bootloader could not repair every flash block\n");
+    telemetry_update_last_bootloader(record->stage2_slot);
+
+    if (record->stage2_slot == BOOT_STAGE2_SLOT_FALLBACK) {
+        warning("Boot: all stage-2 copies failed their CRC; stage 1 started the OS directly (no MRAM repair)\n");
+    } else if (record->stage2_slot == BOOT_STAGE2_SLOT_UNKNOWN) {
+        info("Boot: stage 2 entered without stage 1\n");
+    } else {
+        info("Boot: stage 2 copy %u\n", (unsigned int)record->stage2_slot);
     }
-    report->magic = 0; // So a stale report is never logged after a reset that skipped the bootloader
+
+    if (record->stage2_slot != BOOT_STAGE2_SLOT_FALLBACK) {
+        info("Boot: MRAM modules at init %s/%s/%s, at handoff %s/%s/%s\n", mram_state_name(record->mram_status_init),
+             mram_state_name(record->mram_status_init >> 2), mram_state_name(record->mram_status_init >> 4),
+             mram_state_name(record->mram_status_final), mram_state_name(record->mram_status_final >> 2),
+             mram_state_name(record->mram_status_final >> 4));
+
+        switch (record->refresh) {
+            case BOOT_REFRESH_NOT_REQUESTED:
+                break;
+            case BOOT_REFRESH_OK:
+                info("Boot: MRAM refresh complete (%u blocks copied)\n", (unsigned int)record->refresh_blocks);
+                break;
+            case BOOT_REFRESH_NO_MRAM:
+                warning("Boot: MRAM refresh requested but no MRAM module is healthy; will retry next boot\n");
+                break;
+            case BOOT_REFRESH_BAD_FLASH:
+                warning("Boot: MRAM refresh refused: flash image fails its own header/CRCs at %x; will retry next boot\n",
+                        (unsigned int)record->refresh_fail_addr);
+                break;
+            case BOOT_REFRESH_MODULE_LOST:
+                warning(
+                    "Boot: MRAM refresh incomplete: fewer than 2 MRAM modules healthy, or one dropped out (%u blocks "
+                    "copied); will retry next boot\n",
+                    (unsigned int)record->refresh_blocks);
+                break;
+            default:
+                warning("Boot: MRAM refresh FAILED at MRAM %x after %u blocks; golden copy invalid, will retry next boot\n",
+                        (unsigned int)record->refresh_fail_addr, (unsigned int)record->refresh_blocks);
+                break;
+        }
+
+        switch (record->repair) {
+            case BOOT_REPAIR_DONE:
+                info(
+                    "Boot: flash checked against MRAM: %u blocks, %u repaired, %u with unusable MRAM copy, %u program "
+                    "failures%s\n",
+                    (unsigned int)record->blocks_checked, (unsigned int)record->blocks_repaired, (unsigned int)record->blocks_bad_mram,
+                    (unsigned int)record->blocks_program_failed,
+                    record->header_row == BOOT_HEADER_ROW_REWRITTEN ? ", header row rewritten" : "");
+                if (record->header_row == BOOT_HEADER_ROW_FAILED) {
+                    warning("Boot: flash header row differed from MRAM and reprogramming it FAILED\n");
+                }
+                if (record->mram_scrubs != 0u) {
+                    warning("Boot: MRAM replicas disagreed on %u reads; the verified data was written back to every module\n",
+                            (unsigned int)record->mram_scrubs);
+                }
+                if (record->blocks_flagged != 0u) {
+                    // Bit n = app block n; printed as two 32-bit halves (high, low).
+                    info("Boot: flash blocks flagged %08x%08x\n", (unsigned int)(record->blocks_flagged >> 32),
+                         (unsigned int)record->blocks_flagged);
+                }
+                if (record->blocks_unfixed != 0u) {
+                    warning("Boot: flash blocks still WRONG at OS start %08x%08x\n", (unsigned int)(record->blocks_unfixed >> 32),
+                            (unsigned int)record->blocks_unfixed);
+                }
+                if (record->blocks_ecc_scrubbed != 0u || record->blocks_ecc_dual != 0u || record->ecc_last_err != 0u) {
+                    warning("Boot: flash ECC: %u blocks scrubbed (single-bit), %u with dual-bit errors, last ECCERR %x\n",
+                            (unsigned int)record->blocks_ecc_scrubbed, (unsigned int)record->blocks_ecc_dual,
+                            (unsigned int)record->ecc_last_err);
+                }
+                break;
+            case BOOT_REPAIR_NO_MRAM:
+                warning("Boot: flash repair skipped: no healthy MRAM module\n");
+                break;
+            case BOOT_REPAIR_HEADER_READ_FAILED:
+                warning("Boot: flash repair skipped: MRAM header read failed\n");
+                break;
+            case BOOT_REPAIR_NO_IMAGE:
+                warning("Boot: flash repair skipped: MRAM holds no valid golden image\n");
+                break;
+            default:
+                warning("Boot: stage 2 did not record a repair result\n");
+                break;
+        }
+    }
+    record->magic = 0u;
 }
 
 static status_t PVDX_init(void) {
+    // The RTT control block is pinned to the start of RAM and shared with stage 2, so it is not zeroed at startup:
+    // re-create it before anything logs (otherwise RTT would keep using stage 2's buffer pointers).
+    SEGGER_RTT_Init();
     // Segger Buffer 0 is pre-configured at compile time according to segger documentation
     // Config the logging output channel (assuming it's not zero)
     if (LOGGING_RTT_OUTPUT_CHANNEL != 0) {
@@ -86,7 +168,7 @@ static status_t PVDX_init(void) {
 // case it is still running from an earlier boot.
 [[maybe_unused]] static void wait_seconds_feeding_watchdog(uint32_t seconds) {
     for (uint32_t s = 0; s < seconds; s++) {
-        watchdog_feed(WDT);
+        watchdog_pet();
         os_delay_ms(1000);
     }
 }
@@ -131,7 +213,7 @@ static status_t PVDX_init(void) {
 
 [[maybe_unused]] static void send_picture_over_rtt(void) {
     for (uint32_t attempt = 1; attempt <= CAMERA_CAPTURE_ATTEMPTS; attempt++) {
-        watchdog_feed(WDT);
+        watchdog_pet();
         status_t status = init_arducam_hardware(ARDUCAM_DEFAULT_RESOLUTION);
         if (status == SUCCESS) {
             status = capture_rtt();
@@ -283,7 +365,7 @@ int main(void) {
         warning("rtc: Hardware initialization failed\n");
     }
 
-    log_boot_report();
+    log_boot_record();
 
     /* ---------- DEVICE CHECKS ---------- */
 

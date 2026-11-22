@@ -9,9 +9,6 @@
 Standard definitions for main.c
 */
 
-#define BOOTLOADER_MAGIC_NUMBER_ADDRESS (BKUPRAM_ADDR + 0x0)
-#define BOOTLOADER_MAGIC_NUMBER_VALUE (0x50564458UL) // ASCII for 'PVDX'
-
 /*
 Compilation guards to make sure that compilation is being done with the correct flags and correct compiler versions
 If you want to get rid of the red squiggly lines:

@@ -134,10 +134,10 @@ CFLAGS += -Wno-unused-parameter #Because some ASF functions have unused paramete
 
 # Tests that `make test` can build individually. Each NAME is guarded by #ifdef TEST_NAME in src/tests
 # Keep this list in sync with src/tests/test.h
-TEST_NAMES := SPP LINALG CFDP USLP PMB TELEMETRY UPLINK FLOAT PUSP
+TEST_NAMES := SPP LINALG CFDP USLP PMB TELEMETRY UPLINK FLOAT PUSP MRAM
 
 # `make test TESTS="spp cfdp"` builds only those tests by passing -DTEST_SPP -DTEST_CFDP.
-# Leaving TESTS empty builds the default tests.
+# Leaving TESTS empty builds the default tests; destructive hardware MRAM tests are opt-in only.
 SELECTED_TESTS := $(patsubst TEST_%,%,$(shell echo '$(TESTS)' | tr 'a-z,' 'A-Z '))
 UNKNOWN_TESTS := $(filter-out $(TEST_NAMES),$(SELECTED_TESTS))
 ifneq ($(UNKNOWN_TESTS),)
@@ -155,6 +155,9 @@ CFLAGS_RELEASE := -DRELEASE -O2
 export SUB_DIRS := $(patsubst %/,%,$(sort $(dir $(OBJS))))
 
 export DIR_INCLUDES := $(foreach dir,$(EXTRA_VPATH),-I"$(dir)" )
+# image_format.h and boot_record.h, from the bootloader. src/drivers/{flash,mram,watchdog} symlink the bootloader's
+# drivers; -idirafter so a PVDXos header always wins over a same-named one in bootloader/src.
+DIR_INCLUDES += -idirafter "$(PVDXOS_DIR)/bootloader/src"
 
 export OBJS_AS_ARGS := $(foreach obj,$(OBJS),$(patsubst ../%,%,$(obj)))
 
@@ -172,9 +175,8 @@ define ensure_build_type
 	fi
 endef
 
-# PVDXos runs from flash, and the bootloader keeps a golden copy of it in MRAM, so it can't be larger than the
-# golden copy's slot (MRAM_GOLDEN_APP_MAX_SIZE in bootloader/src/image_format.h)
-MAX_BIN_SIZE := 450560
+# PVDXos runs from flash after its 8 KiB header row: FLASH_OS_APP_SIZE (0x7E000) in bootloader/src/image_format.h
+MAX_BIN_SIZE := 516096
 
 BUILD_LOG := $(CHILD_MAKEFILE_PATH)/build.log
 
@@ -201,11 +203,11 @@ define child_build
 	fi; exit 1; }
 endef
 
-# $(call check_bin_size,<build type>) fails the build if PVDXos.bin is bigger than its MRAM golden-copy slot
+# $(call check_bin_size,<build type>) fails the build if PVDXos.bin is bigger than its flash slot
 define check_bin_size
 	@size=$$(wc -c < ../ASF/gcc/PVDXos.bin | tr -d ' '); \
 	if [ "$$size" -gt $(MAX_BIN_SIZE) ]; then \
-		echo "ERROR: PVDXos.bin is $$size bytes, which is larger than its MRAM golden-copy slot ($(MAX_BIN_SIZE) bytes)"; \
+		echo "ERROR: PVDXos.bin is $$size bytes, which is larger than its flash slot ($(MAX_BIN_SIZE) bytes)"; \
 		$(call size_hint,$(1)) \
 		exit 1; \
 	fi

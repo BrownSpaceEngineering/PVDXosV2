@@ -65,9 +65,14 @@ connect:
 	&& $(GDBCMD) \
 		-ex "set confirm off" \
 		-ex "add-symbol-file src/PVDXos.elf" \
-		-ex "add-symbol-file bootloader/src/stage2_1.elf" \
-		-ex "add-symbol-file bootloader/src/stage2_2.elf" \
-		-ex "add-symbol-file bootloader/src/stage2_3.elf" \
+		-ex "add-symbol-file bootloader/src/bootloader1.elf" \
+		-ex "add-symbol-file bootloader/src/bootloader2.elf" \
+		-ex "add-symbol-file bootloader/src/bootloader3.elf" \
+		-ex "add-symbol-file bootloader/src/bootloader4.elf" \
+		-ex "add-symbol-file bootloader/src/bootloader5.elf" \
+		-ex "add-symbol-file bootloader/src/bootloader6.elf" \
+		-ex "add-symbol-file bootloader/src/bootloader7.elf" \
+		-ex "add-symbol-file bootloader/src/bootloader8.elf" \
 		-ex "set confirm on" \
 		-ex "target remote localhost:2331" \
 		-ex "monitor reset" \
@@ -75,21 +80,26 @@ connect:
 		-ex "continue" \
 		-ex "break main" \
 		-ex "continue" \
-		bootloader/src/stage1.elf
+		bootloader/src/preboot.elf
 
 connect_tasks: 
 	JLinkExe -CommanderScript flash.jlink \
 	&& $(GDBCMD) \
 		-ex "set confirm off" \
 		-ex "add-symbol-file src/PVDXos.elf" \
-		-ex "add-symbol-file bootloader/src/stage2_1.elf" \
-		-ex "add-symbol-file bootloader/src/stage2_2.elf" \
-		-ex "add-symbol-file bootloader/src/stage2_3.elf" \
+		-ex "add-symbol-file bootloader/src/bootloader1.elf" \
+		-ex "add-symbol-file bootloader/src/bootloader2.elf" \
+		-ex "add-symbol-file bootloader/src/bootloader3.elf" \
+		-ex "add-symbol-file bootloader/src/bootloader4.elf" \
+		-ex "add-symbol-file bootloader/src/bootloader5.elf" \
+		-ex "add-symbol-file bootloader/src/bootloader6.elf" \
+		-ex "add-symbol-file bootloader/src/bootloader7.elf" \
+		-ex "add-symbol-file bootloader/src/bootloader8.elf" \
 		-ex "set confirm on" \
 		-ex "target remote localhost:2331" \
 		-ex "monitor reset" \
 		-ex "break main" \
-		bootloader/src/stage1.elf
+		bootloader/src/preboot.elf
 
 # connect for debugging bootloader
 connect_bl:
@@ -97,13 +107,18 @@ connect_bl:
 	&& $(GDBCMD) \
 		-ex "set confirm off" \
 		-ex "add-symbol-file src/PVDXos.elf" \
-		-ex "add-symbol-file bootloader/src/stage2_1.elf" \
-		-ex "add-symbol-file bootloader/src/stage2_2.elf" \
-		-ex "add-symbol-file bootloader/src/stage2_3.elf" \
+		-ex "add-symbol-file bootloader/src/bootloader1.elf" \
+		-ex "add-symbol-file bootloader/src/bootloader2.elf" \
+		-ex "add-symbol-file bootloader/src/bootloader3.elf" \
+		-ex "add-symbol-file bootloader/src/bootloader4.elf" \
+		-ex "add-symbol-file bootloader/src/bootloader5.elf" \
+		-ex "add-symbol-file bootloader/src/bootloader6.elf" \
+		-ex "add-symbol-file bootloader/src/bootloader7.elf" \
+		-ex "add-symbol-file bootloader/src/bootloader8.elf" \
 		-ex "set confirm on" \
 		-ex "target remote localhost:2331" \
 		-ex "monitor reset" \
-		bootloader/src/stage1.elf
+		bootloader/src/preboot.elf
 
 clean:
 	rm -f PVDXos.bin PVDXos.elf \

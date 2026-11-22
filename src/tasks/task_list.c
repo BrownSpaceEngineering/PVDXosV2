@@ -19,6 +19,7 @@
 #include "tasks/cfdp/cfdp_task.h"
 #include "tasks/fuel_gauge/fuel_gauge_task.h"
 #include "tasks/perovskite/perovskite_task.h"
+#include "tasks/reflash/reflash_task.h"
 #include "tasks/thermistor/thermistor_task.h"
 #include "uhf_radio/uhf_radio_task.h"
 
@@ -209,6 +210,22 @@ pvdx_task_t perovskite_task = {.name = "Perovskite",
                                .has_registered = false,
                                .task_type = SENSOR};
 
+pvdx_task_t reflash_task = {.name = "Reflash",
+                            .enabled = true,
+                            .handle = NULL,
+                            .command_queue = NULL,
+                            .init = NULL,
+                            .function = main_reflash_task,
+                            .stack_size = REFLASH_TASK_STACK_SIZE,
+                            .stack_buffer = reflash_mem.reflash_task_stack,
+                            .pvParameters = NULL,
+                            .priority = 1,
+                            .task_tcb = &reflash_mem.reflash_task_tcb,
+                            .watchdog_timeout_ms = 10000,
+                            .last_checkin_time_ticks = 0xDEADBEEF,
+                            .has_registered = false,
+                            .task_type = OS}; // repairs bootloader flash slots from MRAM in every state
+
 // and define their constant pointers
 pvdx_task_t *const p_watchdog_task = &watchdog_task;
 pvdx_task_t *const p_task_manager_task = &task_manager_task;
@@ -221,6 +238,7 @@ pvdx_task_t *const p_fuel_gauge_task = &fuel_gauge_task;
 pvdx_task_t *const p_thermistor_task = &thermistor_task;
 pvdx_task_t *const p_camera_task = &camera_task;
 pvdx_task_t *const p_perovskite_task = &perovskite_task;
+pvdx_task_t *const p_reflash_task = &reflash_task;
 pvdx_task_t *const task_list_null_terminator = NULL;
 
 // Global list of all tasks running on PVDXos (see `pvdx_task_t` definition in globals.h)
@@ -231,7 +249,8 @@ pvdx_task_t *const task_list_null_terminator = NULL;
 // If you change the order of any of these, make sure that main.c reflects the change and update this comment.
 pvdx_task_t *task_list[] = {
     p_watchdog_task,  p_task_manager_task, p_adcs_task,       p_display_task, p_heartbeat_task,  p_cfdp_task,
-    p_uhf_radio_task, p_fuel_gauge_task,   p_thermistor_task, p_camera_task,  p_perovskite_task, task_list_null_terminator,
+    p_uhf_radio_task, p_fuel_gauge_task,   p_thermistor_task, p_camera_task,  p_perovskite_task, p_reflash_task,
+    task_list_null_terminator,
 };
 
 /**
