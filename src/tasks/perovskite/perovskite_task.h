@@ -51,6 +51,15 @@ void perovskite_checkin(void);
 // Reads back the sweep saved in a slot. SUCCESS only if the slot holds a complete sweep that passes its CRC.
 status_t perovskite_load_sweep(uint8_t slot, perovskite_sweep_t *p_sweep);
 
+// Finds the sweep saved in a slot without loading it, for reading it straight out of MRAM (e.g. to downlink it): a
+// perovskite_sweep_t at *p_offset within MRAM_REGION_PEROVSKITE. Unlike perovskite_load_sweep(), only checks the
+// record's size, not its CRC.
+status_t perovskite_sweep_mram_offset(uint8_t slot, uint32_t *p_offset);
+
+// Finds the slot of the newest sweep in MRAM (the highest sequence number), checking records as
+// perovskite_sweep_mram_offset() does. ERROR_READ_FAILED if no slot holds a sweep. Safe to call from any task
+status_t perovskite_newest_sweep_slot(uint8_t *p_slot);
+
 // The state machine can stop this task mid-sweep. Suspending it blindly could leave a pixel biased, or leave it
 // holding the I2C bus shared with the fuel gauges, so it stops itself at a safe point (same handshake as the camera).
 bool perovskite_stop_requested(void);

@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 #include "globals.h"
+#include "tasks/cfdp/uplink_parse.h"
 #include "telemetry/telemetry.h"
 
 #define ADCS_ASCII_ART                                                                                                                     \
@@ -72,19 +73,19 @@ void main_adcs(void *pvParameters);
 
 /* ---------- COMMANDS ---------- */
 
-// TODO(blocked on uplink dispatcher): send these for TEL_CMD_SET_ADCS_OPMODE, _SET_UNIX_TIME and _ADCS_UPDATE_PARAMETERS
+// TODO(blocked on uplink dispatcher): send these for the SET_ADCS_OP_MODE, SET_UNIX_TIME and ADCS_UPDATE_PARAMS uplink commands
 // (the last through adcs_tle_from_uplink())
 
 /**
  * \fn adcs_tle_from_uplink
  *
- * \brief Converts uplinked TEL_CMD_ADCS_UPDATE_PARAMETERS data into the TLE `get_adcs_set_tle_command()` takes. Doesn't
+ * \brief Converts uplinked ADCS_UPDATE_PARAMS data into the TLE `get_adcs_set_tle_command()` takes. Doesn't
  *      check it: that happens when the command runs, and then again in `body()`.
  *
  * \param params the uplinked parameters
  * \param tle the TLE to fill
  */
-void adcs_tle_from_uplink(const tel_adcs_parameters_t *const params, adcs_tle_t *const tle);
+void adcs_tle_from_uplink(const uplink_adcs_parameters_t *const params, adcs_tle_t *const tle);
 
 /**
  * \fn get_adcs_do_point_command

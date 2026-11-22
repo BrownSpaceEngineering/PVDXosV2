@@ -19,9 +19,8 @@
 #include "tasks/cfdp/cfdp_task.h"
 #include "tasks/fuel_gauge/fuel_gauge_task.h"
 #include "tasks/perovskite/perovskite_task.h"
-#include "tasks/rtc/rtc_task.h"
 #include "tasks/thermistor/thermistor_task.h"
-
+#include "uhf_radio/uhf_radio_task.h"
 
 // Define task structs; tasks are mutable so not constant
 pvdx_task_t watchdog_task = {.name = "Watchdog",
@@ -124,6 +123,22 @@ pvdx_task_t cfdp_task = {.name = "CFDP",
                          .has_registered = false,
                          .task_type = ACTUATOR};
 
+pvdx_task_t uhf_radio_task = {.name = "Radio",
+                              .enabled = false,
+                              .handle = NULL,
+                              .command_queue = NULL,
+                              .init = init_uhf_radio,
+                              .function = main_uhf_radio,
+                              .stack_size = UHF_RADIO_TASK_STACK_SIZE,
+                              .stack_buffer = uhf_radio_mem.uhf_radio_task_stack,
+                              .pvParameters = NULL,
+                              .priority = 2,
+                              .task_tcb = &uhf_radio_mem.uhf_radio_task_tcb,
+                              .watchdog_timeout_ms = 10000,
+                              .last_checkin_time_ticks = 0xDEADBEEF,
+                              .has_registered = false,
+                              .task_type = ACTUATOR};
+
 pvdx_task_t fuel_gauge_task = {.name = "FuelGauge",
                                .enabled = true,
                                .handle = NULL,
@@ -157,7 +172,6 @@ pvdx_task_t thermistor_task = {.name = "Thermistor",
                                .last_checkin_time_ticks = 0xDEADBEEF,
                                .has_registered = false,
                                .task_type = SENSOR};
-
 
 pvdx_task_t camera_task = {.name = "Camera",
                            .enabled = false,
@@ -195,22 +209,6 @@ pvdx_task_t perovskite_task = {.name = "Perovskite",
                                .has_registered = false,
                                .task_type = SENSOR};
 
-pvdx_task_t rtc_task = {.name = "RTC",
-                        .enabled = true,
-                        .handle = NULL,
-                        .command_queue = NULL,
-                        .init = init_rtc,
-                        .function = main_rtc,
-                        .stack_size = RTC_TASK_STACK_SIZE,
-                        .stack_buffer = rtc_mem.rtc_task_stack,
-                        .pvParameters = NULL,
-                        .priority = 2,
-                        .task_tcb = &rtc_mem.rtc_task_tcb,
-                        .watchdog_timeout_ms = 10000,
-                        .last_checkin_time_ticks = 0xDEADBEEF,
-                        .has_registered = false,
-                        .task_type = OS}; // timekeeping runs in every state, so the state machine never suspends it
-
 // and define their constant pointers
 pvdx_task_t *const p_watchdog_task = &watchdog_task;
 pvdx_task_t *const p_task_manager_task = &task_manager_task;
@@ -218,11 +216,11 @@ pvdx_task_t *const p_adcs_task = &adcs_task;
 pvdx_task_t *const p_display_task = &display_task;
 pvdx_task_t *const p_heartbeat_task = &heartbeat_task;
 pvdx_task_t *const p_cfdp_task = &cfdp_task;
+pvdx_task_t *const p_uhf_radio_task = &uhf_radio_task;
 pvdx_task_t *const p_fuel_gauge_task = &fuel_gauge_task;
 pvdx_task_t *const p_thermistor_task = &thermistor_task;
 pvdx_task_t *const p_camera_task = &camera_task;
 pvdx_task_t *const p_perovskite_task = &perovskite_task;
-pvdx_task_t *const p_rtc_task = &rtc_task;
 pvdx_task_t *const task_list_null_terminator = NULL;
 
 // Global list of all tasks running on PVDXos (see `pvdx_task_t` definition in globals.h)
@@ -232,9 +230,8 @@ pvdx_task_t *const task_list_null_terminator = NULL;
 // NOTE: Watchdog task must be first in the list, Command Dispatcher second, and Task Manager third.
 // If you change the order of any of these, make sure that main.c reflects the change and update this comment.
 pvdx_task_t *task_list[] = {
-    p_watchdog_task, p_task_manager_task, p_adcs_task, p_display_task, p_heartbeat_task,
-    p_cfdp_task, p_fuel_gauge_task, p_thermistor_task, p_camera_task, p_perovskite_task, p_rtc_task,
-    task_list_null_terminator,
+    p_watchdog_task,  p_task_manager_task, p_adcs_task,       p_display_task, p_heartbeat_task,  p_cfdp_task,
+    p_uhf_radio_task, p_fuel_gauge_task,   p_thermistor_task, p_camera_task,  p_perovskite_task, task_list_null_terminator,
 };
 
 /**

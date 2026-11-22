@@ -141,9 +141,9 @@ status_t init_rtc_hardware(void) {
 /**
  * \fn calibrate_rtc
  *
- * \brief Measure the RTC against the UHF radio's timestamp counter. The RTC task calls it every second: it opens a
- * window, and once the window is 100 to 105 RTC seconds long it closes it, corrects the time over the window to the
- * radio's measurement, takes the measured tick rate, and opens the next window at the same instant. A window that runs
+ * \brief Measure the RTC against the UHF radio's timestamp counter. The UHF radio task calls it every
+ * RTC_CALIBRATE_PERIOD_MS, since it owns the radio's SPI bus: it opens a window, and once the window is 100 to 105 RTC
+ * seconds long it closes it, corrects the time over the window to the radio's measurement, takes the measured tick rate, and opens the next window at the same instant. A window that runs
  * too long (the radio counter may have wrapped) or gives an impossible rate (the radio was reset) is dropped.
  */
 void calibrate_rtc(void) {

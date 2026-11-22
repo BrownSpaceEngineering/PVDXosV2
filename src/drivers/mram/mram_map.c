@@ -171,3 +171,14 @@ bool mram_record_load(mram_region_t region, uint32_t offset, void *payload, uint
     unlock(locked);
     return good_chip != 0;
 }
+
+bool mram_record_payload_offset(mram_region_t region, uint32_t offset, uint32_t size, uint32_t *p_payload_offset) {
+    uint32_t address;
+    mram_record_header_t header;
+    if (!record_address(region, offset, size, &address) || !mram_region_read(region, offset, &header, sizeof(header)) ||
+        header.size != size) {
+        return false;
+    }
+    *p_payload_offset = offset + sizeof(header);
+    return true;
+}

@@ -24,6 +24,7 @@
 #include "libraries/adcs/include/quat.h"
 #include "libraries/cmd_dispatcher/cmd_dispatcher.h"
 #include "logging.h"
+#include "telemetry/telemetry.h"
 #include "os_delay.h"
 #include "state_machine.h"
 #include "task_list.h"
@@ -104,7 +105,7 @@ static status_t offer_tle(const adcs_tle_t *const tle) {
     return SUCCESS;
 }
 
-void adcs_tle_from_uplink(const tel_adcs_parameters_t *const params, adcs_tle_t *const tle) {
+void adcs_tle_from_uplink(const uplink_adcs_parameters_t *const params, adcs_tle_t *const tle) {
     // body() takes the mean elements in a different order from TLE line 2, and in radians
     tle->mean[0] = params->mean_motion;
     tle->mean[1] = params->eccentricity;
@@ -334,12 +335,14 @@ status_t adcs_read_gyro(float *const gyro_rad_s) {
     const status_t result = gyro_read(&reading);
 
     if (result != SUCCESS) {
+        telemetry_update_gyro_data(NULL);
         handle_read_failure(GYROSCOPE_ID, "gyro");
         for (size_t i = 0; i < 3; i++) {
             gyro_rad_s[i] = NAN;
         }
         return result;
     }
+    telemetry_update_gyro_data(&reading);
 
     // Left in the gyro chip's own axes: body() maps them to the body frame itself (sensor_frames.h)
     for (size_t i = 0; i < 3; i++) {

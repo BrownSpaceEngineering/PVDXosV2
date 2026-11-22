@@ -9,6 +9,7 @@
 
 #include "perovskite_task.h"
 
+#include <stddef.h>
 #include <string.h>
 
 #include "cmd_dispatcher.h"
@@ -106,7 +107,7 @@ command_t get_perovskite_sweep_command(void) {
     return (command_t){
         .target = p_perovskite_task,
         .operation = OPERATION_PEROVSKITE_SWEEP,
-        .data = {0},
+        .data = {{0}},
         .data_type = CMD_DATA_NONE,
         .result = PROCESSING,
     };
@@ -132,6 +133,45 @@ status_t perovskite_load_sweep(uint8_t slot, perovskite_sweep_t *p_sweep) {
         return ERROR_READ_FAILED;
     }
     return SUCCESS;
+#endif
+}
+
+status_t perovskite_sweep_mram_offset(uint8_t slot, uint32_t *p_offset) {
+    if (slot >= PEROVSKITE_SLOT_COUNT) {
+        return ERROR_BAD_ARGS;
+    }
+#ifdef NO_MRAM
+    (void)p_offset;
+    return ERROR_READ_FAILED;
+#else
+    if (!mram_record_payload_offset(MRAM_REGION_PEROVSKITE, perovskite_slot_offset(slot), sizeof(perovskite_sweep_t), p_offset)) {
+        return ERROR_READ_FAILED;
+    }
+    return SUCCESS;
+#endif
+}
+
+status_t perovskite_newest_sweep_slot(uint8_t *p_slot) {
+#ifdef NO_MRAM
+    (void)p_slot;
+    return ERROR_READ_FAILED;
+#else
+    bool found = false;
+    uint32_t newest_sequence = 0;
+    for (uint8_t slot = 0; slot < PEROVSKITE_SLOT_COUNT; slot++) {
+        uint32_t offset;
+        uint32_t sequence;
+        if (perovskite_sweep_mram_offset(slot, &offset) != SUCCESS ||
+            !mram_region_read(MRAM_REGION_PEROVSKITE, offset + offsetof(perovskite_sweep_t, sequence), &sequence, sizeof(sequence))) {
+            continue;
+        }
+        if (!found || sequence > newest_sequence) {
+            found = true;
+            newest_sequence = sequence;
+            *p_slot = slot;
+        }
+    }
+    return found ? SUCCESS : ERROR_READ_FAILED;
 #endif
 }
 
