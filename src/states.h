@@ -29,25 +29,26 @@ typedef enum { // preliminary contents; still under discussion
 } state_id_t;
 
 typedef struct { // preliminary contents; still under discussion
-	bool burn_wire_burned;
+	// bool burn_wire_burned;
 	bool in_sunlight;
-	bool detumbling; // i think
-	float battery_level; // not sure yet how this will be stored/fetched
+	bool detumbling; // ?
+	float battery_level; // updated by fuel gauge task
 	bool image_ready_to_display;
 	bool display_active;
 	bool photo_taken_for_downlink;
-	bool adcs_pointing;
-	bool adcs_sensor_fault;
+	bool adcs_pointing; // ?
+	bool adcs_sensor_fault; // ?
 	bool perovskite_data_ready_for_downlink;
 	// Filled in by the task manager itself; never sent as an input update
 	TickType_t current_tick;
 	TickType_t last_transition_tick; // when the current state was entered
-	bool sband_wants_to_transmit; // this does not guarantee a transition to STATE_SBAND_TRANS
+	TickType_t last_reflash_tick;
+	bool sband_pass_pending; // this does not guarantee a transition to STATE_SBAND_TRANS
+    bool uhf_pass_pending;
     bool safe_to_disable_radio; // any time this is set to true, the radio should assume it might be disabled
 } input_t;
 
 typedef enum { // preliminary contents; still under discussion
-	BURN_WIRE_STATUS_UPDATE,
 	SUNLIGHT_STATUS_UPDATE,
 	DETUMBLING_UPDATE,
 	BATTERY_LEVEL_UPDATE,
