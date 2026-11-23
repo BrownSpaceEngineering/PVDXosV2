@@ -1,5 +1,6 @@
 #include "telemetry.h"
 
+#include <math.h>
 #include <string.h>
 
 #include "FreeRTOS.h"
@@ -217,16 +218,26 @@ void telemetry_update_gyro_data(const SCH1_result_t *gyro_readings) {
     } else {
         for (size_t i = 0; i < 3; i++) {
             tel_cache.gyro.rate[i] = gyro_readings->Rate1[i];
+            // gyro_read() gives Rate1 as raw counts / SCH16T_SENSITIVITY_RATE1. The counts are at most 20 bits, so the
+            // float rounding error is well under half a count and rounding gets them back exactly
+            tel_cache.gyro.raw_rate[i] = (int32_t)lroundf(gyro_readings->Rate1[i] * (float)SCH16T_SENSITIVITY_RATE1);
         }
         tel_cache.gyro.health = TEL_DEVICE_STATUS_OK;
     }
     taskEXIT_CRITICAL();
 }
 
-void telemetry_update_camera_data(tel_device_status_t camera_status, bool last_capture_succeeded, uint8_t resolution) {
+void telemetry_update_camera_data(status_t capture_result, uint8_t resolution) {
+    tel_device_status_t health = TEL_DEVICE_STATUS_BROKEN;
+    if (capture_result == SUCCESS) {
+        health = TEL_DEVICE_STATUS_OK;
+    } else if (capture_result == ERROR_TASK_DISABLED) {
+        health = TEL_DEVICE_STATUS_DISABLED;
+    }
+
     taskENTER_CRITICAL();
-    tel_cache.camera.health = camera_status;
-    tel_cache.camera.last_capture_succeeded = last_capture_succeeded;
+    tel_cache.camera.health = health;
+    tel_cache.camera.last_capture_succeeded = capture_result == SUCCESS;
     tel_cache.camera.resolution = resolution;
     taskEXIT_CRITICAL();
 }
@@ -279,6 +290,36 @@ void telemetry_update_state(uint8_t state, uint32_t transition_time) {
 
     sm->state_history[0] = state;
     sm->transition_times[0] = transition_time;
+    taskEXIT_CRITICAL();
+}
+
+_Static_assert(TEL_INPUT_COUNT <= 8 * sizeof(((tel_state_machine_data_t *)0)->input_variables), "inputs must fit in input_variables");
+
+void telemetry_update_state_inputs(const input_t *inputs) {
+    const bool bits[TEL_INPUT_COUNT] = {
+        [TEL_INPUT_IN_SUNLIGHT] = inputs->in_sunlight,
+        [TEL_INPUT_DETUMBLING] = inputs->detumbling,
+        [TEL_INPUT_IMAGE_READY_TO_DISPLAY] = inputs->image_ready_to_display,
+        [TEL_INPUT_DISPLAY_ACTIVE] = inputs->display_active,
+        [TEL_INPUT_PHOTO_TAKEN_FOR_DOWNLINK] = inputs->photo_taken_for_downlink,
+        [TEL_INPUT_ADCS_POINTING] = inputs->adcs_pointing,
+        [TEL_INPUT_ADCS_SENSOR_FAULT] = inputs->adcs_sensor_fault,
+        [TEL_INPUT_PEROVSKITE_READY_FOR_DOWNLINK] = inputs->perovskite_data_ready_for_downlink,
+        [TEL_INPUT_STUDENT_CAPTURE_OVERRIDE] = inputs->student_capture_override,
+        [TEL_INPUT_UTC_VALID] = inputs->utc_valid,
+        [TEL_INPUT_SBAND_PASS_PENDING] = inputs->sband_pass_pending,
+        [TEL_INPUT_UHF_PASS_PENDING] = inputs->uhf_pass_pending,
+        [TEL_INPUT_SAFE_TO_DISABLE_RADIO] = inputs->safe_to_disable_radio,
+    };
+    uint8_t packed[sizeof(tel_cache.state_machine.input_variables)] = {0};
+    for (size_t i = 0; i < TEL_INPUT_COUNT; i++) {
+        if (bits[i]) {
+            packed[i / 8] |= (uint8_t)(1u << (i % 8));
+        }
+    }
+
+    taskENTER_CRITICAL();
+    memcpy(tel_cache.state_machine.input_variables, packed, sizeof(packed));
     taskEXIT_CRITICAL();
 }
 

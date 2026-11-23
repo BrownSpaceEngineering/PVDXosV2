@@ -931,14 +931,17 @@ void test_telemetry_downlink(void) {
     #define TEL_OFF_MAG_GAIN 23 // gain-adjusted readings
     #define TEL_OFF_MAGNETORQUER 35
     #define TEL_OFF_PHOTODIODE 47
+    #define TEL_OFF_GYRO_RAW 83
     #define TEL_OFF_GYRO_RATE 95
     #define TEL_OFF_GYRO_HEALTH 107
+    #define TEL_OFF_CAMERA 108 // health, last capture succeeded, resolution
     #define TEL_OFF_DISPLAY_HEALTH 111
     #define TEL_OFF_UHF_HEALTH 112
     #define TEL_OFF_SBAND 113 // health, last transmission timestamp
     #define TEL_OFF_EPS 118   // charge, voltage, current, temperature; 4 floats each
     #define TEL_OFF_STATE_HISTORY 182
     #define TEL_OFF_TRANSITION_TIMES 190
+    #define TEL_OFF_STATE_INPUTS 222
     #define TEL_OFF_ADCS 225 // position, attitude, gyro bias, covariance diagonal, then opmode, flags, filter resets, TLE epoch
     #define TEL_OFF_COMMANDS 293
     #define TEL_OFF_MRAM 357 // status, reflash count, reflash timestamps
@@ -1029,6 +1032,16 @@ void test_telemetry_setters(void) {
     adcs.covariance_diag[5] = 0.15625f;
     telemetry_update_adcs_data(&adcs);
 
+    // A good capture, then a failed one, which must be what's sent
+    telemetry_update_camera_data(SUCCESS, 1);
+    telemetry_collect(&downlink);
+    PVDX_ASSERT_MSG(downlink.camera.health == TEL_DEVICE_STATUS_OK && downlink.camera.last_capture_succeeded,
+                    "camera OK after a capture\n");
+    telemetry_update_camera_data(ERROR_SANITY_CHECK_FAILED, 2);
+
+    // Bits 0, 9 and 12
+    telemetry_update_state_inputs(&(input_t){.in_sunlight = true, .utc_valid = true, .safe_to_disable_radio = true});
+
     // Whether UTC is known depends on what ran before the tests, so the stamps are checked against utc.c either way
     uint32_t boot_time = 0;
     const bool utc_known = utc_get_boot_time(&boot_time) == SUCCESS;
@@ -1091,6 +1104,16 @@ void test_telemetry_setters(void) {
                         memcmp(&buf[TEL_OFF_ADCS + 60], adcs_tail, sizeof(adcs_tail)) == 0,
                     "adcs data\n");
 
+    // 1.0, -2.5 and 0.15625 dps at 1600 counts per dps
+    PVDX_ASSERT_MSG(tel_be32_is(&buf[TEL_OFF_GYRO_RAW], 1600) && tel_be32_is(&buf[TEL_OFF_GYRO_RAW + 4], (uint32_t)-4000) &&
+                        tel_be32_is(&buf[TEL_OFF_GYRO_RAW + 8], 250),
+                    "gyro raw counts from the rates\n");
+    PVDX_ASSERT_MSG(
+        buf[TEL_OFF_CAMERA] == TEL_DEVICE_STATUS_BROKEN && buf[TEL_OFF_CAMERA + 1] == TELEMETRY_FALSE && buf[TEL_OFF_CAMERA + 2] == 2,
+        "camera broken after a failed capture\n");
+    PVDX_ASSERT_MSG(buf[TEL_OFF_STATE_INPUTS] == 0x01 && buf[TEL_OFF_STATE_INPUTS + 1] == 0x12 && buf[TEL_OFF_STATE_INPUTS + 2] == 0x00,
+                    "state inputs packed as bits\n");
+
     if (utc_known) {
         PVDX_ASSERT_MSG(tel_be32(&buf[TEL_OFF_BOOT_TIMESTAMP]) == boot_time && tel_be32(&buf[TEL_OFF_TIMESTAMP]) >= boot_time,
                         "timestamps stamped from UTC\n");
@@ -1119,11 +1142,17 @@ void test_telemetry_setters(void) {
     bool mram_okay = check_device(MRAM_ID);
     uncheck_device(DISPLAY_ID);
     bool display_okay = check_device(DISPLAY_ID);
+    telemetry_update_magnetometer_registers(0xFF, 0xFF);
+    uncheck_device(MAGNETOMETER_ID);
+    bool magnetometer_okay = check_device(MAGNETOMETER_ID);
     tel_collect_and_serialize(&downlink, buf);
     // All three MRAMs OK is 0b010101: each chip's state in its own 2 bits
     PVDX_ASSERT_MSG(buf[TEL_OFF_MRAM] != 0xFF && (buf[TEL_OFF_MRAM] == 0x15) == mram_okay, "mram check publishes status\n");
     PVDX_ASSERT_MSG(buf[TEL_OFF_DISPLAY_HEALTH] == (display_okay ? TEL_DEVICE_STATUS_OK : TEL_DEVICE_STATUS_BROKEN),
                     "display check publishes health\n");
+    PVDX_ASSERT_MSG(
+        buf[TEL_OFF_LAST_BOOTLOADER + 1] == (magnetometer_okay ? RM3100_REVID_VALUE : 0) && buf[TEL_OFF_LAST_BOOTLOADER + 2] == 0,
+        "magnetometer check publishes REVID\n");
 }
 
 void test_uplink_parse(void) {

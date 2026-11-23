@@ -10,6 +10,7 @@
 #include "drivers/magnetorquer/magnetorquer_driver.h"
 #include "drivers/mram/mram_driver.h"
 #include "drivers/photodiode/photodiode_driver.h"
+#include "states.h"
 
 // Reference: PVDX UHF Uplink/Downlink Summary 3/3/2026
 // (https://docs.google.com/spreadsheets/d/1XYJBU4V2vjlKj8QtCxaPuW247gf_tx6XY4dey5q0v0k/edit?usp=sharing)
@@ -49,7 +50,8 @@ typedef struct {
 } tel_photodiode_data_t;
 
 typedef struct {
-    int32_t raw_rate[3]; // TODO: The spreadsheet only says "approximately equivalent to magnetometer data"
+    int32_t raw_rate[3]; // Rate1 in raw counts (SCH16T_SENSITIVITY_RATE1 per dps). TODO: The spreadsheet only says
+                         // "approximately equivalent to magnetometer data"
     float rate[3];       // degrees per second
     tel_device_status_t health;
 } tel_gyro_data_t;
@@ -57,7 +59,7 @@ typedef struct {
 typedef struct {
     tel_device_status_t health;
     bool last_capture_succeeded;
-    uint8_t resolution;
+    uint8_t resolution; // an arducam_resolution_t
 } tel_camera_data_t;
 
 typedef struct {
@@ -76,8 +78,26 @@ typedef struct {
 typedef struct {
     uint8_t state_history[8];     // last 8 states
     uint32_t transition_times[8]; // unix timestamps of the last 8 transitions
-    uint8_t input_variables[3];
+    uint8_t input_variables[3];   // TEL_INPUT_* bits: bit n is input_variables[n / 8] bit n % 8
 } tel_state_machine_data_t;
+
+// Bits of tel_state_machine_data_t.input_variables: the boolean state machine inputs (input_t in states.h)
+typedef enum {
+    TEL_INPUT_IN_SUNLIGHT = 0,
+    TEL_INPUT_DETUMBLING,
+    TEL_INPUT_IMAGE_READY_TO_DISPLAY,
+    TEL_INPUT_DISPLAY_ACTIVE,
+    TEL_INPUT_PHOTO_TAKEN_FOR_DOWNLINK,
+    TEL_INPUT_ADCS_POINTING,
+    TEL_INPUT_ADCS_SENSOR_FAULT,
+    TEL_INPUT_PEROVSKITE_READY_FOR_DOWNLINK,
+    TEL_INPUT_STUDENT_CAPTURE_OVERRIDE,
+    TEL_INPUT_UTC_VALID,
+    TEL_INPUT_SBAND_PASS_PENDING,
+    TEL_INPUT_UHF_PASS_PENDING,
+    TEL_INPUT_SAFE_TO_DISABLE_RADIO,
+    TEL_INPUT_COUNT, // not an input; at most 24
+} tel_input_bit_t;
 
 // ADCS operating mode, sent as 2 bytes in the SET_ADCS_OP_MODE uplink command and as 1 byte in the downlink
 typedef enum {
@@ -167,9 +187,7 @@ void telemetry_update_last_bootloader(uint8_t bootloader);
  * Updates the magnetometer registers inside the telemetry cache
  *
  * \param revid - revid register
- * \param bist - bist register
- *
- * TODO: NOT CALLED YET: nothing reads the RM3100 REVID/BIST registers after init_rm3100()
+ * \param bist - bist register. Always 0: nothing runs the RM3100's built-in self test
  */
 void telemetry_update_magnetometer_registers(uint8_t revid, uint8_t bist);
 
@@ -204,15 +222,13 @@ void telemetry_update_photodiode_data(const uint16_t photodiode_data[PHD_COUNT])
 void telemetry_update_gyro_data(const SCH1_result_t *gyro_readings);
 
 /**
- * Updates the camera data inside the telemetry cache
+ * Updates the camera data inside the telemetry cache from the result of a capture. SUCCESS is a good capture and OK
+ * health, ERROR_TASK_DISABLED a failed capture and DISABLED health, and anything else a failed capture and BROKEN health
  *
- * \param camera_status - status of the camera
- * \param last_capture_succeeded - whether the last capture succeeded
- * \param resolution - resolution of the camera
- *
- * TODO: NOT CALLED YET: nothing defines how resolution is encoded in its byte
+ * \param capture_result - what camera_capture() returned
+ * \param resolution - resolution of the capture, an arducam_resolution_t
  */
-void telemetry_update_camera_data(tel_device_status_t camera_status, bool last_capture_succeeded, uint8_t resolution);
+void telemetry_update_camera_data(status_t capture_result, uint8_t resolution);
 
 /**
  * Updates the display status inside the telemetry cache
@@ -257,12 +273,18 @@ void telemetry_update_eps_data(uint8_t pack_number, float charge_percent, float 
 /**
  * Updates the state data inside the telemetry cache
  *
- * TODO: Should input variables be included here? Where do those get recorded?
- *
  * \param state - current state
  * \param transition_time - unix time of state transition
  */
 void telemetry_update_state(uint8_t state, uint32_t transition_time);
+
+/**
+ * Updates the state machine inputs inside the telemetry cache, packed as TEL_INPUT_* bits. Only the boolean inputs are
+ * sent; the battery level, times and ticks aren't
+ *
+ * \param inputs - the state machine's inputs
+ */
+void telemetry_update_state_inputs(const input_t *inputs);
 
 /**
  * Updates the MRAM data inside the telemetry cache

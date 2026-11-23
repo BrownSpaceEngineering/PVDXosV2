@@ -212,6 +212,7 @@ void state_machine_check_transition(void) {
     // Inputs the task manager knows itself are filled in here rather than sent as updates
     inputs.current_tick = xTaskGetTickCount();
     inputs.utc_valid = utc_get(&inputs.current_utc) == SUCCESS;
+    telemetry_update_state_inputs(&inputs);
 
     const state_id_t next_state = mission_states[current_state].fetch_next_state(&inputs);
     if (next_state >= NUM_STATES) {
