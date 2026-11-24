@@ -31,13 +31,9 @@
 #define BURN_SEQUENCE_CAMERA_CHECK_CAPTURE
 
 #define BURN_UHF_MODE_BEACON 0
-#define BURN_UHF_MODE_LINK   1
-#define BURN_UHF_MODE_OFF    2
+#define BURN_UHF_MODE_LINK 1
+#define BURN_UHF_MODE_OFF 2
 #define BURN_SEQUENCE_UHF_MODE BURN_UHF_MODE_OFF
-
-// TEMPORARY: leaves out the CFDP receive buffers (about 8.7 KB) so that the image fits in RAM. Until this is removed,
-// CFDP rejects every incoming file. Sending is unaffected.
-// #define DO_NOT_BUILD_CFDP_BUFFERS
 
 // Comment out to save perovskite sweeps to MRAM. While defined, the perovskite task only logs its readings over RTT
 // and never touches MRAM, so nothing it measures survives a reboot.
@@ -87,17 +83,21 @@ typedef enum {
 typedef enum {
     // General operations (can be overloaded by any task)
     OPERATION_POWER_OFF = 0,
+    OPERATION_ENABLE_DISABLE_DEVICE, // p_data: uplink_cmd_t* uplink_cmd
 
     // Watchdog operations
     OPERATION_CHECKIN, // p_data: TaskHandle_t *handle
 
     // Task-Manager operations
-    OPERATION_INIT_SUBTASKS,   // p_data: NULL
-    OPERATION_ENABLE_SUBTASK,  // p_data: TaskHandle_t *handle
-    OPERATION_DISABLE_SUBTASK, // p_data: TaskHandle_t *handle
+    OPERATION_INIT_SUBTASKS,    // p_data: NULL
+    OPERATION_ENABLE_SUBTASK,   // p_data: TaskHandle_t *handle
+    OPERATION_DISABLE_SUBTASK,  // p_data: TaskHandle_t *handle
+    OPERATION_REBOOT,           // p_data: uplink_cmd_t* uplink_cmd
+    OPERATION_TRANSMIT_ON_OFF,  // p_data: uplink_cmd_t* uplink_cmd
+    OPERATION_SET_POWER_MODE,   // p_data: uplink_cmd_t* uplink_cmd
 
     // Display operations
-    OPERATION_DISPLAY_IMAGE, // p_data: color_t *p_buffer
+    OPERATION_DISPLAY_IMAGE, // p_data: uplink_cmd_t* uplink_cmd
     OPERATION_CLEAR_IMAGE,   // p_data: NULL
 
     // ADCS operations
@@ -106,12 +106,17 @@ typedef enum {
     OPERATION_ADCS_SET_TLE,       // p_data: const adcs_tle_t *tle
     OPERATION_ADCS_SET_UTC,       // data: uint32_t unix_time
 
-    // CFDP Operations
-    OPERATION_CFDP_PUT,    // p_data: cfdp_request_t* req
-    OPERATION_CFDP_CANCEL, // p_data: cfdp_request_t* req
+    // Camera Operations
+    OPERATION_TAKE_PHOTO, // uplink_cmd_t* uplink_cmd
 
-    OPERATION_CFDP_TIMEOUT_INACTIVITY, // p_data: cfdp_transaction_t* txn
-    OPERATION_CFDP_TIMEOUT_RETRANSMIT, // p_data: cfdp_transaction_t* txn
+    // ADCS Operations
+    OPERATION_SET_KEPLER_COEFF, // p_data: uplink_cmd_t* uplink_cmd
+    OPERATION_SET_UNIX_TIME,    // p_data: uint32_t timestamp
+    OPERATION_SET_ADCS_OP_MODE, // p_data: uplink_cmd_t* uplink_cmd
+    OPERATION_ADCS_UPDATE_PARAMS,
+
+    // CFDP Operations
+    OPERATION_CFDP_PUT, // data: cfdp_put_t cfdp_put. Cancels and timeouts are task notifications (see cfdp_task.h)
 
     // State machine operations
     OPERATION_UPDATE_STATE_INPUTS,
@@ -202,24 +207,44 @@ typedef struct {
     uint32_t last_checkin_time_ticks;   // Last time the task checked in with the watchdog
     bool has_registered;                // Whether the task is being monitored by the watchdog (initialized to NULL)
     const task_type_t task_type;        // Whether the task is OS-integrity, a sensor, or an actuator
-    bool (*prepare_suspend)(void);     // Optional safe-point handshake; called without the task list mutex
-    void (*prepare_resume)(void);      // Optional nonblocking hook; called before the task is resumed
+    bool (*prepare_suspend)(void);      // Optional safe-point handshake; called without the task list mutex
+    void (*prepare_resume)(void);       // Optional nonblocking hook; called before the task is resumed
 } pvdx_task_t;
 
 typedef struct adcs_tle adcs_tle_t;
-typedef union cfdp_request_data cfdp_request_data_t;
-typedef struct cfdp_transaction cfdp_transaction_t;
 typedef struct input_update_data input_update_data_t;
 
+typedef struct cfdp_buff_header cfdp_buff_header_t;
+
+typedef struct {
+    size_t buff_offset;
+    cfdp_buff_header_t *header;
+} uplink_cmd_t;
+
+// Files a CFDP put can send. Each is read straight out of its MRAM region while it's sent, since it may not fit in RAM
+typedef enum {
+    CFDP_FILE_IMAGE = 0,  // The JPEG capture_mram() last saved to MRAM_REGION_CAMERA
+    CFDP_FILE_PEROVSKITE, // The perovskite_sweep_t saved in MRAM_REGION_PEROVSKITE slot `index`
+} cfdp_file_t;
+
+// A CFDP put request. It's stored in the command, so the sender doesn't have to keep it alive. The file's size is found
+// from MRAM when the put starts, and the file must not be overwritten in MRAM until the transfer finishes
+typedef struct {
+    uint8_t file;   // cfdp_file_t
+    uint8_t index;  // CFDP_FILE_PEROVSKITE: slot of the sweep (0 to PEROVSKITE_SLOT_COUNT - 1). Unused otherwise
+    uint8_t stream; // radio_stream_t
+} cfdp_put_t;
+
 typedef union command_data {
+    uplink_cmd_t uplink_cmd; // Can't be a pointer: Data has to live in the command queue -> must be in the command_t struct
     const adcs_tle_t *adcs_tle;
     uint32_t unix_time;
     const uint8_t *display_data;
     TaskHandle_t *task_handle;
     pvdx_task_t *pvdx_task;
-    cfdp_request_data_t *cfdp_request;
-    cfdp_transaction_t *cfdp_timeout_data;
+    cfdp_put_t cfdp_put;
     input_update_data_t *state_input_update_data;
+    uint32_t timestamp;
 } command_data_t;
 
 typedef enum {
@@ -229,9 +254,10 @@ typedef enum {
     CMD_DATA_DISPLAY,
     CMD_DATA_TASK_HANDLE,
     CMD_DATA_PVDX_TASK,
-    CMD_CFDP_REQ,
-    CMD_CFDP_TIMEOUT,
+    CMD_CFDP_PUT,
+    CMD_DATA_UPLINK,
     CMD_STATE_INPUT_UPDATE,
+    CMD_DATA_TIMESTAMP
 } command_data_type_t;
 
 // A struct to represent a command that OS tasks can execute

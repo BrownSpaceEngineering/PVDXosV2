@@ -128,14 +128,14 @@ static bool uhf_wait_state(at86rf215_rf_state_t want, uint32_t timeout_ms) {
 }
 
 static bool uhf_txprep(void) {
-    if (at86_go_txprep(&uhf_dev) != AT86RF215_OK) {
+    if (burn_at86_go_txprep(&uhf_dev) != AT86RF215_OK) {
         return false;
     }
     return uhf_wait_state(AT86RF215_STATE_RF_TXPREP, UHF_STATE_TIMEOUT_MS);
 }
 
 static uint8_t uhf_read_irqs(void) {
-    return at86_read_irqs(&uhf_dev).bbc;
+    return burn_at86_read_irqs(&uhf_dev).bbc;
 }
 
 static int uhf_tx(const link_packet_t *pkt) {
@@ -150,7 +150,7 @@ static int uhf_tx(const link_packet_t *pkt) {
         goto fail;
     }
     (void)uhf_read_irqs();
-    ret = at86_send_frame(&uhf_dev, (const uint8_t *)pkt, psdu_len);
+    ret = burn_at86_send_frame(&uhf_dev, (const uint8_t *)pkt, psdu_len);
     if (ret) {
         goto fail;
     }
@@ -181,7 +181,7 @@ static uhf_rx_result_t uhf_rx(link_packet_t *out, uint32_t timeout_ms) {
         return UHF_RX_ERROR;
     }
     (void)uhf_read_irqs();
-    if (at86_go_rx(&uhf_dev) != AT86RF215_OK) {
+    if (burn_at86_go_rx(&uhf_dev) != AT86RF215_OK) {
         uhf_txprep();
         return UHF_RX_ERROR;
     }
@@ -376,7 +376,7 @@ static bool uhf_phase_b(const link_packet_t *first) {
 static bool uhf_setup(void) {
     spi_m_sync_enable(&SPI_UHF);
 
-    UHF_TRY(at86_init_pvdx(&uhf_dev));
+    UHF_TRY(burn_at86_init_pvdx(&uhf_dev));
     UHF_TRY(at86rf215_conn_check(&uhf_dev));
     UHF_TRY(at86rf215_set_mode(&uhf_dev, AT86RF215_RF_MODE_BBRF));
 
@@ -388,7 +388,7 @@ static bool uhf_setup(void) {
     };
     UHF_TRY(at86rf215_radio_conf(&uhf_dev, AT86RF215_RF09, &radio_conf));
 
-    UHF_TRY(change_at86_config(&uhf_dev, AT86_MR_FSK_LINK));
+    UHF_TRY(burn_change_at86_config(&uhf_dev, AT86_MR_FSK_LINK));
     UHF_TRY(at86rf215_bb_enable(&uhf_dev, AT86RF215_RF09, 1));
 
     UHF_TRY(at86rf215_set_freq(&uhf_dev, AT86RF215_RF09, UHF_FREQ_HZ));

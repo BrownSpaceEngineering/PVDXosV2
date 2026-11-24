@@ -2,29 +2,71 @@
 
 #include <string.h>
 
+#include "ccsds/radio_routing.h"
 #include "cfdp_task.h"
+#include "cfdp_timer.h"
+#include "globals.h"
+#include "logging.h"
+#include "mutexes.h"
+#include "rtos_start.h"
+#include "uhf_radio/uhf_radio_task.h"
 
 uint32_t next_seq_num(void) {
     static uint32_t counter = 0;
     return ++counter;
 }
 
-int cfdp_send(void *buff, size_t sz) {
+int cfdp_send(void *buff, size_t sz, radio_stream_t stream) {
 #if defined(UNITTEST)
+    // Tests run before the scheduler starts and without the radio's queues, so they just capture the PDU
     memcpy(test_mem, buff, sz);
-#else
-    (void)buff;
-    (void)sz;
+    (void)stream;
+    return 0;
 #endif
-    // TODO: send to radio board
+    if (sz == 0 || sz > RADIO_PAYLOAD_MAX_SIZE) {
+        return -1; // PDU doesn't fit
+    }
+
+    // The radio task wraps the PDU in an SPP packet when it sends it
+    radio_queue_item_t item;
+    item.len = (uint16_t)sz;
+    item.apid = CCSDS_APID_CFDP;
+    memcpy(item.data, buff, sz);
+
+    TickType_t wait = (stream == RADIO_STREAM_CFDP_REPLY) ? CFDP_SEND_REPLY_WAIT : CFDP_SEND_NO_WAIT;
+    if (radio_route_send(stream, &item, wait)) {
+        return -1; // queue full, caller retries later
+    }
+
     return 0;
 }
 
-int cfdp_recv(void *buff, size_t sz) {
-    (void)buff;
-    (void)sz;
-    // TODO: receive from radio board
-    return 0;
+int cfdp_recv(void *buff, size_t sz, uint8_t *vcid) {
+    if (sz < sizeof(radio_queue_item_t)) {
+        return -1; // buff is too small to recieve radio_queue_item_t
+    }
+
+    if (xQueueReceive(uplink_queue, buff, 0) != pdPASS) {
+        return 0; // queue empty, nothing to recieve.
+    }
+
+    // The radio task has already checked the SPP headers and stripped them, so data is the PDU
+    radio_queue_item_t *item = (radio_queue_item_t *)buff;
+    *vcid = item->vcid;
+
+    if (item->apid != CCSDS_APID_CFDP) {
+        return -1; // not a CFDP packet
+    }
+
+    size_t len = item->len;
+    if (len == 0 || len > sizeof(item->data)) {
+        return -1; // no PDU, and 0 is reserved for an empty queue
+    }
+
+    // item->data is inside buff, so the two overlap
+    memmove(buff, item->data, len);
+
+    return (int)len;
 }
 
 void cfdp_nak_buf_push(cfdp_nak_buf_t *buf, cfdp_pdu_segment_request_t segment) {
@@ -101,107 +143,111 @@ fin_txn_t fin_txn_buf_pop(fin_txn_buf_t *buf) {
     return txn;
 }
 
-cfdp_transaction_t *cfdp_alloc_transaction(cfdp_transaction_store_t *txn_store) {
-    if (!txn_store->slot_free) {
+// Only the CFDP task calls these
+cfdp_transaction_t *cfdp_alloc_transaction(void) {
+    if (cfdp_txn_store.active) {
         return NULL;
     }
-    for (int i = 0; i < MAX_TRANSACTIONS; i++) {
-        if (!txn_store->active[i]) {
-            txn_store->active[i] = true;
-            memset(&txn_store->transactions[i], 0, sizeof(cfdp_transaction_t));
 
-            // Attach the pre-created static timer handles for this slot.
-            // Handles were created once in init_cfdp(); the timer IDs are set
-            // to the transaction pointer by the caller after full initialisation.
-            txn_store->transactions[i].inactivity_timer_handle = cfdp_mem.inactivity_timer_handles[i];
-            txn_store->transactions[i].retransmit_timer_handle = cfdp_mem.retransmit_timer_handles[i];
+    // The previous transaction's timers were stopped when it was freed, but one may have fired just before, so drop
+    // any timeout or cancel still pending for it
+    xTaskNotifyWait(0, CFDP_NOTIFY_ALL, NULL, 0);
 
-            txn_store->slot_free = false;
-            for (int j = 0; j < MAX_TRANSACTIONS; j++) {
-                if (!txn_store->active[j]) {
-                    txn_store->slot_free = true;
-                    break;
-                }
-            }
-            return &txn_store->transactions[i];
-        }
-    }
-    txn_store->slot_free = false;
-    warning("cfdp: mismatch between slot_free and txn store capacity");
-    return NULL;
+    cfdp_txn_store.active = true;
+    memset(&cfdp_txn_store.txn, 0, sizeof(cfdp_txn_store.txn));
+    cfdp_txn_store.txn.pass = radio_link_view().pass;
+    return &cfdp_txn_store.txn;
 }
 
-void cfdp_free_transaction(cfdp_transaction_store_t *txn_store, cfdp_transaction_t *txn) {
-    if (txn_store == NULL || txn == NULL) {
+void cfdp_free_transaction(void) {
+    if (!cfdp_txn_store.active) {
         return;
     }
-    for (int i = 0; i < MAX_TRANSACTIONS; i++) {
-        if (&txn_store->transactions[i] == txn) {
-            txn_store->active[i] = false;
-            txn_store->slot_free = true;
-            return;
-        }
+    cfdp_transaction_t *txn = &cfdp_txn_store.txn;
+
+    // The timer outlives the transaction, so stop it or it fires on the next one
+    stop_timer(cfdp_mem.inactivity_timer_handle);
+
+    // A transaction that ends before its EOF (error, cancel, pass dropped) would leave the S-band radio on
+    radio_sband_close();
+
+    // Received files hold a CFDP buffer. Commands parsed out of it hold their own references, so this only drops
+    // the transaction's
+    if (txn->buff_header != NULL) {
+        cfdp_release_buff(txn->buff_header);
+        txn->buff_header = NULL;
+        txn->file_data = NULL;
     }
+    cfdp_txn_store.active = false;
 }
 
-cfdp_transaction_t *cfdp_find_transaction(cfdp_transaction_store_t *txn_store, uint32_t entity_id, uint32_t seq_num) {
-    for (int i = 0; i < MAX_TRANSACTIONS; i++) {
-        if (txn_store->active[i] && txn_store->transactions[i].transaction_id.entity_id == entity_id &&
-            txn_store->transactions[i].transaction_id.seq_num == seq_num) {
-            return &txn_store->transactions[i];
-        }
+cfdp_transaction_t *cfdp_find_transaction(uint32_t entity_id, uint32_t seq_num) {
+    cfdp_transaction_t *txn = &cfdp_txn_store.txn;
+    if (cfdp_txn_store.active && txn->transaction_id.entity_id == entity_id && txn->transaction_id.seq_num == seq_num) {
+        return txn;
     }
     return NULL;
 }
 
-#ifdef DO_NOT_BUILD_CFDP_BUFFERS
-// Callers treat NULL as no free buffer, and reject the incoming file
-uint8_t *cfdp_alloc_small_buff() {
-    return NULL;
-}
-
-uint8_t *cfdp_alloc_large_buff() {
-    return NULL;
-}
-
-int cfdp_free_buff(uint8_t *buff) {
-    (void)buff;
-    return -1;
-}
-#else
-uint8_t *cfdp_alloc_small_buff() {
+cfdp_buff_header_t *cfdp_alloc_small_buff() {
     for (size_t i = 0; i < CFDP_SMALL_BUFF_COUNT; ++i) {
-        if (!cfdp_small_buffs.in_use[i]) {
-            cfdp_small_buffs.in_use[i] = true;
-            return &cfdp_small_buffs.buff[i * CFDP_SMALL_BUFF_SZ];
+        lock_mutex(cfdp_small_buffs[i].header.semaphore);
+        if (!cfdp_small_buffs[i].header.ref_count) {
+            cfdp_small_buffs[i].header.ref_count = 1;
+            cfdp_small_buffs[i].header.is_large = false;
+            unlock_mutex(cfdp_small_buffs[i].header.semaphore);
+            return &cfdp_small_buffs[i].header;
         }
+        unlock_mutex(cfdp_small_buffs[i].header.semaphore);
     }
     return NULL;
 }
 
-uint8_t *cfdp_alloc_large_buff() {
-    if (cfdp_large_buff.in_use) {
-        return NULL;
-    } else {
-        cfdp_large_buff.in_use = true;
-        return cfdp_large_buff.buff;
+cfdp_buff_header_t *cfdp_alloc_large_buff() {
+    lock_mutex(cfdp_large_buff.header.semaphore);
+    cfdp_buff_header_t *ret = NULL;
+    if (cfdp_large_buff.header.ref_count == 0) {
+        cfdp_large_buff.header.ref_count = 1;
+        ret = &cfdp_large_buff.header;
     }
+    unlock_mutex(cfdp_large_buff.header.semaphore);
+    return ret;
 }
 
-int cfdp_free_buff(uint8_t *buff) {
-    if (cfdp_large_buff.buff == buff) {
-        cfdp_large_buff.in_use = false;
-        return 0;
+int cfdp_free_buff(cfdp_buff_header_t *buff) {
+    lock_mutex(buff->semaphore);
+    if (buff->ref_count != 1) {
+        unlock_mutex(buff->semaphore);
+        return -1;
     }
-    for (size_t i = 0; i < CFDP_SMALL_BUFF_COUNT; ++i) {
-        if (&cfdp_small_buffs.buff[i * CFDP_SMALL_BUFF_SZ] == buff) {
-            cfdp_small_buffs.in_use[i] = false;
-            return 0;
-        }
-    }
-    return -1;
+
+    buff->ref_count = 0;
+    unlock_mutex(buff->semaphore);
+    return 0;
 }
-#endif // DO_NOT_BUILD_CFDP_BUFFERS
+
+int cfdp_release_buff(cfdp_buff_header_t *buff) {
+    lock_mutex(buff->semaphore);
+
+    if (buff->ref_count == 0) {
+        unlock_mutex(buff->semaphore);
+        return -1;
+    }
+
+    buff->ref_count--;
+    unlock_mutex(buff->semaphore);
+    return 0;
+}
+
+int cfdp_add_buff_reference(cfdp_buff_header_t *buff) {
+    lock_mutex(buff->semaphore);
+
+    buff->ref_count++;
+
+    unlock_mutex(buff->semaphore);
+
+    return 0;
+}
 
 uint32_t cfdp_calculate_modular_checksum(cfdp_transaction_t *txn) {
     size_t words = txn->file_size / 4;
@@ -220,4 +266,43 @@ uint32_t cfdp_calculate_modular_checksum(cfdp_transaction_t *txn) {
     }
 
     return checksum + checksum_rem;
+}
+
+uint32_t cfdp_checksum_add(uint32_t checksum, uint32_t offset, const uint8_t *data, uint32_t size) {
+    for (uint32_t i = 0; i < size; i++) {
+        checksum += (uint32_t)data[i] << (8 * (3 - ((offset + i) % 4)));
+    }
+    return checksum;
+}
+
+bool cfdp_read_file(const cfdp_transaction_t *txn, uint32_t offset, uint8_t *dst, uint32_t size) {
+    if (offset > txn->file_size || size > txn->file_size - offset) {
+        return false;
+    }
+    if (txn->file_data != NULL) {
+        memcpy(dst, txn->file_data + offset, size);
+        return true;
+    }
+#ifdef NO_MRAM
+    return false; // A NO_MRAM build has nowhere to read a file from
+#else
+    return mram_region_read(txn->file_mram_region, txn->file_mram_offset + offset, dst, size);
+#endif
+}
+
+#define CFDP_CHECKSUM_CHUNK_SZ 256 // Bytes read at a time by cfdp_file_checksum, on the CFDP task's stack
+
+bool cfdp_file_checksum(const cfdp_transaction_t *txn, uint32_t size, uint32_t *p_checksum) {
+    uint8_t chunk[CFDP_CHECKSUM_CHUNK_SZ];
+    uint32_t checksum = 0;
+    for (uint32_t offset = 0; offset < size;) {
+        uint32_t n = (size - offset > sizeof(chunk)) ? sizeof(chunk) : size - offset;
+        if (!cfdp_read_file(txn, offset, chunk, n)) {
+            return false;
+        }
+        checksum = cfdp_checksum_add(checksum, offset, chunk, n);
+        offset += n;
+    }
+    *p_checksum = checksum;
+    return true;
 }

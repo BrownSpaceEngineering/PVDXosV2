@@ -65,14 +65,14 @@ status_t display_set_window(void) {
     spi_tx_buffer[1] = SSD_1362_COL_START;
     spi_tx_buffer[2] = SSD_1362_COL_END;
 
-    ret_err_status(spi_transfer(false), "display: spi_transfer(false) failed");
+    ret_err_status(spi_transfer(false), "display: spi_transfer(false) failed\n");
 
     xfer.size = 3;
     spi_tx_buffer[0] = SSD1362_CMD_3B_SETROW;
     spi_tx_buffer[1] = SSD_1362_ROW_START;
     spi_tx_buffer[2] = SSD_1362_ROW_END;
 
-    ret_err_status(spi_transfer(false), "display: spi_transfer(false) failed");
+    ret_err_status(spi_transfer(false), "display: spi_transfer(false) failed\n");
 
     return SUCCESS;
 }
@@ -143,7 +143,7 @@ void display_clear_buffer(void) {
  */
 status_t display_update(void) {
     // set the display window to the entire display
-    ret_err_status(display_set_window(), "display: set_window failed");
+    ret_err_status(display_set_window(), "display: set_window failed\n");
 
     // write the display buffer to the display, pointing the transfer at it directly to avoid an 8 KB copy
     xfer.txbuf = display_buffer;
@@ -151,7 +151,7 @@ status_t display_update(void) {
     status_t status = spi_transfer(true);
     xfer.txbuf = spi_tx_buffer; // restore before returning, since every command transfer writes into spi_tx_buffer
 
-    ret_err_status(status, "display: spi_transer(true) failed");
+    ret_err_status(status, "display: spi_transer(true) failed\n");
 
     return SUCCESS;
 }
@@ -164,7 +164,7 @@ status_t display_update(void) {
 status_t display_off(void) {
     xfer.size = 1;
     spi_tx_buffer[0] = SSD1362_CMD_1B_DISPLAYOFF;
-    ret_err_status(spi_transfer(false), "display: could not turn display off");
+    ret_err_status(spi_transfer(false), "display: could not turn display off\n");
 
     return SUCCESS;
 }
@@ -193,112 +193,112 @@ status_t init_display_hardware(void) {
     spi_tx_buffer[0] = SSD1362_CMD_2B_COMMANDLOCK;
     spi_tx_buffer[1] = SSD_1362_ARG_COMMANDLOCK_UNLOCK;
 
-    ret_err_status(spi_transfer(false), "display hardware init: could not unlock command lock");
+    ret_err_status(spi_transfer(false), "display hardware init: could not unlock command lock\n");
 
     // Put display to sleep
-    ret_err_status(display_off(), "display hardware init: could not put display to sleep");
+    ret_err_status(display_off(), "display hardware init: could not put display to sleep\n");
 
     // Set active display window to the entire display
-    ret_err_status(display_set_window(), "display hardware init: could not set active window to whole display");
+    ret_err_status(display_set_window(), "display hardware init: could not set active window to whole display\n");
 
     // Set contrast
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_CONTRASTMASTER;
     spi_tx_buffer[1] = SSD1362_CONTRAST_STEP;
-    ret_err_status(spi_transfer(false), "display hardware init: could not set contrast");
+    ret_err_status(spi_transfer(false), "display hardware init: could not set contrast\n");
 
     // Set remap
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_SETREMAP;
     spi_tx_buffer[1] = SSD1362_REMAP_VALUE;
-    ret_err_status(spi_transfer(false), "display hardware init: could not set remap");
+    ret_err_status(spi_transfer(false), "display hardware init: could not set remap\n");
 
     // Set display start line
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_STARTLINE;
     spi_tx_buffer[1] = 0x00;
-    ret_err_status(spi_transfer(false), "display hardware init: could not set display start line");
+    ret_err_status(spi_transfer(false), "display hardware init: could not set display start line\n");
 
     // Set display offset
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_DISPLAYOFFSET;
     spi_tx_buffer[1] = 0x00;
-    ret_err_status(spi_transfer(false), "display hardware init: could not set display offset");
+    ret_err_status(spi_transfer(false), "display hardware init: could not set display offset\n");
 
     // Set display mode (normal, not all-on/all-off/inverted)
     xfer.size = 1;
     spi_tx_buffer[0] = SSD1362_CMD_1B_NORMALDISPLAY;
-    ret_err_status(spi_transfer(false), "display hardware init: could not set display mode");
+    ret_err_status(spi_transfer(false), "display hardware init: could not set display mode\n");
 
     // Set multiplex ratio
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_MULTIPLEX_RATIO;
     spi_tx_buffer[1] = SSD1362_MUX_RATIO;
-    ret_err_status(spi_transfer(false), "display hardware init: could not set multiplex ratio");
+    ret_err_status(spi_transfer(false), "display hardware init: could not set multiplex ratio\n");
 
     // Set VDD
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_SET_VDD;
     spi_tx_buffer[1] = SSD_1362_ARG_VDD_ON;
-    ret_err_status(spi_transfer(false), "display hardware init: could not set VDD");
+    ret_err_status(spi_transfer(false), "display hardware init: could not set VDD\n");
 
     // Set IREF
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_IREF_SELECTION;
     spi_tx_buffer[1] = SSD_1362_ARG_IREF_INTERNAL;
-    ret_err_status(spi_transfer(false), "display hardware init: could not set IREF");
+    ret_err_status(spi_transfer(false), "display hardware init: could not set IREF\n");
 
     // Set phase length
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_PHASE_LENGTH;
     spi_tx_buffer[1] = SSD_1362_PHASE_1_2_LENGTHS;
-    ret_err_status(spi_transfer(false), "display hardware init: could not set phase length");
+    ret_err_status(spi_transfer(false), "display hardware init: could not set phase length\n");
 
     // Set display clock divider
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_CLOCKDIV;
     spi_tx_buffer[1] = SSD1362_CLOCK_DIVIDER_VALUE;
-    ret_err_status(spi_transfer(false), "display hardware init: could not set display clock divider");
+    ret_err_status(spi_transfer(false), "display hardware init: could not set display clock divider\n");
 
     // Set pre-charge 2 period
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_PRECHARGE2;
     spi_tx_buffer[1] = SSD1362_PRECHARGE_2_TIME;
-    ret_err_status(spi_transfer(false), "display hardware init: could not set pre-charge 2 periods");
+    ret_err_status(spi_transfer(false), "display hardware init: could not set pre-charge 2 periods\n");
 
     // Set linear LUT
     xfer.size = 1;
     spi_tx_buffer[0] = SSD1362_CMD_1B_USELINEARLUT;
-    ret_err_status(spi_transfer(false), "display hardware init: could not set linear LUT");
+    ret_err_status(spi_transfer(false), "display hardware init: could not set linear LUT\n");
 
     // Set pre-charge voltage level to 0.5 * Vcc
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_PRECHARGELEVEL;
     spi_tx_buffer[1] = SSD1362_PRECHARGE_VOLTAGE_RATIO;
-    ret_err_status(spi_transfer(false), "display hardware init: could not set pre-charge voltage");
+    ret_err_status(spi_transfer(false), "display hardware init: could not set pre-charge voltage\n");
 
     // Set pre-charge capacitor
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_PRECHARGE_CAPACITOR;
     spi_tx_buffer[1] = SSD1362_PRECHARGE_CAPACITOR;
-    ret_err_status(spi_transfer(false), "display hardware init: could not set pre-charge capacitor");
+    ret_err_status(spi_transfer(false), "display hardware init: could not set pre-charge capacitor\n");
 
     // Set COM deselect voltage
     xfer.size = 2;
     spi_tx_buffer[0] = SSD1362_CMD_2B_COM_DESELECT_VOLTAGE;
     spi_tx_buffer[1] = SSD1362_DESELECT_VOLTAGE_RATIO;
-    ret_err_status(spi_transfer(false), "display hardware init: could not set COM deselect voltage");
+    ret_err_status(spi_transfer(false), "display hardware init: could not set COM deselect voltage\n");
 
     // Turn the display on!
     xfer.size = 1;
     spi_tx_buffer[0] = SSD1362_CMD_1B_DISPLAYON;
-    ret_err_status(spi_transfer(false), "display hardware init: could not turn display on");
+    ret_err_status(spi_transfer(false), "display hardware init: could not turn display on\n");
 
     // Show the PVDX logo straight away, so a working display is visible at init
     display_set_buffer((const color_t *)IMAGE_BUFFER_PVDX);
 
     // Trigger an update so the buffer is actually displayed
-    ret_err_status(display_update(), "display: Update failed");
+    ret_err_status(display_update(), "display: Update failed\n");
 
     return SUCCESS;
 }

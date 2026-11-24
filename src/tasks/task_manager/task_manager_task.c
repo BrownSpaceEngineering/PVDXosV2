@@ -11,6 +11,7 @@
 
 #include "task_manager_task.h"
 
+#include "cfdp/uplink_commands.h"
 #include "logging.h"
 #include "state_machine.h"
 #include "watchdog_task.h"
@@ -51,12 +52,12 @@ void task_manager_enable_task(pvdx_task_t *const p_task) {
 
     // If given an unintialized task, something went wrong
     if (p_task->handle == NULL) {
-        fatal("task_manager: Attempted to enable uninitialized task");
+        fatal("task_manager: Attempted to enable uninitialized task\n");
     }
 
     // If given an already enabled task, something went wrong
     if (p_task->enabled) {
-        fatal("task_manager: Tried to enable a task that has already been enabled");
+        fatal("task_manager: Tried to enable a task that has already been enabled\n");
     }
 
     if (p_task->prepare_resume != NULL) {
@@ -90,12 +91,12 @@ void task_manager_disable_task(pvdx_task_t *const p_task) {
 
     // If given an unintialized task, something went wrong
     if (p_task->handle == NULL) {
-        fatal("task_manager: Trying to disable task that was never initialized");
+        fatal("task_manager: Trying to disable task that was never initialized\n");
     }
 
     // If given an already disabled task, something went wrong
     if (!p_task->enabled) {
-        fatal("task_manager: Tried to disable a task that has already been disabled");
+        fatal("task_manager: Tried to disable a task that has already been disabled\n");
     }
 
     if (p_task->prepare_suspend != NULL) {
@@ -229,6 +230,16 @@ void exec_command_task_manager(command_t *const p_cmd) {
         case OPERATION_DISABLE_SUBTASK:
             task_manager_disable_task(p_cmd->data.pvdx_task); // Turn this into an index
             p_cmd->result = SUCCESS;
+            break;
+        case OPERATION_REBOOT:
+        case OPERATION_TRANSMIT_ON_OFF:
+        case OPERATION_SET_POWER_MODE:
+            // TODO: uplinked commands that aren't implemented yet are thrown away
+            warning("task-manager: operation %d not implemented, dropping command\n", p_cmd->operation);
+            if (p_cmd->data_type == CMD_DATA_UPLINK) {
+                uplink_cmd_release(&p_cmd->data.uplink_cmd);
+            }
+            p_cmd->result = ERROR_NOT_READY;
             break;
         default:
             fatal("task-manager: Invalid operation!\n");

@@ -66,7 +66,12 @@ parsing. To build only some tests, pass their names, e.g.
 `make test TESTS="spp cfdp"` (defines `TEST_SPP`/`TEST_CFDP`; see `TEST_NAMES`
 in `src/Makefile` and `src/tests/test.h`); with no `TESTS`, all are built.
 Builds fail if `PVDXos.bin` exceeds its 440 KB MRAM golden-copy slot or the
-linker's flash or RAM region overflows.
+linker's flash or RAM region overflows. Two optional flags work with
+`make dev` and `make test` (not `release`): `NO_MRAM=1` builds a bootloader
+that never touches MRAM and leaves the MRAM driver and `mram_map.c` out of
+PVDXos, with every MRAM user skipping its reads and writes under
+`#ifdef NO_MRAM`; `PLANT_SIM=1` runs the ADCS task against the adcs-c truth
+plant (`src/tasks/adcs/adcs_mock.c`) instead of its sensors and magnetorquers.
 
 For hardware flashing, start a J-Link GDB server configured for
 `ATSAMD51P20A`, SWD, and port 2331. For J-Link/GDB workflows:

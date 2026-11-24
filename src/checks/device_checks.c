@@ -28,6 +28,8 @@
 #include "logging.h"
 #include "magnetometer_driver.h"
 #include "photodiode_driver.h"
+#include "telemetry/telemetry.h"
+#include "watchdog_driver.h"
 
 // forward declarations of check functions
 bool check_magnetometer(void);
@@ -76,6 +78,11 @@ bool check_all_devices_on_startup(void) {
     info("CHECKING ALL DEVICES...\n");
     info("1 = OKAY / 0 = NOT OKAY...\n");
     for (device_id_t device_id = 0; device_id < NUM_DEVICES; device_id++) {
+        // These run before the scheduler, with the hardware watchdog (~16 s) still running from the bootloader and
+        // no watchdog task to feed it. With devices missing/failing, each check waits out its timeouts (S-band alone takes
+        // over 5 s), and together they outlast it. Feeding it before each check still resets the board if any one
+        // check hangs.
+        watchdog_feed(WDT);
         bool device_okay = check_device(device_id);
         at_least_one_failed = at_least_one_failed || !device_okay;
         info("%-20s: %d\n", device_name_of(device_id), device_okay);
@@ -99,6 +106,12 @@ bool check_device(device_id_t device_id) {
     if (!device_states[device_id].checked) {
         device_states[device_id].valid = device_check_functions[device_id]();
         device_states[device_id].checked = true;
+        const tel_device_status_t health = device_states[device_id].valid ? TEL_DEVICE_STATUS_OK : TEL_DEVICE_STATUS_BROKEN;
+        if (device_id == DISPLAY_ID) {
+            telemetry_update_display_data(health);
+        } else if (device_id == UHF_ID) {
+            telemetry_update_uhf_data(health);
+        }
     }
     return device_states[device_id].valid;
 }
@@ -133,8 +146,15 @@ bool check_gyro(void) {
 }
 
 // Passes only if main.c's mram_map_init() found all three MRAM chips OK (every write goes to all three).
+// A NO_MRAM build never initializes MRAM, so it fails.
 bool check_mram(void) {
+#ifdef NO_MRAM
+    info("MRAM: compiled out (NO_MRAM build)\n");
+    return false;
+#else
     mram_status_t status = mram_map_status();
+    // TODO: reflash count and timestamps aren't tracked anywhere yet, so they stay 0
+    telemetry_update_mram_data(&(tel_mram_data_t){.status = status});
     bool all_okay = true;
     for (uint8_t mram = 1; mram <= 3; mram++) {
         uint8_t state = get_mram_state(status, mram);
@@ -142,6 +162,7 @@ bool check_mram(void) {
         all_okay = all_okay && (state == MRAM_STATE_OK);
     }
     return all_okay;
+#endif
 }
 
 bool check_camera(void) {

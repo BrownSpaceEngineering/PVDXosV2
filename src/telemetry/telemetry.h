@@ -5,21 +5,25 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "drivers/gyro/gyro_driver.h"
+#include "drivers/magnetometer/magnetometer_driver.h"
+#include "drivers/magnetorquer/magnetorquer_driver.h"
+#include "drivers/mram/mram_driver.h"
+#include "drivers/photodiode/photodiode_driver.h"
+
 // Reference: PVDX UHF Uplink/Downlink Summary 3/3/2026
 // (https://docs.google.com/spreadsheets/d/1XYJBU4V2vjlKj8QtCxaPuW247gf_tx6XY4dey5q0v0k/edit?usp=sharing)
 // Every multi-byte value is sent most significant byte first, and floats are sent as their IEEE 754 bits
-
-#define TELEMETRY_CALLSIGN_LENGTH 6
-#define TELEMETRY_CALLSIGN "BSEBSE" // TODO: Make real value
-#define TELEMETRY_DOWNLINK_APID 1   // TODO: Make real value
+// The downlink is sent without CFDP: one serialized downlink is the user data of one SPP packet (CCSDS_APID_TELEMETRY),
+// which fits in one USLP frame and one AT86 frame (see uhf_beacon_prepare()).
+// Uplinked commands are parsed in tasks/cfdp/uplink_parse.c
 
 #define TELEMETRY_FALSE 0x00
 #define TELEMETRY_TRUE 0x01
 
 /* ---------- DOWNLINK ---------- */
 
-// Size of a serialized downlink packet, including its SPP primary and secondary headers. Bytes after the
-// last field are spare, and are sent as zeros
+// Size of a serialized downlink file. Bytes after the last field are spare, and are sent as zeros
 #define TELEMETRY_DOWNLINK_SIZE 512
 
 // Health of a device, sent as one byte
@@ -37,11 +41,11 @@ typedef struct {
 } tel_magnetometer_data_t;
 
 typedef struct {
-    int32_t current[3]; // "current" applied to the x, y, z magnetorquers (really PWM frequency)
+    float duty[3]; // signed PWM duty applied to the x, y, z magnetorquers, from -1.0 to 1.0
 } tel_magnetorquer_data_t;
 
 typedef struct {
-    float raw_readings[22];
+    uint16_t raw_readings[PHD_COUNT]; // raw ADC codes, indexed by PHD number. Sheet says 22 but only 18 photodiodes
 } tel_photodiode_data_t;
 
 typedef struct {
@@ -70,12 +74,12 @@ typedef struct {
 } tel_eps_data_t;
 
 typedef struct {
-    uint8_t state_history[8];  // last 8 states
-    float transition_times[8]; // timestamps of the last 8 transitions
+    uint8_t state_history[8];     // last 8 states
+    uint32_t transition_times[8]; // unix timestamps of the last 8 transitions
     uint8_t input_variables[3];
 } tel_state_machine_data_t;
 
-// ADCS operating mode, sent as 2 bytes in TEL_CMD_SET_ADCS_OPMODE and as 1 byte in the downlink
+// ADCS operating mode, sent as 2 bytes in the SET_ADCS_OP_MODE uplink command and as 1 byte in the downlink
 typedef enum {
     TEL_ADCS_OPMODE_POINT = 0,         // point whenever possible, detumble (B-dot) whenever not pointing; the default
     TEL_ADCS_OPMODE_DETUMBLE_ONLY = 1, // B-dot only; the attitude filter doesn't run
@@ -102,7 +106,7 @@ typedef struct {
 } tel_adcs_data_t;
 
 typedef struct {
-    uint8_t status[3];
+    mram_status_t status; // 2 bits per MRAM chip (MRAM_STATE_*), packed as by set_mram_state()
     uint32_t reflash_count;
     uint32_t reflash_timestamps[8]; // last 8 reflashes
 } tel_mram_data_t;
@@ -113,9 +117,7 @@ typedef struct {
 } tel_os_error_data_t;
 
 typedef struct {
-    // Sent in the SPP headers. The callsign is always TELEMETRY_CALLSIGN
-    uint16_t sequence_count; // only the low 14 bits are sent, so it wraps at 0x4000
-    uint32_t timestamp;      // unix time
+    uint32_t timestamp;      // unix time. TODO: NOT SET YET: telemetry_collect() should stamp it
     uint32_t boot_timestamp; // unix time of the last boot
 
     uint8_t last_bootloader; // bootloader copy that we last booted from
@@ -130,14 +132,13 @@ typedef struct {
     tel_eps_data_t eps;
     tel_state_machine_data_t state_machine;
     tel_adcs_data_t adcs;
-    uint16_t command_timestamps[16]; // sent timestamps of received commands
+    uint32_t command_timestamps[16]; // sent timestamps of received commands
     tel_mram_data_t mram;
     tel_os_error_data_t os_errors;
 } tel_downlink_t;
 
 /**
- * Serializes a downlink packet: an SPP telemetry packet with a secondary header, whose user data field
- * holds every field of downlink, in order
+ * Serializes a downlink: every field of downlink, in order
  *
  * \param downlink - telemetry to send
  * \param buf - buffer to write into; exactly TELEMETRY_DOWNLINK_SIZE bytes are written on success
@@ -147,85 +148,162 @@ typedef struct {
  */
 bool telemetry_downlink_serialize(const tel_downlink_t *downlink, uint8_t *buf, size_t buf_size);
 
-/* ---------- UPLINK ---------- */
-
-#define TELEMETRY_UPLINK_MAX_COMMANDS 16
-#define TELEMETRY_DISPLAY_BITMAP_SIZE 8192 // 256 x 64 pixels, 4 bits (16 levels) each
-#define TELEMETRY_KEPLER_COEFFICIENTS 6
-
-// Command IDs, sent as 2 bytes
-typedef enum {
-    TEL_CMD_ENABLE_DISABLE_DEVICE = 0,
-    TEL_CMD_SET_DEVICE_BROKEN = 1,
-    TEL_CMD_UPDATE_DISPLAY = 2,
-    TEL_CMD_SLEEP = 3,
-    TEL_CMD_REBOOT = 4,
-    TEL_CMD_TAKE_PICTURE = 5,
-    TEL_CMD_SEND_PICTURES = 6,
-    TEL_CMD_SET_KEPLER_COEFFICIENTS = 7,
-    TEL_CMD_SET_UNIX_TIME = 8,
-    TEL_CMD_SET_ADCS_OPMODE = 9,
-    TEL_CMD_ADCS_UPDATE_PARAMETERS = 10,
-    TEL_CMD_SET_POWER_MODE = 11,
-    TEL_CMD_COUNT, // not a command
-} tel_command_id_t;
-
-// Data for TEL_CMD_ADCS_UPDATE_PARAMETERS: a TLE's mean elements, in TLE line 2 order, plus its epoch and B*.
-// These are SGP4 mean elements: they must be copied from a TLE as is, not replaced with osculating Kepler elements.
-typedef struct {
-    double epoch_jd;           // TLE epoch, UTC, as a Julian date (a float32 or whole seconds would lose ~km of position)
-    float inclination;         // degrees
-    float raan;                // degrees, right ascension of the ascending node
-    float eccentricity;        // unitless, 0-1
-    float argument_of_perigee; // degrees
-    float mean_anomaly;        // degrees
-    float mean_motion;         // revolutions per day
-    float bstar;               // B* drag term, 1/earth radii
-} tel_adcs_parameters_t;
-
-typedef struct {
-    tel_command_id_t id;
-    uint32_t data_size;  // bytes of command data
-    const uint8_t *data; // raw command data; points into the parsed buffer
-    // Command data decoded according to id. TEL_CMD_UPDATE_DISPLAY has no member here; its bitmap is data
-    union {
-        uint16_t device; // a device_id_t; TEL_CMD_ENABLE_DISABLE_DEVICE, TEL_CMD_SET_DEVICE_BROKEN
-        uint32_t sleep_time;
-        uint8_t reboot;
-        uint32_t picture_timestamp;
-        int32_t picture_count;
-        float kepler_coefficients[TELEMETRY_KEPLER_COEFFICIENTS];
-        uint32_t unix_time;
-        uint16_t adcs_opmode; // a tel_adcs_opmode_t
-        tel_adcs_parameters_t adcs_parameters;
-        uint16_t power_mode;
-    } args;
-} tel_command_t;
-
-typedef struct {
-    char callsign[TELEMETRY_CALLSIGN_LENGTH]; // not NULL-terminated
-    uint32_t message_size;                    // size of the whole SPP packet, in bytes
-    uint16_t num_commands;
-    uint32_t timestamp; // when the uplink was sent
-    tel_command_t commands[TELEMETRY_UPLINK_MAX_COMMANDS];
-} tel_uplink_t;
+/**
+ * Fills in downlink with the current telemetry
+ *
+ * \param downlink - telemetry to fill in
+ */
+void telemetry_collect(tel_downlink_t *downlink);
 
 /**
- * Parses an uplink packet: an SPP telecommand packet whose user data field holds a preamble followed by
- * num_commands commands
+ * Updates the timestamp of last boot in the telemetry cache
  *
- * - No copy (on success, each command's data points into buf, so buf must outlive uplink)
- * - Bytes in buf past the end given by the SPP packet data length field are ignored
- * - Rejects the packet if message_size isn't the SPP packet's size, if there are more than
- *   TELEMETRY_UPLINK_MAX_COMMANDS commands, if a command is unknown or has the wrong data size for its ID,
- *   or if the commands don't exactly fill the packet
+ * \param boot_timestamp - timstamp of last boot
  *
- * \param uplink - uplink to fill in; left unspecified on failure
- * \param buf - pointer to start of the SPP packet
- * \param len - length, in bytes, of buf
- *
- * \return true on failure (malformed or unsupported), else false
+ * TODO: NOT CALLED YET: needs UTC, but the RTC only counts time since boot
  */
-bool telemetry_uplink_parse(tel_uplink_t *uplink, uint8_t *buf, size_t len);
+void telemetry_update_boot_timestamp(uint32_t boot_timestamp);
+
+/**
+ * Updates which bootloader was last booted from in telemetry cache
+ *
+ * \param bootloader - Last Bootloader number booted from
+ */
+void telemetry_update_last_bootloader(uint8_t bootloader);
+
+/**
+ * Updates the magnetometer registers inside the telemetry cache
+ *
+ * \param revid - revid register
+ * \param bist - bist register
+ *
+ * TODO: NOT CALLED YET: nothing reads the RM3100 REVID/BIST registers after init_rm3100()
+ */
+void telemetry_update_magnetometer_registers(uint8_t revid, uint8_t bist);
+
+/**
+ * Updates the magnetometer readings inside the telemetry cache
+ *
+ * \param raw - raw magnetometer data
+ * \param gain_adjusted - gain adjusted magnetometer data
+ *
+ * TODO: NOT CALLED YET: adcs_read_magnetometer() is a stub; call this from it once it uses magnetometer_read()
+ */
+void telemetry_update_magnetometer_readings(const mag_raw_reading_t *raw, const mag_data_t *gain_adjusted);
+
+/**
+ * Updates the magnetorquer data inside the telemetry cache
+ *
+ * \param mag_data - signed PWM duty of each magnetorquer, from -1.0 to 1.0
+ *
+ * TODO: NOT CALLED YET: adcs_drive_magnetorquers() doesn't drive the magnetorquers yet
+ */
+void telemetry_update_magnetorquer_data(const mag_torque_input_t *mag_data);
+
+/**
+ * Updates the photodiode data inside the telemetry cache
+ *
+ * \param photodiode_data - raw ADC codes, as from phd_read_all()
+ *
+ * TODO: NOT CALLED YET: adcs_read_photodiodes() is a stub; call this from it once it uses phd_read_all()
+ */
+void telemetry_update_photodiode_data(const uint16_t photodiode_data[PHD_COUNT]);
+
+/**
+ * Updates the gyroscope data inside the telemetry cache
+ *
+ * \param gyro_readings - gyroscope data to update, or NULL if the read failed. The last good rates are then kept and
+ * the gyroscope is marked as broken
+ */
+void telemetry_update_gyro_data(const SCH1_result_t *gyro_readings);
+
+/**
+ * Updates the camera data inside the telemetry cache
+ *
+ * \param camera_status - status of the camera
+ * \param last_capture_succeeded - whether the last capture succeeded
+ * \param resolution - resolution of the camera
+ *
+ * TODO: NOT CALLED YET: nothing defines how resolution is encoded in its byte
+ */
+void telemetry_update_camera_data(tel_device_status_t camera_status, bool last_capture_succeeded, uint8_t resolution);
+
+/**
+ * Updates the display status inside the telemetry cache
+ *
+ * \param display_status - status of the display
+ */
+void telemetry_update_display_data(tel_device_status_t display_status);
+
+/**
+ * Updates the UHF status inside the telemetry cache
+ *
+ * \param uhf_status - status of the UHF radio
+ */
+void telemetry_update_uhf_data(tel_device_status_t uhf_status);
+
+/**
+ * Updates the sband data inside the telemetry cache
+ *
+ * \param sband_status - status of the sband
+ * \param last_transmission_timestamp - timestamp of last sband transmission
+ *
+ * TODO: NOT CALLED YET: there is no S-band task
+ */
+void telemetry_update_sband_data(tel_device_status_t sband_status, uint32_t last_transmission_timestamp);
+
+/**
+ * Updates the ADCS data inside the telemetry cache
+ *
+ * \param adcs_data - ADCS data to update
+ *
+ * TODO: NOT CALLED YET: adcs_publish_telemetry() is a TODO, and adcs-c has no position getter
+ */
+void telemetry_update_adcs_data(const tel_adcs_data_t *adcs_data);
+
+/**
+ * Updates the eps data inside the telemetry cache
+ *
+ * \param pack_number - battery pack being read, from 0 to 3
+ * \param charge_percent - state of charge, in percent
+ * \param voltage - total pack voltage, in volts
+ * \param current - current, in amps
+ * \param temperature - temperature, in degrees Celsius
+ */
+void telemetry_update_eps_data(uint8_t pack_number, float charge_percent, float voltage, float current, float temperature);
+
+/**
+ * Updates the state data inside the telemetry cache
+ *
+ * TODO: Should input variables be included here? Where do those get recorded?
+ *
+ * \param state - current state
+ * \param transition_time - unix time of state transition
+ */
+void telemetry_update_state(uint8_t state, uint32_t transition_time);
+
+/**
+ * Updates the MRAM data inside the telemetry cache
+ *
+ * \param mram_data - MRAM data to update
+ */
+void telemetry_update_mram_data(const tel_mram_data_t *mram_data);
+
+/**
+ * Adds an OS error to the telemetry cache. The oldest of the last 8 errors is dropped
+ *
+ * \param error_code - code of the OS error
+ * \param error_timestamp - time of the OS error
+ *
+ * TODO: NOT CALLED YET: there is no one-byte error code scheme behind fatal()/warning()
+ */
+void telemetry_update_os_error(uint8_t error_code, uint32_t error_timestamp);
+
+/**
+ * Adds a received command to the telemetry cache. The oldest of the last 16 commands is dropped
+ *
+ * \param command_timestamp - sent timestamp of the received command
+ */
+void telemetry_update_command(uint32_t command_timestamp);
 
 #endif

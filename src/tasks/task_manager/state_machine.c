@@ -10,6 +10,8 @@
 #include "state_machine.h"
 
 #include "logging.h"
+#include "tasks/adcs/adcs_task.h"
+#include "telemetry/telemetry.h"
 
 // Whether state_machine_init() has run; no transition is taken before then
 static bool state_machine_initialised = false;
@@ -89,6 +91,11 @@ static void enter_state(state_id_t next_state) {
     current_state = next_state;
     inputs.last_transition_tick = xTaskGetTickCount();
 
+    // Same clock as the perovskite records; 0 if the RTC can't be read
+    int unix_time = 0, jd_scalar = 0;
+    float jd_frac = 0.0f;
+    telemetry_update_state((uint8_t)next_state, adcs_get_time(&unix_time, &jd_scalar, &jd_frac) == SUCCESS ? (uint32_t)unix_time : 0);
+
     if (mission_states[next_state].on_enter != NULL) {
         mission_states[next_state].on_enter(previous_state, &inputs);
     }
@@ -105,9 +112,6 @@ static void enter_state(state_id_t next_state) {
  */
 static void copy_input(input_update_t update, const input_t *const p_new_values) {
     switch (update) {
-        case BURN_WIRE_STATUS_UPDATE:
-            inputs.burn_wire_burned = p_new_values->burn_wire_burned;
-            break;
         case SUNLIGHT_STATUS_UPDATE:
             inputs.in_sunlight = p_new_values->in_sunlight;
             break;
@@ -136,7 +140,7 @@ static void copy_input(input_update_t update, const input_t *const p_new_values)
             inputs.perovskite_data_ready_for_downlink = p_new_values->perovskite_data_ready_for_downlink;
             break;
         case SBAND_READY_TRANSMIT_UPDATE:
-            inputs.sband_wants_to_transmit = p_new_values->sband_wants_to_transmit;
+            inputs.sband_pass_pending = p_new_values->sband_pass_pending;
             break;
         case SAFE_DISABLE_RADIO_UPDATE:
             inputs.safe_to_disable_radio = p_new_values->safe_to_disable_radio;

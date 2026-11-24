@@ -8,22 +8,37 @@
  * Authors: Noah Shepard
  */
 
+#include "ccsds/radio_routing.h"
 #include "cfdp_task.h"
 #include "cfdp_timer.h"
 #include "cfdp_utils.h"
 #include "globals.h"
 #include "libraries/cmd_dispatcher/cmd_dispatcher.h"
 #include "logging.h"
+#include "uhf_radio/uhf_radio_task.h"
+#include "uplink_commands.h"
 #include "watchdog_task.h"
 
-// CFDP Task Memory Structure & CFDP Memory Stores
+// CFDP Memory Stores. PDUs go to and from the radio through its uplink_queue/downlink_queue (see cfdp_utils.c)
 cfdp_task_memory_t cfdp_mem;
 cfdp_transaction_store_t cfdp_txn_store;
-#ifndef DO_NOT_BUILD_CFDP_BUFFERS
 cfdp_large_buff_t cfdp_large_buff;
-cfdp_small_buffs_t cfdp_small_buffs;
-#endif
+cfdp_small_buff_t cfdp_small_buffs[CFDP_SMALL_BUFF_COUNT];
 fin_txn_buf_t cfdp_fin_txn;
+
+// cfdp_recv receives a whole radio_queue_item_t into the buffer it's given
+_Static_assert(CFDP_MAX_PDU_SIZE >= sizeof(radio_queue_item_t), "CFDP receive buffer must hold a radio_queue_item_t");
+
+static void init_cfdp_buff(cfdp_buff_header_t *header, uint8_t *buff, bool is_large) {
+    header->ref_count = 0;
+    header->is_large = is_large;
+    header->buff = buff;
+    header->semaphore = xSemaphoreCreateMutexStatic(&header->_semaphore_mem);
+
+    if (header->semaphore == NULL) {
+        fatal("Failed to create cfdp buffer mutex!\n");
+    }
+}
 
 /**
  * \fn init_cfdp
@@ -44,6 +59,11 @@ QueueHandle_t init_cfdp(void) {
     }
 
     init_cfdp_timers(&cfdp_mem);
+
+    for (size_t i = 0; i < CFDP_SMALL_BUFF_COUNT; i++) {
+        init_cfdp_buff(&cfdp_small_buffs[i].header, cfdp_small_buffs[i].buff, false);
+    }
+    init_cfdp_buff(&cfdp_large_buff.header, cfdp_large_buff.buff, true);
 
     cfdp_fin_txn = (fin_txn_buf_t){0};
 
@@ -68,58 +88,117 @@ void main_cfdp(void *pvParameters) {
 
     command_t cmd_checkin = get_watchdog_checkin_command(current_task);
 
-    // Calculate the maximum time this task should block (and thus be unable to
-    // check in with the watchdog)
-    const TickType_t queue_block_time_ticks = get_command_queue_block_time_ticks(current_task);
     // Variable to hold commands popped off the queue
     command_t cmd;
     uint8_t recv_buff[CFDP_MAX_PDU_SIZE];
 
-    cfdp_txn_store.slot_free = true;
-    for (size_t i = 0; i < MAX_TRANSACTIONS; ++i) {
-        cfdp_txn_store.active[i] = false;
-    }
+    cfdp_txn_store = (cfdp_transaction_store_t){0};
 
     while (true) {
-        while (cfdp_txn_store.slot_free && xQueueReceive(current_task->command_queue, &cmd, queue_block_time_ticks) == pdPASS) {
-            info("cfdp: performing command\n");
-            exec_command_cfdp_request(&cmd);
-            info("cfdp: finished command\n");
+        // Taken before reading the uplink queue, so a PDU or turn start after this isn't counted as handled (see
+        // radio_routing.h)
+        const radio_link_view_t view = radio_link_view();
+
+        // A transaction only lives as long as its pass. Nothing can be sent with the link down, so it's just dropped
+        if (cfdp_txn_store.active && (!view.link_up || cfdp_txn_store.txn.pass != view.pass)) {
+            warning("cfdp: pass ended, dropping txn %lu\n", cfdp_txn_store.txn.transaction_id.seq_num);
+            cfdp_free_transaction();
+        }
+        // Notifications are only read while a transaction is active, so a cancel (e.g. the ground disabling transmit)
+        // or timeout that arrives as the link goes down would otherwise hit the next pass's transaction
+        if (!view.link_up) {
+            xTaskNotifyWait(0, CFDP_NOTIFY_ALL, NULL, 0);
         }
 
-        // handle CFDP State
-        if (cfdp_recv(recv_buff, TXN_FRAME) == 0 /* Whatever success status code is*/) {
-            info("cfdp: recieved PDU\n");
-            cfdp_process_pdu(recv_buff, TXN_FRAME);
+        TickType_t poll = pdMS_TO_TICKS(CFDP_POLL_MS);
+        if (!cfdp_txn_store.active) {
+            // Only start a new transaction once the last one has finished, and only during a pass. Take one command at
+            // a time: a put starts a transaction, and the rest of the queue waits until it's done
+            if (!view.link_up) {
+                vTaskDelay(poll);
+            } else if (xQueueReceive(current_task->command_queue, &cmd, poll) == pdPASS) {
+                radio_cfdp_set_busy();
+                exec_command_cfdp_request(&cmd);
+            }
+        } else {
+            // Timeouts and cancels arrive as notifications while a transaction is active
+            uint32_t events = 0;
+            if (xTaskNotifyWait(0, CFDP_NOTIFY_ALL, &events, poll) == pdTRUE) {
+                radio_cfdp_set_busy();
+                if (events & CFDP_NOTIFY_CANCEL) {
+                    cfdp_cancel_request();
+                }
+                if (events & CFDP_NOTIFY_INACTIVITY) {
+                    inactivity_timer_timeout();
+                }
+            }
         }
-        uint32_t elapsed_ms = 10; // how do i use RTC? / calculate this
 
-        for (size_t i = 0; i < MAX_TRANSACTIONS; i++) {
-            if (!cfdp_txn_store.active[i]) {
+        // Re-send once the ground has had a full turn to answer and hasn't
+        if (cfdp_txn_store.active && cfdp_txn_store.txn.retransmit_armed &&
+            (int32_t)(view.turns - cfdp_txn_store.txn.retransmit_turn) >= 0) {
+            radio_cfdp_set_busy();
+            cfdp_turn_retransmit();
+        }
+
+        // handle every PDU the radio has received. Checks the link now rather than view, which predates the wait: the
+        // queue is emptied when a pass starts, so a PDU in it is from this pass if the link is up
+        const bool link_up = radio_link_view().link_up;
+        int pdu_len;
+        uint8_t vcid;
+        while ((pdu_len = cfdp_recv(recv_buff, sizeof(recv_buff), &vcid)) != 0) {
+            if (pdu_len < 0) {
+                warning("cfdp: dropping malformed uplink packet\n");
                 continue;
             }
+            if (!link_up) {
+                warning("cfdp: dropping uplink packet from a pass that has ended\n");
+                continue;
+            }
+            info("cfdp: recieved PDU\n");
+            cfdp_process_pdu(recv_buff, (size_t)pdu_len, vcid);
+        }
 
-            // probably need to update elapsed_ms for each transaction
-            cfdp_result_t result;
+        cfdp_result_t result = CFDP_RESULT_COMPLETE;
+        if (cfdp_txn_store.active) {
+            cfdp_transaction_t *txn = &cfdp_txn_store.txn;
+
+            // Runs until the transaction is waiting on a received PDU, the downlink queue is full, or it has finished
             do {
-                result = cfdp_transact(&cfdp_txn_store.transactions[i], elapsed_ms);
+                result = cfdp_transact(txn);
             } while (result == CFDP_RESULT_IN_PROGRESS);
 
             if (result == CFDP_RESULT_COMPLETE) {
-                info("cfdp: transaction %lu complete\n", cfdp_txn_store.transactions[i].transaction_id.seq_num);
-                if (cfdp_txn_store.transactions[i].direction == CFDP_SEND) {
-                    info("cfdp: adding tracking for stale txn with seq: %d\n", cfdp_txn_store.transactions[i].transaction_id.seq_num);
+                info("cfdp: transaction %lu complete\n", txn->transaction_id.seq_num);
+                // The ground only sends us uplink command files, so every file we finish receiving is one
+                if (txn->direction == CFDP_RECV && txn->condition_code == CFDP_COND_NOERROR) {
+                    uplink_commands_dispatch(txn->buff_header, txn->file_size);
+                }
+                // Only class 2 sends get a FIN from the ground, so only they can get a stale one
+                if (txn->direction == CFDP_SEND && txn->reliable_mode) {
+                    info("cfdp: adding tracking for stale txn with seq: %d\n", txn->transaction_id.seq_num);
                     fin_txn_buf_push(&cfdp_fin_txn,
-                                     (fin_txn_t){.seq_num = cfdp_txn_store.transactions[i].transaction_id.seq_num,
-                                                 .src_entity_id = cfdp_txn_store.transactions[i].transaction_id.entity_id});
+                                     (fin_txn_t){.seq_num = txn->transaction_id.seq_num, .src_entity_id = txn->transaction_id.entity_id});
+                }
+                if (txn->direction == CFDP_SEND) {
+                    cfdp_send_complete(txn);
                 }
 
-                cfdp_free_transaction(&cfdp_txn_store, &cfdp_txn_store.transactions[i]);
+                cfdp_free_transaction();
             } else if (result == CFDP_RESULT_ERROR) {
-                warning("cfdp: transaction %lu ended with error\n", cfdp_txn_store.transactions[i].transaction_id.seq_num);
-                cfdp_free_transaction(&cfdp_txn_store, &cfdp_txn_store.transactions[i]);
+                warning("cfdp: transaction %lu ended with error\n", txn->transaction_id.seq_num);
+                cfdp_free_transaction();
             }
         }
+        // Done for this turn once nothing is left to send: a transaction waiting on the ground, or no transaction and no
+        // put waiting to start one. The UHF task yields the turn then
+        bool done = cfdp_txn_store.active ? (result == CFDP_RESULT_BLOCKED) : (uxQueueMessagesWaiting(current_task->command_queue) == 0);
+        if (done) {
+            radio_cfdp_set_done(view.inputs);
+        } else {
+            radio_cfdp_set_busy();
+        }
+
         if (should_checkin(current_task)) {
             enqueue_command(&cmd_checkin);
             debug("cfdp: Enqueued watchdog checkin command\n");

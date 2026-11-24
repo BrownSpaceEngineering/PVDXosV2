@@ -19,13 +19,12 @@
 #include "drivers/magnetorquer/magnetorquer_driver.h"
 #include "drivers/photodiode/photodiode_driver.h"
 #include "globals.h"
-#include "libraries/adcs/include/bdot.h"
 #include "libraries/adcs/include/body.h"
-#include "libraries/adcs/include/moments2currents.h"
 #include "libraries/adcs/include/photodiode_determination.h"
 #include "libraries/adcs/include/quat.h"
 #include "libraries/cmd_dispatcher/cmd_dispatcher.h"
 #include "logging.h"
+#include "telemetry/telemetry.h"
 #include "os_delay.h"
 #include "state_machine.h"
 #include "task_list.h"
@@ -42,9 +41,6 @@
 #define ADCS_UTC_SAVE_PERIOD_S 60u
 // A saved TLE older than this is not restored, since SGP4's error grows by around a km per day
 #define ADCS_TLE_MAX_RESTORE_AGE_DAYS 14.0
-// body() checks a TLE as soon as the sensors let it get that far, so a TLE that fails this many times is bad. It has
-// to be dropped: body() gives up on any step where it is handed a bad TLE, which would stop pointing for good.
-#define ADCS_TLE_MAX_ATTEMPTS 3
 // The photodiodes have to agree on sunlight or eclipse for this many steps in a row (about 1 s) before it is reported,
 // so that noise near the terminator doesn't flip the state machine's input back and forth
 #define ADCS_SUNLIGHT_DEBOUNCE_STEPS 10
@@ -62,14 +58,11 @@ static const float MTQ_FULL_DUTY_CURRENT_A[3] = {0.156f, 0.156f, 0.104f};
 #define MTQ_REFERENCE_TEMP_C      20.0f
 #define MTQ_COIL_TEMP_COEFF_PER_C 0.00393f
 
-// TODO(blocked on mechanical): set these sensor-to-body rotations from the PCB/CAD mounting (identity until then)
-static const float BODY_FROM_MAG[3][3] = {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}};
-static const float BODY_FROM_GYRO[3][3] = {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}};
-
-// The same values as the uplinked and downlinked tel_adcs_opmode_t
+// The same values as the uplinked and downlinked tel_adcs_opmode_t. body() runs every step in both; the mode is
+// passed to it with body_set_detumble_only(), and body() does all of the control (B-dot, hand-off, pointing).
 typedef enum {
-    ADCS_MODE_DO_POINT = TEL_ADCS_OPMODE_POINT,              // body() whenever possible, B-dot whenever it is not pointing
-    ADCS_MODE_DETUMBLE_ONLY = TEL_ADCS_OPMODE_DETUMBLE_ONLY, // B-dot only; body() is not called
+    ADCS_MODE_DO_POINT = TEL_ADCS_OPMODE_POINT,              // B-dot until body() hands off to pointing
+    ADCS_MODE_DETUMBLE_ONLY = TEL_ADCS_OPMODE_DETUMBLE_ONLY, // B-dot only; body() never hands off
 } adcs_mode_t;
 
 // All of this is only touched by the ADCS task itself: commands reach it through its queue
@@ -82,9 +75,8 @@ static uint8_t sunlight_disagree_steps = 0;
 
 static uint32_t last_utc_save_time = 0;
 
-static adcs_tle_t pending_tle; // a TLE waiting for body() to accept it; only valid if tle_pending is set
+static adcs_tle_t pending_tle; // a TLE waiting for body() to look at it; only valid if tle_pending is set
 static bool tle_pending = false;
-static uint8_t tle_attempts = 0;
 
 // Copied out by adcs_get_telemetry(), which runs on other tasks
 static tel_adcs_data_t telemetry_snapshot;
@@ -92,6 +84,11 @@ static tel_adcs_data_t telemetry_snapshot;
 /* ---------- ORBIT AND TIME ---------- */
 
 status_t adcs_get_time(int *const unix_time, int *const jd_scalar, float *const jd_frac) {
+#ifdef PLANT_SIM
+    // body() has to see the plant's simulated time, which advances by a fixed step per tick rather than in real time
+    return adcs_mock_get_time(unix_time, jd_scalar, jd_frac);
+#endif
+
     uint32_t utc;
     const status_t result = utc_get(&utc);
     if (result != SUCCESS) {
@@ -111,11 +108,10 @@ static status_t offer_tle(const adcs_tle_t *const tle) {
 
     pending_tle = *tle;
     tle_pending = true;
-    tle_attempts = 0;
     return SUCCESS;
 }
 
-void adcs_tle_from_uplink(const tel_adcs_parameters_t *const params, adcs_tle_t *const tle) {
+void adcs_tle_from_uplink(const uplink_adcs_parameters_t *const params, adcs_tle_t *const tle) {
     // body() takes the mean elements in a different order from TLE line 2, and in radians
     tle->mean[0] = params->mean_motion;
     tle->mean[1] = params->eccentricity;
@@ -131,21 +127,22 @@ const float *adcs_get_tle_update(void) {
     return tle_pending ? pending_tle.mean : NULL;
 }
 
-// Stops offering the pending TLE once body() has either accepted it or had enough chances to
-static void resolve_pending_tle(const bool body_saw_tle) {
+// Stops offering the pending TLE once body() has looked at it. body() counts every TLE it accepts or rejects, so a
+// change in either counter across the body() call means it saw this one; if neither changed (no trusted time yet, or it
+// returned early on a bad gyro sample while pointing) the TLE stays pending for the next step. A rejected TLE has used
+// up its metadata in body(), so it is dropped rather than retried: the ground resends the whole TLE (tle_last_reject
+// says why, see the BODY_ORBIT_* codes in body.h).
+static void resolve_pending_tle(const body_sensor_rejects_t *const before, const body_sensor_rejects_t *const after) {
     if (!tle_pending) {
         return;
     }
 
-    adcs_tle_t committed;
-    const bool committed_valid = body_get_tle(committed.mean, &committed.bstar, &committed.epoch_jd);
-    if (committed_valid && memcmp(committed.mean, pending_tle.mean, sizeof(committed.mean)) == 0 &&
-        memcmp(&committed.epoch_jd, &pending_tle.epoch_jd, sizeof(committed.epoch_jd)) == 0) {
+    if (after->tle_accepted != before->tle_accepted) {
         info("adcs: TLE accepted\n");
         adcs_persist_save_tle(&pending_tle);
         tle_pending = false;
-    } else if (body_saw_tle && ++tle_attempts >= ADCS_TLE_MAX_ATTEMPTS) {
-        warning("adcs: dropped a TLE that body() rejected\n");
+    } else if (after->tle_rejected != before->tle_rejected) {
+        warning("adcs: body() rejected the TLE (reason %u), dropped it\n", after->tle_last_reject);
         tle_pending = false;
     }
 }
@@ -237,11 +234,13 @@ void exec_command_adcs(command_t *const p_cmd) {
     switch (p_cmd->operation) {
         case OPERATION_ADCS_DO_POINT:
             adcs_mode = ADCS_MODE_DO_POINT;
+            body_set_detumble_only(false);
             info("adcs: mode set to do point\n");
             p_cmd->result = SUCCESS;
             break;
         case OPERATION_ADCS_DETUMBLE_ONLY:
             adcs_mode = ADCS_MODE_DETUMBLE_ONLY;
+            body_set_detumble_only(true);
             info("adcs: mode set to detumble only\n");
             p_cmd->result = SUCCESS;
             break;
@@ -264,56 +263,27 @@ void exec_command_adcs(command_t *const p_cmd) {
 
 /* ---------- CONTROL ---------- */
 
-// Same requirement as body()'s own magnetometer check: finite and non-zero
-static bool mag_usable(const float *const mag) {
-    const float norm_squared = mag[0] * mag[0] + mag[1] * mag[1] + mag[2] * mag[2];
-    return isfinite(norm_squared) && norm_squared > 0.0f;
-}
-
-static void adcs_detumble(const float *const last_mag, const float *const mag, const float dt, float *const currents) {
-    // moment2current3axis's clamp lets NaN through, so a bad reading has to be stopped here
-    if (!mag_usable(last_mag) || !mag_usable(mag)) {
-        memset(currents, 0, 3 * sizeof(float));
-        return;
-    }
-
-    float moments[3];
-    Bdot(mag, last_mag, BDOT_GAIN, dt, moments);
-    moment2current3axis(moments, Imax, currents);
-}
-
 void adcs_compute_currents(const float *const last_mag, const float *const mag, const float *const gyro, const float *const photodiodes,
                            const float dt, float *const currents) {
-    if (adcs_mode == ADCS_MODE_DO_POINT) {
-        int unix_time;
-        int jd_scalar;
-        float jd_frac;
+    // body() does all of the control, in both modes: B-dot detumbling (with its own coil quiet period, before the first
+    // TLE, without trusted UTC, and with a failed gyro), the hand-off, pointing, and dropping back to B-dot on a fault
+    // or in detumble-only mode. Its currents are used as they are.
+    int unix_time = 0;
+    int jd_scalar = 0;
+    float jd_frac = 0.0f;
+    const bool time_valid = adcs_get_time(&unix_time, &jd_scalar, &jd_frac) == SUCCESS;
 
-        if (adcs_get_time(&unix_time, &jd_scalar, &jd_frac) == SUCCESS) {
-            body(last_mag, mag, gyro, photodiodes, adcs_get_tle_update(), unix_time, jd_scalar, jd_frac, dt, currents);
-
-            // body() bails before it looks at the TLE if the magnetometer or gyro readings are unusable
-            const bool gyro_finite = isfinite(gyro[0]) && isfinite(gyro[1]) && isfinite(gyro[2]);
-            resolve_pending_tle(gyro_finite && mag_usable(last_mag) && mag_usable(mag));
-
-            if (body_is_pointing()) {
-                return;
-            }
-        }
-    }
-
-    // Not pointing. body() may already have run this same B-dot, but it also gives up with zero currents for reasons
-    // that don't stop B-dot (no TLE yet, a rejected TLE, a failed gyro read), and it can't tell us which happened.
-    adcs_detumble(last_mag, mag, dt, currents);
+    // static: the counters struct is a few hundred bytes, and the ADCS task's stack is tight (see adcs_task.h)
+    static body_sensor_rejects_t before;
+    static body_sensor_rejects_t after;
+    body_get_sensor_rejects(&before);
+    // Without trusted UTC, body() leaves a pending TLE untouched, so it stays pending until the time is set
+    body(last_mag, mag, gyro, photodiodes, adcs_get_tle_update(), unix_time, jd_scalar, jd_frac, time_valid, dt, currents);
+    body_get_sensor_rejects(&after);
+    resolve_pending_tle(&before, &after);
 }
 
 /* ---------- SENSORS ---------- */
-
-static void rotate_to_body(const float rotation[3][3], const float *const sensor_frame, float *const body_frame) {
-    for (size_t row = 0; row < 3; row++) {
-        body_frame[row] = rotation[row][0] * sensor_frame[0] + rotation[row][1] * sensor_frame[1] + rotation[row][2] * sensor_frame[2];
-    }
-}
 
 static void handle_read_failure(const device_id_t device, const char *const name) {
     warning("adcs: %s read failed\n", name);
@@ -359,8 +329,10 @@ status_t adcs_read_magnetometer(float *const mag_tesla) {
         return result;
     }
 
-    const float sensor_frame[3] = {reading.x * MICROTESLA_TO_TESLA, reading.y * MICROTESLA_TO_TESLA, reading.z * MICROTESLA_TO_TESLA};
-    rotate_to_body(BODY_FROM_MAG, sensor_frame, mag_tesla);
+    // Left in the magnetometer's own [U8, U9, U10] axes: body() maps them to the body frame itself (sensor_frames.h)
+    mag_tesla[0] = reading.x * MICROTESLA_TO_TESLA;
+    mag_tesla[1] = reading.y * MICROTESLA_TO_TESLA;
+    mag_tesla[2] = reading.z * MICROTESLA_TO_TESLA;
     return SUCCESS;
 }
 
@@ -369,15 +341,19 @@ status_t adcs_read_gyro(float *const gyro_rad_s) {
     const status_t result = gyro_read(&reading);
 
     if (result != SUCCESS) {
+        telemetry_update_gyro_data(NULL);
         handle_read_failure(GYROSCOPE_ID, "gyro");
         for (size_t i = 0; i < 3; i++) {
             gyro_rad_s[i] = NAN;
         }
         return result;
     }
+    telemetry_update_gyro_data(&reading);
 
-    const float sensor_frame[3] = {reading.Rate1[0] * DEG_TO_RAD, reading.Rate1[1] * DEG_TO_RAD, reading.Rate1[2] * DEG_TO_RAD};
-    rotate_to_body(BODY_FROM_GYRO, sensor_frame, gyro_rad_s);
+    // Left in the gyro chip's own axes: body() maps them to the body frame itself (sensor_frames.h)
+    for (size_t i = 0; i < 3; i++) {
+        gyro_rad_s[i] = reading.Rate1[i] * DEG_TO_RAD;
+    }
     return SUCCESS;
 }
 
@@ -399,7 +375,7 @@ status_t adcs_read_photodiodes(float *const photodiodes) {
 }
 
 // A failed read is all zeros, which would look like eclipse, so it restarts the count instead of counting towards one
-static void update_sunlight(const float *const photodiodes, const bool photodiodes_valid) {
+void adcs_update_sunlight(const float *const photodiodes, const bool photodiodes_valid) {
     float sun_vector[3];
     if (!photodiodes_valid || get_vec_from_photodiode_readings(photodiodes, sun_vector) == in_sunlight) {
         sunlight_disagree_steps = 0;
@@ -417,7 +393,7 @@ void adcs_read_sensors(float *const mag_tesla, float *const gyro_rad_s, float *c
     sensor_fault = false;
     adcs_read_magnetometer(mag_tesla);
     adcs_read_gyro(gyro_rad_s);
-    update_sunlight(photodiodes, adcs_read_photodiodes(photodiodes) == SUCCESS);
+    adcs_update_sunlight(photodiodes, adcs_read_photodiodes(photodiodes) == SUCCESS);
 }
 
 /* ---------- ACTUATORS, TELEMETRY AND STATE MACHINE ---------- */
@@ -441,7 +417,7 @@ void adcs_drive_magnetorquers(const float *const currents) {
 void adcs_publish_telemetry(void) {
     tel_adcs_data_t telemetry = {0};
 
-    // these are frozen while in detumble only, since body() is not running
+    // body() runs in both modes, so these stay live in detumble only too
     float q_body_to_eci[4];
     const bool attitude_valid = body_get_attitude(q_body_to_eci);
     if (attitude_valid) {

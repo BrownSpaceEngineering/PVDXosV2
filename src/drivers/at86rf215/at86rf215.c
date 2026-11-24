@@ -513,10 +513,22 @@ at86rf215_set_seln(struct at86rf215 *h, uint8_t enable)
  * @param h the device handle
  * @param us the delay in microseconds
  */
+/*
+ * Before the scheduler starts the FreeRTOS tick count doesn't advance, so the
+ * driver's timeouts would never expire. Every timeout loop delays through
+ * at86rf215_delay_us(), so until then the time delayed there stands in for
+ * the clock. It ignores the time spent outside those delays, so a timeout can
+ * run long but never short.
+ */
+static uint64_t prescheduler_delayed_us = 0;
+
 __attribute__((weak)) void
 at86rf215_delay_us(struct at86rf215 *h, uint32_t us)
 {
   (void)h;
+  if (xTaskGetSchedulerState() == taskSCHEDULER_NOT_STARTED) {
+    prescheduler_delayed_us += us;
+  }
   os_delay_us(us);
 }
 
@@ -529,6 +541,10 @@ at86rf215_delay_us(struct at86rf215 *h, uint32_t us)
 __attribute__((weak)) size_t
 at86rf215_get_time_ms(struct at86rf215 *h)
 {
+  (void)h;
+  if (xTaskGetSchedulerState() == taskSCHEDULER_NOT_STARTED) {
+    return (size_t)(prescheduler_delayed_us / 1000u);
+  }
   return (size_t)(xTaskGetTickCount() * portTICK_PERIOD_MS);
 }
 
@@ -1516,7 +1532,7 @@ at86rf215_set_agc(struct at86rf215 *h, at86rf215_radio_t radio,
 
   uint8_t val = (cnf->input << 6) | (cnf->avgs << 4) | (cnf->reset << 3) |
                 (cnf->freeze << 1) | cnf->enable;
-  ret = at86rf215_reg_write_8(h, val, reg);
+  ret         = at86rf215_reg_write_8(h, val, reg);
   if (ret) {
     return ret;
   }
@@ -1723,7 +1739,7 @@ at86rf215_set_aux_settings(struct at86rf215 *h, at86rf215_radio_t radio,
 
   uint8_t val = (cnf->extlnabyp << 7) | (cnf->agcmap << 5) | (cnf->avext << 4) |
                 (cnf->aven << 3) | cnf->pavc;
-  ret = at86rf215_reg_write_8(h, val, reg);
+  ret         = at86rf215_reg_write_8(h, val, reg);
   if (ret) {
     return ret;
   }
@@ -2519,8 +2535,8 @@ at86rf215_bb_enable(struct at86rf215 *h, at86rf215_radio_t radio, uint8_t en)
     return ret;
   }
   const struct at86rf215_bb_conf *conf = &h->priv.bbc[radio];
-  uint8_t val = conf->pt | ((en & 0x1) << 2) | (conf->fcst << 3) |
-                (conf->txafcs << 4) | (conf->fcsfe << 6) | (conf->ctx << 7);
+  uint8_t  val = conf->pt | ((en & 0x1) << 2) | (conf->fcst << 3) |
+                 (conf->txafcs << 4) | (conf->fcsfe << 6) | (conf->ctx << 7);
   uint16_t reg = 0;
   if (radio == AT86RF215_RF09) {
     reg = REG_BBC0_PC;
@@ -2844,7 +2860,7 @@ at86rf215_iq_conf(struct at86rf215 *h, at86rf215_radio_t radio,
   }
   uint8_t val = conf->eec | (conf->cmv1v2 << 1) | (conf->cmv << 2) |
                 (conf->drv << 4) | (conf->extlb << 7);
-  ret = at86rf215_reg_write_8(h, val, REG_RF_IQIFC0);
+  ret         = at86rf215_reg_write_8(h, val, REG_RF_IQIFC0);
   if (ret) {
     return ret;
   }

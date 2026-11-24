@@ -8,6 +8,7 @@
  * Authors: Oren Kohavi, Tanish Makadia, Siddharta Laloux
  */
 
+#include "libraries/cmd_dispatcher/cmd_dispatcher.h"
 #include "watchdog_task.h"
 #include "cmd_dispatcher.h"
 #include "os_delay.h"

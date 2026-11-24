@@ -39,10 +39,11 @@
 #define MRAM_CAMERA_SIZE (0x61000u)
 
 typedef enum {
-    MRAM_REGION_BURN_RECORD, // main.c's burn wait progress
-    MRAM_REGION_ADCS,        // TLE and UTC, see adcs_persist.c
-    MRAM_REGION_PEROVSKITE,  // Sweep ring buffer, see perovskite_task.h
-    MRAM_REGION_CAMERA,      // Last JPEG from capture_mram(), see arducam_driver.h
+    MRAM_REGION_BURN_RECORD,    // main.c's burn wait progress
+    MRAM_REGION_ADCS,           // TLE and UTC, see adcs_persist.c
+    MRAM_REGION_PEROVSKITE,     // Sweep ring buffer, see perovskite_task.h
+    MRAM_REGION_CAMERA,         // Last JPEG from capture_mram(), see arducam_driver.h
+    MRAM_REGION_DISPLAY_BITMAP, // Last uplinked display bitmap
     MRAM_REGION_COUNT,
 } mram_region_t;
 
@@ -74,5 +75,12 @@ bool mram_region_write(mram_region_t region, uint32_t offset, const void *data, 
  */
 bool mram_record_save(mram_region_t region, uint32_t offset, const void *payload, uint32_t size);
 bool mram_record_load(mram_region_t region, uint32_t offset, void *payload, uint32_t size);
+
+/*
+ * Finds the payload of a record saved with mram_record_save(), for a record too big to load into RAM at once: its
+ * bytes can be read in pieces with mram_region_read() from *p_payload_offset within `region`. Returns false if the
+ * record's header doesn't hold `size`. Only the header on the chip mram_region_read() reads is checked, not the CRC.
+ */
+bool mram_record_payload_offset(mram_region_t region, uint32_t offset, uint32_t size, uint32_t *p_payload_offset);
 
 #endif // MRAM_MAP_H

@@ -1,7 +1,15 @@
 /**
-* Extracted helpers from `radio-task` for UHF functionality
-* Taken by Alex on 10/29. should rip these out before merge.
-*/
+ * DIVERGED COPY, used only by the burn sequence (src/burn/burn_uhf.c).
+ *
+ * Extracted from `radio-task` by Alex on 10/29, and kept separate from the UHF radio task's own helpers in
+ * src/tasks/uhf_radio/uhf_radio_task.c. The functions have a burn_ prefix so that both copies can link. They are NOT
+ * interchangeable. This copy differs in that it:
+ *   - sets rf_femode_09 to AT86RF215_RF_FEMODE0 (the radio task uses AT86RF215_RF_FEMODE1)
+ *   - clears EXTLNABYP in AUXS during init (the radio task does not)
+ *   - has the AT86_MR_FSK_LINK config (the radio task does not)
+ *
+ * TODO: merge into one implementation. Which FEMODE is right for RF09 has to be decided and tested on hardware first.
+ */
 
 #ifndef AT86_PVDX_H
 #define AT86_PVDX_H
@@ -49,19 +57,19 @@ typedef struct
 } at86_irqs_t;
 
 int
-at86_init_pvdx(struct at86rf215 *radio);
+burn_at86_init_pvdx(struct at86rf215 *radio);
 int
-change_at86_config(struct at86rf215 *h, at86_config_t config);
+burn_change_at86_config(struct at86rf215 *h, at86_config_t config);
 int
-at86_check_health(struct at86rf215 *h, at86_health_t *health);
+burn_at86_check_health(struct at86rf215 *h, at86_health_t *health);
 
 at86_irqs_t
-at86_read_irqs(struct at86rf215 *h);
+burn_at86_read_irqs(struct at86rf215 *h);
 int
-at86_go_txprep(struct at86rf215 *h);
+burn_at86_go_txprep(struct at86rf215 *h);
 int
-at86_go_rx(struct at86rf215 *h);
+burn_at86_go_rx(struct at86rf215 *h);
 int
-at86_send_frame(struct at86rf215 *h, const uint8_t *buf, size_t sz);
+burn_at86_send_frame(struct at86rf215 *h, const uint8_t *buf, size_t sz);
 
 #endif // AT86_PVDX_H
