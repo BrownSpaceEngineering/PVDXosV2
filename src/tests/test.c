@@ -2,6 +2,7 @@
 #include "tests/test.h"
 
 #include <math.h>
+#include <stdint.h>
 #include <string.h>
 
 #include "ccsds/spp.h"
@@ -43,31 +44,31 @@ void test_float(void);
 void test_pmb(void);
 
 void tests_run(void) {
-#ifdef TEST_SPP
+    #ifdef TEST_SPP
     test_spp();
-#endif
-#ifdef TEST_CFDP
+    #endif
+    #ifdef TEST_CFDP
     test_cfdp();
-#endif
-#ifdef TEST_USLP
+    #endif
+    #ifdef TEST_USLP
     test_uslp();
-#endif
-#ifdef TEST_PMB
+    #endif
+    #ifdef TEST_PMB
     test_pmb();
-#endif
-#ifdef TEST_FLOAT
+    #endif
+    #ifdef TEST_FLOAT
     test_float();
-#endif
-#ifdef TEST_TELEMETRY
+    #endif
+    #ifdef TEST_TELEMETRY
     test_telemetry_downlink();
     test_telemetry_setters();
-#endif
-#ifdef TEST_UPLINK
+    #endif
+    #ifdef TEST_UPLINK
     test_uplink_parse();
-#endif
-#ifdef TEST_PUSP
+    #endif
+    #ifdef TEST_PUSP
     test_pusp();
-#endif
+    #endif
     test_log("test results: %d/%d passed", tests_passed, tests_total);
 }
 
@@ -1202,9 +1203,9 @@ void test_uplink_parse(void) {
     PVDX_ASSERT_MSG(uplink_packet_parse(&packet, bad_device_state, sizeof(bad_device_state)), "unknown device state rejected\n");
 }
 
-// Tests that the hard float ABI works: FPU arithmetic, float args/returns passed in s registers, and libm calls.
-// Operands are volatile and the helpers are noinline so the compiler can't constant fold the work away.
-#define FLOAT_EPS 1e-5f
+    // Tests that the hard float ABI works: FPU arithmetic, float args/returns passed in s registers, and libm calls.
+    // Operands are volatile and the helpers are noinline so the compiler can't constant fold the work away.
+    #define FLOAT_EPS 1e-5f
 static bool float_close(float a, float b) {
     return fabsf(a - b) < FLOAT_EPS;
 }
@@ -1267,11 +1268,11 @@ void test_float(void) {
 // passes, every pixel is swept from 0 to full scale and the INA226 bus voltage is checked against the commanded
 // value. Requires the PMB hardware; results are reported over RTT.
 
-#define PMB_TEST_STEP_MV 50U                                              // Pixel voltage step
-#define PMB_TEST_TOLERANCE_MV 50                                          // Allowed |measured - commanded| pixel voltage
-#define PMB_TEST_SETTLE_MS 5U                                             // Opamp settling time after a DAC step
-#define PMB_TEST_CONVERSION_TIMEOUT_MS (4U * INA226_CONVERSION_PERIOD_MS) // Two conversions plus margin
-#define PMB_TEST_CHAIN_MIN_SWING_MV (PVD_PIXEL_FULL_SCALE_MV / 2)         // Minimum response to a 0 -> full-scale step
+    #define PMB_TEST_STEP_MV 50U                                              // Pixel voltage step
+    #define PMB_TEST_TOLERANCE_MV 50                                          // Allowed |measured - commanded| pixel voltage
+    #define PMB_TEST_SETTLE_MS 5U                                             // Opamp settling time after a DAC step
+    #define PMB_TEST_CONVERSION_TIMEOUT_MS (4U * INA226_CONVERSION_PERIOD_MS) // Two conversions plus margin
+    #define PMB_TEST_CHAIN_MIN_SWING_MV (PVD_PIXEL_FULL_SCALE_MV / 2)         // Minimum response to a 0 -> full-scale step
 
 static void test_pmb_sweep_pixel(uint8_t pixel) {
     PVDX_ASSERT_MSG(adg734_select_pixel(pixel) == SUCCESS, "pmb select pixel\n");
@@ -1348,6 +1349,22 @@ static int test_pmb_sanity(void) {
 
     // I2C bus and device presence
     test_pmb_scan_bus();
+
+    // BRUTE FORCE I2C ADDRS if needed:
+    /*
+    test_log(" -------- probing ina226 -------- \n");
+    for (uint8_t i = 0; i < UINT8_MAX; ++i) {
+        PVDX_ASSERT_MSG(pmb_i2c_probe(i) == SUCCESS, "pmb ina226 acks at: \n");
+        test_log("%d\n", i);
+    }
+
+    test_log("-------- probing mcp23017 --------\n");
+    for (uint8_t i = 0; i < UINT8_MAX; ++i) {
+        PVDX_ASSERT_MSG(pmb_i2c_probe(i) == SUCCESS, "pmb mcp23017 acks at: \n");
+        test_log("%d\n", i);
+    }
+    */
+
     PVDX_ASSERT_MSG(pmb_i2c_probe(INA226_I2C_ADDR) == SUCCESS, "pmb ina226 acks at 0x40\n");
     PVDX_ASSERT_MSG(pmb_i2c_probe(MCP23017_I2C_ADDR) == SUCCESS, "pmb mcp23017 acks at 0x20\n");
 

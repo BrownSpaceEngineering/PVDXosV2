@@ -513,10 +513,22 @@ at86rf215_set_seln(struct at86rf215 *h, uint8_t enable)
  * @param h the device handle
  * @param us the delay in microseconds
  */
+/*
+ * Before the scheduler starts the FreeRTOS tick count doesn't advance, so the
+ * driver's timeouts would never expire. Every timeout loop delays through
+ * at86rf215_delay_us(), so until then the time delayed there stands in for
+ * the clock. It ignores the time spent outside those delays, so a timeout can
+ * run long but never short.
+ */
+static uint64_t prescheduler_delayed_us = 0;
+
 __attribute__((weak)) void
 at86rf215_delay_us(struct at86rf215 *h, uint32_t us)
 {
   (void)h;
+  if (xTaskGetSchedulerState() == taskSCHEDULER_NOT_STARTED) {
+    prescheduler_delayed_us += us;
+  }
   os_delay_us(us);
 }
 
@@ -529,6 +541,10 @@ at86rf215_delay_us(struct at86rf215 *h, uint32_t us)
 __attribute__((weak)) size_t
 at86rf215_get_time_ms(struct at86rf215 *h)
 {
+  (void)h;
+  if (xTaskGetSchedulerState() == taskSCHEDULER_NOT_STARTED) {
+    return (size_t)(prescheduler_delayed_us / 1000u);
+  }
   return (size_t)(xTaskGetTickCount() * portTICK_PERIOD_MS);
 }
 

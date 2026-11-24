@@ -12,6 +12,7 @@
 #include "tasks/adcs/adcs_persist.h"
 
 #include "drivers/mram/mram_map.h"
+#include "logging.h"
 #include "tasks/adcs/adcs_task.h"
 
 // Offsets of the records in the ADCS MRAM region
@@ -24,18 +25,58 @@ _Static_assert(ADCS_UTC_RECORD_OFFSET + MRAM_RECORD_OVERHEAD + sizeof(uint32_t) 
 
 /* ---------- PUBLIC FUNCTIONS ---------- */
 
+#if defined(NO_MRAM)
+// A NO_MRAM build has no MRAM: nothing is saved, and nothing is restored on boot
+
 void adcs_persist_save_tle(const adcs_tle_t *const tle) {
+    (void)tle;
+}
+
+bool adcs_persist_load_tle(adcs_tle_t *const tle) {
+    (void)tle;
+    return false;
+}
+
+void adcs_persist_save_utc(const uint32_t unix_time) {
+    (void)unix_time;
+}
+
+bool adcs_persist_load_utc(uint32_t *const unix_time) {
+    (void)unix_time;
+    return false;
+}
+
+#else
+
+// A plant sim build (make PLANT_SIM=1) runs on a simulated orbit and clock, which must not replace the real saved state
+    #ifdef PLANT_SIM
+        #define ADCS_PERSIST_SKIP_IN_PLANT_SIM(ret)                                                                                        \
+            do {                                                                                                                           \
+                debug("adcs persist: skipped in plant sim build\n");                                                                       \
+                return ret;                                                                                                                \
+            } while (0)
+    #else
+        #define ADCS_PERSIST_SKIP_IN_PLANT_SIM(ret)
+    #endif
+
+void adcs_persist_save_tle(const adcs_tle_t *const tle) {
+    ADCS_PERSIST_SKIP_IN_PLANT_SIM();
     (void)mram_record_save(MRAM_REGION_ADCS, ADCS_TLE_RECORD_OFFSET, tle, sizeof(*tle));
 }
 
 bool adcs_persist_load_tle(adcs_tle_t *const tle) {
+    ADCS_PERSIST_SKIP_IN_PLANT_SIM(false);
     return mram_record_load(MRAM_REGION_ADCS, ADCS_TLE_RECORD_OFFSET, tle, sizeof(*tle));
 }
 
 void adcs_persist_save_utc(const uint32_t unix_time) {
+    ADCS_PERSIST_SKIP_IN_PLANT_SIM();
     (void)mram_record_save(MRAM_REGION_ADCS, ADCS_UTC_RECORD_OFFSET, &unix_time, sizeof(unix_time));
 }
 
 bool adcs_persist_load_utc(uint32_t *const unix_time) {
+    ADCS_PERSIST_SKIP_IN_PLANT_SIM(false);
     return mram_record_load(MRAM_REGION_ADCS, ADCS_UTC_RECORD_OFFSET, unix_time, sizeof(*unix_time));
 }
+
+#endif // NO_MRAM

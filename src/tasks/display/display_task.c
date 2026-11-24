@@ -68,7 +68,7 @@ status_t display_image(const color_t *const p_buffer) {
     debug("display: Displaying new image\n");
 
     display_set_buffer(p_buffer);
-    ret_err_status(display_update(), "display: Update failed");
+    ret_err_status(display_update(), "display: Update failed\n");
 
     return SUCCESS;
 }
@@ -84,7 +84,7 @@ status_t clear_image(void) {
     debug("display: Clearing currently displayed image\n");
 
     display_clear_buffer();
-    ret_err_status(display_update(), "display: Update failed");
+    ret_err_status(display_update(), "display: Update failed\n");
 
     return SUCCESS;
 }

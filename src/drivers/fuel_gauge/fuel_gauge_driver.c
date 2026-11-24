@@ -331,13 +331,13 @@ static status_t fg_read_pack_locked(uint8_t channel, fg_reading_t *out) {
     }
 
     memset(out, 0, sizeof(*out));
-    ret_err_status(fg_mux_select(channel), "fuel_gauge: channel select failed in read_pack");
+    ret_err_status(fg_mux_select(channel), "fuel_gauge: channel select failed in read_pack\n");
 
     uint16_t soc = 0, batt = 0, current = 0, temp = 0;
-    ret_err_status(fg_read_reg16(MAX17205_REG_REPSOC, &soc), "fuel_gauge: RepSOC read failed");
-    ret_err_status(fg_read_reg16(MAX17205_REG_BATT, &batt), "fuel_gauge: Batt read failed");
-    ret_err_status(fg_read_reg16(MAX17205_REG_CURRENT, &current), "fuel_gauge: Current read failed");
-    ret_err_status(fg_read_reg16(MAX17205_REG_TEMP, &temp), "fuel_gauge: Temp read failed");
+    ret_err_status(fg_read_reg16(MAX17205_REG_REPSOC, &soc), "fuel_gauge: RepSOC read failed\n");
+    ret_err_status(fg_read_reg16(MAX17205_REG_BATT, &batt), "fuel_gauge: Batt read failed\n");
+    ret_err_status(fg_read_reg16(MAX17205_REG_CURRENT, &current), "fuel_gauge: Current read failed\n");
+    ret_err_status(fg_read_reg16(MAX17205_REG_TEMP, &temp), "fuel_gauge: Temp read failed\n");
 
     out->soc_pct = fg_conv_soc(soc);
     out->pack_voltage = fg_conv_batt(batt);
