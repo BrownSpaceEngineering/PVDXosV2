@@ -11,7 +11,6 @@
 
 #include "task_manager_task.h"
 
-#include "cfdp/uplink_commands.h"
 #include "logging.h"
 #include "state_machine.h"
 #include "watchdog_task.h"
@@ -232,13 +231,16 @@ void exec_command_task_manager(command_t *const p_cmd) {
             p_cmd->result = SUCCESS;
             break;
         case OPERATION_REBOOT:
+            // Stop checking in: the watchdog task sees the task manager miss its check-in and resets the satellite
+            warning("task-manager: reboot requested by uplink, waiting for the watchdog to reset us\n");
+            while (true) {
+                vTaskDelay(pdMS_TO_TICKS(1000));
+            }
+            break;
         case OPERATION_TRANSMIT_ON_OFF:
         case OPERATION_SET_POWER_MODE:
             // TODO: uplinked commands that aren't implemented yet are thrown away
             warning("task-manager: operation %d not implemented, dropping command\n", p_cmd->operation);
-            if (p_cmd->data_type == CMD_DATA_UPLINK) {
-                uplink_cmd_release(&p_cmd->data.uplink_cmd);
-            }
             p_cmd->result = ERROR_NOT_READY;
             break;
         default:

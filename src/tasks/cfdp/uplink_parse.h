@@ -43,12 +43,9 @@ typedef enum uplink_cmd_type {
 
 typedef uint16_t uplink_cmd_type_t;
 
-// Data for ADCS_UPDATE_PARAMS: a TLE's mean elements, in TLE line 2 order, plus its epoch and B*.
-// These are SGP4 mean elements: they must be copied from a TLE as is, not replaced with osculating Kepler elements.
-// TODO: the ADCS command format is still being decided. The sheet adds fields after B* that aren't parsed yet: device
-// rotation matrices for the magnetometer and magnetorquer (int8_t[3]), flip magnetorquer current (3 bits), a B-dot
-// override ("for 1(?) hour, run B-dot only", 1 bit) and a dipole command ("turn off magnetorquers for 1(?) hour",
-// 1 bit). Its total of 36 bytes only covers the fields below
+// Data for ADCS_UPDATE_PARAMS (40 bytes on the wire): a TLE's mean elements, in TLE line 2 order, plus its epoch and B*,
+// then device settings. These are SGP4 mean elements: they must be copied from a TLE as is, not replaced with
+// osculating Kepler elements.
 typedef struct {
     double epoch_jd;           // TLE epoch, UTC, as a Julian date (a float32 or whole seconds would lose ~km of position)
     float inclination;         // degrees
@@ -58,7 +55,21 @@ typedef struct {
     float mean_anomaly;        // degrees
     float mean_motion;         // revolutions per day
     float bstar;               // B* drag term, 1/earth radii
+    // TODO: the sheet calls this "one matrix for magnetometer and magnetorquer respectively" but gives 3 bytes. Encoding TBD
+    int8_t device_rotation[3];
+    // The last byte holds these flags, from its most significant bit down; its 3 lowest bits must be 0.
+    // TODO: bit order is assumed (the sheet only gives the field order); confirm with the ground
+    bool flip_magnetorquer_current[3]; // bits 7, 6, 5: x, y, z
+    bool bdot_override;                // bit 4: run B-dot only, for 1(?) hour. TODO: duration not final
+    bool dipole_off;                   // bit 3: turn the magnetorquers off, for 1(?) hour. TODO: duration not final
 } uplink_adcs_parameters_t;
+
+#define UPLINK_ADCS_PARAMETERS_SIZE 40 // On the wire
+
+// Command data too big to fit in a command_t (the sheet's "MRAM" handling) is saved by uplink_commands_dispatch() as an
+// MRAM record (see mram_record_load()) in MRAM_REGION_ADCS_UPLINK, for the ADCS task to read
+#define UPLINK_MRAM_KEPLER_OFFSET 0x000      // float[UPLINK_KEPLER_COEFFICIENTS]
+#define UPLINK_MRAM_ADCS_PARAMS_OFFSET 0x100 // uplink_adcs_parameters_t
 
 typedef struct {
     uplink_cmd_type_t type;

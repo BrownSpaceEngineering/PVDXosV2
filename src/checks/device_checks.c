@@ -137,8 +137,11 @@ const char *device_name_of(device_id_t device_id) {
 // ------------------- check function definitions ----------------------
 // - these should wrap device drivers/hardware interaction functions
 
+// init_rm3100() only succeeds if REVID read back as RM3100_REVID_VALUE, so that's the REVID on success. 0 on failure
 bool check_magnetometer(void) {
-    return init_rm3100() == SUCCESS;
+    const bool okay = init_rm3100() == SUCCESS;
+    telemetry_update_magnetometer_registers(okay ? RM3100_REVID_VALUE : 0, 0);
+    return okay;
 }
 
 bool check_gyro(void) {

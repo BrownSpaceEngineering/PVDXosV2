@@ -23,6 +23,7 @@
 #include "os_delay.h"
 #include "telemetry/telemetry.h"
 #include "tests/test_pusp.h"
+#include "utc.h"
 
 // test.c is compiled in every build, but the tests use hooks (test_mem, uslp_test_last_frame) that only unit test builds
 // have. Which tests run is chosen in tests_run(); the linker drops the rest.
@@ -924,16 +925,32 @@ void test_telemetry_downlink(void) {
 }
 
     // Offsets of fields in a serialized downlink, from the order in telemetry_downlink_serialize()
+    #define TEL_OFF_TIMESTAMP 0
+    #define TEL_OFF_BOOT_TIMESTAMP 4
     #define TEL_OFF_LAST_BOOTLOADER 8
+    #define TEL_OFF_MAG_RAW 11  // after revid and bist
+    #define TEL_OFF_MAG_GAIN 23 // gain-adjusted readings
+    #define TEL_OFF_MAGNETORQUER 35
+    #define TEL_OFF_PHOTODIODE 47
+    #define TEL_OFF_GYRO_RAW 83
     #define TEL_OFF_GYRO_RATE 95
     #define TEL_OFF_GYRO_HEALTH 107
+    #define TEL_OFF_CAMERA 108 // health, last capture succeeded, resolution
     #define TEL_OFF_DISPLAY_HEALTH 111
     #define TEL_OFF_UHF_HEALTH 112
-    #define TEL_OFF_EPS 118 // charge, voltage, current, temperature; 4 floats each
+    #define TEL_OFF_SBAND 113 // health, last transmission timestamp
+    #define TEL_OFF_EPS 118   // charge, voltage, current, temperature; 4 floats each
     #define TEL_OFF_STATE_HISTORY 182
     #define TEL_OFF_TRANSITION_TIMES 190
+    #define TEL_OFF_STATE_INPUTS 222
+    #define TEL_OFF_ADCS 225 // position, attitude, gyro bias, covariance diagonal, then opmode, flags, filter resets, TLE epoch
     #define TEL_OFF_COMMANDS 293
     #define TEL_OFF_MRAM 357 // status, reflash count, reflash timestamps
+
+// The 4 bytes at p, big-endian
+static uint32_t tel_be32(const uint8_t *p) {
+    return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) | ((uint32_t)p[2] << 8) | p[3];
+}
 
 // Whether the 4 bytes at p are value, big-endian
 static bool tel_be32_is(const uint8_t *p, uint32_t value) {
@@ -994,6 +1011,42 @@ void test_telemetry_setters(void) {
     mram.reflash_timestamps[7] = 0x01020304;
     telemetry_update_mram_data(&mram);
 
+    telemetry_update_magnetometer_readings(&(mag_raw_reading_t){.x = 1, .y = -2, .z = 0x12345678},
+                                           &(mag_data_t){.x = 1.0f, .y = -2.5f, .z = 0.15625f});
+    telemetry_update_magnetorquer_data(&(mag_torque_input_t){.x = 0.5f, .y = -1.0f, .z = 0.25f});
+
+    uint16_t photodiodes[PHD_COUNT];
+    for (size_t i = 0; i < PHD_COUNT; i++) {
+        photodiodes[i] = (uint16_t)(0x0101u * i + 1);
+    }
+    telemetry_update_photodiode_data(photodiodes);
+
+    telemetry_update_sband_data(TEL_DEVICE_STATUS_BROKEN, 0xDEADBEEF);
+
+    tel_adcs_data_t adcs = {
+        .opmode = TEL_ADCS_OPMODE_DETUMBLE_ONLY,
+        .flags = TEL_ADCS_FLAG_POINTING | TEL_ADCS_FLAG_TLE_LOADED,
+        .filter_resets = 0x0102,
+        .tle_epoch_unix_time = 0xCAFEF00D,
+    };
+    adcs.position[0] = -2.5f;
+    adcs.covariance_diag[5] = 0.15625f;
+    telemetry_update_adcs_data(&adcs);
+
+    // A good capture, then a failed one, which must be what's sent
+    telemetry_update_camera_data(SUCCESS, 1);
+    telemetry_collect(&downlink);
+    PVDX_ASSERT_MSG(downlink.camera.health == TEL_DEVICE_STATUS_OK && downlink.camera.last_capture_succeeded,
+                    "camera OK after a capture\n");
+    telemetry_update_camera_data(ERROR_SANITY_CHECK_FAILED, 2);
+
+    // Bits 0, 9 and 12
+    telemetry_update_state_inputs(&(input_t){.in_sunlight = true, .utc_valid = true, .safe_to_disable_radio = true});
+
+    // Whether UTC is known depends on what ran before the tests, so the stamps are checked against utc.c either way
+    uint32_t boot_time = 0;
+    const bool utc_known = utc_get_boot_time(&boot_time) == SUCCESS;
+
     tel_collect_and_serialize(&downlink, buf);
 
     PVDX_ASSERT_MSG(buf[TEL_OFF_LAST_BOOTLOADER] == 1, "last bootloader\n");
@@ -1029,15 +1082,55 @@ void test_telemetry_setters(void) {
         buf[TEL_OFF_MRAM] == 0x39 && tel_be32_is(&buf[TEL_OFF_MRAM + 1], 3) && tel_be32_is(&buf[TEL_OFF_MRAM + 5 + 28], 0x01020304),
         "mram data\n");
 
+    PVDX_ASSERT_MSG(tel_be32_is(&buf[TEL_OFF_MAG_RAW], 1) && tel_be32_is(&buf[TEL_OFF_MAG_RAW + 4], 0xFFFFFFFEu) &&
+                        tel_be32_is(&buf[TEL_OFF_MAG_RAW + 8], 0x12345678) && tel_be_float_is(&buf[TEL_OFF_MAG_GAIN], 1.0f) &&
+                        tel_be_float_is(&buf[TEL_OFF_MAG_GAIN + 4], -2.5f) && tel_be_float_is(&buf[TEL_OFF_MAG_GAIN + 8], 0.15625f),
+                    "magnetometer readings\n");
+    PVDX_ASSERT_MSG(tel_be_float_is(&buf[TEL_OFF_MAGNETORQUER], 0.5f) && tel_be_float_is(&buf[TEL_OFF_MAGNETORQUER + 4], -1.0f) &&
+                        tel_be_float_is(&buf[TEL_OFF_MAGNETORQUER + 8], 0.25f),
+                    "magnetorquer duty\n");
+
+    ok = true;
+    for (size_t i = 0; i < PHD_COUNT; i++) {
+        ok = ok && buf[TEL_OFF_PHOTODIODE + 2 * i] == (uint8_t)(photodiodes[i] >> 8) &&
+            buf[TEL_OFF_PHOTODIODE + 2 * i + 1] == (uint8_t)photodiodes[i];
+    }
+    PVDX_ASSERT_MSG(ok, "photodiode codes, in order\n");
+
+    PVDX_ASSERT_MSG(buf[TEL_OFF_SBAND] == TEL_DEVICE_STATUS_BROKEN && tel_be32_is(&buf[TEL_OFF_SBAND + 1], 0xDEADBEEF), "sband data\n");
+
+    // opmode 1, flags 0x11, filter resets 0x0102, TLE epoch, after the 15 floats
+    static const uint8_t adcs_tail[] = {0x01, 0x11, 0x01, 0x02, 0xCA, 0xFE, 0xF0, 0x0D};
+    PVDX_ASSERT_MSG(tel_be_float_is(&buf[TEL_OFF_ADCS], -2.5f) && tel_be_float_is(&buf[TEL_OFF_ADCS + 56], 0.15625f) &&
+                        memcmp(&buf[TEL_OFF_ADCS + 60], adcs_tail, sizeof(adcs_tail)) == 0,
+                    "adcs data\n");
+
+    // 1.0, -2.5 and 0.15625 dps at 1600 counts per dps
+    PVDX_ASSERT_MSG(tel_be32_is(&buf[TEL_OFF_GYRO_RAW], 1600) && tel_be32_is(&buf[TEL_OFF_GYRO_RAW + 4], (uint32_t)-4000) &&
+                        tel_be32_is(&buf[TEL_OFF_GYRO_RAW + 8], 250),
+                    "gyro raw counts from the rates\n");
+    PVDX_ASSERT_MSG(
+        buf[TEL_OFF_CAMERA] == TEL_DEVICE_STATUS_BROKEN && buf[TEL_OFF_CAMERA + 1] == TELEMETRY_FALSE && buf[TEL_OFF_CAMERA + 2] == 2,
+        "camera broken after a failed capture\n");
+    PVDX_ASSERT_MSG(buf[TEL_OFF_STATE_INPUTS] == 0x01 && buf[TEL_OFF_STATE_INPUTS + 1] == 0x12 && buf[TEL_OFF_STATE_INPUTS + 2] == 0x00,
+                    "state inputs packed as bits\n");
+
+    if (utc_known) {
+        PVDX_ASSERT_MSG(tel_be32(&buf[TEL_OFF_BOOT_TIMESTAMP]) == boot_time && tel_be32(&buf[TEL_OFF_TIMESTAMP]) >= boot_time,
+                        "timestamps stamped from UTC\n");
+    } else {
+        PVDX_ASSERT_MSG(tel_be32(&buf[TEL_OFF_TIMESTAMP]) == 0 && tel_be32(&buf[TEL_OFF_BOOT_TIMESTAMP]) == 0,
+                        "timestamps 0 without UTC\n");
+    }
+
     test_log("telemetry call site tests:\n");
     // An uplink with no commands ("PVDXGS", message size 0, 0 commands, timestamp 0x0A0B0C0D) records its timestamp;
     // one from another callsign doesn't. No commands, so nothing is enqueued before the scheduler starts
     static uint8_t uplink[] = {'P', 'V', 'D', 'X', 'G', 'S', 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A, 0x0B, 0x0C, 0x0D};
-    cfdp_buff_header_t uplink_buff = {.buff = uplink};
-    uplink_commands_dispatch(&uplink_buff, sizeof(uplink));
+    uplink_commands_dispatch(uplink, sizeof(uplink));
     uplink[0] = 'X';
     uplink[15] = 0xFF;
-    uplink_commands_dispatch(&uplink_buff, sizeof(uplink));
+    uplink_commands_dispatch(uplink, sizeof(uplink));
     tel_collect_and_serialize(&downlink, buf);
     PVDX_ASSERT_MSG(tel_be32_is(&buf[TEL_OFF_COMMANDS], 0x0A0B0C0D) && tel_be32_is(&buf[TEL_OFF_COMMANDS + 4], 0xC0000010u),
                     "uplink timestamp recorded, rejected uplink not\n");
@@ -1050,11 +1143,17 @@ void test_telemetry_setters(void) {
     bool mram_okay = check_device(MRAM_ID);
     uncheck_device(DISPLAY_ID);
     bool display_okay = check_device(DISPLAY_ID);
+    telemetry_update_magnetometer_registers(0xFF, 0xFF);
+    uncheck_device(MAGNETOMETER_ID);
+    bool magnetometer_okay = check_device(MAGNETOMETER_ID);
     tel_collect_and_serialize(&downlink, buf);
     // All three MRAMs OK is 0b010101: each chip's state in its own 2 bits
     PVDX_ASSERT_MSG(buf[TEL_OFF_MRAM] != 0xFF && (buf[TEL_OFF_MRAM] == 0x15) == mram_okay, "mram check publishes status\n");
     PVDX_ASSERT_MSG(buf[TEL_OFF_DISPLAY_HEALTH] == (display_okay ? TEL_DEVICE_STATUS_OK : TEL_DEVICE_STATUS_BROKEN),
                     "display check publishes health\n");
+    PVDX_ASSERT_MSG(
+        buf[TEL_OFF_LAST_BOOTLOADER + 1] == (magnetometer_okay ? RM3100_REVID_VALUE : 0) && buf[TEL_OFF_LAST_BOOTLOADER + 2] == 0,
+        "magnetometer check publishes REVID\n");
 }
 
 void test_uplink_parse(void) {
@@ -1065,15 +1164,17 @@ void test_uplink_parse(void) {
     // timestamp 0x01020304
 
     // Seven commands: take IV curve with sampling resolution 64, kepler coefficients {97.5, 120.25, 2^-10, -45.5, 270,
-    // 15.0625}, ADCS parameters (epoch JD 2461357.25, {3.75, -0.5, 0.15625, 1, -2.5, 15.0625}, B* 2^-13), enable device 8
-    // (display), reboot 1, send photo -2, transmit on/off 0
-    uint8_t multi[] = {0x50, 0x56, 0x44, 0x58, 0x47, 0x53, 0x00, 0x00, 0x00, 0x73, 0x00, 0x07, 0x01, 0x02, 0x03, 0x04, 0x00, 0x02, 0x00,
-                       0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x40, 0x00, 0x08, 0x00, 0x00, 0x00, 0x18, 0x42, 0xC3, 0x00, 0x00, 0x42, 0xF0,
-                       0x80, 0x00, 0x3A, 0x80, 0x00, 0x00, 0xC2, 0x36, 0x00, 0x00, 0x43, 0x87, 0x00, 0x00, 0x41, 0x71, 0x00, 0x00, 0x00,
-                       0x0B, 0x00, 0x00, 0x00, 0x24, 0x41, 0x42, 0xC7, 0x56, 0xA0, 0x00, 0x00, 0x00, 0x40, 0x70, 0x00, 0x00, 0xBF, 0x00,
-                       0x00, 0x00, 0x3E, 0x20, 0x00, 0x00, 0x3F, 0x80, 0x00, 0x00, 0xC0, 0x20, 0x00, 0x00, 0x41, 0x71, 0x00, 0x00, 0x39,
-                       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x08, 0x01, 0x00, 0x05, 0x00, 0x00, 0x00, 0x01, 0x01,
-                       0x00, 0x07, 0x00, 0x00, 0x00, 0x04, 0xFF, 0xFF, 0xFF, 0xFE, 0x00, 0x04, 0x00, 0x00, 0x00, 0x01, 0x00};
+    // 15.0625}, ADCS parameters (epoch JD 2461357.25, {3.75, -0.5, 0.15625, 1, -2.5, 15.0625}, B* 2^-13, rotation
+    // {1, -2, 3}, flags 0xA8: flip x and z, dipole off), enable device 8 (display), reboot 1, send photo -2,
+    // transmit on/off 0
+    uint8_t multi[] = {0x50, 0x56, 0x44, 0x58, 0x47, 0x53, 0x00, 0x00, 0x00, 0x77, 0x00, 0x07, 0x01, 0x02, 0x03, 0x04, 0x00,
+                       0x02, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x40, 0x00, 0x08, 0x00, 0x00, 0x00, 0x18, 0x42, 0xC3,
+                       0x00, 0x00, 0x42, 0xF0, 0x80, 0x00, 0x3A, 0x80, 0x00, 0x00, 0xC2, 0x36, 0x00, 0x00, 0x43, 0x87, 0x00,
+                       0x00, 0x41, 0x71, 0x00, 0x00, 0x00, 0x0B, 0x00, 0x00, 0x00, 0x28, 0x41, 0x42, 0xC7, 0x56, 0xA0, 0x00,
+                       0x00, 0x00, 0x40, 0x70, 0x00, 0x00, 0xBF, 0x00, 0x00, 0x00, 0x3E, 0x20, 0x00, 0x00, 0x3F, 0x80, 0x00,
+                       0x00, 0xC0, 0x20, 0x00, 0x00, 0x41, 0x71, 0x00, 0x00, 0x39, 0x00, 0x00, 0x00, 0x01, 0xFE, 0x03, 0xA8,
+                       0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x08, 0x01, 0x00, 0x05, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00,
+                       0x07, 0x00, 0x00, 0x00, 0x04, 0xFF, 0xFF, 0xFF, 0xFE, 0x00, 0x04, 0x00, 0x00, 0x00, 0x01, 0x00};
     static uplink_packet_t packet; // static so it doesn't use up the test's stack
     bool err;
 
@@ -1104,6 +1205,11 @@ void test_uplink_parse(void) {
                         same_float(adcs->argument_of_perigee, 1.0f) && same_float(adcs->mean_anomaly, -2.5f) &&
                         same_float(adcs->mean_motion, 15.0625f) && same_float(adcs->bstar, 0.0001220703125f),
                     "multi adcs parameters\n");
+    PVDX_ASSERT_MSG(adcs->device_rotation[0] == 1 && adcs->device_rotation[1] == -2 && adcs->device_rotation[2] == 3,
+                    "multi adcs device rotation\n");
+    PVDX_ASSERT_MSG(adcs->flip_magnetorquer_current[0] && !adcs->flip_magnetorquer_current[1] && adcs->flip_magnetorquer_current[2] &&
+                        !adcs->bdot_override && adcs->dipole_off,
+                    "multi adcs flags\n");
 
     PVDX_ASSERT_MSG(
         cmd[3].type == ENABLE_DISABLE_DEVICE && cmd[3].args.device_state.device == DISPLAY_ID && cmd[3].args.device_state.enabled,
@@ -1121,6 +1227,12 @@ void test_uplink_parse(void) {
     uint8_t empty[] = {0x50, 0x56, 0x44, 0x58, 0x47, 0x53, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04};
     err = uplink_packet_parse(&packet, empty, sizeof(empty));
     PVDX_ASSERT_MSG(!err && packet.n_cmds == 0, "no commands\n");
+
+    // One set unix time command, 1795000000
+    uint8_t unix_time[] = {0x50, 0x56, 0x44, 0x58, 0x47, 0x53, 0x00, 0x00, 0x00, 0x0A, 0x00, 0x01, 0x01,
+                           0x02, 0x03, 0x04, 0x00, 0x09, 0x00, 0x00, 0x00, 0x04, 0x6A, 0xFD, 0x86, 0xC0};
+    err = uplink_packet_parse(&packet, unix_time, sizeof(unix_time));
+    PVDX_ASSERT_MSG(!err && packet.cmds[0].type == SET_UNIX_TIME && packet.cmds[0].args.unix_time == 1795000000u, "unix time\n");
 
     // One set ADCS opmode command, detumble only (1)
     uint8_t opmode[] = {0x50, 0x56, 0x44, 0x58, 0x47, 0x53, 0x00, 0x00, 0x00, 0x08, 0x00, 0x01,
@@ -1146,7 +1258,7 @@ void test_uplink_parse(void) {
     for (size_t i = sizeof(display_header); i < sizeof(display); i++) {
         display[i] = (uint8_t)(i * 7);
     }
-    PVDX_ASSERT_MSG(sizeof(display) <= CFDP_LARGE_BUFF_SZ, "display uplink fits in the CFDP large buffer\n");
+    PVDX_ASSERT_MSG(sizeof(display) <= CFDP_FILE_BUFF_SZ, "display uplink fits in the CFDP file buffer\n");
     err = uplink_packet_parse(&packet, display, sizeof(display));
     PVDX_ASSERT_MSG(!err, "display parse\n");
     PVDX_ASSERT_MSG(packet.cmds[0].type == UPDATE_DISPLAY, "display type\n");
@@ -1191,6 +1303,16 @@ void test_uplink_parse(void) {
     uint8_t bad_size[] = {0x50, 0x56, 0x44, 0x58, 0x47, 0x53, 0x00, 0x00, 0x00, 0x08, 0x00, 0x01,
                           0x01, 0x02, 0x03, 0x04, 0x00, 0x02, 0x00, 0x00, 0x00, 0x02, 0x00, 0x40};
     PVDX_ASSERT_MSG(uplink_packet_parse(&packet, bad_size, sizeof(bad_size)), "wrong command data size rejected\n");
+
+    // ADCS parameters with flags 0x14: B-dot override, plus reserved bit 2
+    uint8_t adcs_reserved[] = {0x50, 0x56, 0x44, 0x58, 0x47, 0x53, 0x00, 0x00, 0x00, 0x2E, 0x00, 0x01, 0x01, 0x02, 0x03, 0x04,
+                               0x00, 0x0B, 0x00, 0x00, 0x00, 0x28, 0x41, 0x42, 0xC7, 0x56, 0xA0, 0x00, 0x00, 0x00, 0x40, 0x70,
+                               0x00, 0x00, 0xBF, 0x00, 0x00, 0x00, 0x3E, 0x20, 0x00, 0x00, 0x3F, 0x80, 0x00, 0x00, 0xC0, 0x20,
+                               0x00, 0x00, 0x41, 0x71, 0x00, 0x00, 0x39, 0x00, 0x00, 0x00, 0x01, 0xFE, 0x03, 0x14};
+    PVDX_ASSERT_MSG(uplink_packet_parse(&packet, adcs_reserved, sizeof(adcs_reserved)), "adcs reserved flag bits rejected\n");
+    adcs_reserved[sizeof(adcs_reserved) - 1] = 0x10; // B-dot override only
+    err = uplink_packet_parse(&packet, adcs_reserved, sizeof(adcs_reserved));
+    PVDX_ASSERT_MSG(!err && packet.cmds[0].args.adcs_parameters.bdot_override, "adcs B-dot override\n");
 
     // Enable device 12, which is NUM_DEVICES
     uint8_t bad_device[] = {0x50, 0x56, 0x44, 0x58, 0x47, 0x53, 0x00, 0x00, 0x00, 0x09, 0x00, 0x01, 0x01,

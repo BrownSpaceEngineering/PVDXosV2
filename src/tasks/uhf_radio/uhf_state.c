@@ -5,8 +5,15 @@
  * state. The state handlers themselves are in uhf_process.c.
  */
 #include "ccsds/radio_routing.h"
+#include "libraries/cmd_dispatcher/cmd_dispatcher.h"
 #include "logging.h"
+#include "state_machine.h"
 #include "uhf_radio_task.h"
+
+// The state machine inputs this task owns (static: the task manager reads them after the command is sent)
+static input_update_data_t uhf_pass_inputs = {
+    .input_update_bitmask = INPUT_UPDATE_BIT(UHF_PASS_UPDATE) | INPUT_UPDATE_BIT(SBAND_PASS_UPDATE),
+};
 
 // Only logged, and release builds compile logging out
 [[maybe_unused]] static const char *const uhf_state_names[UHF_STATE_COUNT] = {
@@ -15,6 +22,26 @@
     [TRANS_TO_TX] = "TRANS_TO_TX", [ESTABLISH_SEND] = "ESTABLISH_SEND",
     [TRANS_TO_RX] = "TRANS_TO_RX",
 };
+
+/**
+ * Starts or ends a pass: tells CFDP (radio_link_set_up()) and the state machine, which goes to the pass state of the
+ * pass's type. A pass starting while one is up is a new pass (the type changed)
+ */
+static void uhf_set_pass(const uhf_ctx_t *ctx, bool up) {
+    radio_link_set_up(up, ctx->sband_pass);
+
+    uhf_pass_inputs.new_values.uhf_pass_pending = up && !ctx->sband_pass;
+    uhf_pass_inputs.new_values.sband_pass_pending = up && ctx->sband_pass;
+    // The PUSP tests change states before the scheduler (and the task manager) is running
+    if (xTaskGetSchedulerState() == taskSCHEDULER_NOT_STARTED) {
+        return;
+    }
+    command_t cmd = get_state_input_update_command(&uhf_pass_inputs);
+    const status_t status = enqueue_command(&cmd);
+    if (status != SUCCESS) {
+        warning("Radio: failed to report the pass to the state machine (status %d)\n", status);
+    }
+}
 
 bool uhf_deadline_passed(TickType_t deadline) {
     return (int32_t)(xTaskGetTickCount() - deadline) >= 0;
@@ -33,7 +60,7 @@ void uhf_enter_state(uhf_ctx_t *ctx, uhf_state_t next) {
         radio_turn_ended();
     }
     if (uhf_is_link_state(next) != uhf_is_link_state(ctx->state)) {
-        radio_link_set_up(uhf_is_link_state(next));
+        uhf_set_pass(ctx, uhf_is_link_state(next));
     }
     if (next == ESTABLISH_SEND) {
         radio_turn_started();
@@ -96,7 +123,16 @@ uhf_state_t uhf_retry(uhf_ctx_t *ctx, pusp_directive_t dir) {
 
 uhf_state_t uhf_link_check(uhf_ctx_t *ctx, const uhf_rx_t *rx) {
     if (uhf_rx_is_pusp(rx, SYN)) {
-        info("Radio: SYN in %s, the ground restarted the link\n", uhf_state_names[ctx->state]);
+        const bool sband = uhf_rx_sband_pass(rx);
+        if (sband != ctx->sband_pass) {
+            info("Radio: SYN in %s changes the pass to %s, starting a new pass\n", uhf_state_names[ctx->state],
+                 sband ? "UHF + S-band" : "UHF");
+            uhf_set_pass(ctx, false);
+            ctx->sband_pass = sband;
+            uhf_set_pass(ctx, true);
+        } else {
+            info("Radio: SYN in %s, the ground restarted the link\n", uhf_state_names[ctx->state]);
+        }
         uhf_transmit_pusp(SYN_ACK);
         if (ctx->state == SYN_RECV) {
             uhf_rearm_retry(ctx); // Staying in SYN_RECV, so uhf_enter_state() won't re-arm it

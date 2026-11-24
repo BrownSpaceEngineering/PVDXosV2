@@ -8,10 +8,12 @@
 #define PEROVSKITE_QUEUE_LENGTH 4      // The only command is one sweep request per state entry
 
 #define PEROVSKITE_PIXEL_COUNT PMB_PIXEL_COUNT
-#define PEROVSKITE_STEP_COUNT 64U // Voltage steps per pixel, 0 to full scale inclusive
+#define PEROVSKITE_STEP_COUNT 64U    // Most voltage steps per pixel (the sampling resolution's maximum and default)
+#define PEROVSKITE_MIN_STEP_COUNT 2U // Fewest: 0 V and full scale
 
-// FOLLOW voltage commanded at a step. The pixel itself sits above this by the shunt drop (see ina226.h)
-#define PEROVSKITE_STEP_MV(step, full_scale_mv) ((uint32_t)(step) * (full_scale_mv) / (PEROVSKITE_STEP_COUNT - 1U))
+// FOLLOW voltage commanded at a step of a sweep of step_count steps, 0 to full scale inclusive. The pixel itself sits
+// above this by the shunt drop (see ina226.h)
+#define PEROVSKITE_STEP_MV(step, full_scale_mv, step_count) ((uint32_t)(step) * (full_scale_mv) / ((step_count) - 1U))
 
 /*
  * MRAM layout (little-endian). A sweep is measured into RAM, then saved as one MRAM record (see mram_map.h) in one of
@@ -26,7 +28,9 @@ typedef struct {
     uint32_t sequence;      // Counts up across reboots; the highest in MRAM is the newest sweep
     uint32_t timestamp;     // Unix time when the sweep started, see utc_get(); 0 if unavailable
     uint16_t full_scale_mv; // Input to PEROVSKITE_STEP_MV for this sweep
-    uint16_t failed_steps;  // Number of PEROVSKITE_SAMPLE_INVALID samples in this sweep
+    uint16_t failed_steps;  // Number of steps whose measurement failed (PEROVSKITE_SAMPLE_INVALID) in this sweep
+    uint16_t step_count;    // Sampling resolution: steps measured per pixel. current[][step_count..] are PEROVSKITE_SAMPLE_INVALID
+    uint16_t reserved;      // 0
     // Pixel current in INA226_CURRENT_LSB_NA (250 nA) units, positive when the pixel sources current
     int16_t current[PEROVSKITE_PIXEL_COUNT][PEROVSKITE_STEP_COUNT];
 } perovskite_sweep_t;
@@ -47,6 +51,11 @@ void main_perovskite(void *pvParameters);
 command_t get_perovskite_sweep_command(void);
 void exec_command_perovskite(command_t *const p_cmd);
 void perovskite_checkin(void);
+
+// Sets the sampling resolution (steps per pixel) of the following sweeps, clamped to PEROVSKITE_MIN_STEP_COUNT ..
+// PEROVSKITE_STEP_COUNT. Set from the TAKE_IV_CURVE uplink once the pass ends. Kept in RAM only: back to
+// PEROVSKITE_STEP_COUNT on reboot. Safe to call from any task
+void perovskite_set_step_count(uint32_t step_count);
 
 // Reads back the sweep saved in a slot. SUCCESS only if the slot holds a complete sweep that passes its CRC.
 status_t perovskite_load_sweep(uint8_t slot, perovskite_sweep_t *p_sweep);

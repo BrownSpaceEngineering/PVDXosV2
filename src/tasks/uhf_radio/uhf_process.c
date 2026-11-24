@@ -69,6 +69,9 @@ uhf_state_t listen_proc(uhf_ctx_t *ctx, const uhf_rx_t *rx) {
                     info("Radio: ignoring SYN, transmit disabled\n");
                     return LISTEN;
                 }
+                // Read before the state change: entering SYN_RECV starts the pass, of this type
+                ctx->sband_pass = uhf_rx_sband_pass(rx);
+                info("Radio: SYN for a %s pass\n", ctx->sband_pass ? "UHF + S-band" : "UHF");
                 uhf_transmit_pusp(SYN_ACK);
                 return SYN_RECV;
             }

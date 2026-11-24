@@ -24,10 +24,15 @@ typedef struct pusp_packet {
 } pusp_packet_t;
 
 // PUSP notification flags, in pusp_packet_t.notifs. Every directive from the ground carries them and the satellite acts
-// on them whatever the directive (see dispatch_pusp_immediate_cmd()). The satellite always sends 0
+// on the transmit flags whatever the directive (see dispatch_pusp_immediate_cmd()). The satellite always sends 0
 #define PUSP_NOTIF_DISABLE_TX (1u << 0) // Stop transmitting: the satellite only listens until PUSP_NOTIF_ENABLE_TX
 #define PUSP_NOTIF_ENABLE_TX (1u << 1)  // Transmitting allowed again. Setting both bits at once is ignored
-#define PUSP_NOTIF_KNOWN (PUSP_NOTIF_DISABLE_TX | PUSP_NOTIF_ENABLE_TX) // Bits 2-7 are unused
+// Pass type, only read from a SYN: set for a UHF + S-band pass, clear for a UHF-only pass. On an S-band pass every CFDP
+// PDU goes down on S-band (full duplex), uplink stays on UHF and the ground keeps the UHF turn for the whole pass. A SYN
+// mid-pass with the same type restarts the link in the same pass; one with the other type ends the pass and starts a new
+// one (see uhf_link_check()). Ignored on every other directive
+#define PUSP_NOTIF_SBAND_PASS (1u << 2)
+#define PUSP_NOTIF_KNOWN (PUSP_NOTIF_DISABLE_TX | PUSP_NOTIF_ENABLE_TX | PUSP_NOTIF_SBAND_PASS) // Bits 3-7 are unused
 
 _Static_assert(sizeof(pusp_packet_t) == 2, "the PUSP payload is two bytes");
 #endif // PUSP_H

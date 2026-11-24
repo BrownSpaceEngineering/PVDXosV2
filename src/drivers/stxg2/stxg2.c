@@ -38,6 +38,17 @@ static uint32_t store_words_sent = 0; // Since SPI enable
 static uint8_t store_carry[4] = {0};  // Partial word
 static size_t store_carry_len = 0;
 
+static bool stream_active = false; // Transmitting, with SPI routed straight to the encoder (stxg2_stream_begin())
+
+// Runs step between blocking steps, if there is one. False means the caller wants to stop
+static bool stxg2_step_ok(stxg2_step_fn_t step) {
+    if (step != NULL && !step()) {
+        warning("stxg2: aborted by caller\n");
+        return false;
+    }
+    return true;
+}
+
 /**
  * \brief Polls addr until (value & mask) == expected
  *
@@ -210,6 +221,15 @@ status_t stxg2_read_reg(uint16_t addr, uint32_t *value) {
  * \brief Radio power on/I2C + SPI enable/read reg
  */
 status_t stxg2_init(void) {
+    return stxg2_init_step(NULL);
+}
+
+/**
+ * \brief stxg2_init(), running step between polls of the boot wait (up to STXG2_BOOT_TIMEOUT_MS)
+ *
+ * \returns ERROR_NOT_READY if step asked to stop
+ */
+status_t stxg2_init_step(stxg2_step_fn_t step) {
     gpio_set_pin_level(SBAND_CS, true);
     gpio_set_pin_direction(SBAND_CS, GPIO_DIRECTION_OUT);
     gpio_set_pin_function(SBAND_CS, GPIO_PIN_FUNCTION_OFF);
@@ -248,6 +268,9 @@ status_t stxg2_init(void) {
         if (result == SUCCESS) {
             break;
         }
+        if (!stxg2_step_ok(step)) {
+            return ERROR_NOT_READY;
+        }
         os_delay_ms(STXG2_POLL_MS);
     }
     if (result == ERROR_I2C_FAILED) {
@@ -273,6 +296,7 @@ status_t stxg2_init(void) {
         return ERROR_SANITY_CHECK_FAILED;
     }
     store_active = false;
+    stream_active = false;
     return SUCCESS;
 }
 
@@ -280,6 +304,7 @@ void stxg2_power_off(void) {
     spi_m_sync_disable(&SPI_SBAND);
     i2c_m_sync_disable(&I2C_SBAND);
     store_active = false;
+    stream_active = false;
 
     gpio_set_pin_level(SBAND_RST, false);
     gpio_set_pin_direction(SBAND_RST, GPIO_DIRECTION_OUT);
@@ -695,6 +720,104 @@ status_t stxg2_request_retransmit(uint32_t packet_id, uint8_t count) {
     ret_err_status(stxg2_read_reg(REG_MEM_RT_CTRL, &rt_ctrl), "stxg2: retransmit control read failed\n");
     rt_ctrl = (rt_ctrl & ~(MEM_RT_CTRL_STOP | MEM_RT_CTRL_CLEAR_QUEUE)) | MEM_RT_CTRL_START;
     return stxg2_write_reg(REG_MEM_RT_CTRL, rt_ctrl);
+}
+
+/**
+ * \brief Starts transmitting live: SPI is routed straight to the encoder, and everything sent with stxg2_stream_send()
+ * goes out as it arrives. The radio's framer is off, so the caller frames its own data. Between writes the encoder
+ * sends DVB-S2 dummy frames, so the carrier stays up for the ground.
+ *
+ * TODO: confirm in the USM (sections on the crossbar and Transmit mode, 9.2.8.7 and 12.x) that SPI can feed the encoder
+ * in Transmit mode. Only memory read -> encoder (stxg2_downlink_begin(), USM 12.1.3) is documented in this driver so far
+ *
+ * \param step run between the blocking steps (mode changes, RF lock), each up to STXG2_MODE_TIMEOUT_MS. Can be NULL
+ * \returns ERROR_NOT_READY if step asked to stop. The radio is left in Config mode on any failure
+ */
+status_t stxg2_stream_begin(uint32_t freq_khz, uint32_t sym_rate_ksps, uint8_t modcod, uint8_t power_dbm, stxg2_step_fn_t step) {
+    if (store_active || stream_active) {
+        warning("stxg2: stream requested during a store session or stream\n");
+        return ERROR_NOT_READY;
+    }
+    ret_err_status(stxg2_set_mode(STXG2_MODE_CONFIG), "stxg2: config mode failed\n");
+    if (!stxg2_step_ok(step)) {
+        return ERROR_NOT_READY;
+    }
+    ret_err_status(stxg2_configure_rf(freq_khz, sym_rate_ksps, modcod, power_dbm), "stxg2: RF config failed\n");
+    ret_err_status(stxg2_disable_framer(), "stxg2: framer bypass failed\n");
+
+    // Re-enable applies the mode and resets SPI_RX_CNT
+    ret_err_status(stxg2_write_reg(REG_SPI_CTRL, 0), "stxg2: SPI disable failed\n");
+    ret_err_status(stxg2_write_reg(REG_SPI_CTRL, SPI_CTRL_ENABLE | SPI_CTRL_MODE(STXG2_SPI_MODE)), "stxg2: SPI enable failed\n");
+    ret_err_status(stxg2_route(XBAR_IN_SPI, XBAR_OUT_FRAMER_SHIFT), "stxg2: route SPI to encoder failed\n");
+
+    // Lock RF before the PA turns on
+    uint32_t rf_status = 0;
+    if (stxg2_poll_reg(REG_RF_STATUS, RF_STATUS_LOCKED, RF_STATUS_LOCKED, STXG2_MODE_TIMEOUT_MS, &rf_status) != SUCCESS) {
+        warning("stxg2: RF synthesizers not locked (RF_STAT = 0x%lx)\n", (unsigned long)rf_status);
+        return ERROR_NOT_READY;
+    }
+    if (!stxg2_step_ok(step)) {
+        return ERROR_NOT_READY;
+    }
+    ret_err_status(stxg2_set_mode(STXG2_MODE_TRANSMIT), "stxg2: transmit mode failed\n");
+
+    // Framer must still be off
+    status_t result = stxg2_disable_framer();
+    if (result != SUCCESS) {
+        warning("stxg2: stream start failed, leaving transmit mode\n");
+        (void)stxg2_set_mode(STXG2_MODE_CONFIG);
+        return result;
+    }
+    store_words_sent = 0;
+    stream_active = true;
+    return SUCCESS;
+}
+
+/**
+ * \brief Sends len bytes straight to the encoder. Only whole words go over SPI, so len must be a multiple of 4: the
+ * caller pads each frame, since a partial word held back would delay it until the next write
+ */
+status_t stxg2_stream_send(const uint8_t *data_buf, size_t len) {
+    if (!stream_active) {
+        warning("stxg2: stream send without stream_begin\n");
+        return ERROR_NOT_READY;
+    }
+    if (data_buf == NULL || len == 0 || (len % 4u) != 0) {
+        return ERROR_BAD_ARGS;
+    }
+    return stxg2_spi_send_words(data_buf, len);
+}
+
+/**
+ * \brief Stops transmitting: waits for the SPI buffer to drain, disables SPI and returns to Config mode
+ *
+ * \returns first error. The stream counts as ended either way
+ */
+status_t stxg2_stream_end(void) {
+    if (!stream_active) {
+        return SUCCESS;
+    }
+    stream_active = false;
+
+    // Let what's already in the buffer go out before the PA turns off
+    status_t result = stxg2_poll_reg(REG_SPI_STATUS, SPI_STATUS_COUNT_MSK, 0, STXG2_MEM_TIMEOUT_MS, NULL);
+    if (result != SUCCESS) {
+        warning("stxg2: SPI buffer did not empty before the stream ended\n");
+    }
+    status_t spi_result = stxg2_write_reg(REG_SPI_CTRL, 0);
+    status_t mode_result = stxg2_set_mode(STXG2_MODE_CONFIG);
+    status_t route_result = stxg2_route(XBAR_IN_NONE, XBAR_OUT_FRAMER_SHIFT);
+
+    if (result != SUCCESS) {
+        return result;
+    }
+    if (spi_result != SUCCESS) {
+        return spi_result;
+    }
+    if (mode_result != SUCCESS) {
+        return mode_result;
+    }
+    return route_result;
 }
 
 /**

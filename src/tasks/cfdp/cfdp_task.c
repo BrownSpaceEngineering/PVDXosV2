@@ -29,7 +29,7 @@
  * dispatcher task) ---------- */
 
 // cfdp_put_t is packed so a command doesn't grow to hold it
-_Static_assert(sizeof(cfdp_put_t) <= sizeof(uplink_cmd_t), "cfdp_put_t must not grow command_data_t");
+_Static_assert(sizeof(cfdp_put_t) <= sizeof(uint32_t), "cfdp_put_t must not grow command_data_t");
 
 status_t cfdp_find_file(const cfdp_put_t *put, mram_region_t *p_region, uint32_t *p_offset, uint32_t *p_size) {
     switch ((cfdp_file_t)put->file) {
@@ -113,7 +113,7 @@ void cfdp_send_complete(const cfdp_transaction_t *txn) {
     input_update_data_t *p_update;
     switch ((cfdp_file_t)txn->file) {
         case CFDP_FILE_IMAGE:
-            p_update = &image_downlinked_input; // Lets SBAND_TRANS exit and the next picture be taken
+            p_update = &image_downlinked_input; // Lets the next picture be taken
             break;
         case CFDP_FILE_PEROVSKITE:
             // TODO: clears after any sweep is sent; only clear once every unsent sweep is
@@ -445,22 +445,11 @@ static void handle_metadata_pdu(cfdp_transaction_t *txn, const uint8_t *pdu_data
             return;
         }
 
-        if (meta.file_length <= CFDP_SMALL_BUFF_SZ) {
-            info("cfdp: allocating small buffer for incoming txn of size %u\n", meta.file_length);
-            txn->buff_header = cfdp_alloc_small_buff();
-        } else if (meta.file_length <= CFDP_LARGE_BUFF_SZ) {
-            info("cfdp: allocating large buffer for incoming txn of size %u\n", meta.file_length);
-            txn->buff_header = cfdp_alloc_large_buff();
-        } else {
+        if (meta.file_length > CFDP_FILE_BUFF_SZ) {
             warning("cfdp: incoming file larger than supported size\n");
             return;
         }
-
-        if (txn->buff_header == NULL) {
-            warning("cfdp: no free buffer to allocate\n");
-            return;
-        }
-        uint8_t *data = txn->buff_header->buff;
+        uint8_t *data = cfdp_file_buff;
         disarm_retransmit(txn);
         txn->state = CFDP_RECV_STATE_WAIT_EOF;
         txn->file_size = meta.file_length;
@@ -683,13 +672,13 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz, uint8_t vcid) {
             return;
         }
 
-        if (meta.file_length > CFDP_LARGE_BUFF_SZ) {
+        if (meta.file_length > CFDP_FILE_BUFF_SZ) {
             warning("cfdp: incoming file larger than supported size\n");
             cfdp_send_reject_fin(&header, &meta, CFDP_COND_FILE_SIZEERROR);
             return;
         }
 
-        // Override before taking a buffer, since the active transaction may hold the one this transfer needs
+        // The active transaction owns cfdp_file_buff, so override it before this transfer takes it
         if (cfdp_txn_store.active) {
             if (!ground_seq_is_newer(header.transaction_seq)) {
                 warning("cfdp: busy, dropping metadata for txn %lu (not newer than %lu)\n", header.transaction_seq,
@@ -699,27 +688,9 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz, uint8_t vcid) {
             override_transaction();
         }
 
-        // Get the buffer before the transaction slot, so that a failure leaves neither an active slot nor a running timer
-        cfdp_buff_header_t *buff_header = NULL;
-
-        if (meta.file_length <= CFDP_SMALL_BUFF_SZ) {
-            info("cfdp: allocating small buffer for incoming txn of size %u\n", meta.file_length);
-            buff_header = cfdp_alloc_small_buff();
-        } else {
-            info("cfdp: allocating large buffer for incoming txn of size %u\n", meta.file_length);
-            buff_header = cfdp_alloc_large_buff();
-        }
-
-        if (buff_header == NULL) {
-            warning("cfdp: no free buffer to allocate\n");
-            cfdp_send_reject_fin(&header, &meta, CFDP_COND_INVALID_TRANSMISSION);
-            return;
-        }
-
         cfdp_transaction_t *new_txn = cfdp_alloc_transaction();
         if (new_txn == NULL) {
             warning("cfdp: alloc failed for new recv txn\n");
-            cfdp_free_buff(buff_header);
             cfdp_send_reject_fin(&header, &meta, CFDP_COND_CANCEL_REQ);
             return;
         }
@@ -744,8 +715,7 @@ void cfdp_process_pdu(uint8_t *raw, size_t sz, uint8_t vcid) {
         new_txn->checksum_type = meta.checksum_type;
         new_txn->condition_code = CFDP_COND_NOERROR;
         new_txn->eof_acked = false;
-        new_txn->buff_header = buff_header;
-        new_txn->file_data = buff_header->buff;
+        new_txn->file_data = cfdp_file_buff;
 
         start_timer(cfdp_mem.inactivity_timer_handle);
 
@@ -811,10 +781,6 @@ cfdp_result_t cfdp_handle_send_state(cfdp_transaction_t *transaction) {
             } else {
                 if (cfdp_send_eof(transaction) < 0) {
                     return CFDP_RESULT_DOWNLINK_FULL;
-                }
-                // EOF is the file's last packet, so the S-band radio can be powered off now
-                if (radio_routes[transaction->stream].radio == RADIO_SBAND) {
-                    radio_sband_close();
                 }
                 if (transaction->reliable_mode) {
                     transaction->state = CFDP_SEND_STATE_WAIT_ACK;

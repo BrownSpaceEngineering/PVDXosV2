@@ -11,6 +11,7 @@
 
 #include "tests/test_pusp.h"
 
+#include "ccsds/radio_routing.h"
 #include "logging.h"
 #include "tests/test.h"
 #include "uhf_radio/uhf_radio_task.h"
@@ -180,6 +181,58 @@ static void test_pusp_tx_toggle(void) {
                     "toggle: SYN with enable flag answered\n");
 }
 
+// Every CFDP stream on radio, and the UHF task's own streams on UHF
+static bool routed_to(radio_id_t radio) {
+    return radio_route_radio(RADIO_STREAM_PEROVSKITE) == radio && radio_route_radio(RADIO_STREAM_IMAGE) == radio &&
+        radio_route_radio(RADIO_STREAM_CFDP_REPLY) == radio && radio_route_radio(RADIO_STREAM_UPLINK_CMD) == radio &&
+        radio_route_radio(RADIO_STREAM_TELEMETRY) == RADIO_UHF && radio_route_radio(RADIO_STREAM_PUSP) == RADIO_UHF;
+}
+
+// The SYN that opens a pass says whether it's UHF + S-band. A SYN of the other type mid-pass starts a new pass
+static void test_pusp_pass_type(void) {
+    uhf_ctx_t ctx = pusp_ctx(LISTEN);
+    PVDX_ASSERT_MSG(pusp_step(&ctx, pusp_rx_notifs(NTF, PUSP_NOTIF_SBAND_PASS)) == LISTEN && uhf_pusp_tx_count == 0,
+                    "pass: S-band flag on NTF starts nothing\n");
+    PVDX_ASSERT_MSG(pusp_step(&ctx, pusp_rx_notifs(SYN, PUSP_NOTIF_SBAND_PASS)) == SYN_RECV && pusp_sent(SYN_ACK),
+                    "pass: SYN with S-band flag answered\n");
+    radio_link_view_t view = radio_link_view();
+    PVDX_ASSERT_MSG(view.link_up && view.sband && ctx.sband_pass, "pass: S-band pass started\n");
+    PVDX_ASSERT_MSG(routed_to(RADIO_SBAND), "routing: CFDP on S-band during an S-band pass\n");
+    const uint32_t pass = view.pass;
+
+    // The flag only counts on a SYN
+    PVDX_ASSERT_MSG(pusp_step(&ctx, pusp_rx(SRT)) == ESTABLISH_RECV, "pass: SRT without the flag\n");
+    PVDX_ASSERT_MSG(pusp_step(&ctx, pusp_rx(NTF)) == ESTABLISH_RECV, "pass: NTF without the flag\n");
+    view = radio_link_view();
+    PVDX_ASSERT_MSG(view.sband && view.pass == pass, "pass: type kept without the flag on other directives\n");
+
+    // A SYN of the same type restarts the link in the same pass
+    uhf_pusp_tx_count = 0;
+    PVDX_ASSERT_MSG(pusp_step(&ctx, pusp_rx_notifs(SYN, PUSP_NOTIF_SBAND_PASS)) == SYN_RECV && pusp_sent(SYN_ACK),
+                    "pass: same-type SYN restarts the link\n");
+    view = radio_link_view();
+    PVDX_ASSERT_MSG(view.link_up && view.sband && view.pass == pass, "pass: same-type SYN keeps the pass\n");
+
+    // A SYN of the other type ends the pass and starts a new one
+    uhf_pusp_tx_count = 0;
+    PVDX_ASSERT_MSG(pusp_step(&ctx, pusp_rx(SYN)) == SYN_RECV && pusp_sent(SYN_ACK), "pass: other-type SYN answered\n");
+    view = radio_link_view();
+    PVDX_ASSERT_MSG(view.link_up && !view.sband && view.pass == pass + 1, "pass: other-type SYN starts a new UHF pass\n");
+    PVDX_ASSERT_MSG(routed_to(RADIO_UHF), "routing: everything on UHF during a UHF pass\n");
+
+    // Losing the link ends the pass
+    ctx.last_rx = xTaskGetTickCount() - pdMS_TO_TICKS(UHF_LINK_TIMEOUT_MS) - 1;
+    PVDX_ASSERT_MSG(pusp_step(&ctx, RX_NONE) == LISTEN, "pass: link timeout -> LISTEN\n");
+    view = radio_link_view();
+    PVDX_ASSERT_MSG(!view.link_up && !view.sband && routed_to(RADIO_UHF), "pass: no pass, everything on UHF\n");
+
+    // A SYN without the flag opens a UHF pass
+    PVDX_ASSERT_MSG(pusp_step(&ctx, pusp_rx(SYN)) == SYN_RECV, "pass: SYN without the flag answered\n");
+    view = radio_link_view();
+    PVDX_ASSERT_MSG(view.link_up && !view.sband && !ctx.sband_pass, "pass: UHF pass started\n");
+    uhf_enter_state(&ctx, LISTEN);
+}
+
 void test_pusp(void) {
     test_log("----- testing pusp -----\n");
     test_pusp_timing();
@@ -188,6 +241,7 @@ void test_pusp(void) {
     test_pusp_retries();
     test_pusp_inactivity();
     test_pusp_tx_toggle();
+    test_pusp_pass_type();
 }
 
 #endif // UNITTEST && TEST_PUSP

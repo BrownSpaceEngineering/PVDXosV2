@@ -161,6 +161,9 @@ static void uhf_rx_classify(uhf_rx_t *out) {
         return;
     }
 
+    // De-whiten packet before inspecting
+    ccsds_undo_pseudorandomize(at86_buffer, sz);
+
     // Both views point into at86_buffer, so everything needed is copied out before returning
     uslp_transfer_frame_view_t tframe_view;
     if (uslp_transfer_frame_parse(&tframe_view, at86_buffer, (uint32_t)sz)) {
@@ -280,6 +283,21 @@ bool dispatch_pusp_immediate_cmd(uint8_t notifs) {
     return true;
 }
 
+// Set by uhf_request_transmit() from another task, applied by the UHF task
+static volatile uint8_t tx_request_notifs;
+
+void uhf_request_transmit(bool enable) {
+    tx_request_notifs = enable ? PUSP_NOTIF_ENABLE_TX : PUSP_NOTIF_DISABLE_TX;
+    if (p_uhf_radio_task->handle != NULL) {
+        xTaskNotify(p_uhf_radio_task->handle, UHF_EVENT_TX_REQUEST, eSetBits);
+    }
+}
+
+void uhf_apply_transmit_request(void) {
+    info("Radio: transmit %s requested by uplink command\n", tx_request_notifs == PUSP_NOTIF_ENABLE_TX ? "on" : "off");
+    dispatch_pusp_immediate_cmd(tx_request_notifs);
+}
+
 bool uhf_tx_is_enabled(void) {
     return uhf_tx_enabled;
 }
@@ -318,6 +336,7 @@ bool uhf_tx_process() {
                                      RADIO_SDU_ID, USLP_QOS_EXPEDITED)) {
             warning("USLP: failed to prepare frame\n");
         } else {
+            ccsds_pseudorandomize(at86_buffer, frame_sz);
             uhf_send_frame_blocking(at86_buffer, frame_sz, "downlink frame");
         }
     }
@@ -737,7 +756,7 @@ bool uhf_beacon_prepare(void) {
         warning("USLP: failed to prepare beacon frame\n");
         return false;
     }
-
+    ccsds_pseudorandomize(beacon_frame, frame_sz);
     beacon_frame_len = frame_sz;
     return true;
 }
@@ -843,6 +862,7 @@ bool uhf_transmit_pusp(pusp_directive_t dir) {
                                  SPP_VERSION_NUMBER, RADIO_SDU_ID, USLP_QOS_EXPEDITED)) {
         warning("USLP: failed to prepare PUSP frame\n");
     } else {
+        ccsds_pseudorandomize(at86_buffer, frame_sz);
         sent = uhf_send_frame_blocking(at86_buffer, frame_sz, "PUSP directive");
         if (sent) {
             debug("Radio: sent PUSP directive %u\n", dir);

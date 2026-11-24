@@ -8,6 +8,7 @@
 #include "os_delay.h"
 #include "semphr.h"
 #include "task_list.h"
+#include "telemetry/telemetry.h"
 
 static volatile bool stop_requested = false;
 static StaticSemaphore_t stop_ack_storage;
@@ -66,7 +67,7 @@ command_t get_camera_capture_command(void) {
     return (command_t){
         .target = p_camera_task,
         .operation = OPERATION_CAMERA_CAPTURE,
-        .data = {{0}},
+        .data = {0},
         .data_type = CMD_DATA_NONE,
         .result = PROCESSING,
     };
@@ -102,7 +103,9 @@ status_t camera_capture(void) {
     }
     // Asleep whenever this returns, so a disabled camera task leaves the camera asleep too
     arducam_sleep();
-    return camera_stop_requested() ? ERROR_TASK_DISABLED : status;
+    const status_t result = camera_stop_requested() ? ERROR_TASK_DISABLED : status;
+    telemetry_update_camera_data(result, (uint8_t)ARDUCAM_DEFAULT_RESOLUTION);
+    return result;
 }
 
 void exec_command_camera(command_t *const p_cmd) {

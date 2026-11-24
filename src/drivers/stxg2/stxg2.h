@@ -250,8 +250,12 @@ typedef enum {
 
 /* ---------- Functions ---------- */
 
+// Run between the blocking steps of a long operation (e.g. to check in with the watchdog). Return false to stop it
+typedef bool (*stxg2_step_fn_t)(void);
+
 // Setup, registers
 status_t stxg2_init(void);
+status_t stxg2_init_step(stxg2_step_fn_t step);
 void stxg2_power_off(void);
 status_t stxg2_read_reg(uint16_t addr, uint32_t *value);
 status_t stxg2_write_reg(uint16_t addr, uint32_t value);
@@ -271,6 +275,11 @@ status_t stxg2_store_end(uint32_t *packets_written);
 status_t stxg2_downlink_begin(uint32_t start_index, uint32_t num_packets);
 status_t stxg2_downlink_end(void);
 status_t stxg2_request_retransmit(uint32_t packet_id, uint8_t count);
+
+// Live transmit: begin, send (repeat), end. SPI goes straight to the encoder, nothing is stored
+status_t stxg2_stream_begin(uint32_t freq_khz, uint32_t sym_rate_ksps, uint8_t modcod, uint8_t power_dbm, stxg2_step_fn_t step);
+status_t stxg2_stream_send(const uint8_t *data_buf, size_t len);
+status_t stxg2_stream_end(void);
 
 // Telemetry
 status_t stxg2_get_board_status(uint32_t *status);

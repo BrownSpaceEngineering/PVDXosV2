@@ -51,7 +51,7 @@ void main_task_manager(void *pvParameters) {
     command_t initialise_all_tasks = {
         .target = p_task_manager_task,
         .operation = OPERATION_INIT_SUBTASKS,
-        .data = {{0}},
+        .data = {0},
         .data_type = CMD_DATA_NONE,
         .result = NO_STATUS_RETURN,
 

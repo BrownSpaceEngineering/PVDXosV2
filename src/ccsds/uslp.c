@@ -64,6 +64,38 @@ uint32_t uslp_crc(const uint8_t *data, size_t length, bool is_crc32) {
     }
 }
 
+// Standard CCSDS Additive Scrambler (x^17 + x^14 + 1)
+// (because we turn off hardware data whitening)
+void ccsds_pseudorandomize(uint8_t *data, size_t length) {
+    uint32_t state = 0b11000111000111000;
+
+    for (size_t i = 0; i < length; ++i) {
+        uint8_t scrambled_byte = 0;
+
+        for (int bit = 7; bit >= 0; --bit) {
+            uint32_t x0 = state & 1;
+
+            // Extract the original data bit and XOR it with the scrambler/feedback bit
+            uint8_t data_bit = (data[i] >> bit) & 1;
+            scrambled_byte |= ((data_bit ^ x0) << bit);
+
+            uint32_t x14 = (state >> 14) & 1;
+            uint32_t x17 = x0 ^ x14;
+
+            // Shift right by 1, and feed the calculated bit back into Stage 1 (bit 16)
+            state = (state >> 1) | (x17 << 16);
+        }
+
+        data[i] = scrambled_byte;
+    }
+}
+
+// Wrapper for just applying pseudorandomize again because data-independence.
+// Separated to avoid confusion, but ain't that neat?
+void ccsds_undo_pseudorandomize(uint8_t *data, size_t length) {
+    ccsds_pseudorandomize(data, length);
+}
+
 void uslp_init(void) {
     uslp_tx_mutex = xSemaphoreCreateMutexStatic(&uslp_tx_mutex_buffer);
 

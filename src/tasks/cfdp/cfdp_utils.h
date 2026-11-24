@@ -56,12 +56,6 @@ cfdp_transaction_t *cfdp_alloc_transaction(void);
 void cfdp_free_transaction(void);
 cfdp_transaction_t *cfdp_find_transaction(uint32_t entity_id, uint32_t seq_num);
 
-cfdp_buff_header_t *cfdp_alloc_small_buff();
-cfdp_buff_header_t *cfdp_alloc_large_buff();
-int cfdp_free_buff(cfdp_buff_header_t *buff);
-int cfdp_release_buff(cfdp_buff_header_t *buff);
-int cfdp_add_buff_reference(cfdp_buff_header_t *buff);
-
 uint32_t cfdp_calculate_modular_checksum(cfdp_transaction_t *transaction);
 
 // Adds `size` bytes of file data, starting at file offset `offset`, to a modular checksum. Any offset works, since

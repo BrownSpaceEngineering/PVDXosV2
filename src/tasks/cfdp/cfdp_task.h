@@ -32,9 +32,9 @@
 
 #define TXN_FRAME 0x200 // placeholder
 
-#define CFDP_LARGE_BUFF_SZ 10240 // fits an uplink with a display bitmap (16 + 6 + 8192 bytes)
-#define CFDP_SMALL_BUFF_SZ 128
-#define CFDP_SMALL_BUFF_COUNT 4
+// The one buffer received files go in. CFDP runs one transaction at a time and only the CFDP task touches it, so it
+// belongs to the active transaction. Fits an uplink with a display bitmap (16 + 6 + 8192 bytes)
+#define CFDP_FILE_BUFF_SZ (16 * 1024)
 
 #define CFDP_MAX_PDU_SIZE 1024 // double what we expect so hmm.
 
@@ -101,24 +101,6 @@ typedef enum cfdp_result {
     CFDP_RESULT_INVALID_ARG
 } cfdp_result_t;
 
-typedef struct cfdp_buff_header {
-    size_t ref_count;
-    StaticSemaphore_t _semaphore_mem;
-    SemaphoreHandle_t semaphore;
-    bool is_large;
-    void *buff;
-} cfdp_buff_header_t;
-
-typedef struct {
-    cfdp_buff_header_t header;
-    uint8_t buff[CFDP_LARGE_BUFF_SZ];
-} cfdp_large_buff_t;
-
-typedef struct {
-    cfdp_buff_header_t header;
-    uint8_t buff[CFDP_SMALL_BUFF_SZ];
-} cfdp_small_buff_t;
-
 typedef struct cfdp_nak_buf {
     cfdp_pdu_segment_request_t segments[CFDP_MAX_SEGMENT_REQUESTS];
     uint32_t tail;
@@ -134,8 +116,8 @@ typedef struct cfdp_transaction {
     // after transfer completes.
     uint32_t expected_checksum;
 
-    // Stream the file belongs to, which picks the radio and VC its file PDUs are sent on. Replies always go on
-    // RADIO_STREAM_CFDP_REPLY
+    // Stream the file belongs to, which picks the VC its file PDUs are sent on. Replies always go on
+    // RADIO_STREAM_CFDP_REPLY. The radio comes from the pass type (radio_route_radio())
     radio_stream_t stream;
 
     // Pass the transaction started in. It's dropped when that pass ends
@@ -165,8 +147,7 @@ typedef struct cfdp_transaction {
     bool delivery_complete;
     bool eof_acked;
 
-    cfdp_buff_header_t *buff_header;
-    // The file in RAM. Received files always use it. When it's NULL, a sent file is read from MRAM instead: file_size
+    // The file in RAM. Received files always use it (cfdp_file_buff). When it's NULL, a sent file is read from MRAM instead: file_size
     // bytes at file_mram_offset within file_mram_region (see cfdp_put_request). Read either with cfdp_read_file()
     uint8_t *file_data;
     uint8_t file; // Sent files: the cfdp_file_t being sent, so its state machine input is cleared once it's delivered
@@ -198,8 +179,7 @@ extern cfdp_task_memory_t cfdp_mem;
 
 extern cfdp_transaction_store_t cfdp_txn_store;
 
-extern cfdp_large_buff_t cfdp_large_buff;
-extern cfdp_small_buff_t cfdp_small_buffs[CFDP_SMALL_BUFF_COUNT];
+extern uint8_t cfdp_file_buff[CFDP_FILE_BUFF_SZ];
 
 QueueHandle_t init_cfdp(void);
 void main_cfdp(void *pvParameters);
@@ -218,6 +198,15 @@ command_t get_cfdp_put_command(cfdp_file_t file, uint8_t index, radio_stream_t s
 void cfdp_send_complete(const cfdp_transaction_t *txn);
 void cfdp_cancel_request(void);
 void cfdp_cancel(void);
+
+// Safe-suspend handshake with the task manager (pvdx_task_t.prepare_suspend/prepare_resume). CFDP only runs in the pass
+// states: before it's suspended it drops its transaction and powers the S-band radio off, so nothing is left transmitting
+bool cfdp_prepare_suspend(void);
+void cfdp_prepare_resume(void);
+// Whether the task manager is waiting for the CFDP task to park (cfdp_main.c)
+bool cfdp_stop_requested(void);
+// Checks in with the watchdog if it's time to. For long blocking work in the CFDP task (cfdp_main.c)
+void cfdp_checkin(void);
 
 int cfdp_prepare_pdu_header(uint8_t *buff, cfdp_transaction_t *transaction, uint16_t pdu_len, cfdp_pdu_type_t pdu_type);
 int cfdp_send_metadata(cfdp_transaction_t *transaction);

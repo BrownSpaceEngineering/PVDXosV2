@@ -37,10 +37,11 @@
 #define UHF_EVENT_DOWNLINK (1u << 0)
 #define UHF_EVENT_IRQ (1u << 1) // Set by uhf_radio_irq_handler(), the task then calls uhf_read_irqs()
 // Set by uhf_irqs_to_events(). After RXFE or TXFE the radio is in TXPREP
-#define UHF_EVENT_RXFE (1u << 2)      // A frame was received
-#define UHF_EVENT_TXFE (1u << 3)      // A frame was sent
-#define UHF_EVENT_TXRDY (1u << 4)     // The radio reached TXPREP. Masked from the pin, so only seen alongside another IRQ
-#define UHF_EVENT_CFDP_DONE (1u << 5) // CFDP has nothing more to send for now, see radio_cfdp_turn_done()
+#define UHF_EVENT_RXFE (1u << 2)       // A frame was received
+#define UHF_EVENT_TXFE (1u << 3)       // A frame was sent
+#define UHF_EVENT_TXRDY (1u << 4)      // The radio reached TXPREP. Masked from the pin, so only seen alongside another IRQ
+#define UHF_EVENT_CFDP_DONE (1u << 5)  // CFDP has nothing more to send for now, see radio_cfdp_turn_done()
+#define UHF_EVENT_TX_REQUEST (1u << 6) // uhf_request_transmit() asked to turn transmit on or off
 
 // PUSP link timing. TODO: tune on hardware. The retry period must cover a whole round trip: our frame's airtime, the
 // ground station's RX/TX turnaround and its reply's airtime
@@ -122,6 +123,7 @@ struct uhf_ctx {
     TickType_t next_beacon;    // Absolute tick at which LISTEN goes to BEACON
     TickType_t beacon_end;     // Absolute tick at which BEACON stops sending and goes back to LISTEN, set by LISTEN
     TickType_t yield_deadline; // Absolute tick at which ESTABLISH_SEND yields, set on entering it
+    bool sband_pass;           // Type of the current pass, from PUSP_NOTIF_SBAND_PASS on the SYN that opened it
 };
 
 extern const uhf_state_desc_t uhf_state_descs[UHF_STATE_COUNT];
@@ -150,6 +152,15 @@ bool uhf_rx_is_pusp(const uhf_rx_t *rx, pusp_directive_t dir);
  * \return true if this changed whether transmit is enabled
  */
 bool dispatch_pusp_immediate_cmd(uint8_t notifs);
+
+/**
+ * Turns transmit on or off from another task, as PUSP_NOTIF_ENABLE_TX / PUSP_NOTIF_DISABLE_TX would: the backup path
+ * for the TRANSMIT_ON_OFF uplink command. The UHF task applies it on its next wake-up (uhf_radio_task.c)
+ */
+void uhf_request_transmit(bool enable);
+
+// Run by the UHF task on UHF_EVENT_TX_REQUEST: applies the last uhf_request_transmit() (uhf_radio_task.c)
+void uhf_apply_transmit_request(void);
 
 // False while the ground has disabled transmit. uhf_step() then keeps the task in LISTEN, and every transmit is
 // refused (uhf_radio_task.c)
@@ -222,10 +233,16 @@ void uhf_rearm_retry(uhf_ctx_t *ctx);
  */
 uhf_state_t uhf_retry(uhf_ctx_t *ctx, pusp_directive_t dir);
 
+// Whether a received SYN asks for a UHF + S-band pass (PUSP_NOTIF_SBAND_PASS)
+static inline bool uhf_rx_sband_pass(const uhf_rx_t *rx) {
+    return (rx->notifs & PUSP_NOTIF_SBAND_PASS) != 0;
+}
+
 /**
  * Checks shared by every link state, which call it first. A SYN means the ground restarted the link: sends SYN_ACK
- * (re-arming the retry timer if already in SYN_RECV). No packet from the ground for UHF_LINK_TIMEOUT_MS drops the link
- * (logged).
+ * (re-arming the retry timer if already in SYN_RECV). A SYN of the same pass type stays in the same pass; one of the
+ * other type ends the pass and starts a new one of its type (CFDP drops its transaction). No packet from the ground for
+ * UHF_LINK_TIMEOUT_MS drops the link (logged).
  *
  * \return SYN_RECV on a SYN, LISTEN on a timeout, else ctx->state: the handler carries on only if this is ctx->state
  */
