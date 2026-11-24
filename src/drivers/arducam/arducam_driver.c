@@ -215,7 +215,7 @@ uint32_t arducam_i2c_read(uint8_t addr, uint8_t *readBuf, uint16_t size) {
 
 int32_t arducam_spi_write(uint8_t addr, uint8_t data) {
     if (device_disabled(CAMERA_ID)) {
-        return 2;
+        return 0;
     }
     gpio_set_pin_level(CAMERA_CS, 0);
 
