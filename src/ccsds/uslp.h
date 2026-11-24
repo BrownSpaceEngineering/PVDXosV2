@@ -134,6 +134,13 @@ typedef enum uslp_qos {
  */
 void uslp_init(void);
 
+/**
+ * Data whitening/dewhitening in software since we turn at86.dw off (for reasons of compatibility with SDR)
+ * Radio preamble, PHY header and hardware FCS are not part of this buffer
+ */
+void ccsds_pseudorandomize(uint8_t *data, size_t length);
+void ccsds_undo_pseudorandomize(uint8_t *data, size_t length);
+
 /*
  * MAPP.request function
  * Reference: USLP Blue book page 3-6

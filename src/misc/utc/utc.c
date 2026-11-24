@@ -78,6 +78,20 @@ status_t utc_get(uint32_t *const unix_time) {
     return SUCCESS;
 }
 
+status_t utc_get_boot_time(uint32_t *const unix_time) {
+    taskENTER_CRITICAL();
+    const bool valid = utc_valid;
+    const uint32_t boot_time = utc_at_rtc_zero;
+    taskEXIT_CRITICAL();
+
+    if (!valid) {
+        return ERROR_NOT_READY;
+    }
+
+    *unix_time = boot_time;
+    return SUCCESS;
+}
+
 void utc_to_jd(const uint32_t unix_time, int *const jd_scalar, float *const jd_frac) {
     *jd_scalar = UNIX_EPOCH_JD_SCALAR + (int)(unix_time / SECONDS_PER_DAY);
     *jd_frac = UNIX_EPOCH_JD_FRAC + (float)(unix_time % SECONDS_PER_DAY) / SECONDS_PER_DAY;

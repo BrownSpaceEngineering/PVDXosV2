@@ -161,6 +161,9 @@ static void uhf_rx_classify(uhf_rx_t *out) {
         return;
     }
 
+    // De-whiten packet before inspecting
+    ccsds_undo_pseudorandomize(at86_buffer, sz);
+
     // Both views point into at86_buffer, so everything needed is copied out before returning
     uslp_transfer_frame_view_t tframe_view;
     if (uslp_transfer_frame_parse(&tframe_view, at86_buffer, (uint32_t)sz)) {
@@ -333,6 +336,7 @@ bool uhf_tx_process() {
                                      RADIO_SDU_ID, USLP_QOS_EXPEDITED)) {
             warning("USLP: failed to prepare frame\n");
         } else {
+            ccsds_pseudorandomize(at86_buffer, frame_sz);
             uhf_send_frame_blocking(at86_buffer, frame_sz, "downlink frame");
         }
     }
@@ -752,7 +756,7 @@ bool uhf_beacon_prepare(void) {
         warning("USLP: failed to prepare beacon frame\n");
         return false;
     }
-
+    ccsds_pseudorandomize(beacon_frame, frame_sz);
     beacon_frame_len = frame_sz;
     return true;
 }
@@ -858,6 +862,7 @@ bool uhf_transmit_pusp(pusp_directive_t dir) {
                                  SPP_VERSION_NUMBER, RADIO_SDU_ID, USLP_QOS_EXPEDITED)) {
         warning("USLP: failed to prepare PUSP frame\n");
     } else {
+        ccsds_pseudorandomize(at86_buffer, frame_sz);
         sent = uhf_send_frame_blocking(at86_buffer, frame_sz, "PUSP directive");
         if (sent) {
             debug("Radio: sent PUSP directive %u\n", dir);

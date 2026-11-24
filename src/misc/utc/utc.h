@@ -31,6 +31,18 @@ status_t utc_set(const uint32_t unix_time);
 status_t utc_get(uint32_t *const unix_time);
 
 /**
+ * \fn utc_get_boot_time
+ *
+ * \brief Gets the UTC of the last boot (when the RTC started counting). Moves with every utc_set(), since each one
+ *        corrects the clock
+ *
+ * \param unix_time filled with seconds since the Unix epoch
+ *
+ * \returns status_t SUCCESS, or ERROR_NOT_READY if UTC hasn't been set since boot
+ */
+status_t utc_get_boot_time(uint32_t *const unix_time);
+
+/**
  * \fn utc_to_jd
  *
  * \brief Converts Unix time to a Julian date, split so that a float fraction keeps sub-second resolution

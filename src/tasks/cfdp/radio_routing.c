@@ -16,6 +16,8 @@
 #include "logging.h"
 #include "queue.h"
 #include "tasks/task_list.h"
+#include "telemetry/telemetry.h"
+#include "utc.h"
 
 // Reference: radio_routing_info.md
 const radio_route_t radio_routes[RADIO_STREAM_COUNT] = {
@@ -91,10 +93,20 @@ bool spp_wrap(const radio_queue_item_t *it, uint8_t *buf, size_t buf_size, size_
         .sequence_count = spp_next_seq_count(it->apid),
     };
 
-    // TODO(temp): placeholder timestamps and callsign. Transmitting on UHF needs the real callsign before flight
+    // Both timestamps are 0 until UTC is set
+    uint32_t unix_time = 0;
+    uint32_t boot_time = 0;
+    if (utc_get(&unix_time) != SUCCESS) {
+        unix_time = 0;
+    }
+    if (utc_get_boot_time(&boot_time) != SUCCESS) {
+        boot_time = 0;
+    }
+
+    // TODO(temp): placeholder callsign. Transmitting on UHF needs the real callsign before flight
     spp_secondary_packet_header_t secondary_header = {
-        .timestamp = 0,                             // TODO(temp): unix time
-        .boot_timestamp = 0,                        // TODO(temp): unix time of last boot
+        .timestamp = unix_time,
+        .boot_timestamp = boot_time,
         .callsign = {'B', 'S', 'E', 'B', 'S', 'E'}, // TODO(temp): real callsign
     };
 
@@ -105,8 +117,18 @@ bool spp_wrap(const radio_queue_item_t *it, uint8_t *buf, size_t buf_size, size_
 // the ground's PUSP directives on the PUSP VC
 static const radio_stream_t uplink_streams[] = {RADIO_STREAM_CFDP_REPLY, RADIO_STREAM_UPLINK_CMD, RADIO_STREAM_PUSP};
 
+// Records the result and time of the last S-band attempt in telemetry. The time is 0 if UTC isn't known yet
+static void sband_report(bool ok) {
+    uint32_t now = 0;
+    if (utc_get(&now) != SUCCESS) {
+        now = 0;
+    }
+    telemetry_update_sband_data(ok ? TEL_DEVICE_STATUS_OK : TEL_DEVICE_STATUS_BROKEN, now);
+}
+
 // Shuts the stream down after a failure. Sends fail until the retry
 static void sband_fail(void) {
+    sband_report(false);
     radio_sband_close();
     sband_state = SBAND_FAILED;
     sband_retry_at = xTaskGetTickCount() + pdMS_TO_TICKS(RADIO_SBAND_RETRY_MS);
@@ -150,6 +172,7 @@ static int sband_send(const radio_queue_item_t *item) {
         sband_fail();
         return -RADIO_ERR_SBAND;
     }
+    sband_report(true);
     return RADIO_OK;
 }
 
