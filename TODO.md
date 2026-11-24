@@ -2,11 +2,6 @@
 
 Open items for CFDP, radio, and integration. UHF hardware/RF items are listed in `src/tasks/uhf_radio/uhf_radio_main.c`.
 
-## Blocking
-- Commit the `src/libraries/adcs` submodule pointer (now `0bbe2d6`, matching `main`). The merge left it at `c516e7f`, which doesn't build with `adcs_task.c`.
-- ADCS uplink commands crash: `OPERATION_SET_UNIX_TIME`, `SET_KEPLER_COEFF`, `SET_ADCS_OP_MODE`, `ADCS_UPDATE_PARAMS` hit `fatal()` in `exec_command_adcs()`. Still true on `adcs-body-integration`.
-- Merge `origin/adcs-body-integration` (newest ADCS; `main` has nothing new). Commit first; expect conflicts in `device_checks.c`, `cfdp_utils.c`.
-
 ## ADCS
 - `OPERATION_SET_KEPLER_COEFF` / `OPERATION_ADCS_UPDATE_PARAMS` are stubs: load from `MRAM_REGION_ADCS_UPLINK` and apply.
 - `OPERATION_SET_UNIX_TIME` (UHF task, every ground packet) is a stub: decide whether it should set UTC.
@@ -15,18 +10,16 @@ Open items for CFDP, radio, and integration. UHF hardware/RF items are listed in
 - Camera task uses `capture_rtt()`; switch to `capture_mram()`.
 - `PEROVSKITE_LOG_ONLY` is defined, so sweeps aren't saved to MRAM.
 - Perovskite sweeps aren't CRC-checked before downlink (needs an incremental `crc32()`).
-- Nothing stops a capture/sweep overwriting a file mid-transfer.
 
 ## Downlink
 - Send pictures: only the last image is kept; a count > 1 sends one.
 - Send IV curve: send *all* saved sweeps, not only the newest.
 - `perovskite_data_ready_for_downlink` clears after any sweep is sent; clear only once all are.
-- A FIN arriving after its txn was dropped (pass ended) doesn't clear the ready input.
+- If the ground gets a whole file but its FIN is lost (pass ended, S-band failed, or an uplink overrode the send), the ready input stays set until the ground requests the file again. Transactions don't continue across passes, so a late FIN isn't expected. Decide whether the ground needs a way to clear it without a re-send.
 - Duplicate send requests queue duplicate puts.
 - Metadata has no file names; the ground can only tell files apart by sequence number.
 
 ## Uplink
-- Command numbers: the sheet now numbers them 1-13; the enum starts at 0. Pick one.
 - `TRANSMIT_ON_OFF` is a backup for the PUSP transmit flags; its byte is assumed 1 = on, 0 = off (TODO(temp)). Confirm with the sheet.
 - Sheet gives no handling for Set ADCS opmode.
 - Enable/disable device rejects states other than 0/1; confirm.
@@ -34,7 +27,6 @@ Open items for CFDP, radio, and integration. UHF hardware/RF items are listed in
 - Enable/disable device: to be done through the device mock system. Ignored for now.
 - Set power mode: to be done as a PUSP bitmap, through the state machine (FORCE_LOW, FORCE_HIGH, AUTO). The uplink command is ignored for now.
 - Take IV curve sets the sweep's sampling resolution (steps per pixel, 2-64). Kept in RAM only, so it goes back to 64 on reboot; decide whether to save it to MRAM.
-- `uplink_commands.c` calls `mram_record_save()` without a `NO_MRAM` guard; a `NO_MRAM=1` build hasn't been tried since the deferred commands went in.
 - Error handling in all tasks; the ground isn't told when a command fails.
 - Real callsign: `UPLINK_CALLSIGN` and `spp_wrap()`.
 
@@ -45,6 +37,7 @@ Open items for CFDP, radio, and integration. UHF hardware/RF items are listed in
 - A pass that starts during a perovskite sweep or student picture waits until that finishes.
 - CFDP's safe-suspend timeout is 3 s, but an STXG2 mode change can take up to 4 s; a misbehaving S-band radio while leaving a pass would `fatal()`.
 - A restart SYN of the same pass type still gets a SYN_ACK and stays in the same pass (not ignored outright, since the ground would retry forever).
+- The student capture states (`STATE_STUDENT_PICTURE_CAPTURE`, `STATE_STUDENT_CAPTURE_OVERRIDE`) have no timeout: if the display update or camera request fails, no photo is ever reported, so the satellite stays there and no pass state can start. Add one, like `PEROVSKITE_CAPTURE_TIMEOUT_MS`. The low-battery exit of `STATE_STUDENT_PICTURE_CAPTURE` is also commented out.
 
 ## S-band
 - RF settings are placeholders (TODO(temp) in `radio_routing.c`): 2450 MHz, 5 Msps, MODCOD 1, 27 dBm. The flatsat needs 14-20 dBm, which the driver rejects.
