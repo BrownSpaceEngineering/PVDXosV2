@@ -6,6 +6,7 @@
 #include "ccsds.h"
 #include "ccsds/radio_routing.h"
 #include "ccsds/uslp.h"
+#include "checks/device_checks.h"
 #include "hal_gpio.h"
 #include "libraries/cmd_dispatcher/cmd_dispatcher.h"
 #include "logging.h"
@@ -743,6 +744,20 @@ bool uhf_beacon_prepare(void) {
 }
 
 /**
+ * A frame didn't go out: the radio may have failed. Its check runs again (device_report_failure()), and the chip is set
+ * up again whatever the check finds, since the check re-initializes the chip with its own settings, and a chip that
+ * stopped sending may have lost its configuration anyway. The radio task does that once uhf_radio_is_ready() is false.
+ */
+static void uhf_send_failed(void) {
+    uhf_radio_ready = false;
+    device_report_failure(UHF_ID);
+}
+
+bool uhf_radio_is_ready(void) {
+    return uhf_radio_ready;
+}
+
+/**
  * Sends one prepared frame: TXPREP, send, poll until the frame is out. Leaves the radio in TXPREP. Refuses while
  * transmit is disabled.
  *
@@ -756,12 +771,17 @@ static bool uhf_send_frame_blocking(const uint8_t *frame, size_t len, const char
         warning("Radio: transmit disabled, %s not sent\n", what);
         return false;
     }
+    // A radio that failed its check sends nothing; the radio task sets the chip up again once it passes
+    if (device_disabled(UHF_ID)) {
+        return false;
+    }
 
     // DATASHEET(verify): assumes CMD=TXPREP while already in TXPREP (e.g. after the previous frame of a burst) is
     // harmless and the state reads TXPREP straight away. The state diagram (5.2) doesn't show this transition explicitly
     uhf_go_txprep();
     if (!uhf_wait_txprep(UHF_STATE_TIMEOUT_MS)) {
         warning("Radio: did not reach TXPREP for %s\n", what);
+        uhf_send_failed();
         return false;
     }
 
@@ -772,6 +792,7 @@ static bool uhf_send_frame_blocking(const uint8_t *frame, size_t len, const char
     int ret = at86_send_frame(&at86_dev, frame, len);
     if (ret) {
         warning("Radio: failed to send %s (%d)\n", what, ret);
+        uhf_send_failed();
         return false;
     }
 
@@ -779,6 +800,7 @@ static bool uhf_send_frame_blocking(const uint8_t *frame, size_t len, const char
     // itself, without a TRXRDY IRQ (5.2.7, 5.3.2.4 IRQS.TXFE)
     if (!uhf_wait_txfe(UHF_TX_TIMEOUT_MS)) {
         warning("Radio: %s not sent within %d ms\n", what, UHF_TX_TIMEOUT_MS);
+        uhf_send_failed();
         return false;
     }
     return true;

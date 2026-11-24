@@ -147,6 +147,22 @@ void device_recheck_if_due(device_id_t device_id) {
     check_device(device_id);
 }
 
+bool device_report_failure(device_id_t device_id) {
+    if (device_id >= NUM_DEVICES || device_check_functions[device_id] == NULL) {
+        return false;
+    }
+    const device_check_state_t *const state = &device_states[device_id];
+    if (state->checking || device_disabled(device_id)) {
+        return device_disabled(device_id); // A disabled device is re-checked by device_recheck_if_due()
+    }
+    if (state->checked && xTaskGetTickCount() - state->last_check_tick < pdMS_TO_TICKS(DEVICE_FAILURE_RECHECK_MS)) {
+        return false;
+    }
+    debug("%s failed in use, checking it again\n", device_name_of(device_id));
+    uncheck_device(device_id);
+    return !check_device(device_id);
+}
+
 void uncheck_device(device_id_t device_id) {
     device_states[device_id].checked = false;
 }

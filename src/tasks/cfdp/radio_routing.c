@@ -11,6 +11,7 @@
 #include "ccsds/radio_routing.h"
 
 #include "ccsds/uslp.h"
+#include "checks/device_checks.h"
 #include "drivers/stxg2/stxg2.h"
 #include "logging.h"
 #include "queue.h"
@@ -145,6 +146,7 @@ int radio_route_send(radio_stream_t stream, radio_queue_item_t *item, TickType_t
                     if (sband_open_session() != SUCCESS) {
                         warning("radio routing: failed to open S-band store session\n");
                         stxg2_power_off();
+                        device_report_failure(SBAND_ID);
                         return -RADIO_ERR_SBAND_STORE;
                     }
                     sband_open = true;

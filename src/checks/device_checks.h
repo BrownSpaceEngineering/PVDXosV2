@@ -23,12 +23,20 @@
  * - Start each public operation of the device's driver with a `device_disabled()` gate that fills the outputs with safe
  *   placeholder values and returns SUCCESS, so code using a dead device keeps working without knowing
  * - Call `device_recheck_if_due()` from the loop of the task that owns the device
+ * - Call `device_report_failure()` where an operation on the device fails, from the task that owns it (not while
+ *   holding a bus mutex the check needs), so a device that dies after a good startup check gets disabled too
  * - Run a debug session to make sure it's working as expected
  */
 
 // How often a task re-runs the check of a disabled device it owns
 #ifndef DEVICE_RECHECK_INTERVAL_MS
 #define DEVICE_RECHECK_INTERVAL_MS (5u * 60u * 1000u)
+#endif
+
+// Shortest time between two checks that device_report_failure() runs on a device, so a device failing on every call
+// isn't checked on every call
+#ifndef DEVICE_FAILURE_RECHECK_MS
+#define DEVICE_FAILURE_RECHECK_MS (10u * 1000u)
 #endif
 
 /**
@@ -64,6 +72,15 @@ bool device_disabled(device_id_t device_id);
  * device that comes back is enabled again. Call it from the loop of the task that owns the device.
  */
 void device_recheck_if_due(device_id_t device_id);
+
+/**
+ * \brief tells the device checks that an operation on a device failed. If the device is enabled, its check runs again
+ * (unless it ran in the last DEVICE_FAILURE_RECHECK_MS), and a failed check disables it, after which
+ * device_recheck_if_due() brings it back once it passes. Call it from the task that owns the device, not while holding
+ * a bus mutex the check needs.
+ * \return true if the device is disabled now
+ */
+bool device_report_failure(device_id_t device_id);
 
 /**
  * gets the string corresponding to the name of a device, primarily for debugging purposes

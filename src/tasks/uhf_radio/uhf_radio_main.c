@@ -109,41 +109,60 @@ void uhf_watchdog_checkin(void) {
 void main_uhf_radio(void *pvParameters) {
     info("radio: Task Started!\n");
 
-    // Keep checking in while retrying, so that a dead radio doesn't get the whole satellite reset by the watchdog. A radio
-    // that failed its device check is left alone until a re-check passes.
-    while (device_disabled(UHF_ID) || !uhf_chip_setup()) {
-        if (!device_disabled(UHF_ID)) {
-            warning("Radio: chip setup failed, retrying in %d ms\n", UHF_SETUP_RETRY_MS);
-        }
-        uhf_watchdog_checkin();
-        vTaskDelay(pdMS_TO_TICKS(UHF_SETUP_RETRY_MS));
-        device_recheck_if_due(UHF_ID);
-    }
-
-    at86_irq_setup();
-
-    const TickType_t start = xTaskGetTickCount();
-    uhf_ctx_t ctx = {.state = LISTEN, .last_rx = start, .next_beacon = start + pdMS_TO_TICKS(UHF_BEACON_PERIOD_MS)};
-
-    // The RTC is calibrated against the radio's timestamp counter here, since this task owns the radio's SPI bus
-    TickType_t next_rtc_calibration = start + pdMS_TO_TICKS(RTC_CALIBRATE_PERIOD_MS);
-
+    bool irq_ready = false;
     while (true) {
-        TickType_t wait = uhf_ticks_until_wake(&ctx);
-        const TickType_t until_rtc_calibration = uhf_ticks_until(xTaskGetTickCount(), next_rtc_calibration);
-        wait = until_rtc_calibration < wait ? until_rtc_calibration : wait;
-
-        uint32_t events = 0;
-        xTaskNotifyWait(0, UINT32_MAX, &events, wait);
-
-        const uhf_rx_t rx = uhf_rx_poll(&ctx, events);
-        uhf_step(&ctx, &rx);
-
-        if (uhf_deadline_passed(next_rtc_calibration)) {
-            calibrate_rtc();
-            next_rtc_calibration = xTaskGetTickCount() + pdMS_TO_TICKS(RTC_CALIBRATE_PERIOD_MS);
+        // Keep checking in while retrying, so that a dead radio doesn't get the whole satellite reset by the watchdog. A
+        // radio that failed its device check is left alone until a re-check passes, then set up again: a radio that
+        // failed mid-run may have lost its configuration
+        while (device_disabled(UHF_ID) || !uhf_chip_setup()) {
+            if (!device_disabled(UHF_ID)) {
+                warning("Radio: chip setup failed, retrying in %d ms\n", UHF_SETUP_RETRY_MS);
+                device_report_failure(UHF_ID);
+            }
+            uhf_watchdog_checkin();
+            vTaskDelay(pdMS_TO_TICKS(UHF_SETUP_RETRY_MS));
+            device_recheck_if_due(UHF_ID);
         }
 
-        uhf_watchdog_checkin();
+        if (!irq_ready) {
+            at86_irq_setup();
+            irq_ready = true;
+        }
+
+        const TickType_t start = xTaskGetTickCount();
+        uhf_ctx_t ctx = {.state = LISTEN, .last_rx = start, .next_beacon = start + pdMS_TO_TICKS(UHF_BEACON_PERIOD_MS)};
+
+        // The RTC is calibrated against the radio's timestamp counter here, since this task owns the radio's SPI bus
+        TickType_t next_rtc_calibration = start + pdMS_TO_TICKS(RTC_CALIBRATE_PERIOD_MS);
+
+        // Runs until a frame fails to go out, which re-checks the radio and needs the chip set up again
+        while (uhf_radio_is_ready() && !device_disabled(UHF_ID)) {
+            TickType_t wait = uhf_ticks_until_wake(&ctx);
+            const TickType_t until_rtc_calibration = uhf_ticks_until(xTaskGetTickCount(), next_rtc_calibration);
+            wait = until_rtc_calibration < wait ? until_rtc_calibration : wait;
+
+            uint32_t events = 0;
+            xTaskNotifyWait(0, UINT32_MAX, &events, wait);
+
+            const uhf_rx_t rx = uhf_rx_poll(&ctx, events);
+            uhf_step(&ctx, &rx);
+
+            if (uhf_deadline_passed(next_rtc_calibration)) {
+                calibrate_rtc();
+                next_rtc_calibration = xTaskGetTickCount() + pdMS_TO_TICKS(RTC_CALIBRATE_PERIOD_MS);
+            }
+
+            uhf_watchdog_checkin();
+        }
+
+        // Ends any pass (CFDP sees the link go down) before setting the chip up again
+        if (device_disabled(UHF_ID)) {
+            warning("Radio: the radio failed its check, waiting for it to pass again\n");
+        } else {
+            warning("Radio: a frame didn't go out, setting the chip up again\n");
+        }
+        if (ctx.state != LISTEN) {
+            uhf_enter_state(&ctx, LISTEN);
+        }
     }
 }

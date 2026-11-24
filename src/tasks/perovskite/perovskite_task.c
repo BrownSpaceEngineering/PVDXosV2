@@ -359,6 +359,7 @@ static status_t perovskite_capture(void) {
         status_t status = perovskite_init_hardware();
         if (status != SUCCESS) {
             warning("perovskite: Hardware initialization failed (status=%d)\n", status);
+            device_report_failure(PEROVSKITE_ID);
             return status;
         }
         hardware_ready = true;
@@ -376,6 +377,9 @@ static status_t perovskite_capture(void) {
     if (status != SUCCESS) {
         if (status != ERROR_TASK_DISABLED) {
             warning("perovskite: Sweep not saved (status=%d)\n", status);
+        }
+        if (status == ERROR_PROCESSING_FAILED) {
+            device_report_failure(PEROVSKITE_ID); // Every step failed
         }
         return status;
     }

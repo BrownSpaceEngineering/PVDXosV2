@@ -281,10 +281,8 @@ void adcs_compute_currents(const float *const last_mag, const float *const mag, 
 
 static void handle_read_failure(const device_id_t device, const char *const name) {
     warning("adcs: %s read failed\n", name);
-    // at this point we should check the device, as we've potentially run into a fault
-    // uncheck device to force the check function to run again
-    uncheck_device(device);
-    if (!check_device(device)) {
+    // The device may have failed: its check runs again, and disables it if it fails
+    if (device_report_failure(device)) {
         warning("adcs: %s device check failed after read failure\n", name);
         sensor_fault = true;
     }

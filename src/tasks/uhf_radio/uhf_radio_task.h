@@ -291,6 +291,12 @@ bool uhf_tx_process();
  */
 bool uhf_chip_setup(void);
 
+/**
+ * False until uhf_chip_setup() succeeds, and again once a frame fails to go out: the radio task then sets the chip up
+ * again (after a failed device check, once the check passes)
+ */
+bool uhf_radio_is_ready(void);
+
 int uhf_go_rx();
 void uhf_go_txprep();
 

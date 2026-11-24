@@ -85,6 +85,8 @@ void main_fuel_gauge(void *pvParameters) {
             level = (level < 0.0f) ? 0.0f : (level > 1.0f) ? 1.0f : level;
         } else {
             warning("fuel_gauge: no pack read, reporting full battery\n");
+            // Every gauge failed: the check (which passes while any gauge works) decides whether they're gone
+            device_report_failure(EPS_ID);
         }
         fuel_gauge_inputs.new_values.battery_level = level;
         command_t cmd_battery = get_state_input_update_command(&fuel_gauge_inputs);
