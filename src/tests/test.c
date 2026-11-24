@@ -22,7 +22,6 @@
 #include "os_delay.h"
 #include "telemetry/telemetry.h"
 #include "tests/test_pusp.h"
-#include "utc.h"
 
 // test.c is compiled in every build, but the tests use hooks (test_mem, uslp_test_last_frame) that only unit test builds
 // have. Which tests run is chosen in tests_run(); the linker drops the rest.
@@ -857,8 +856,6 @@ void test_telemetry_downlink(void) {
     bool err;
 
     memset(&downlink, 0, sizeof(downlink));
-    downlink.timestamp = 0x01020304;
-    downlink.boot_timestamp = 0x0A0B0C0D;
     downlink.last_bootloader = 2;
     downlink.magnetometer.revid_register = 0x5A;
     downlink.magnetometer.bist_register = 0xA5;
@@ -881,9 +878,9 @@ void test_telemetry_downlink(void) {
     downlink.os_errors.error_timestamps[7] = 0x11223344;
 
     // The expected bytes below were generated with Python's struct module, independently of telemetry.c.
-    // Each assert costs RAM in the test image, so rather than comparing all 512 bytes, these check one section
+    // Each assert costs RAM in the test image, so rather than comparing every byte, these check one section
     // near the start, one in the middle, and the last field, which together pin down every field's size and order
-    // Magnetometer, right after the 8 bytes of timestamps and the 1-byte last bootloader
+    // Magnetometer, right after the 1-byte last bootloader
     uint8_t expected_mag[] = {0x5A, 0xA5,                                                              // revid, bist
                               0x00, 0x00, 0x00, 0x01, 0xFF, 0xFF, 0xFF, 0xFE, 0x12, 0x34, 0x56, 0x78,  // raw
                               0x3F, 0x80, 0x00, 0x00, 0xC0, 0x20, 0x00, 0x00, 0x3E, 0x20, 0x00, 0x00}; // gain adjusted
@@ -896,22 +893,21 @@ void test_telemetry_downlink(void) {
     memset(buf, 0xEE, sizeof(buf)); // nonzero, so we can tell the spare bytes were zeroed
     err = telemetry_downlink_serialize(&downlink, buf, sizeof(buf));
     PVDX_ASSERT_MSG(!err, "downlink serialize\n");
-    uint8_t expected_timestamps[] = {0x01, 0x02, 0x03, 0x04, 0x0A, 0x0B, 0x0C, 0x0D}; // timestamp, boot timestamp
-    PVDX_ASSERT_MSG(memcmp(&buf[0], expected_timestamps, sizeof(expected_timestamps)) == 0, "downlink timestamps (no spp headers)\n");
-    PVDX_ASSERT_MSG(buf[8] == 2, "downlink last bootloader\n");
-    PVDX_ASSERT_MSG(memcmp(&buf[9], expected_mag, sizeof(expected_mag)) == 0, "downlink magnetometer bytes\n");
-    PVDX_ASSERT_MSG(buf[81] == 0xAB && buf[82] == 0xCD, "downlink last photodiode (uint16)\n");
-    PVDX_ASSERT_MSG(memcmp(&buf[113], expected_sband, sizeof(expected_sband)) == 0, "downlink sband bytes\n");
-    PVDX_ASSERT_MSG(buf[218] == 0x55 && buf[219] == 0x66 && buf[220] == 0x77 && buf[221] == 0x88,
+    PVDX_ASSERT_MSG(TELEMETRY_DOWNLINK_SIZE == 492, "downlink is a 512-byte packet minus its 20 bytes of SPP headers\n");
+    PVDX_ASSERT_MSG(buf[0] == 2, "downlink last bootloader (no spp headers or timestamps)\n");
+    PVDX_ASSERT_MSG(memcmp(&buf[1], expected_mag, sizeof(expected_mag)) == 0, "downlink magnetometer bytes\n");
+    PVDX_ASSERT_MSG(buf[73] == 0xAB && buf[74] == 0xCD, "downlink last photodiode (uint16)\n");
+    PVDX_ASSERT_MSG(memcmp(&buf[105], expected_sband, sizeof(expected_sband)) == 0, "downlink sband bytes\n");
+    PVDX_ASSERT_MSG(buf[210] == 0x55 && buf[211] == 0x66 && buf[212] == 0x77 && buf[213] == 0x88,
                     "downlink last transition time (uint32)\n");
-    PVDX_ASSERT_MSG(memcmp(&buf[285], expected_adcs_tail, sizeof(expected_adcs_tail)) == 0, "downlink adcs tail bytes\n");
-    PVDX_ASSERT_MSG(buf[353] == 0xCA && buf[354] == 0xFE && buf[355] == 0xBA && buf[356] == 0xBE,
+    PVDX_ASSERT_MSG(memcmp(&buf[277], expected_adcs_tail, sizeof(expected_adcs_tail)) == 0, "downlink adcs tail bytes\n");
+    PVDX_ASSERT_MSG(buf[345] == 0xCA && buf[346] == 0xFE && buf[347] == 0xBA && buf[348] == 0xBE,
                     "downlink last command timestamp (uint32)\n");
-    PVDX_ASSERT_MSG(buf[357] == 0x39, "downlink mram status (1 byte)\n");
-    PVDX_ASSERT_MSG(buf[430] == 0x11 && buf[431] == 0x22 && buf[432] == 0x33 && buf[433] == 0x44, "downlink last os error timestamp\n");
+    PVDX_ASSERT_MSG(buf[349] == 0x39, "downlink mram status (1 byte)\n");
+    PVDX_ASSERT_MSG(buf[422] == 0x11 && buf[423] == 0x22 && buf[424] == 0x33 && buf[425] == 0x44, "downlink last os error timestamp\n");
 
     bool spare_zeroed = true;
-    for (size_t i = 434; i < TELEMETRY_DOWNLINK_SIZE; i++) {
+    for (size_t i = 426; i < TELEMETRY_DOWNLINK_SIZE; i++) {
         spare_zeroed = spare_zeroed && buf[i] == 0;
     }
     PVDX_ASSERT_MSG(spare_zeroed, "downlink spare bytes zeroed\n");
@@ -924,32 +920,25 @@ void test_telemetry_downlink(void) {
 }
 
     // Offsets of fields in a serialized downlink, from the order in telemetry_downlink_serialize()
-    #define TEL_OFF_TIMESTAMP 0
-    #define TEL_OFF_BOOT_TIMESTAMP 4
-    #define TEL_OFF_LAST_BOOTLOADER 8
-    #define TEL_OFF_MAG_RAW 11  // after revid and bist
-    #define TEL_OFF_MAG_GAIN 23 // gain-adjusted readings
-    #define TEL_OFF_MAGNETORQUER 35
-    #define TEL_OFF_PHOTODIODE 47
-    #define TEL_OFF_GYRO_RAW 83
-    #define TEL_OFF_GYRO_RATE 95
-    #define TEL_OFF_GYRO_HEALTH 107
-    #define TEL_OFF_CAMERA 108 // health, last capture succeeded, resolution
-    #define TEL_OFF_DISPLAY_HEALTH 111
-    #define TEL_OFF_UHF_HEALTH 112
-    #define TEL_OFF_SBAND 113 // health, last transmission timestamp
-    #define TEL_OFF_EPS 118   // charge, voltage, current, temperature; 4 floats each
-    #define TEL_OFF_STATE_HISTORY 182
-    #define TEL_OFF_TRANSITION_TIMES 190
-    #define TEL_OFF_STATE_INPUTS 222
-    #define TEL_OFF_ADCS 225 // position, attitude, gyro bias, covariance diagonal, then opmode, flags, filter resets, TLE epoch
-    #define TEL_OFF_COMMANDS 293
-    #define TEL_OFF_MRAM 357 // status, reflash count, reflash timestamps
-
-// The 4 bytes at p, big-endian
-static uint32_t tel_be32(const uint8_t *p) {
-    return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) | ((uint32_t)p[2] << 8) | p[3];
-}
+    #define TEL_OFF_LAST_BOOTLOADER 0
+    #define TEL_OFF_MAG_RAW 3   // after revid and bist
+    #define TEL_OFF_MAG_GAIN 15 // gain-adjusted readings
+    #define TEL_OFF_MAGNETORQUER 27
+    #define TEL_OFF_PHOTODIODE 39
+    #define TEL_OFF_GYRO_RAW 75
+    #define TEL_OFF_GYRO_RATE 87
+    #define TEL_OFF_GYRO_HEALTH 99
+    #define TEL_OFF_CAMERA 100 // health, last capture succeeded, resolution
+    #define TEL_OFF_DISPLAY_HEALTH 103
+    #define TEL_OFF_UHF_HEALTH 104
+    #define TEL_OFF_SBAND 105 // health, last transmission timestamp
+    #define TEL_OFF_EPS 110   // charge, voltage, current, temperature; 4 floats each
+    #define TEL_OFF_STATE_HISTORY 174
+    #define TEL_OFF_TRANSITION_TIMES 182
+    #define TEL_OFF_STATE_INPUTS 214
+    #define TEL_OFF_ADCS 217 // position, attitude, gyro bias, covariance diagonal, then opmode, flags, filter resets, TLE epoch
+    #define TEL_OFF_COMMANDS 285
+    #define TEL_OFF_MRAM 349 // status, reflash count, reflash timestamps
 
 // Whether the 4 bytes at p are value, big-endian
 static bool tel_be32_is(const uint8_t *p, uint32_t value) {
@@ -987,6 +976,15 @@ void test_telemetry_setters(void) {
     PVDX_ASSERT_MSG(downlink.gyro.health == TEL_DEVICE_STATUS_OK, "gyro OK after a good read\n");
     telemetry_update_gyro_data(NULL);
 
+    // Display health from a command's result
+    telemetry_update_display_result(SUCCESS);
+    telemetry_collect(&downlink);
+    ok = downlink.display_health == TEL_DEVICE_STATUS_OK;
+    telemetry_update_display_result(ERROR_TASK_DISABLED);
+    telemetry_collect(&downlink);
+    ok = ok && downlink.display_health == TEL_DEVICE_STATUS_DISABLED;
+    PVDX_ASSERT_MSG(ok, "display health from command results\n");
+
     telemetry_update_display_data(TEL_DEVICE_STATUS_BROKEN);
     telemetry_update_uhf_data(TEL_DEVICE_STATUS_OK);
 
@@ -1006,9 +1004,9 @@ void test_telemetry_setters(void) {
         telemetry_update_command(0xC0000000u + i);
     }
 
-    tel_mram_data_t mram = {.status = 0x39, .reflash_count = 3};
-    mram.reflash_timestamps[7] = 0x01020304;
-    telemetry_update_mram_data(&mram);
+    static const uint32_t reflash_times[8] = {[7] = 0x01020304};
+    telemetry_update_reflashes(3, reflash_times);
+    telemetry_update_mram_status(0x39);
 
     telemetry_update_magnetometer_readings(&(mag_raw_reading_t){.x = 1, .y = -2, .z = 0x12345678},
                                            &(mag_data_t){.x = 1.0f, .y = -2.5f, .z = 0.15625f});
@@ -1041,10 +1039,6 @@ void test_telemetry_setters(void) {
 
     // Bits 0, 9 and 12
     telemetry_update_state_inputs(&(input_t){.in_sunlight = true, .utc_valid = true, .safe_to_disable_radio = true});
-
-    // Whether UTC is known depends on what ran before the tests, so the stamps are checked against utc.c either way
-    uint32_t boot_time = 0;
-    const bool utc_known = utc_get_boot_time(&boot_time) == SUCCESS;
 
     tel_collect_and_serialize(&downlink, buf);
 
@@ -1079,7 +1073,7 @@ void test_telemetry_setters(void) {
 
     PVDX_ASSERT_MSG(
         buf[TEL_OFF_MRAM] == 0x39 && tel_be32_is(&buf[TEL_OFF_MRAM + 1], 3) && tel_be32_is(&buf[TEL_OFF_MRAM + 5 + 28], 0x01020304),
-        "mram data\n");
+        "mram data (status doesn't clear the reflashes)\n");
 
     PVDX_ASSERT_MSG(tel_be32_is(&buf[TEL_OFF_MAG_RAW], 1) && tel_be32_is(&buf[TEL_OFF_MAG_RAW + 4], 0xFFFFFFFEu) &&
                         tel_be32_is(&buf[TEL_OFF_MAG_RAW + 8], 0x12345678) && tel_be_float_is(&buf[TEL_OFF_MAG_GAIN], 1.0f) &&
@@ -1114,14 +1108,6 @@ void test_telemetry_setters(void) {
     PVDX_ASSERT_MSG(buf[TEL_OFF_STATE_INPUTS] == 0x01 && buf[TEL_OFF_STATE_INPUTS + 1] == 0x12 && buf[TEL_OFF_STATE_INPUTS + 2] == 0x00,
                     "state inputs packed as bits\n");
 
-    if (utc_known) {
-        PVDX_ASSERT_MSG(tel_be32(&buf[TEL_OFF_BOOT_TIMESTAMP]) == boot_time && tel_be32(&buf[TEL_OFF_TIMESTAMP]) >= boot_time,
-                        "timestamps stamped from UTC\n");
-    } else {
-        PVDX_ASSERT_MSG(tel_be32(&buf[TEL_OFF_TIMESTAMP]) == 0 && tel_be32(&buf[TEL_OFF_BOOT_TIMESTAMP]) == 0,
-                        "timestamps 0 without UTC\n");
-    }
-
     test_log("telemetry call site tests:\n");
     // An uplink with no commands ("PVDXGS", message size 0, 0 commands, timestamp 0x0A0B0C0D) records its timestamp;
     // one from another callsign doesn't. No commands, so nothing is enqueued before the scheduler starts
@@ -1136,23 +1122,25 @@ void test_telemetry_setters(void) {
 
     // Re-running a device check publishes its result. Each starts from a value the check can never publish, so a check
     // that didn't publish fails. UHF isn't re-checked: that would reset the radio after the burn sequence set it up
-    telemetry_update_mram_data(&(tel_mram_data_t){.status = 0xFF});
+    telemetry_update_mram_status(0xFF);
     telemetry_update_display_data(TEL_DEVICE_STATUS_DISABLED);
     uncheck_device(MRAM_ID);
     bool mram_okay = check_device(MRAM_ID);
     uncheck_device(DISPLAY_ID);
     bool display_okay = check_device(DISPLAY_ID);
-    telemetry_update_magnetometer_registers(0xFF, 0xFF);
+    telemetry_update_magnetometer_registers(0xFF, 0x01); // 0x01: a BIST read always has STE (bit 7) set
     uncheck_device(MAGNETOMETER_ID);
     bool magnetometer_okay = check_device(MAGNETOMETER_ID);
     tel_collect_and_serialize(&downlink, buf);
     // All three MRAMs OK is 0b010101: each chip's state in its own 2 bits
-    PVDX_ASSERT_MSG(buf[TEL_OFF_MRAM] != 0xFF && (buf[TEL_OFF_MRAM] == 0x15) == mram_okay, "mram check publishes status\n");
+    PVDX_ASSERT_MSG(buf[TEL_OFF_MRAM] != 0xFF && (buf[TEL_OFF_MRAM] == 0x15) == mram_okay && tel_be32_is(&buf[TEL_OFF_MRAM + 1], 3),
+                    "mram check publishes status, keeps reflashes\n");
     PVDX_ASSERT_MSG(buf[TEL_OFF_DISPLAY_HEALTH] == (display_okay ? TEL_DEVICE_STATUS_OK : TEL_DEVICE_STATUS_BROKEN),
                     "display check publishes health\n");
-    PVDX_ASSERT_MSG(
-        buf[TEL_OFF_LAST_BOOTLOADER + 1] == (magnetometer_okay ? RM3100_REVID_VALUE : 0) && buf[TEL_OFF_LAST_BOOTLOADER + 2] == 0,
-        "magnetometer check publishes REVID\n");
+    // A magnetometer that answered ran the self test, whose result has STE and the BW/BP settings in its low bits
+    PVDX_ASSERT_MSG(buf[TEL_OFF_LAST_BOOTLOADER + 1] == (magnetometer_okay ? RM3100_REVID_VALUE : 0) &&
+                        (magnetometer_okay ? (buf[TEL_OFF_LAST_BOOTLOADER + 2] & 0x8F) == 0x8F : buf[TEL_OFF_LAST_BOOTLOADER + 2] == 0),
+                    "magnetometer check publishes REVID and BIST\n");
 }
 
 void test_uplink_parse(void) {
