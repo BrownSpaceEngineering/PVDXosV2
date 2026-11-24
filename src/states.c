@@ -194,14 +194,14 @@ void init_states(void) {
                   .on_enter = perovskite_capture_on_enter};
     mission_states[STATE_PICTURE_CAPTURE] =
         (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_uhf_radio_task, p_cfdp_task, p_display_task, p_camera_task},
-                  .fetch_next_state = student_picture_capture_next_state,
-                  .on_enter = student_picture_capture_on_enter};
+                  .fetch_next_state = picture_capture_next_state,
+                  .on_enter = picture_capture_on_enter};
     mission_states[STATE_SBAND_PASS] = (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_uhf_radio_task, p_cfdp_task},
-                                                  .fetch_next_state = sband_trans_next_state};
+                                                  .fetch_next_state = sband_pass_next_state};
     mission_states[STATE_LOW_POWER_IDLE] = (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_uhf_radio_task, p_cfdp_task},
                                                      .fetch_next_state = low_power_idle_next_state};
-    mission_states[STATE_FAKE_HEARTBEAT] =
-        (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_uhf_radio_task, p_cfdp_task, p_heartbeat_task},
-                  .fetch_next_state = fake_heartbeat_next_state};
+    // mission_states[STATE_FAKE_HEARTBEAT] =
+    //     (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_uhf_radio_task, p_cfdp_task, p_heartbeat_task},
+    //               .fetch_next_state = fake_heartbeat_next_state};
     // ... one line per state in state_id_t
 }
