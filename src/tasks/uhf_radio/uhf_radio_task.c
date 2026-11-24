@@ -6,6 +6,7 @@
 #include "ccsds.h"
 #include "ccsds/radio_routing.h"
 #include "ccsds/uslp.h"
+#include "drivers/magnetorquer/magnetorquer_driver.h"
 #include "hal_gpio.h"
 #include "libraries/cmd_dispatcher/cmd_dispatcher.h"
 #include "logging.h"
@@ -743,20 +744,13 @@ bool uhf_beacon_prepare(void) {
 }
 
 /**
- * Sends one prepared frame: TXPREP, send, poll until the frame is out. Leaves the radio in TXPREP. Refuses while
- * transmit is disabled.
+ * Sends one prepared frame with the coils quiet: TXPREP, send, poll until the frame is out. Leaves the radio in TXPREP.
+ * Called by uhf_send_frame_blocking(), which holds the magnetorquers off around it.
  *
  * \param what names the frame in warnings
  * \return true if the frame was sent within UHF_TX_TIMEOUT_MS (failures are logged)
  */
-static bool uhf_send_frame_blocking(const uint8_t *frame, size_t len, const char *what) {
-    // Every transmit comes through here. uhf_step() already keeps the task out of states that send while transmit is
-    // disabled; this is the backstop
-    if (!uhf_tx_enabled) {
-        warning("Radio: transmit disabled, %s not sent\n", what);
-        return false;
-    }
-
+static bool uhf_send_frame_quiet(const uint8_t *frame, size_t len, const char *what) {
     // DATASHEET(verify): assumes CMD=TXPREP while already in TXPREP (e.g. after the previous frame of a burst) is
     // harmless and the state reads TXPREP straight away. The state diagram (5.2) doesn't show this transition explicitly
     uhf_go_txprep();
@@ -782,6 +776,29 @@ static bool uhf_send_frame_blocking(const uint8_t *frame, size_t len, const char
         return false;
     }
     return true;
+}
+
+/**
+ * Sends one prepared frame: TXPREP, send, poll until the frame is out. Leaves the radio in TXPREP. Refuses while
+ * transmit is disabled. The magnetorquers are off for the whole frame: mtq_quiet_begin() switches them off and waits
+ * for their current to decay (MTQ_DECAY_MS after the last one switched off), and ADCS can't switch them on again until
+ * mtq_quiet_end(). Not for the burn sequence's beacons, which go out before the scheduler starts.
+ *
+ * \param what names the frame in warnings
+ * \return true if the frame was sent within UHF_TX_TIMEOUT_MS (failures are logged)
+ */
+static bool uhf_send_frame_blocking(const uint8_t *frame, size_t len, const char *what) {
+    // Every transmit comes through here. uhf_step() already keeps the task out of states that send while transmit is
+    // disabled; this is the backstop
+    if (!uhf_tx_enabled) {
+        warning("Radio: transmit disabled, %s not sent\n", what);
+        return false;
+    }
+
+    mtq_quiet_begin();
+    const bool sent = uhf_send_frame_quiet(frame, len, what);
+    mtq_quiet_end();
+    return sent;
 }
 
 bool uhf_transmit_beacon(void) {

@@ -81,7 +81,8 @@ void mtq_set(mtq_axis_t axis, float duty) {
     if (mtq_quiet_count > 0) {
         duty = 0.0f;
     }
-    if (duty == 0.0f && mtq_duty[axis] != 0.0f) {
+    // A coil switching off starts its current's decay (-Wfloat-equal rules out comparing duties with == 0)
+    if (!(fabsf(duty) > 0.0f) && fabsf(mtq_duty[axis]) > 0.0f) {
         mtq_off_tick = xTaskGetTickCount();
     }
     mtq_duty[axis] = duty;
