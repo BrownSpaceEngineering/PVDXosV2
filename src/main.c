@@ -15,6 +15,8 @@
 
 #include "main.h"
 
+#include <string.h>
+
 #include "SEGGER_RTT.h"
 #include "checks/device_checks.h"
 #include "../bootloader/src/image_format.h"
@@ -33,6 +35,7 @@
 #include "cosmic_monkey_task.h"
 #include "rtos_start.h"
 #include "task_list.h"
+#include "tasks/adcs/adcs_persist.h"
 #include "tasks/task_manager/task_manager_task.h"
 #include "telemetry/telemetry.h"
 #include "tests/test.h"
@@ -48,28 +51,6 @@ cosmic_monkey_task_arguments_t cm_args = {0};
 // How often the burn wait saves its progress to MRAM, so a reboot resumes the wait instead of restarting it
 #define BURN_RECORD_SAVE_PERIOD_S 60u
 
-
-// Logs (and clears) the report stage 2 of the bootloader leaves in backup RAM about checking flash against MRAM
-static void log_boot_report(void) {
-    static const char *const golden_states[] = {"valid", "written from flash", "write failed", "unreadable", "disabled (NO_MRAM)"};
-    volatile boot_report_t *report = (volatile boot_report_t *)BOOT_REPORT_ADDR;
-    if (report->magic != BOOT_REPORT_MAGIC) {
-        warning_impl("[!] No bootloader flash report\n");
-        return;
-    }
-    const char *golden = report->golden_state < sizeof(golden_states) / sizeof(golden_states[0])
-                             ? golden_states[report->golden_state]
-                             : "unknown";
-    telemetry_update_last_bootloader(report->stage2_index);
-    info_impl("[+] Bootloader (stage 2 copy %u): golden copy %s, MRAM status 0x%02x\n", report->stage2_index, golden,
-              report->mram_status);
-    info_impl("[+] Bootloader blocks: %u checked, %u repaired, %u failed\n", report->blocks_checked, report->blocks_repaired,
-              report->blocks_failed);
-    if (report->blocks_failed != 0) {
-        warning_impl("[!] Bootloader could not repair every flash block\n");
-    }
-    report->magic = 0; // So a stale report is never logged after a reset that skipped the bootloader
-}
 
 static status_t PVDX_init(void) {
     // Segger Buffer 0 is pre-configured at compile time according to segger documentation
@@ -182,6 +163,71 @@ static void save_burn_record(const burn_record_t *const p_record) {
         warning_impl("[!] Could not write the burn record to every MRAM chip\n");
     }
 #endif
+}
+
+/* ---------- REFLASH RECORD IN MRAM ---------- */
+
+// Kept after the burn record, in its region: both are main.c's boot bookkeeping
+#define REFLASH_RECORD_OFFSET 0x100u
+
+// Boots on which the bootloader repaired flash from the MRAM golden copy
+typedef struct {
+    uint32_t count;
+    uint32_t timestamps[8]; // newest first: the last UTC the ADCS task saved before that reflash's reset, 0 if none
+} reflash_record_t;
+
+_Static_assert(MRAM_RECORD_OVERHEAD + sizeof(burn_record_t) <= REFLASH_RECORD_OFFSET, "the burn record runs into the reflash record");
+_Static_assert(REFLASH_RECORD_OFFSET + MRAM_RECORD_OVERHEAD + sizeof(reflash_record_t) <= MRAM_BURN_RECORD_SIZE,
+               "the reflash record must fit its MRAM region");
+
+// Loads the reflash record, adds this boot to it if the bootloader repaired flash, and puts it in telemetry. A NO_MRAM
+// build keeps nothing, so it always reports 0 reflashes
+static void record_reflash(bool reflashed) {
+    reflash_record_t record = {0};
+#ifdef NO_MRAM
+    (void)reflashed;
+#else
+    if (!mram_record_load(MRAM_REGION_BURN_RECORD, REFLASH_RECORD_OFFSET, &record, sizeof(record))) {
+        record = (reflash_record_t){0};
+    }
+    if (reflashed) {
+        // UTC isn't restored until the ADCS task starts, so the time is the last one it saved (at most a minute before
+        // the reset, unless the satellite was off)
+        uint32_t last_saved_utc = 0;
+        memmove(&record.timestamps[1], &record.timestamps[0], sizeof(record.timestamps) - sizeof(record.timestamps[0]));
+        record.timestamps[0] = adcs_persist_load_utc(&last_saved_utc) ? last_saved_utc : 0;
+        record.count++;
+        if (!mram_record_save(MRAM_REGION_BURN_RECORD, REFLASH_RECORD_OFFSET, &record, sizeof(record))) {
+            warning_impl("[!] Could not write the reflash record to every MRAM chip\n");
+        }
+        info_impl("[+] Reflash %lu recorded\n", (unsigned long)record.count);
+    }
+#endif
+    telemetry_update_reflashes(record.count, record.timestamps);
+}
+
+// Logs (and clears) the report stage 2 of the bootloader leaves in backup RAM about checking flash against MRAM
+static void log_boot_report(void) {
+    static const char *const golden_states[] = {"valid", "written from flash", "write failed", "unreadable", "disabled (NO_MRAM)"};
+    volatile boot_report_t *report = (volatile boot_report_t *)BOOT_REPORT_ADDR;
+    if (report->magic != BOOT_REPORT_MAGIC) {
+        warning_impl("[!] No bootloader flash report\n");
+        record_reflash(false);
+        return;
+    }
+    const char *golden = report->golden_state < sizeof(golden_states) / sizeof(golden_states[0])
+                             ? golden_states[report->golden_state]
+                             : "unknown";
+    telemetry_update_last_bootloader(report->stage2_index);
+    info_impl("[+] Bootloader (stage 2 copy %u): golden copy %s, MRAM status 0x%02x\n", report->stage2_index, golden,
+              report->mram_status);
+    info_impl("[+] Bootloader blocks: %u checked, %u repaired, %u failed\n", report->blocks_checked, report->blocks_repaired,
+              report->blocks_failed);
+    if (report->blocks_failed != 0) {
+        warning_impl("[!] Bootloader could not repair every flash block\n");
+    }
+    record_reflash(report->blocks_repaired != 0);
+    report->magic = 0; // So a stale report is never logged after a reset that skipped the bootloader
 }
 
 int main(void) {

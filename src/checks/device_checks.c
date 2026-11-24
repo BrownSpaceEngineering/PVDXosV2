@@ -27,6 +27,7 @@
 #include "globals.h"
 #include "logging.h"
 #include "magnetometer_driver.h"
+#include "os_delay.h"
 #include "photodiode_driver.h"
 #include "telemetry/telemetry.h"
 #include "watchdog_driver.h"
@@ -137,10 +138,44 @@ const char *device_name_of(device_id_t device_id) {
 // ------------------- check function definitions ----------------------
 // - these should wrap device drivers/hardware interaction functions
 
-// init_rm3100() only succeeds if REVID read back as RM3100_REVID_VALUE, so that's the REVID on success. 0 on failure
+// RM3100 built-in self test (RM3100 user manual 5.6.1): STE set, the longest timeout (BW = 4 sleep cycles) and the most
+// LR periods (BP = 4)
+#define RM3100_BIST_START 0x8Fu
+// Wait before the test, for the measurement init_rm3100() starts to finish, and for the test itself. The manual's
+// example waits 10 ms instead of polling DRDY
+#define RM3100_BIST_WAIT_MS 10u
+
+/**
+ * Runs the RM3100's built-in self test, which checks its three LR oscillators, and leaves STE clear so the next POLL
+ * write takes a measurement again. Only the result is reported: a failed axis doesn't fail the check
+ *
+ * \return the BIST register while STE is still set (bits 4-6 are XOK/YOK/ZOK; 0xFF is a pass), or 0 if it couldn't run
+ */
+static uint8_t run_magnetometer_bist(void) {
+    uint8_t start = RM3100_BIST_START;
+    uint8_t poll = RM3100_SINGLE; // a write to POLL starts the test while STE is set
+    uint8_t stop = 0;
+    uint8_t bist = 0;
+
+    os_delay_ms(RM3100_BIST_WAIT_MS);
+    if (rm3100_write_reg(NULL, RM3100_BIST_REG, &start, 1) == SUCCESS && rm3100_write_reg(NULL, RM3100_POLL_REG, &poll, 1) == SUCCESS) {
+        os_delay_ms(RM3100_BIST_WAIT_MS);
+        // Only valid while STE is set, so read before clearing it
+        if (rm3100_read_reg(NULL, RM3100_BIST_REG, &bist, 1) != SUCCESS) {
+            bist = 0;
+        }
+    }
+    if (rm3100_write_reg(NULL, RM3100_BIST_REG, &stop, 1) != SUCCESS) {
+        warning("magnetometer: could not clear STE after the self test\n");
+    }
+    return bist;
+}
+
+// init_rm3100() only succeeds if REVID read back as RM3100_REVID_VALUE, so that's the REVID on success. 0 on failure.
+// The self test only runs on a magnetometer that answered
 bool check_magnetometer(void) {
     const bool okay = init_rm3100() == SUCCESS;
-    telemetry_update_magnetometer_registers(okay ? RM3100_REVID_VALUE : 0, 0);
+    telemetry_update_magnetometer_registers(okay ? RM3100_REVID_VALUE : 0, okay ? run_magnetometer_bist() : 0);
     return okay;
 }
 
@@ -156,8 +191,7 @@ bool check_mram(void) {
     return false;
 #else
     mram_status_t status = mram_map_status();
-    // TODO: reflash count and timestamps aren't tracked anywhere yet, so they stay 0
-    telemetry_update_mram_data(&(tel_mram_data_t){.status = status});
+    telemetry_update_mram_status(status);
     bool all_okay = true;
     for (uint8_t mram = 1; mram <= 3; mram++) {
         uint8_t state = get_mram_state(status, mram);

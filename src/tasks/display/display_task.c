@@ -14,6 +14,7 @@
 #include "cmd_dispatcher.h"
 #include "display_driver.h"
 #include "state_machine.h"
+#include "telemetry/telemetry.h"
 
 // The state machine inputs the display task sends once a photo is taken: the photo is ready for downlink, and the
 // requests that led to it (an uplinked image to show, a TAKE_PHOTO override) are done. Static: the task manager reads it
@@ -257,6 +258,7 @@ void exec_command_display(command_t *const p_cmd) {
             fatal("display: Invalid operation! target: %d operation: %d\n", p_cmd->target, p_cmd->operation);
             break;
     }
+    telemetry_update_display_result(p_cmd->result);
 }
 
 /**

@@ -5,7 +5,6 @@
 
 #include "FreeRTOS.h"
 #include "task.h"
-#include "utc.h"
 
 #define TEL_ARRAY_LEN(a) (sizeof(a) / sizeof((a)[0]))
 
@@ -166,11 +165,6 @@ void telemetry_collect(tel_downlink_t *downlink) {
     taskENTER_CRITICAL();
     *downlink = tel_cache;
     taskEXIT_CRITICAL();
-
-    // Stamped here rather than cached, since both come from UTC
-    uint32_t unix_time;
-    downlink->timestamp = utc_get(&unix_time) == SUCCESS ? unix_time : 0;
-    downlink->boot_timestamp = utc_get_boot_time(&unix_time) == SUCCESS ? unix_time : 0;
 }
 
 void telemetry_update_last_bootloader(uint8_t bootloader) {
@@ -227,13 +221,20 @@ void telemetry_update_gyro_data(const SCH1_result_t *gyro_readings) {
     taskEXIT_CRITICAL();
 }
 
-void telemetry_update_camera_data(status_t capture_result, uint8_t resolution) {
-    tel_device_status_t health = TEL_DEVICE_STATUS_BROKEN;
-    if (capture_result == SUCCESS) {
-        health = TEL_DEVICE_STATUS_OK;
-    } else if (capture_result == ERROR_TASK_DISABLED) {
-        health = TEL_DEVICE_STATUS_DISABLED;
+// A device's health from what an operation on it returned: SUCCESS is OK, ERROR_TASK_DISABLED (its task was stopped)
+// is DISABLED, and anything else is BROKEN
+static tel_device_status_t health_from_result(status_t result) {
+    if (result == SUCCESS) {
+        return TEL_DEVICE_STATUS_OK;
     }
+    if (result == ERROR_TASK_DISABLED) {
+        return TEL_DEVICE_STATUS_DISABLED;
+    }
+    return TEL_DEVICE_STATUS_BROKEN;
+}
+
+void telemetry_update_camera_data(status_t capture_result, uint8_t resolution) {
+    const tel_device_status_t health = health_from_result(capture_result);
 
     taskENTER_CRITICAL();
     tel_cache.camera.health = health;
@@ -246,6 +247,10 @@ void telemetry_update_display_data(tel_device_status_t display_status) {
     taskENTER_CRITICAL();
     tel_cache.display_health = display_status;
     taskEXIT_CRITICAL();
+}
+
+void telemetry_update_display_result(status_t result) {
+    telemetry_update_display_data(health_from_result(result));
 }
 
 void telemetry_update_uhf_data(tel_device_status_t uhf_status) {
@@ -323,9 +328,16 @@ void telemetry_update_state_inputs(const input_t *inputs) {
     taskEXIT_CRITICAL();
 }
 
-void telemetry_update_mram_data(const tel_mram_data_t *mram_data) {
+void telemetry_update_mram_status(mram_status_t status) {
     taskENTER_CRITICAL();
-    tel_cache.mram = *mram_data;
+    tel_cache.mram.status = status;
+    taskEXIT_CRITICAL();
+}
+
+void telemetry_update_reflashes(uint32_t count, const uint32_t timestamps[8]) {
+    taskENTER_CRITICAL();
+    tel_cache.mram.reflash_count = count;
+    memcpy(tel_cache.mram.reflash_timestamps, timestamps, sizeof(tel_cache.mram.reflash_timestamps));
     taskEXIT_CRITICAL();
 }
 
@@ -361,9 +373,7 @@ bool telemetry_downlink_serialize(const tel_downlink_t *downlink, uint8_t *buf, 
     // Only ever write TELEMETRY_DOWNLINK_SIZE bytes, even if buf is bigger
     tel_writer_t w = {.buf = buf, .size = TELEMETRY_DOWNLINK_SIZE};
 
-    // No SPP headers here: the file is sent with CFDP, which wraps each of its PDUs in an SPP packet itself
-    put_uint32(&w, downlink->timestamp);
-    put_uint32(&w, downlink->boot_timestamp);
+    // No SPP headers or timestamps here: uhf_beacon_prepare() wraps this in an SPP packet, whose secondary header has them
     put_uint8(&w, downlink->last_bootloader);
     serialize_magnetometer(&w, &downlink->magnetometer);
     put_floats(&w, downlink->magnetorquer.duty, TEL_ARRAY_LEN(downlink->magnetorquer.duty));

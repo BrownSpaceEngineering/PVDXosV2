@@ -17,8 +17,8 @@
  * - Settle the task's priority in task_list.c
  *
  * TODO (SPP / CFDP):
- * - spp_wrap() (radio_routing.c) sends a placeholder callsign and zero timestamps on every downlink, beacons and PUSP
- *   directives included. Needs the real callsign before transmitting on UHF
+ * - spp_wrap() (radio_routing.c) sends a placeholder callsign on every downlink, beacons and PUSP directives included.
+ *   Needs the real callsign before transmitting on UHF
  * - More in TODO.md at the repository root
  */
 #include <sys/types.h>

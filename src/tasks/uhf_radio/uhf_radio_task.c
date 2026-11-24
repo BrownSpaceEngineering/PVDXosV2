@@ -781,6 +781,7 @@ static bool uhf_send_frame_blocking(const uint8_t *frame, size_t len, const char
     uhf_go_txprep();
     if (!uhf_wait_txprep(UHF_STATE_TIMEOUT_MS)) {
         warning("Radio: did not reach TXPREP for %s\n", what);
+        telemetry_update_uhf_data(TEL_DEVICE_STATUS_BROKEN);
         return false;
     }
 
@@ -791,6 +792,7 @@ static bool uhf_send_frame_blocking(const uint8_t *frame, size_t len, const char
     int ret = at86_send_frame(&at86_dev, frame, len);
     if (ret) {
         warning("Radio: failed to send %s (%d)\n", what, ret);
+        telemetry_update_uhf_data(TEL_DEVICE_STATUS_BROKEN);
         return false;
     }
 
@@ -798,8 +800,10 @@ static bool uhf_send_frame_blocking(const uint8_t *frame, size_t len, const char
     // itself, without a TRXRDY IRQ (5.2.7, 5.3.2.4 IRQS.TXFE)
     if (!uhf_wait_txfe(UHF_TX_TIMEOUT_MS)) {
         warning("Radio: %s not sent within %d ms\n", what, UHF_TX_TIMEOUT_MS);
+        telemetry_update_uhf_data(TEL_DEVICE_STATUS_BROKEN);
         return false;
     }
+    telemetry_update_uhf_data(TEL_DEVICE_STATUS_OK);
     return true;
 }
 
