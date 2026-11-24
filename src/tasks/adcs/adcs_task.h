@@ -4,6 +4,7 @@
 // Includes
 #include <stddef.h>
 
+#include "drivers/magnetorquer/magnetorquer_driver.h"
 #include "globals.h"
 #include "tasks/cfdp/uplink_parse.h"
 #include "telemetry/telemetry.h"
@@ -25,8 +26,7 @@
 // takes in real time
 // TODO: retune the B-dot and PD gains, since the coils are now off for part of each step
 #define ADCS_LOOP_PERIOD_MS 100 // How long the coils are driven between steps; must stay well below the watchdog timeout
-// TODO(blocked on hardware run): measure the coil current's decay time and set this to match
-#define ADCS_MTQ_SETTLE_MS 10 // How long the coils are off before the magnetometer starts measuring
+#define ADCS_MTQ_SETTLE_MS MTQ_DECAY_MS // How long the coils are off before the magnetometer starts measuring
 
 // Placed in a struct to ensure that the TCB is placed higher than the stack in memory
 //^ This ensures that stack overflows do not corrupt the TCB (since the stack grows downwards)

@@ -10,6 +10,8 @@
 
 #include <math.h>
 
+#include "os_delay.h"
+
 // Per-axis mapping: which TCC, the two compare channels (IN1/IN2), and the nSLEEP pin.
 typedef struct {
     Tcc *hw;
@@ -31,6 +33,11 @@ static const mtq_cfg_t MTQ_CFG[MTQ_AXIS_COUNT] = {
 // Cached TCC period (compare value for 100% duty) per axis, and last commanded duty.
 static uint32_t mtq_period[MTQ_AXIS_COUNT];
 static float mtq_duty[MTQ_AXIS_COUNT];
+
+// Open mtq_quiet_begin() calls, and the tick when a coil last switched off. Both the ADCS task and the radio's task
+// reach these, so they only change in critical sections.
+static uint32_t mtq_quiet_count = 0;
+static TickType_t mtq_off_tick = 0;
 
 status_t init_magnetorquers(void) {
     // pwm_init() already ran in atmel_start_init (WAVEGEN=NPWM, PER configured). Enable the
@@ -68,6 +75,16 @@ void mtq_set(mtq_axis_t axis, float duty) {
     } else if (duty < -1.0f) {
         duty = -1.0f;
     }
+
+    // A critical section, so that mtq_quiet_begin() can't run between the check and the register writes
+    taskENTER_CRITICAL();
+    if (mtq_quiet_count > 0) {
+        duty = 0.0f;
+    }
+    // A coil switching off starts its current's decay (-Wfloat-equal rules out comparing duties with == 0)
+    if (!(fabsf(duty) > 0.0f) && fabsf(mtq_duty[axis]) > 0.0f) {
+        mtq_off_tick = xTaskGetTickCount();
+    }
     mtq_duty[axis] = duty;
 
     float mag = fabsf(duty);
@@ -88,6 +105,7 @@ void mtq_set(mtq_axis_t axis, float duty) {
     }
 
     gpio_set_pin_level(c->slp_pin, mag > 0.0f ? MTQ_AWAKE_LEVEL : MTQ_ASLEEP_LEVEL);
+    taskEXIT_CRITICAL();
 }
 
 void mtq_set_all(float x, float y, float z) {
@@ -111,4 +129,28 @@ float mtq_get_duty(mtq_axis_t axis) {
         return 0.0f;
     }
     return mtq_duty[axis];
+}
+
+void mtq_quiet_begin(void) {
+    taskENTER_CRITICAL();
+    mtq_quiet_count++;
+    taskEXIT_CRITICAL();
+    mtq_stop_all();
+
+    // The tick count can step just after a coil switches off, so one tick of the difference may not have passed
+    const TickType_t decay_ticks = pdMS_TO_TICKS(MTQ_DECAY_MS) + 1;
+    taskENTER_CRITICAL();
+    const TickType_t since_off = xTaskGetTickCount() - mtq_off_tick;
+    taskEXIT_CRITICAL();
+    if (since_off < decay_ticks) {
+        os_delay_ms((uint32_t)(decay_ticks - since_off) * portTICK_PERIOD_MS);
+    }
+}
+
+void mtq_quiet_end(void) {
+    taskENTER_CRITICAL();
+    if (mtq_quiet_count > 0) {
+        mtq_quiet_count--;
+    }
+    taskEXIT_CRITICAL();
 }

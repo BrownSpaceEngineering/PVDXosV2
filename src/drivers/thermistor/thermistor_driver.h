@@ -50,9 +50,9 @@
 // ---- Heater control (bang-bang with hysteresis) ----
 // Control runs on the ADC node voltage (higher voltage = colder on the as-built divider). These
 // temperatures are converted to node-voltage thresholds through the divider and Beta model above
-// (4 C -> ~2.222 V, 6 C -> ~2.161 V); between the two the heater keeps its current state.
-#define HEATER_ON_C  4.0f // heater turns ON at or below this
-#define HEATER_OFF_C 6.0f // heater turns OFF at or above this
+// (2 C -> ~2.282 V, 5 C -> ~2.191 V); between the two the heater keeps its current state.
+#define HEATER_ON_C  2.0f // heater turns ON at or below this
+#define HEATER_OFF_C 5.0f // heater turns OFF at or above this
 
 // ---- Single-fault tolerance (see THERMISTOR_FAULT_PLAN.md) ----
 // Electrical guard: k = code/FS at/above this means the divider has railed (open NTC or
