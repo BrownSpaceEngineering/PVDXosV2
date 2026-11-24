@@ -9,6 +9,7 @@
  * Authors: PVDX
  */
 
+#include "checks/device_checks.h"
 #include "logging.h"
 #include "thermistor_task.h"
 #include "cmd_dispatcher.h"
@@ -42,12 +43,23 @@ void main_thermistor(void *pvParameters) {
 
     while (true) {
         debug("\n---------- Thermistor Task Loop ----------\n");
+        device_recheck_if_due(THERMISTOR_ID);
 
         uint16_t codes[THERM_COUNT];
         float temps[THERM_COUNT];
         status_t rs = therm_read_all(codes, temps);
         if (rs != SUCCESS) {
             warning("thermistor: therm_read_all reported a fault (status=%d)\n", rs);
+            // One railed unit is handled by heater_control_update(); every unit railed may mean the thermistors are gone
+            uint8_t railed = 0;
+            for (uint8_t i = 0; i < THERM_COUNT; i++) {
+                if (codes[i] == 0 || (float)codes[i] / THERM_ADC_FS >= THERM_K_OPEN) {
+                    railed++;
+                }
+            }
+            if (railed == THERM_COUNT) {
+                device_report_failure(THERMISTOR_ID);
+            }
         }
         // Temperatures printed as integer milli-degrees to avoid relying on %f in printf.
         for (uint8_t i = 0; i < THERM_COUNT; i++) {

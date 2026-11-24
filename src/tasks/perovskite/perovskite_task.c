@@ -12,6 +12,7 @@
 #include <stddef.h>
 #include <string.h>
 
+#include "checks/device_checks.h"
 #include "cmd_dispatcher.h"
 #include "drivers/mram/mram_map.h"
 #include "drivers/pmb/ina226.h"
@@ -348,10 +349,17 @@ static void perovskite_send_telemetry(const perovskite_sweep_t *p_sweep) {
 
 // Called only by the perovskite task. Hardware is left alone while the task is disabled.
 static status_t perovskite_capture(void) {
+    // Without the board a sweep would only measure zeros and overwrite a real sweep in MRAM, so skip it. The hardware
+    // is set up again once the board comes back.
+    if (device_disabled(PEROVSKITE_ID)) {
+        hardware_ready = false;
+        return SUCCESS;
+    }
     if (!hardware_ready) {
         status_t status = perovskite_init_hardware();
         if (status != SUCCESS) {
             warning("perovskite: Hardware initialization failed (status=%d)\n", status);
+            device_report_failure(PEROVSKITE_ID);
             return status;
         }
         hardware_ready = true;
@@ -369,6 +377,9 @@ static status_t perovskite_capture(void) {
     if (status != SUCCESS) {
         if (status != ERROR_TASK_DISABLED) {
             warning("perovskite: Sweep not saved (status=%d)\n", status);
+        }
+        if (status == ERROR_PROCESSING_FAILED) {
+            device_report_failure(PEROVSKITE_ID); // Every step failed
         }
         return status;
     }

@@ -8,6 +8,7 @@
 
 #include "photodiode_driver.h"
 
+#include "checks/device_checks.h"
 #include "mutexes/mutexes.h"
 
 // Photodiode index -> {ADC descriptor, AIN channel}.
@@ -38,6 +39,9 @@ static const phd_cfg_t PHD_CFG[PHD_COUNT] = {
 };
 
 status_t init_photodiodes(void) {
+    if (device_disabled(PHOTODIODE_ID)) {
+        return SUCCESS;
+    }
     // Ratiometric, 12-bit, on both ADCs. (ADC1 config is shared with the thermistor driver;
     // identical settings, so this is idempotent.)
     struct adc_sync_descriptor *const adcs[2] = {&ADC_0, &ADC_1};
@@ -80,6 +84,11 @@ static status_t phd_read_raw_unlocked(uint8_t index, uint16_t *code) {
 status_t phd_read_raw(uint8_t index, uint16_t *code) {
     if (index >= PHD_COUNT || code == NULL) {
         return ERROR_BAD_TARGET;
+    }
+    // While the photodiodes are disabled every channel reads dark, as in eclipse
+    if (device_disabled(PHOTODIODE_ID)) {
+        *code = 0;
+        return SUCCESS;
     }
 
     // Only ADC_1 is shared

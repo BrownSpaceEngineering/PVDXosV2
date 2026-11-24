@@ -9,6 +9,7 @@
 
 #include "thermistor_driver.h"
 
+#include "checks/device_checks.h"
 #include "mutexes/mutexes.h"
 
 #include <math.h>
@@ -82,6 +83,9 @@ static float therm_volts_from_celsius(float temp_c) {
 // ---------------------- ADC ----------------------
 
 status_t init_thermistors(void) {
+    if (device_disabled(THERMISTOR_ID)) {
+        return SUCCESS;
+    }
     // Ratiometric: reference = VDDANA (the rail that powers the divider), 12-bit.
     adc_sync_set_reference(&ADC_1, ADC_REFCTRL_REFSEL_INTVCC1_Val);
     adc_sync_set_resolution(&ADC_1, ADC_CTRLB_RESSEL_12BIT_Val);
@@ -139,6 +143,10 @@ static status_t therm_read_raw_unlocked(uint8_t index, uint16_t *code) {
 status_t therm_read_raw(uint8_t index, uint16_t *code) {
     if (index >= THERM_COUNT || code == NULL) {
         return ERROR_BAD_TARGET;
+    }
+    if (device_disabled(THERMISTOR_ID)) {
+        *code = (uint16_t)(therm_volts_from_celsius(THERM_DISABLED_C) / THERM_VREF_V * THERM_ADC_FS + 0.5f);
+        return SUCCESS;
     }
 
     lock_adc1();

@@ -15,6 +15,7 @@
 #include "cmd_dispatcher.h"
 #include "display_driver.h"
 #include "state_machine.h"
+#include "telemetry/telemetry.h"
 
 // The state machine inputs the display task owns
 static input_update_data_t display_inputs = {
@@ -166,6 +167,8 @@ void exec_command_display(command_t *const p_cmd) {
             break;
         case OPERATION_DISPLAY_INIT:
             p_cmd->result = init_display_hardware();
+            // The display has no device check (it is write-only over SPI), so its health comes from setting it up
+            telemetry_update_display_data(p_cmd->result == SUCCESS ? TEL_DEVICE_STATUS_OK : TEL_DEVICE_STATUS_BROKEN);
             break;
         case OPERATION_DISPLAY_IMAGE:
             if (p_cmd->data_type == CMD_DATA_UPLINK) {

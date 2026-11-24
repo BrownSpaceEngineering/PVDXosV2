@@ -54,6 +54,10 @@
 #define HEATER_ON_C  4.0f // heater turns ON at or below this
 #define HEATER_OFF_C 6.0f // heater turns OFF at or above this
 
+// What every thermistor reads while the thermistors are disabled (failed their device check, i.e. none of the four
+// reads): above HEATER_OFF_C, so both heaters stay off rather than draining the battery on no information
+#define THERM_DISABLED_C 20.0f
+
 // ---- Single-fault tolerance (see THERMISTOR_FAULT_PLAN.md) ----
 // Electrical guard: k = code/FS at/above this means the divider has railed (open NTC or
 // tap shorted to the rail), which drives the Rth model to a divide-by-zero. Reject such a

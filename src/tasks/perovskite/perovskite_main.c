@@ -1,3 +1,4 @@
+#include "checks/device_checks.h"
 #include "cmd_dispatcher.h"
 #include "logging.h"
 #include "perovskite_task.h"
@@ -22,6 +23,7 @@ void main_perovskite(void *pvParameters) {
         if (perovskite_stop_requested()) {
             continue;
         }
+        device_recheck_if_due(PEROVSKITE_ID);
         perovskite_checkin();
     }
 }

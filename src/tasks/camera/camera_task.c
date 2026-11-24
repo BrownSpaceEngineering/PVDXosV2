@@ -1,6 +1,7 @@
 #include "camera_task.h"
 
 #include "SEGGER_RTT.h"
+#include "checks/device_checks.h"
 #include "cmd_dispatcher.h"
 #include "display_task.h"
 #include "drivers/arducam/arducam_driver.h"
@@ -102,7 +103,13 @@ status_t camera_capture(void) {
     }
     // Asleep whenever this returns, so a disabled camera task leaves the camera asleep too
     arducam_sleep();
-    return camera_stop_requested() ? ERROR_TASK_DISABLED : status;
+    if (camera_stop_requested()) {
+        return ERROR_TASK_DISABLED;
+    }
+    if (status != SUCCESS && status != ERROR_TASK_DISABLED) {
+        device_report_failure(CAMERA_ID);
+    }
+    return status;
 }
 
 void exec_command_camera(command_t *const p_cmd) {

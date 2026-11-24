@@ -8,6 +8,7 @@
  * Authors: PVDX
  */
 
+#include "checks/device_checks.h"
 #include "logging.h"
 #include "fuel_gauge_task.h"
 #include "cmd_dispatcher.h"
@@ -49,6 +50,7 @@ void main_fuel_gauge(void *pvParameters) {
 
     while (true) {
         debug("\n---------- Fuel Gauge Task Loop ----------\n");
+        device_recheck_if_due(EPS_ID);
 
         fg_reading_t packs[FG_NUM_PACKS];
         status_t rs = fg_read_all(packs);
@@ -83,6 +85,8 @@ void main_fuel_gauge(void *pvParameters) {
             level = (level < 0.0f) ? 0.0f : (level > 1.0f) ? 1.0f : level;
         } else {
             warning("fuel_gauge: no pack read, reporting full battery\n");
+            // Every gauge failed: the check (which passes while any gauge works) decides whether they're gone
+            device_report_failure(EPS_ID);
         }
         fuel_gauge_inputs.new_values.battery_level = level;
         command_t cmd_battery = get_state_input_update_command(&fuel_gauge_inputs);

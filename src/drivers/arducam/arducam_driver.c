@@ -10,6 +10,7 @@
 #include "arducam_driver.h"
 #include <string.h> // For memcpy
 #include "arducam_registers.h"
+#include "checks/device_checks.h"
 #include "jpeg_restart.h"
 #include "mram_map.h"
 #include "mutexes.h"
@@ -64,6 +65,9 @@ status_t init_arducam_hardware(arducam_resolution_t resolution) {
     if ((uint32_t)resolution >= ARDUCAM_RESOLUTION_COUNT) {
         warning("Unknown camera resolution %d\n", (int)resolution);
         return ERROR_BAD_ARGS;
+    }
+    if (device_disabled(CAMERA_ID)) {
+        return SUCCESS;
     }
 
     // main() enables I2C_SENSORS; this only needs its io descriptor
@@ -144,6 +148,9 @@ status_t init_arducam_hardware(arducam_resolution_t resolution) {
  *      which takes the whole shared I2C bus down until the sensor is reset.
  */
 void arducam_sleep(void) {
+    if (device_disabled(CAMERA_ID)) {
+        return;
+    }
     // Hold PWDN high. Only bit 1: as outputs driven low, bits 0 and 2 would hold the sensor in reset or cut its power.
     // The value goes first so the pin is already high when it becomes an output.
     arducam_spi_write(ARDUCHIP_GPIO, arducam_spi_read(ARDUCHIP_GPIO) | GPIO_PWDN_MASK);
@@ -154,6 +161,10 @@ void arducam_sleep(void) {
 }
 
 uint32_t arducam_i2c_write(uint8_t addr, uint8_t *data, uint16_t size) {
+    // A dead sensor can hold the shared I2C bus, so a disabled camera stays off it
+    if (device_disabled(CAMERA_ID)) {
+        return 0;
+    }
     uint8_t writeBuf[32 + 1];
     writeBuf[0] = addr;
     memcpy(writeBuf + 1, data, size);
@@ -183,6 +194,10 @@ uint32_t arducam_i2c_multi_write(const struct sensor_reg reglist[]) {
 }
 
 uint32_t arducam_i2c_read(uint8_t addr, uint8_t *readBuf, uint16_t size) {
+    if (device_disabled(CAMERA_ID)) {
+        memset(readBuf, 0, size);
+        return 0;
+    }
     uint8_t writeBuf[1] = { addr };
     int32_t rv;
     // Held across the address write and the read so no other transfer lands between them
@@ -199,6 +214,9 @@ uint32_t arducam_i2c_read(uint8_t addr, uint8_t *readBuf, uint16_t size) {
 }
 
 int32_t arducam_spi_write(uint8_t addr, uint8_t data) {
+    if (device_disabled(CAMERA_ID)) {
+        return 0;
+    }
     gpio_set_pin_level(CAMERA_CS, 0);
 
     uint8_t value[2] = {addr | 0x80, data};  // Set MSB high for write operation
@@ -209,6 +227,9 @@ int32_t arducam_spi_write(uint8_t addr, uint8_t data) {
 }
 
 uint8_t arducam_spi_read(uint8_t addr) {
+    if (device_disabled(CAMERA_ID)) {
+        return 0;
+    }
     gpio_set_pin_level(CAMERA_CS, 0);
 
     uint8_t tx_data = addr & 0x7F;  // Set MSB low for read operation
@@ -259,6 +280,9 @@ static status_t wait_capture_done(void) {
 }
 
 status_t capture(void) {
+    if (device_disabled(CAMERA_ID)) {
+        return SUCCESS;
+    }
     // NOTE: In some versions of the official C++ ArduCam OV2640 driver, the FIFO_CLEAR_MASK is written twice,
     // while in others, it is written once. This implementation emprically works, so currently it is written twice.
     arducam_spi_write(ARDUCHIP_FIFO, FIFO_CLEAR_MASK); // Flush the FIFO
@@ -398,6 +422,9 @@ static bool write_mram(void *ctx, const uint8_t *buf, size_t len) {
  * \returns `status_t`, whether the operation was successful
  */
 status_t capture_rtt(void) {
+    if (device_disabled(CAMERA_ID)) {
+        return SUCCESS;
+    }
     size_t len = 0;
     ret_err_status(capture_to_fifo(&len), "Arducam capture failed\n");
 
@@ -431,6 +458,10 @@ status_t capture_rtt(void) {
  * \returns `status_t`, whether the operation was successful
  */
 status_t capture_mram(void) {
+    // A disabled camera leaves the last image in MRAM as it is
+    if (device_disabled(CAMERA_ID)) {
+        return SUCCESS;
+    }
 #ifdef NO_MRAM
     warning("camera: NO_MRAM build, so there is nowhere to save the image\n");
     return ERROR_WRITE_FAILED;
