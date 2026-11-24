@@ -115,9 +115,6 @@ static void copy_input(input_update_t update, const input_t *const p_new_values)
         case SUNLIGHT_STATUS_UPDATE:
             inputs.in_sunlight = p_new_values->in_sunlight;
             break;
-        case DETUMBLING_UPDATE:
-            inputs.detumbling = p_new_values->detumbling;
-            break;
         case BATTERY_LEVEL_UPDATE:
             inputs.battery_level = p_new_values->battery_level;
             break;
@@ -139,11 +136,26 @@ static void copy_input(input_update_t update, const input_t *const p_new_values)
         case PEROVSKITE_READY_DOWNLINK_UPDATE:
             inputs.perovskite_data_ready_for_downlink = p_new_values->perovskite_data_ready_for_downlink;
             break;
-        case SBAND_READY_TRANSMIT_UPDATE:
+        case SBAND_PASS_PENDING_UPDATE:
             inputs.sband_pass_pending = p_new_values->sband_pass_pending;
+            break;
+        case UHF_PASS_PENDING_UPDATE:
+            inputs.uhf_pass_pending = p_new_values->uhf_pass_pending;
+            break;
+        case REFLASH_PROGRESS_UPDATE:
+            inputs.reflash_in_progress = p_new_values->reflash_in_progress;
+            break;
+        case LAST_REFLASH_TICK_UPDATE:
+            inputs.last_reflash_tick = p_new_values->last_reflash_tick;
             break;
         case SAFE_DISABLE_RADIO_UPDATE:
             inputs.safe_to_disable_radio = p_new_values->safe_to_disable_radio;
+            break;
+        case OVERRIDE_TAKE_PHOTO_UPDATE:
+            inputs.override_take_photo = p_new_values->override_take_photo;
+            break;
+        case POWER_STATE_OVERRIDE_UPDATE:
+            inputs.power_state_override = p_new_values->power_state_override;
             break;
         case NUM_INPUT_UPDATE_OPTIONS:
             // Not an input; listed so that the switch covers the whole enum

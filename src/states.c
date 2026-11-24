@@ -5,7 +5,7 @@
  * carries out the actual execution of state transitions.
  *
  * Created: October 9, 2026
- * Authors: Aanya K Agrawal
+ * Authors: Aanya K Agrawal, Thomas Ha
  */
 
 #include "states.h"
@@ -21,9 +21,11 @@
 
 // these state transitions are just examples
 #define LOW_BATTERY_LEVEL 0.1                // absolutely made up
-#define RECOVERED_BATTERY_LEVEL 0.5          // absolutely made up
-#define FAKE_IDLE_PERIOD_MS 25000            // EXAMPLE ONLY: how long IDLE waits before the next FAKE_HEARTBEAT
-#define FAKE_HEARTBEAT_PERIOD_MS 5000        // EXAMPLE ONLY: how long to stay in FAKE_HEARTBEAT
+#define RECOVERED_BATTERY_LEVEL 0.1          // absolutely made up
+#define REFLASH_INTERVAL_MS (60 * 60 * 1000)  // 1 hour
+#define REFLASH_START_TIMEOUT_MS 10000        // Give up if reflash_on_enter's input update hasn't arrived by then
+// #define FAKE_IDLE_PERIOD_MS 25000            // EXAMPLE ONLY: how long IDLE waits before the next FAKE_HEARTBEAT
+// #define FAKE_HEARTBEAT_PERIOD_MS 5000        // EXAMPLE ONLY: how long to stay in FAKE_HEARTBEAT
 #define PEROVSKITE_CAPTURE_TIMEOUT_MS 300000 // Give up on a sweep that hasn't finished; a normal one takes about 90 s
 
 // How long the state machine has been in its current state
@@ -36,53 +38,14 @@ static state_id_t unimplemented_next_state(const input_t *const input) {
     return STATE_IDLE;
 }
 
-static state_id_t idle_next_state(const input_t *const input) {
-    if (input->battery_level < LOW_BATTERY_LEVEL)
-        return STATE_LOW_POWER_IDLE;
-    if (input->image_ready_to_display && !input->photo_taken_for_downlink && !input->in_sunlight)
-        return STATE_STUDENT_PICTURE_CAPTURE;
-    // if (input->photo_taken_for_downlink)
-    //     return STATE_SBAND_TRANS; // TODO: re-enable? cfdp_send_complete() now clears the flag, so this would exit
-    if (input->in_sunlight && !input->perovskite_data_ready_for_downlink)
-        return STATE_PEROVSKITE_CAPTURE;
-    if (ticks_in_state(input) >= pdMS_TO_TICKS(FAKE_IDLE_PERIOD_MS))
-        return STATE_FAKE_HEARTBEAT; // EXAMPLE ONLY
-    return STATE_IDLE;
-}
-
-static state_id_t perovskite_capture_next_state(const input_t *const input) {
-    if (input->battery_level < LOW_BATTERY_LEVEL)
-        return STATE_LOW_POWER_IDLE;
-    if (input->perovskite_data_ready_for_downlink)
-        return STATE_IDLE; // cleared once the downlink finishes
-    if (ticks_in_state(input) >= pdMS_TO_TICKS(PEROVSKITE_CAPTURE_TIMEOUT_MS))
-        return STATE_IDLE;
-    return STATE_PEROVSKITE_CAPTURE;
-}
-
-// EXAMPLE ONLY: runs the heartbeat task for a while, then goes back to idle. The heartbeat task mocks the inputs that
+// EXAMPLE ONLY, disabled: IDLE no longer goes to STATE_FAKE_HEARTBEAT.
+// Runs the heartbeat task for a while, then goes back to idle. The heartbeat task mocks the inputs that
 // nothing produces yet, so that IDLE goes on to a student picture or a perovskite sweep afterwards (see heartbeat_main.c)
-static state_id_t fake_heartbeat_next_state(const input_t *const input) {
-    if (ticks_in_state(input) >= pdMS_TO_TICKS(FAKE_HEARTBEAT_PERIOD_MS))
-        return STATE_IDLE;
-    return STATE_FAKE_HEARTBEAT;
-}
-
-static state_id_t student_picture_capture_next_state(const input_t *const input) {
-    // if (input->battery_level < LOW_BATTERY_LEVEL)
-    //     return STATE_LOW_POWER_IDLE;
-    if (input->photo_taken_for_downlink)
-        return STATE_IDLE; // cleared once the picture is taken
-    return STATE_STUDENT_PICTURE_CAPTURE;
-}
-
-static state_id_t sband_trans_next_state(const input_t *const input) {
-    if (input->battery_level < LOW_BATTERY_LEVEL)
-        return STATE_LOW_POWER_IDLE;
-    if (!input->photo_taken_for_downlink)
-        return STATE_IDLE; // cleared once the downlink finishes
-    return STATE_SBAND_TRANS;
-}
+// static state_id_t fake_heartbeat_next_state(const input_t *const input) {
+//     if (ticks_in_state(input) >= pdMS_TO_TICKS(FAKE_HEARTBEAT_PERIOD_MS))
+//         return STATE_IDLE;
+//     return STATE_FAKE_HEARTBEAT;
+// }
 
 static state_id_t low_power_idle_next_state(const input_t *const input) {
     if (input->battery_level > RECOVERED_BATTERY_LEVEL)
@@ -90,12 +53,72 @@ static state_id_t low_power_idle_next_state(const input_t *const input) {
     return STATE_LOW_POWER_IDLE;
 }
 
+static state_id_t idle_next_state(const input_t *const input) {
+     /** TODO: Determine priority of transitions */
+    if (input->battery_level < LOW_BATTERY_LEVEL)
+        return STATE_LOW_POWER_IDLE;
+    if (input->uhf_pass_pending)
+        return STATE_UHF_PASS;
+    if (input->sband_pass_pending)
+        return STATE_SBAND_PASS;
+    if ((!input->photo_taken_for_downlink && input->in_sunlight) 
+        || input->override_take_photo)
+        return STATE_PICTURE_CAPTURE;
+    if (!input->perovskite_data_ready_for_downlink && input->in_sunlight)
+        return STATE_PEROVSKITE_CAPTURE;
+    if (input->current_tick - input->last_reflash_tick > pdMS_TO_TICKS(REFLASH_INTERVAL_MS))
+        return STATE_REFLASH;
+    return STATE_IDLE;
+}
+
+static state_id_t perovskite_capture_next_state(const input_t *const input) {
+     if (input->perovskite_data_ready_for_downlink || input->uhf_pass_pending || input->sband_pass_pending)
+        // TODO: perov task needs to implement on_suspend
+        return STATE_IDLE; 
+    if (ticks_in_state(input) >= pdMS_TO_TICKS(PEROVSKITE_CAPTURE_TIMEOUT_MS))
+        return STATE_IDLE;
+    return STATE_PEROVSKITE_CAPTURE;
+}
+
+static state_id_t picture_capture_next_state(const input_t *const input) {
+    // TODO: picture capture MUST clear override_take_photo before this
+    // TODO: add timeout?
+    if (input->photo_taken_for_downlink)
+        return STATE_IDLE;
+    return STATE_PICTURE_CAPTURE;
+}
+
+static state_id_t sband_pass_next_state(const input_t *const input) {
+    if (!input->sband_pass_pending)
+        return STATE_IDLE; // cleared once the downlink finishes
+    return STATE_SBAND_PASS;
+}
+
+static state_id_t uhf_pass_next_state(const input_t *const input) {
+    if (!input->uhf_pass_pending)
+        return STATE_IDLE;
+    return STATE_UHF_PASS;
+}
+
+static state_id_t reflash_next_state(const input_t *const input) {
+    // reflash_on_enter's input update goes through the command queue, so it may not have been applied yet. Until it
+    // has, reflash_in_progress is still false from before; wait rather than going straight back to IDLE.
+    if (input->last_reflash_tick != input->last_transition_tick) {
+        if (ticks_in_state(input) >= pdMS_TO_TICKS(REFLASH_START_TIMEOUT_MS))
+            return STATE_IDLE; // the update was lost; IDLE will come back here and try again
+        return STATE_REFLASH;
+    }
+    if (!input->reflash_in_progress)
+        return STATE_IDLE;
+    return STATE_REFLASH;
+}
+
 // ENTRY ACTIONS
 // Run by the task manager after the new state's tasks have been enabled; see entry_action_t
 
 // Initialises the display, then puts the student picture on it. The display task runs its commands in
 // order, so the image is only drawn once initialisation has finished.
-static void student_picture_capture_on_enter(state_id_t previous_state, const input_t *const input) {
+static void picture_capture_on_enter(state_id_t previous_state, const input_t *const input) {
     command_t init_cmd = get_display_init_command();
     status_t status = enqueue_command(&init_cmd);
     if (status != SUCCESS) {
@@ -108,6 +131,25 @@ static void student_picture_capture_on_enter(state_id_t previous_state, const in
     status = enqueue_command(&image_cmd);
     if (status != SUCCESS) {
         warning("states: failed to enqueue student picture display command (status %d)\n", status);
+    }
+}
+
+// Marks a reflash as started and records when, so that IDLE waits another REFLASH_INTERVAL_MS before the next one.
+// The entry tick is used as the reflash tick so that reflash_next_state can tell when this update has been applied.
+static void reflash_on_enter(state_id_t previous_state, const input_t *const input) {
+    // Must be static: the task manager reads it later, when the command comes back round to it
+    static input_update_data_t reflash_inputs = {
+        .input_update_bitmask = INPUT_UPDATE_BIT(REFLASH_PROGRESS_UPDATE) | INPUT_UPDATE_BIT(LAST_REFLASH_TICK_UPDATE),
+    };
+
+    reflash_inputs.new_values.reflash_in_progress = true;
+    reflash_inputs.new_values.last_reflash_tick = input->last_transition_tick;
+
+    command_t cmd = get_state_input_update_command(&reflash_inputs);
+    const status_t status = enqueue_command(&cmd);
+    if (status != SUCCESS) {
+        // reflash_next_state gives up after REFLASH_START_TIMEOUT_MS, and IDLE then tries again
+        warning("states: failed to enqueue reflash input update (status %d)\n", status);
     }
 }
 
@@ -140,15 +182,23 @@ void init_states(void) {
     mission_states[STATE_PEROVSKITE_CAPTURE] = (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_cfdp_task, p_perovskite_task},
                                                          .fetch_next_state = perovskite_capture_next_state,
                                                          .on_enter = perovskite_capture_on_enter};
-    mission_states[STATE_STUDENT_PICTURE_CAPTURE] =
+    mission_states[STATE_PICTURE_CAPTURE] =
         (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_cfdp_task, p_display_task, p_camera_task},
-                  .fetch_next_state = student_picture_capture_next_state,
-                  .on_enter = student_picture_capture_on_enter};
-    mission_states[STATE_SBAND_TRANS] =
-        (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_cfdp_task}, .fetch_next_state = sband_trans_next_state};
+                  .fetch_next_state = picture_capture_next_state,
+                  .on_enter = picture_capture_on_enter};
+        mission_states[STATE_SBAND_PASS] =
+        (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_uhf_radio_task, p_cfdp_task},
+                  .fetch_next_state = sband_pass_next_state};
+    mission_states[STATE_UHF_PASS] =
+        (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_uhf_radio_task, p_cfdp_task},
+                  .fetch_next_state = uhf_pass_next_state};
+    mission_states[STATE_REFLASH] =
+        (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_uhf_radio_task, p_cfdp_task},
+                  .fetch_next_state = reflash_next_state,
+                  .on_enter = reflash_on_enter};
     mission_states[STATE_LOW_POWER_IDLE] =
         (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_cfdp_task}, .fetch_next_state = low_power_idle_next_state};
-    mission_states[STATE_FAKE_HEARTBEAT] =
-        (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_cfdp_task, p_heartbeat_task}, .fetch_next_state = fake_heartbeat_next_state};
+    // mission_states[STATE_FAKE_HEARTBEAT] =
+    //     (state_t){.enabled_tasks = {p_fuel_gauge_task, p_adcs_task, p_cfdp_task, p_heartbeat_task}, .fetch_next_state = fake_heartbeat_next_state};
     // ... one line per state in state_id_t
 }

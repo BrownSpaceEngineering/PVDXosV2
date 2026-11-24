@@ -4,7 +4,7 @@
  * Describes the states, inputs, and transitions of the PVDX state machine. 
  *
  * Created: October 9, 2026
- * Authors: Aanya K Agrawal
+ * Authors: Aanya K Agrawal, Thomas Ha
  */
 
 #ifndef STATES_H
@@ -16,51 +16,65 @@
 #define MAX_ENABLED_TASKS 9
 
 typedef enum { // preliminary contents; still under discussion
-	// The burn wire and the other boot steps run in main() before the scheduler starts; the state machine starts in STATE_IDLE
-	STATE_FIRST_BOOT,
-	STATE_LOW_POWER_IDLE,
-	STATE_IDLE,
-	STATE_PEROVSKITE_CAPTURE,
-	STATE_STUDENT_PICTURE_CAPTURE,
-	STATE_SBAND_TRANS,
-	STATE_FLASH_RECOVERY_CHECK,
-	STATE_FAKE_HEARTBEAT, // EXAMPLE ONLY: not a real PVDX state
-	NUM_STATES
+    // The burn wire and the other boot steps run in main() before the scheduler starts; the state machine starts in STATE_IDLE
+    STATE_FIRST_BOOT,
+    STATE_LOW_POWER_IDLE,
+    STATE_IDLE,
+    STATE_PEROVSKITE_CAPTURE,
+    STATE_PICTURE_CAPTURE,
+    STATE_SBAND_PASS,
+    STATE_UHF_PASS,
+    STATE_REFLASH,
+    // STATE_FAKE_HEARTBEAT, // EXAMPLE ONLY: not a real PVDX state; disabled, IDLE no longer goes here
+    NUM_STATES
 } state_id_t;
 
+typedef enum {
+	AUTO, 
+	FORCE_LOW,
+	FORCE_HIGH
+} power_override_t;
+
 typedef struct { // preliminary contents; still under discussion
-	// bool burn_wire_burned;
-	bool in_sunlight;
-	bool detumbling; // ?
-	float battery_level; // updated by fuel gauge task
-	bool image_ready_to_display;
-	bool display_active;
-	bool photo_taken_for_downlink;
-	bool adcs_pointing; // ?
-	bool adcs_sensor_fault; // ?
-	bool perovskite_data_ready_for_downlink;
-	// Filled in by the task manager itself; never sent as an input update
-	TickType_t current_tick;
-	TickType_t last_transition_tick; // when the current state was entered
-	TickType_t last_reflash_tick;
-	bool sband_pass_pending; // this does not guarantee a transition to STATE_SBAND_TRANS
+    bool in_sunlight;
+    // bool detumbling;     // ?
+    float battery_level; // updated by fuel gauge task
+    bool image_ready_to_display;
+    bool display_active;
+    bool photo_taken_for_downlink;
+    bool adcs_pointing;     // ?
+    bool adcs_sensor_fault; // ?
+    bool perovskite_data_ready_for_downlink;
+    // Filled in by the task manager itself; never sent as an input update
+    TickType_t current_tick;
+    TickType_t last_transition_tick; // when the current state was entered
+    TickType_t last_reflash_tick; // exception: set by reflash_on_enter through LAST_REFLASH_TICK_UPDATE
+    bool sband_pass_pending; // this does not guarantee a transition to STATE_SBAND_PASS
     bool uhf_pass_pending;
+    bool reflash_in_progress;
     bool safe_to_disable_radio; // any time this is set to true, the radio should assume it might be disabled
+    bool override_take_photo;
+    power_override_t power_state_override; 
 } input_t;
 
 typedef enum { // preliminary contents; still under discussion
-	SUNLIGHT_STATUS_UPDATE,
-	DETUMBLING_UPDATE,
-	BATTERY_LEVEL_UPDATE,
-	IMAGE_READY_DISPLAY_UPDATE,
-	DISPLAY_ACTIVE_UPDATE,
-	PHOTO_READY_DOWNLINK_UPDATE,
-	ADCS_POINTING_UPDATE,
-	ADCS_SENSOR_FAULT_UPDATE,
-	PEROVSKITE_READY_DOWNLINK_UPDATE,
-	SBAND_READY_TRANSMIT_UPDATE,
-	SAFE_DISABLE_RADIO_UPDATE,
-	NUM_INPUT_UPDATE_OPTIONS
+    SUNLIGHT_STATUS_UPDATE,
+    // DETUMBLING_UPDATE,
+    BATTERY_LEVEL_UPDATE,
+    IMAGE_READY_DISPLAY_UPDATE,
+    DISPLAY_ACTIVE_UPDATE,
+    PHOTO_READY_DOWNLINK_UPDATE,
+    ADCS_POINTING_UPDATE,
+    ADCS_SENSOR_FAULT_UPDATE,
+    PEROVSKITE_READY_DOWNLINK_UPDATE,
+    SBAND_PASS_PENDING_UPDATE,
+    UHF_PASS_PENDING_UPDATE,
+    REFLASH_PROGRESS_UPDATE,
+    LAST_REFLASH_TICK_UPDATE, // sent by reflash_on_enter
+    SAFE_DISABLE_RADIO_UPDATE,
+    OVERRIDE_TAKE_PHOTO_UPDATE, 
+    POWER_STATE_OVERRIDE_UPDATE,
+    NUM_INPUT_UPDATE_OPTIONS
 } input_update_t;
 
 struct input_update_data {
