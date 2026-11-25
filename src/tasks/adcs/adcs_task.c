@@ -403,6 +403,44 @@ void adcs_drive_magnetorquers(const float *const currents) {
     debug("adcs: magnetorquer duty [x,y,z]: [%f,%f,%f]\n", duty[0], duty[1], duty[2]);
 }
 
+// Saturate instead of wrapping, so a full counter reads as "at least this many"
+static uint16_t sat_u16(unsigned int value) { return value > UINT16_MAX ? UINT16_MAX : (uint16_t)value; }
+static uint8_t sat_u8(unsigned int value) { return value > UINT8_MAX ? UINT8_MAX : (uint8_t)value; }
+
+// The compact form of body()'s sensor and input checks (see tel_adcs_data_t)
+static void adcs_fill_rejects(tel_adcs_data_t *const telemetry) {
+    body_sensor_rejects_t rejects;
+    body_get_sensor_rejects(&rejects);
+
+    telemetry->rej_gyro_stuck = sat_u16(rejects.gyro_stuck);
+    telemetry->rej_gyro_spike = sat_u16(rejects.gyro_spike);
+    telemetry->rej_mag_stuck = sat_u16(rejects.mag_stuck);
+    telemetry->rej_mag_norm = sat_u16(rejects.mag_norm);
+    telemetry->rej_mag_nan = sat_u16(rejects.mag_nan);
+    telemetry->rej_innovation_gated = sat_u16(rejects.innovation_gated);
+    telemetry->rej_null_ptr = sat_u16(rejects.null_ptr);
+    telemetry->rej_bad_dt = sat_u16(rejects.bad_dt);
+
+    unsigned int pd_total = 0;
+    uint32_t mask = 0;
+    for (size_t k = 0; k < NUM_DIODES; k++) {
+        // Sum without overflowing: once past UINT16_MAX it only needs to stay there
+        pd_total = pd_total > UINT16_MAX ? pd_total : pd_total + (rejects.pd_rejected[k] > UINT16_MAX ? UINT16_MAX : rejects.pd_rejected[k]);
+        if (rejects.pd_rejects_streak[k] >= TEL_ADCS_PD_FAILING_TICKS) {
+            mask |= (uint32_t)1u << k;
+        }
+    }
+    telemetry->rej_pd_total = sat_u16(pd_total);
+    telemetry->pd_failing_mask = mask;
+
+    telemetry->tle_accepted = sat_u8(rejects.tle_accepted);
+    telemetry->tle_rejected = sat_u8(rejects.tle_rejected);
+    telemetry->tle_last_reject = sat_u8(rejects.tle_last_reject);
+    telemetry->orbit_fail_streak = sat_u16(rejects.orbit_fail_streak);
+    telemetry->orbit_fail_reason = sat_u8(rejects.orbit_fail_reason);
+    telemetry->gyro_fail_streak = sat_u16(rejects.gyro_fail_streak);
+}
+
 void adcs_publish_telemetry(void) {
     tel_adcs_data_t telemetry = {0};
 
@@ -441,10 +479,13 @@ void adcs_publish_telemetry(void) {
     telemetry.opmode = (uint8_t)adcs_mode;
     const int filter_resets = body_get_filter_resets();
     telemetry.filter_resets = filter_resets > UINT16_MAX ? UINT16_MAX : (uint16_t)filter_resets;
+    adcs_fill_rejects(&telemetry);
 
     taskENTER_CRITICAL();
     telemetry_snapshot = telemetry;
     taskEXIT_CRITICAL();
+    // The beacon is built from the telemetry cache, so this is what gets the ADCS section downlinked
+    telemetry_update_adcs_data(&telemetry);
 
     debug("adcs: mode: %d, pointing: %d, attitude valid: %d, filter resets: %d, min free stack: %lu words\n", adcs_mode, body_is_pointing(),
           attitude_valid, body_get_filter_resets(), (unsigned long)uxTaskGetStackHighWaterMark(NULL));

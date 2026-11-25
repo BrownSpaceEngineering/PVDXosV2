@@ -876,6 +876,16 @@ void test_telemetry_downlink(void) {
     downlink.adcs.flags = TEL_ADCS_FLAG_POINTING | TEL_ADCS_FLAG_IN_SUNLIGHT;
     downlink.adcs.filter_resets = 0x0102;
     downlink.adcs.tle_epoch_unix_time = 0xCAFEF00D;
+    downlink.adcs.rej_gyro_stuck = 0x0102;
+    downlink.adcs.rej_bad_dt = 0xFFFF;
+    downlink.adcs.rej_pd_total = 0x1234;
+    downlink.adcs.pd_failing_mask = (1u << 17) | (1u << 10) | 1u; // photodiodes 17, 10 and 0
+    downlink.adcs.tle_accepted = 3;
+    downlink.adcs.tle_rejected = 1;
+    downlink.adcs.tle_last_reject = 2;
+    downlink.adcs.orbit_fail_streak = 0xABCD;
+    downlink.adcs.orbit_fail_reason = 4;
+    downlink.adcs.gyro_fail_streak = 7;
     downlink.command_timestamps[15] = 0xCAFEBABE;
     downlink.mram.status = 0x39;
     downlink.os_errors.error_timestamps[7] = 0x11223344;
@@ -891,6 +901,14 @@ void test_telemetry_downlink(void) {
     uint8_t expected_sband[] = {TEL_DEVICE_STATUS_BROKEN, 0xDE, 0xAD, 0xBE, 0xEF};
     // End of the ADCS section: opmode, flags, filter resets and TLE epoch, after its 15 floats
     uint8_t expected_adcs_tail[] = {0x01, 0x09, 0x01, 0x02, 0xCA, 0xFE, 0xF0, 0x0D};
+    // ADCS rejects, right after the TLE epoch: 9 uint16 counters, the 3-byte photodiode mask, TLE accepted / rejected /
+    // last reason, orbit fail streak and reason, gyro fail streak (29 bytes)
+    uint8_t expected_adcs_rejects[] = {0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // gyro stuck .. mag nan
+                                       0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x12, 0x34,             // gated, null, bad dt, pd total
+                                       0x02, 0x04, 0x01,                                           // photodiode mask
+                                       0x03, 0x01, 0x02,                                           // TLE accepted, rejected, reason
+                                       0xAB, 0xCD, 0x04,                                           // orbit fail streak, reason
+                                       0x00, 0x07};                                                // gyro fail streak
 
     test_log("telemetry downlink serialize test:\n");
     memset(buf, 0xEE, sizeof(buf)); // nonzero, so we can tell the spare bytes were zeroed
@@ -905,13 +923,14 @@ void test_telemetry_downlink(void) {
     PVDX_ASSERT_MSG(buf[218] == 0x55 && buf[219] == 0x66 && buf[220] == 0x77 && buf[221] == 0x88,
                     "downlink last transition time (uint32)\n");
     PVDX_ASSERT_MSG(memcmp(&buf[285], expected_adcs_tail, sizeof(expected_adcs_tail)) == 0, "downlink adcs tail bytes\n");
-    PVDX_ASSERT_MSG(buf[353] == 0xCA && buf[354] == 0xFE && buf[355] == 0xBA && buf[356] == 0xBE,
+    PVDX_ASSERT_MSG(memcmp(&buf[293], expected_adcs_rejects, sizeof(expected_adcs_rejects)) == 0, "downlink adcs rejects bytes\n");
+    PVDX_ASSERT_MSG(buf[382] == 0xCA && buf[383] == 0xFE && buf[384] == 0xBA && buf[385] == 0xBE,
                     "downlink last command timestamp (uint32)\n");
-    PVDX_ASSERT_MSG(buf[357] == 0x39, "downlink mram status (1 byte)\n");
-    PVDX_ASSERT_MSG(buf[430] == 0x11 && buf[431] == 0x22 && buf[432] == 0x33 && buf[433] == 0x44, "downlink last os error timestamp\n");
+    PVDX_ASSERT_MSG(buf[386] == 0x39, "downlink mram status (1 byte)\n");
+    PVDX_ASSERT_MSG(buf[459] == 0x11 && buf[460] == 0x22 && buf[461] == 0x33 && buf[462] == 0x44, "downlink last os error timestamp\n");
 
     bool spare_zeroed = true;
-    for (size_t i = 434; i < TELEMETRY_DOWNLINK_SIZE; i++) {
+    for (size_t i = 463; i < TELEMETRY_DOWNLINK_SIZE; i++) {
         spare_zeroed = spare_zeroed && buf[i] == 0;
     }
     PVDX_ASSERT_MSG(spare_zeroed, "downlink spare bytes zeroed\n");
@@ -932,8 +951,8 @@ void test_telemetry_downlink(void) {
     #define TEL_OFF_EPS 118 // charge, voltage, current, temperature; 4 floats each
     #define TEL_OFF_STATE_HISTORY 182
     #define TEL_OFF_TRANSITION_TIMES 190
-    #define TEL_OFF_COMMANDS 293
-    #define TEL_OFF_MRAM 357 // status, reflash count, reflash timestamps
+    #define TEL_OFF_COMMANDS 322
+    #define TEL_OFF_MRAM 386 // status, reflash count, reflash timestamps
 
 // Whether the 4 bytes at p are value, big-endian
 static bool tel_be32_is(const uint8_t *p, uint32_t value) {

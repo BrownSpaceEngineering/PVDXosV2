@@ -97,13 +97,31 @@ typedef enum {
 typedef struct {
     float position[3];            // ECI, meters, from the last SGP4 propagation; zero if TEL_ADCS_FLAG_POSITION_VALID is clear
     float attitude[3];            // body-to-ECI rotation vector (axis * angle), radians; zero if TEL_ADCS_FLAG_ATTITUDE_VALID is clear
-    float gyro_bias[3];           // estimated gyro bias, rad/s
+    float gyro_bias[3];           // estimated gyro bias, rad/s, in body axes
     float covariance_diag[6];     // filter covariance diagonal: attitude error variances (rad^2), then gyro bias variances
     uint8_t opmode;               // a tel_adcs_opmode_t
     uint8_t flags;                // TEL_ADCS_FLAG_* bits
     uint16_t filter_resets;       // times the filter has diverged and fallen back to detumbling since boot
     uint32_t tle_epoch_unix_time; // epoch of the TLE in use, truncated to whole seconds; 0 if none is loaded
+
+    // Sensor and input checks in body() (adcs-c body_sensor_rejects_t), compacted. Counters are totals since boot and
+    // saturate at their maximum instead of wrapping (a stuck sensor reaches 65535 in under 2 hours at 10 Hz)
+    uint16_t rej_gyro_stuck, rej_gyro_spike;                // gyro samples rejected: exact repeats, implausible jumps
+    uint16_t rej_mag_stuck, rej_mag_norm, rej_mag_nan;      // magnetometer samples rejected: repeats, |B| vs model, NaN
+    uint16_t rej_innovation_gated;                          // filter updates skipped by the innovation gate
+    uint16_t rej_null_ptr, rej_bad_dt;                      // body() calls with a NULL input / an unusable dt
+    uint16_t rej_pd_total;                                  // photodiode readings rejected, all diodes together
+    uint32_t pd_failing_mask;    // bit k: photodiode k rejected for TEL_ADCS_PD_FAILING_TICKS ticks in a row now. Sent as 3 bytes
+    uint8_t tle_accepted, tle_rejected; // TLE uplinks adopted / rejected
+    uint8_t tle_last_reject;            // BODY_ORBIT_* reason of the most recent rejected TLE
+    uint16_t orbit_fail_streak;         // consecutive ticks with no usable orbit (0 = orbit OK now)
+    uint8_t orbit_fail_reason;          // BODY_ORBIT_* reason for that; 0 while OK
+    uint16_t gyro_fail_streak;          // consecutive ticks the gyro has been unusable (0 = healthy now)
 } tel_adcs_data_t;
+
+// A photodiode counts as failing in pd_failing_mask after this many consecutive rejected ticks (1 s at 10 Hz), so one
+// noisy sample doesn't flag it
+#define TEL_ADCS_PD_FAILING_TICKS 10u
 
 typedef struct {
     mram_status_t status; // 2 bits per MRAM chip (MRAM_STATE_*), packed as by set_mram_state()
