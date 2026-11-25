@@ -24,11 +24,11 @@
 #include "libraries/adcs/include/quat.h"
 #include "libraries/cmd_dispatcher/cmd_dispatcher.h"
 #include "logging.h"
-#include "telemetry/telemetry.h"
 #include "os_delay.h"
 #include "state_machine.h"
 #include "task_list.h"
 #include "tasks/adcs/adcs_persist.h"
+#include "telemetry/telemetry.h"
 #include "utc.h"
 
 #define DEG_TO_RAD (3.14159265358979f / 180.0f)
@@ -429,7 +429,7 @@ void adcs_publish_telemetry(void) {
         memset(telemetry.position, 0, sizeof(telemetry.position));
     }
     body_get_gyro_bias(telemetry.gyro_bias);
-    // TODO(blocked on adcs-c): fill covariance_diag once body.h exposes the filter covariance's diagonal
+    body_get_covariance_diag(telemetry.covariance_diag);
 
     adcs_tle_t tle;
     if (body_get_tle(tle.mean, &tle.bstar, &tle.epoch_jd)) {
