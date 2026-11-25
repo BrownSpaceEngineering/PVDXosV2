@@ -147,6 +147,25 @@ static void serialize_adcs(tel_writer_t *w, const tel_adcs_data_t *adcs) {
     put_uint8(w, adcs->flags);
     put_uint16(w, adcs->filter_resets);
     put_uint32(w, adcs->tle_epoch_unix_time);
+    put_uint16(w, adcs->rej_gyro_stuck);
+    put_uint16(w, adcs->rej_gyro_spike);
+    put_uint16(w, adcs->rej_mag_stuck);
+    put_uint16(w, adcs->rej_mag_norm);
+    put_uint16(w, adcs->rej_mag_nan);
+    put_uint16(w, adcs->rej_innovation_gated);
+    put_uint16(w, adcs->rej_null_ptr);
+    put_uint16(w, adcs->rej_bad_dt);
+    put_uint16(w, adcs->rej_pd_total);
+    // 18 photodiodes fit in 24 bits: the low 3 bytes of the mask, most significant first
+    put_uint8(w, (uint8_t)((adcs->pd_failing_mask >> 16) & 0xFF));
+    put_uint8(w, (uint8_t)((adcs->pd_failing_mask >> 8) & 0xFF));
+    put_uint8(w, (uint8_t)(adcs->pd_failing_mask & 0xFF));
+    put_uint8(w, adcs->tle_accepted);
+    put_uint8(w, adcs->tle_rejected);
+    put_uint8(w, adcs->tle_last_reject);
+    put_uint16(w, adcs->orbit_fail_streak);
+    put_uint8(w, adcs->orbit_fail_reason);
+    put_uint16(w, adcs->gyro_fail_streak);
 }
 
 static void serialize_mram(tel_writer_t *w, const tel_mram_data_t *mram) {
