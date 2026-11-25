@@ -873,6 +873,10 @@ void test_telemetry_downlink(void) {
     downlink.adcs.flags = TEL_ADCS_FLAG_POINTING | TEL_ADCS_FLAG_IN_SUNLIGHT;
     downlink.adcs.filter_resets = 0x0102;
     downlink.adcs.tle_epoch_unix_time = 0xCAFEF00D;
+    downlink.adcs.rejects.gyro_stuck = 0x1234;
+    downlink.adcs.rejects.pd_failing_mask[2] = 0x03;
+    downlink.adcs.rejects.orbit_fail_reason = 6;
+    downlink.adcs.rejects.gyro_fail_streak = 0xBEEF;
     downlink.command_timestamps[15] = 0xCAFEBABE;
     downlink.mram.status = 0x39;
     downlink.os_errors.error_timestamps[7] = 0x11223344;
@@ -886,8 +890,14 @@ void test_telemetry_downlink(void) {
                               0x3F, 0x80, 0x00, 0x00, 0xC0, 0x20, 0x00, 0x00, 0x3E, 0x20, 0x00, 0x00}; // gain adjusted
     // S-band health and last transmission timestamp
     uint8_t expected_sband[] = {TEL_DEVICE_STATUS_BROKEN, 0xDE, 0xAD, 0xBE, 0xEF};
-    // End of the ADCS section: opmode, flags, filter resets and TLE epoch, after its 15 floats
+    // ADCS opmode, flags, filter resets and TLE epoch, after its 15 floats
     uint8_t expected_adcs_tail[] = {0x01, 0x09, 0x01, 0x02, 0xCA, 0xFE, 0xF0, 0x0D};
+    // ADCS sensor and orbit checks, right after the TLE epoch
+    uint8_t expected_adcs_rejects[] = {0x12, 0x34, 0,    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 9 uint16 counts, gyro stuck first
+                                       0x00, 0x00, 0x03,                                              // photodiode failing mask
+                                       0,    0,    0,                                                 // TLE accepted, rejected, last reason
+                                       0x00, 0x00, 0x06,                                              // orbit fail streak, reason
+                                       0xBE, 0xEF};                                                   // gyro fail streak
 
     test_log("telemetry downlink serialize test:\n");
     memset(buf, 0xEE, sizeof(buf)); // nonzero, so we can tell the spare bytes were zeroed
@@ -901,13 +911,14 @@ void test_telemetry_downlink(void) {
     PVDX_ASSERT_MSG(buf[210] == 0x55 && buf[211] == 0x66 && buf[212] == 0x77 && buf[213] == 0x88,
                     "downlink last transition time (uint32)\n");
     PVDX_ASSERT_MSG(memcmp(&buf[277], expected_adcs_tail, sizeof(expected_adcs_tail)) == 0, "downlink adcs tail bytes\n");
-    PVDX_ASSERT_MSG(buf[345] == 0xCA && buf[346] == 0xFE && buf[347] == 0xBA && buf[348] == 0xBE,
+    PVDX_ASSERT_MSG(memcmp(&buf[285], expected_adcs_rejects, sizeof(expected_adcs_rejects)) == 0, "downlink adcs rejects bytes\n");
+    PVDX_ASSERT_MSG(buf[374] == 0xCA && buf[375] == 0xFE && buf[376] == 0xBA && buf[377] == 0xBE,
                     "downlink last command timestamp (uint32)\n");
-    PVDX_ASSERT_MSG(buf[349] == 0x39, "downlink mram status (1 byte)\n");
-    PVDX_ASSERT_MSG(buf[422] == 0x11 && buf[423] == 0x22 && buf[424] == 0x33 && buf[425] == 0x44, "downlink last os error timestamp\n");
+    PVDX_ASSERT_MSG(buf[378] == 0x39, "downlink mram status (1 byte)\n");
+    PVDX_ASSERT_MSG(buf[451] == 0x11 && buf[452] == 0x22 && buf[453] == 0x33 && buf[454] == 0x44, "downlink last os error timestamp\n");
 
     bool spare_zeroed = true;
-    for (size_t i = 426; i < TELEMETRY_DOWNLINK_SIZE; i++) {
+    for (size_t i = 455; i < TELEMETRY_DOWNLINK_SIZE; i++) {
         spare_zeroed = spare_zeroed && buf[i] == 0;
     }
     PVDX_ASSERT_MSG(spare_zeroed, "downlink spare bytes zeroed\n");
@@ -936,9 +947,10 @@ void test_telemetry_downlink(void) {
     #define TEL_OFF_STATE_HISTORY 174
     #define TEL_OFF_TRANSITION_TIMES 182
     #define TEL_OFF_STATE_INPUTS 214
-    #define TEL_OFF_ADCS 217 // position, attitude, gyro bias, covariance diagonal, then opmode, flags, filter resets, TLE epoch
-    #define TEL_OFF_COMMANDS 285
-    #define TEL_OFF_MRAM 349 // status, reflash count, reflash timestamps
+    #define TEL_OFF_ADCS 217         // position, attitude, gyro bias, covariance diagonal, then opmode, flags, filter resets, TLE epoch
+    #define TEL_OFF_ADCS_REJECTS 285 // sensor and orbit checks, 29 bytes
+    #define TEL_OFF_COMMANDS 314
+    #define TEL_OFF_MRAM 378 // status, reflash count, reflash timestamps
 
 // Whether the 4 bytes at p are value, big-endian
 static bool tel_be32_is(const uint8_t *p, uint32_t value) {
@@ -1028,6 +1040,8 @@ void test_telemetry_setters(void) {
     };
     adcs.position[0] = -2.5f;
     adcs.covariance_diag[5] = 0.15625f;
+    adcs.rejects.pd_rejects_total = 0xABCD;
+    adcs.rejects.gyro_fail_streak = 0x0007;
     telemetry_update_adcs_data(&adcs);
 
     // A good capture, then a failed one, which must be what's sent
@@ -1097,6 +1111,9 @@ void test_telemetry_setters(void) {
     PVDX_ASSERT_MSG(tel_be_float_is(&buf[TEL_OFF_ADCS], -2.5f) && tel_be_float_is(&buf[TEL_OFF_ADCS + 56], 0.15625f) &&
                         memcmp(&buf[TEL_OFF_ADCS + 60], adcs_tail, sizeof(adcs_tail)) == 0,
                     "adcs data\n");
+    PVDX_ASSERT_MSG(buf[TEL_OFF_ADCS_REJECTS + 16] == 0xAB && buf[TEL_OFF_ADCS_REJECTS + 17] == 0xCD &&
+                        buf[TEL_OFF_ADCS_REJECTS + 27] == 0x00 && buf[TEL_OFF_ADCS_REJECTS + 28] == 0x07,
+                    "adcs rejects\n");
 
     // 1.0, -2.5 and 0.15625 dps at 1600 counts per dps
     PVDX_ASSERT_MSG(tel_be32_is(&buf[TEL_OFF_GYRO_RAW], 1600) && tel_be32_is(&buf[TEL_OFF_GYRO_RAW + 4], (uint32_t)-4000) &&

@@ -148,6 +148,24 @@ static void serialize_adcs(tel_writer_t *w, const tel_adcs_data_t *adcs) {
     put_uint8(w, adcs->flags);
     put_uint16(w, adcs->filter_resets);
     put_uint32(w, adcs->tle_epoch_unix_time);
+
+    const tel_adcs_rejects_t *rejects = &adcs->rejects;
+    put_uint16(w, rejects->gyro_stuck);
+    put_uint16(w, rejects->gyro_spike);
+    put_uint16(w, rejects->mag_stuck);
+    put_uint16(w, rejects->mag_norm);
+    put_uint16(w, rejects->mag_nan);
+    put_uint16(w, rejects->innovation_gated);
+    put_uint16(w, rejects->null_ptr);
+    put_uint16(w, rejects->bad_dt);
+    put_uint16(w, rejects->pd_rejects_total);
+    put_bytes(w, rejects->pd_failing_mask, sizeof(rejects->pd_failing_mask));
+    put_uint8(w, rejects->tle_accepted);
+    put_uint8(w, rejects->tle_rejected);
+    put_uint8(w, rejects->tle_last_reject);
+    put_uint16(w, rejects->orbit_fail_streak);
+    put_uint8(w, rejects->orbit_fail_reason);
+    put_uint16(w, rejects->gyro_fail_streak);
 }
 
 static void serialize_mram(tel_writer_t *w, const tel_mram_data_t *mram) {

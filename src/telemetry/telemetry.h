@@ -119,6 +119,30 @@ typedef enum {
 #define TEL_ADCS_FLAG_TLE_LOADED (1u << 4)
 #define TEL_ADCS_FLAG_UTC_VALID (1u << 5)
 
+// Sensor and orbit checks inside the ADCS algorithms (adcs-c body_get_sensor_rejects()). Counts are running totals since
+// boot that saturate at the field's maximum; *_streak fields count consecutive bad ticks right now (0 = OK)
+typedef struct {
+    uint16_t gyro_stuck;        // gyro samples rejected as stuck (exact repeat)
+    uint16_t gyro_spike;        // gyro samples rejected as a physically impossible jump
+    uint16_t mag_stuck;         // magnetometer samples rejected as stuck (exact repeat)
+    uint16_t mag_norm;          // magnetometer samples with an impossible field magnitude (zero, overflow, or out of range)
+    uint16_t mag_nan;           // magnetometer samples containing NaN
+    uint16_t innovation_gated;  // measurements the filter rejected as too far from its prediction
+    uint16_t null_ptr;          // calls to body() with NULL inputs
+    uint16_t bad_dt;            // ticks with an invalid time step
+    uint16_t pd_rejects_total;  // rejected samples summed over all 18 photodiodes
+    uint8_t pd_failing_mask[3]; // bit k % 8 of byte k / 8: photodiode k rejected for TEL_ADCS_PD_FAILING_TICKS+ ticks in a row
+    uint8_t tle_accepted;       // TLE uplinks adopted
+    uint8_t tle_rejected;       // TLE uplinks refused (the previous TLE stays in use)
+    uint8_t tle_last_reject;    // BODY_ORBIT_* code of the most recent refused TLE; 0 if none
+    uint16_t orbit_fail_streak; // consecutive ticks with no usable orbit (0 = orbit OK)
+    uint8_t orbit_fail_reason;  // BODY_ORBIT_* code of why the orbit is unusable; 0 while OK
+    uint16_t gyro_fail_streak;  // consecutive ticks the gyro has been unusable (NaN, impossible jump, stuck)
+} tel_adcs_rejects_t;
+
+// Consecutive rejected ticks after which a photodiode's bit is set in pd_failing_mask (about 1 s)
+#define TEL_ADCS_PD_FAILING_TICKS 10u
+
 typedef struct {
     float position[3];            // ECI, meters, from the last SGP4 propagation; zero if TEL_ADCS_FLAG_POSITION_VALID is clear
     float attitude[3];            // body-to-ECI rotation vector (axis * angle), radians; zero if TEL_ADCS_FLAG_ATTITUDE_VALID is clear
@@ -128,6 +152,7 @@ typedef struct {
     uint8_t flags;                // TEL_ADCS_FLAG_* bits
     uint16_t filter_resets;       // times the filter has diverged and fallen back to detumbling since boot
     uint32_t tle_epoch_unix_time; // epoch of the TLE in use, truncated to whole seconds; 0 if none is loaded
+    tel_adcs_rejects_t rejects;   // sensor and orbit check results
 } tel_adcs_data_t;
 
 typedef struct {

@@ -413,6 +413,47 @@ void adcs_drive_magnetorquers(const float *const currents) {
     debug("adcs: magnetorquer duty [x,y,z]: [%f,%f,%f]\n", duty[0], duty[1], duty[2]);
 }
 
+static uint16_t saturate_u16(uint32_t value) {
+    return value > UINT16_MAX ? UINT16_MAX : (uint16_t)value;
+}
+
+static uint8_t saturate_u8(uint32_t value) {
+    return value > UINT8_MAX ? UINT8_MAX : (uint8_t)value;
+}
+
+// Copies adcs-c's sensor and orbit check counters into the downlink's sizes
+static void adcs_fill_rejects(tel_adcs_rejects_t *const out) {
+    body_sensor_rejects_t rejects;
+    body_get_sensor_rejects(&rejects);
+
+    out->gyro_stuck = saturate_u16(rejects.gyro_stuck);
+    out->gyro_spike = saturate_u16(rejects.gyro_spike);
+    out->mag_stuck = saturate_u16(rejects.mag_stuck);
+    out->mag_norm = saturate_u16(rejects.mag_norm);
+    out->mag_nan = saturate_u16(rejects.mag_nan);
+    out->innovation_gated = saturate_u16(rejects.innovation_gated);
+    out->null_ptr = saturate_u16(rejects.null_ptr);
+    out->bad_dt = saturate_u16(rejects.bad_dt);
+
+    _Static_assert(NUM_DIODES <= 8 * sizeof(out->pd_failing_mask), "every photodiode needs a bit in pd_failing_mask");
+    uint32_t pd_total = 0;
+    memset(out->pd_failing_mask, 0, sizeof(out->pd_failing_mask));
+    for (size_t k = 0; k < NUM_DIODES; k++) {
+        pd_total = rejects.pd_rejected[k] > UINT32_MAX - pd_total ? UINT32_MAX : pd_total + rejects.pd_rejected[k];
+        if (rejects.pd_rejects_streak[k] >= TEL_ADCS_PD_FAILING_TICKS) {
+            out->pd_failing_mask[k / 8] |= (uint8_t)(1u << (k % 8));
+        }
+    }
+    out->pd_rejects_total = saturate_u16(pd_total);
+
+    out->tle_accepted = saturate_u8(rejects.tle_accepted);
+    out->tle_rejected = saturate_u8(rejects.tle_rejected);
+    out->tle_last_reject = saturate_u8(rejects.tle_last_reject);
+    out->orbit_fail_streak = saturate_u16(rejects.orbit_fail_streak);
+    out->orbit_fail_reason = saturate_u8(rejects.orbit_fail_reason);
+    out->gyro_fail_streak = saturate_u16(rejects.gyro_fail_streak);
+}
+
 void adcs_publish_telemetry(void) {
     tel_adcs_data_t telemetry = {0};
 
@@ -430,6 +471,7 @@ void adcs_publish_telemetry(void) {
     }
     body_get_gyro_bias(telemetry.gyro_bias);
     body_get_covariance_diag(telemetry.covariance_diag);
+    adcs_fill_rejects(&telemetry.rejects);
 
     adcs_tle_t tle;
     if (body_get_tle(tle.mean, &tle.bstar, &tle.epoch_jd)) {
